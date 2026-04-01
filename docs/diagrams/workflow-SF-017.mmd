@@ -1,0 +1,10 @@
+flowchart TD
+  A[Workflow command accepted] --> B[Build canonical audit envelope]
+  B --> C[Append event to workflow-audit-events.jsonl]
+  C --> D[Record idempotency index]
+  D --> E[Update task-history projection]
+  D --> F[Update task-current-state projection]
+  D --> G[Update task-relationship projection]
+  C --> H[Emit structured observability log]
+  E --> I[History query reads projection]
+  H --> J[Operators pivot using correlation_id / event_id]

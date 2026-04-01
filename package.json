@@ -1,0 +1,67 @@
+{
+  "name": "engineering-team",
+  "version": "1.0.0",
+  "description": "Software Factory prototype repo",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:browser": "vite build",
+    "preview": "vite preview",
+    "serve:browser": "node scripts/serve-browser-dist.js",
+    "docker:browser": "docker build -f Dockerfile.browser -t engineering-team-task-browser .",
+    "test": "node --test tests/unit/*.test.js tests/contract/*.test.js tests/e2e/*.test.js tests/property/*.test.js tests/performance/*.test.js tests/security/*.test.js chaos/*.test.js",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:contract": "node --test tests/contract/*.test.js",
+    "test:e2e": "node --test tests/e2e/*.test.js",
+    "test:property": "node --test tests/property/*.test.js",
+    "test:performance": "node --test tests/performance/*.test.js",
+    "test:security": "node --test tests/security/*.test.js",
+    "test:chaos": "node --test chaos/*.test.js",
+    "test:integration:postgres": "node --test tests/integration/*.test.js",
+    "test:ui": "vitest run src/app/App.test.tsx",
+    "test:integration:docker": "bash scripts/run-postgres-integration-docker.sh",
+    "audit:rebuild": "node scripts/rebuild-audit-projections.js",
+    "audit:project": "node scripts/process-audit-projection-queue.js",
+    "audit:outbox": "node scripts/process-audit-outbox.js",
+    "audit:migrate": "node scripts/migrate-audit-postgres.js",
+    "audit:api": "node scripts/run-audit-api.js",
+    "audit:workers": "node scripts/run-audit-workers.js",
+    "dev:postgres:up": "docker compose up -d postgres",
+    "dev:postgres:down": "docker compose down --remove-orphans",
+    "dev:postgres:reset": "docker compose down -v --remove-orphans",
+    "dev:audit:up": "docker compose up -d postgres pushgateway audit-api audit-workers",
+    "dev:audit:down": "docker compose down --remove-orphans",
+    "dev:audit:reset": "docker compose down -v --remove-orphans"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wiinc1/engineering-team.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wiinc1/engineering-team/issues"
+  },
+  "homepage": "https://github.com/wiinc1/engineering-team#readme",
+  "dependencies": {
+    "pg": "^8.20.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "axe-core": "^4.10.3",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3",
+    "vitest": "^3.2.4"
+  }
+}

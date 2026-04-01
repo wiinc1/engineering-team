@@ -861,49 +861,141 @@ Scalability Plan
 
 Horizontal scaling triggers: [CPU > 70%, queue depth > 100]
 Database scaling: [read replicas, sharding strategy]
-10. UI/UX (if applicable) ✅ Standard | Complex | Epic
-Design Assets
+10. UI/UX Requirements ✅ Standard | Complex | Epic
+**Owner:** Completed by the **UX Designer** during the PM + Architect review stage.
 
-Figma link: [URL]
-OR Wireframe description/sketch
-Component Library
+10.1 Design Assets
+- Figma link: [URL]
+- OR wireframe description/sketch
+- Prototype link (if applicable): [URL]
 
-Components used: [Material-UI, shadcn/ui, custom]
-New components created: [list]
-Responsive Design
+10.2 Core Screens & Purpose
+List every required screen touched by this story and the purpose of each.
 
-Breakpoints: 320px (mobile), 768px (tablet), 1024px (desktop), 1920px (large)
-Visual Regression (MANDATORY — replaces manual UI review)
+| Screen | Purpose | Primary User/Agent |
+|---|---|---|
+| [e.g., Task Detail Page] | [single source of truth for state + next action] | [PM / Architect / Engineer / QA / SRE / Human] |
+| [e.g., Role Inbox] | [role-specific queue for pending work] | [...] |
 
- Percy/Chromatic/Playwright baseline screenshots committed
- Threshold: 0.05% pixel diff tolerance
- All breakpoints covered
- All interactive states captured (hover, focus, error, disabled)
-Accessibility Automation (NOT OPTIONAL)
+10.3 Role-Based Inbox / Queue Requirements
+Define which inboxes are affected and what each role must be able to see/do.
 
- WCAG 2.2 Level AA compliance automated
- axe-core runs in every E2E test (0 violations allowed)
- Pa11y-ci in CI pipeline
- Keyboard navigation E2E test:
-Tab order logical
-Enter/Space activate buttons
-Esc closes modals
-Arrow keys work in lists/grids
- Screen reader testing:
-All images have alt text
-Form inputs have labels
-ARIA roles/labels validated
-Live regions for dynamic content
-Interaction Recording (✅ Complex+)
+- PM Inbox:
+- Architect Inbox:
+- Engineer Inbox:
+- QA Inbox:
+- SRE Inbox:
+- Human Stakeholder Inbox:
 
- Playwright trace on failure → uploaded to S3/artifact storage
- Session replay tool tags: feature:[name]
- Funnel tracking: [list steps]
-Automated UX Validation
+10.4 Task Detail Page Information Architecture
+Specify the required information hierarchy.
 
- Click/tap targets ≥ 44x44px (validated by automated test)
- Color contrast ≥ 4.5:1 (validated by axe-core)
- Form validation messages tested (all error states)
+**Above the fold (always visible):**
+- [ ] Task title
+- [ ] Priority
+- [ ] Current stage
+- [ ] Current owner / assigned agent
+- [ ] Active / blocked / waiting state
+- [ ] Next required action
+- [ ] Linked PR status
+- [ ] Child task status
+- [ ] Aging / countdown timers
+
+**Below the fold or in tabs:**
+- [ ] User story / business context
+- [ ] Acceptance criteria
+- [ ] Definition of Done
+- [ ] Technical specification
+- [ ] Monitoring specification
+- [ ] Threaded comments
+- [ ] Audit log
+- [ ] Linked commits / PRs
+- [ ] Linked child tasks
+- [ ] Telemetry / logs / traces
+
+10.5 Threaded Comment Model
+Comments are workflow objects, not generic chat. Define all comment types used by this story.
+
+**Allowed types:**
+- Question
+- Escalation
+- Consultation
+- Decision
+- Note
+
+For each type, define:
+- author
+- recipient/tag behavior
+- resolved/unresolved state
+- blocking/non-blocking state
+- whether it creates a workflow event
+
+10.6 Escalation UX
+Define the structured handoff model.
+
+Required escalation fields:
+- target agent
+- reason
+- severity
+- blocking/advisory state
+- context package preview
+- logs / traces / attachments
+- reproduction steps
+- expected outcome
+
+10.7 Stage Visualization
+Define how the workflow state appears in the interface.
+
+Must visually show:
+- completed stages
+- current stage
+- blocked stage
+- backward transition state
+- waiting on PM answer
+- waiting on child task
+- waiting on PR merge
+- expired monitoring state
+
+10.8 Component Library
+- Components used: [Material-UI, shadcn/ui, custom]
+- New components created: [list]
+- Design system references: [list]
+
+10.9 Responsive Design
+- Breakpoints: 320px (mobile), 768px (tablet), 1024px (desktop), 1920px (large)
+- Mobile-first notes:
+- Any desktop-only dense views:
+
+10.10 Visual Regression (MANDATORY — replaces manual UI review)
+- Percy/Chromatic/Playwright baseline screenshots committed
+- Threshold: 0.05% pixel diff tolerance
+- All breakpoints covered
+- All interactive states captured (hover, focus, error, disabled, loading)
+
+10.11 Accessibility Automation (NOT OPTIONAL)
+- WCAG 2.2 Level AA compliance automated
+- axe-core runs in every E2E test (0 violations allowed)
+- Pa11y-ci in CI pipeline
+- Keyboard navigation E2E test:
+  - Tab order logical
+  - Enter/Space activate buttons
+  - Esc closes modals
+  - Arrow keys work in lists/grids
+- Screen reader testing:
+  - All images have alt text
+  - Form inputs have labels
+  - ARIA roles/labels validated
+  - Live regions for dynamic content
+
+10.12 Interaction Recording (✅ Complex+)
+- Playwright trace on failure → uploaded to S3/artifact storage
+- Session replay tool tags: feature:[name]
+- Funnel tracking: [list steps]
+
+10.13 Automated UX Validation
+- Click/tap targets ≥ 44x44px (validated by automated test)
+- Color contrast ≥ 4.5:1 (validated by axe-core)
+- Form validation messages tested (all error states)
 11. Deployment & Release Strategy ✅ ALL TIERS (changed from Complex+)
 Deployment Type
 

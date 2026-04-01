@@ -1,0 +1,12 @@
+flowchart LR
+    PM[Product Manager] --> UI[Task Detail UI / Task Board UI]
+    UI --> FF[Feature Flag: ff_assign-ai-agent-to-task]
+    UI --> API[Task Assignment API]
+    API --> AUTH[AuthN/AuthZ Layer]
+    API --> VAL[Request Validation]
+    API --> SVC[Task Assignment Service]
+    SVC --> DB[(Tasks Database)]
+    SVC --> AUDIT[(Audit Log Store)]
+    SVC --> AGENTS[(AI Agent Roster Source)]
+    SVC --> OBS[Structured Logs / Metrics / Traces]
+    OBS --> DASH[Monitoring Dashboard & Alerts]

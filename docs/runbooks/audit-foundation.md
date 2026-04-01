@@ -1,0 +1,234 @@
+# Audit Foundation Runbook
+
+## Scope
+This slice supports both the original file-backed audit path and a PostgreSQL-backed store contract, plus bounded async workers for projection catch-up and outbox publication.
+
+Supabase Postgres is the canonical production/staging database. Dockerized Postgres is now the canonical local development/testing path. File-backed persistence remains available only as a fallback local harness.
+
+`ff_audit_foundation` is now a real runtime gate. When disabled, audit API routes return `503 feature_disabled`, store methods reject writes/reads, and workers stop making progress until the flag is re-enabled.
+
+## What exists
+### File backend artifacts
+- Source of truth: `data/workflow-audit-events.jsonl`
+- Idempotency index: `data/workflow-audit-idempotency.json`
+- Projection queue: `data/workflow-audit-projection-queue.jsonl`
+- Outbox queue: `data/workflow-audit-outbox.jsonl`
+- Read models:
+  - `data/task-history-projection.json`
+  - `data/task-current-state-projection.json`
+  - `data/task-relationship-projection.json`
+- Structured audit telemetry: `observability/workflow-audit.log`
+- Metrics export: `GET /metrics`
+
+### PostgreSQL backend artifacts
+- `audit_events` — append-only source of truth
+- `audit_projection_queue` — projection work queue
+- `audit_outbox` — downstream publication queue
+- `audit_task_history` — projected task history read model
+- `audit_task_current_state` — projected current-state read model
+- `audit_task_relationships` — projected relationship read model
+- `audit_metrics` — persisted telemetry counters/gauges
+
+## HTTP authz model in this slice
+Default auth contract: bearer JWT with tenant + actor claims.
+
+Legacy fallback headers are accepted **only** when `ALLOW_LEGACY_HEADERS=true`:
+- `x-tenant-id`
+- `x-actor-id`
+- `x-roles`
+
+Supported roles:
+- `reader` — read history/state/relationships/observability
+- `contributor` — append audit events plus read
+- `sre` — read plus metrics access
+- `admin` — full access including metrics and projection processing
+
+## API error/logging contract
+Audit HTTP responses now follow a standardized envelope:
+
+```json
+{
+  "error": {
+    "code": "feature_disabled",
+    "message": "Audit foundation is disabled by ff_audit_foundation",
+    "details": { "feature": "ff_audit_foundation" },
+    "request_id": "..."
+  }
+}
+```
+
+Every response also includes `x-request-id`. Error logs in `observability/workflow-audit.log` include:
+- `feature`
+- `action`
+- `outcome`
+- `request_id`
+- `status_code`
+- `error_code`
+- `error_message`
+- `duration_ms`
+
+Successful read/write access is now logged with `action=audit_access` so tenant-scoped history/state/metrics reads are auditable.
+
+## Tenant isolation guarantees in this slice
+- Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
+- File-backed projections are keyed by `tenant_id::task_id`, not bare `task_id`, so same task ids in different tenants do not overwrite each other.
+- PostgreSQL production posture now expects a `(tenant_id, idempotency_key)` uniqueness contract.
+
+## History API pagination
+`GET /tasks/:id/history` still returns a plain array for backwards-compatible unpaginated reads.
+
+When `limit` and/or `cursor` is present, the route returns:
+
+```json
+{
+  "items": [],
+  "page_info": {
+    "limit": 100,
+    "next_cursor": "42",
+    "has_more": true
+  }
+}
+```
+
+`cursor` is an exclusive sequence-number cursor.
+
+## Supported event types in this slice
+See `lib/audit/event-types.js`. The store handles the declared workflow event types used by Issue #22: task creation, assignment changes, stage transitions, child links, escalation/decision records, and closure.
+
+## Runtime configuration
+- `FF_AUDIT_FOUNDATION=false` — hard-disable the slice at runtime
+- `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; if omitted, runtime prefers `postgres` when `DATABASE_URL` is present and otherwise falls back to `file`
+- `ALLOW_LEGACY_HEADERS=true` — permit legacy non-JWT auth fallback
+- `DATABASE_URL=postgres://...` — required for PostgreSQL backend; in production this should be the Supabase Postgres connection string
+- `ALLOW_FILE_AUDIT_BACKEND_IN_PRODUCTION=true` — emergency escape hatch only; normal production posture should leave this unset/false
+- `PUSHGATEWAY_URL=http://...` — optional worker metric push target
+
+## Deployment posture
+- **Production:** Supabase Postgres only. `run-audit-api.js` and `run-audit-workers.js` now fail fast if production is configured to use the file backend or if `DATABASE_URL` is missing for Postgres.
+- **Local development / test:** use Dockerized Postgres by default. `docker-compose.yml` now runs Postgres with disposable storage (`tmpfs`), so `docker compose down -v` / `npm run dev:postgres:reset` gives a clean slate quickly.
+- **Fallback local harness:** file backend remains available for fast isolated runs. Set `AUDIT_STORE_BACKEND=file` and keep `NODE_ENV=development` or `test`.
+- **Managed Postgres in dev/staging:** use the same Postgres path as production by setting `DATABASE_URL`; no code-path change is required.
+
+## Local Docker workflow
+### Start disposable local Postgres
+```bash
+npm run dev:postgres:up
+```
+
+### Start the full local audit stack
+```bash
+npm run dev:audit:up
+```
+
+### Reset local state completely
+```bash
+npm run dev:postgres:reset
+# or
+npm run dev:audit:reset
+```
+
+### Run the Postgres integration suite against Docker and tear it down automatically
+```bash
+npm run test:integration:docker
+```
+
+### Host-run scripts/tests against Docker Postgres
+```bash
+export DATABASE_URL=postgres://audit:audit@127.0.0.1:5432/engineering_team
+npm run audit:migrate
+npm run test:integration:postgres
+```
+
+## Worker operations
+### Rebuild projections from source of truth
+```bash
+npm run audit:rebuild -- /path/to/repo-root
+```
+
+### Process queued projection work
+```bash
+npm run audit:project -- /path/to/repo-root 100
+```
+
+### Process queued outbox messages
+```bash
+npm run audit:outbox -- /path/to/repo-root 100
+```
+
+### Trigger bounded projection processing via HTTP
+```bash
+curl -X POST \
+  -H 'Authorization: Bearer <jwt>' \
+  'http://localhost:3000/projections/process?limit=100'
+```
+
+## Failure modes
+### Duplicate writes
+Symptom: repeated command delivery.
+Expected behavior: same idempotency key returns the existing event and does not append a second row.
+
+### Projection lag / drift
+Symptom: queued events are older than the read models and `workflow_projection_lag_seconds` rises.
+Immediate action:
+1. Check `/metrics` for `workflow_projection_lag_seconds`, `projection_checkpoint`, and `workflow_projection_failures_total`.
+2. Run `npm run audit:project -- /path/to/repo-root 100`.
+3. If projections are corrupted, rebuild with `npm run audit:rebuild -- /path/to/repo-root`.
+
+### Outbox stuck
+Symptom: audit events persist but downstream publishers do not receive them.
+Immediate action:
+1. Check `/metrics` for `workflow_outbox_publish_failures_total` and `outbox_checkpoint`.
+2. Review `observability/workflow-audit.log` for `outbox_publish` failures.
+3. Retry with `npm run audit:outbox -- /path/to/repo-root 100` after fixing publisher issues.
+
+### Feature disabled / kill switch engaged
+Symptom: API calls fail with `503 feature_disabled` and workers or store methods reject with `ff_audit_foundation` in the error.
+Immediate action:
+1. Confirm whether the disable is intentional.
+2. Re-enable `FF_AUDIT_FOUNDATION` when safe.
+3. Replay queues if lag accumulated while disabled.
+
+## Observability hooks
+Structured log fields emitted in this slice:
+- `feature`
+- `action`
+- `outcome`
+- `task_id`
+- `event_id`
+- `event_type`
+- `correlation_id`
+- `trace_id`
+- `duration_ms`
+
+Prometheus-style metrics exported include:
+- `workflow_audit_events_written_total`
+- `workflow_audit_write_failures_total`
+- `workflow_history_queries_total`
+- `workflow_history_errors_total`
+- `workflow_history_query_latency_regressions_total`
+- `workflow_projection_events_processed_total`
+- `workflow_projection_failures_total`
+- `workflow_projection_lag_seconds`
+- `workflow_outbox_events_published_total`
+- `workflow_outbox_publish_failures_total`
+- `projection_checkpoint`
+- `outbox_checkpoint`
+- `last_write_duration_ms`
+- `last_history_query_duration_ms`
+
+## Validation suites
+- Unit: `npm run test:unit`
+- Contract: `npm run test:contract`
+- E2E API acceptance coverage: `npm run test:e2e`
+- Property-based invariants: `npm run test:property`
+- Performance: `npm run test:performance`
+- Security: `npm run test:security`
+- Chaos: `npm run test:chaos`
+- Postgres integration against disposable Docker Postgres: `npm run test:integration:docker`
+- Manual host-run Postgres integration: `DATABASE_URL=postgres://audit:audit@127.0.0.1:5432/engineering_team npm run test:integration:postgres`
+
+## UI-linked validation note
+This repository does not yet ship the browser-rendered task history / telemetry UI referenced in the issue's UX section. Because of that, `tests/visual/` and `tests/accessibility/` are documented placeholders rather than executable suites today. They should become blocking executable coverage once a real UI surface lands.
+
+## Schema naming note
+The implementation uses `audit_task_*` for PostgreSQL read models and `task-*-projection.json` for the file backend. That naming split is now documented rather than silently divergent; no schema expansion from Issue #24 was pulled into this pass.

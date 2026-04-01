@@ -1,0 +1,43 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid var(--telemetry-card-border, #e2e8f0);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--telemetry-card-bg, #ffffff);
+  display: grid;
+  gap: 6px;
+}
+
+.label,
+.value,
+.hint {
+  margin: 0;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--telemetry-label, #475569);
+}
+
+.value {
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--telemetry-value, #0f172a);
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--telemetry-hint, #475569);
+}
+
+.tone_neutral { border-color: var(--telemetry-tone-neutral, #cbd5e1); }
+.tone_info { border-color: var(--telemetry-tone-info, #93c5fd); }
+.tone_success { border-color: var(--telemetry-tone-success, #86efac); }
+.tone_warning { border-color: var(--telemetry-tone-warning, #fcd34d); }
+.tone_danger { border-color: var(--telemetry-tone-danger, #fca5a5); }

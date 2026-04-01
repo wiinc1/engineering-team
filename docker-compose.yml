@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: audit
+      POSTGRES_PASSWORD: audit
+      POSTGRES_DB: engineering_team
+    ports: ['5432:5432']
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U audit -d engineering_team']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  pushgateway:
+    image: prom/pushgateway:latest
+    ports: ['9091:9091']
+  audit-api:
+    build: .
+    command: sh -c "node scripts/migrate-audit-postgres.js && node scripts/run-audit-api.js"
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      AUDIT_STORE_BACKEND: postgres
+      DATABASE_URL: postgres://audit:audit@postgres:5432/engineering_team
+      AUTH_JWT_SECRET: dev-secret
+      ALLOW_LEGACY_HEADERS: 'false'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports: ['3000:3000']
+  audit-workers:
+    build: .
+    command: sh -c "node scripts/migrate-audit-postgres.js && node scripts/run-audit-workers.js"
+    environment:
+      NODE_ENV: development
+      AUDIT_STORE_BACKEND: postgres
+      DATABASE_URL: postgres://audit:audit@postgres:5432/engineering_team
+      PUSHGATEWAY_URL: http://pushgateway:9091
+      OUTBOX_WEBHOOK_URL: ''
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pushgateway:
+        condition: service_started

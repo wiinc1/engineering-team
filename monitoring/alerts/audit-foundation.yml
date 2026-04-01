@@ -1,0 +1,52 @@
+groups:
+  - name: audit-foundation
+    rules:
+      - alert: WorkflowAuditHistoryErrors
+        expr: workflow_history_errors_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Workflow audit history path reported errors
+      - alert: WorkflowAuditWriteFailures
+        expr: increase(workflow_audit_write_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Workflow audit writes are failing
+      - alert: WorkflowHistoryLatencyRegression
+        expr: increase(workflow_history_query_latency_regressions_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Workflow task-history query latency regressed past threshold
+      - alert: WorkflowProjectionLag
+        expr: workflow_projection_lag_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Workflow projection lag exceeded target
+      - alert: WorkflowProjectionFailures
+        expr: increase(workflow_projection_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Workflow projection worker is failing events
+      - alert: WorkflowOutboxPublishFailures
+        expr: increase(workflow_outbox_publish_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Workflow outbox publisher is failing events
+      - alert: WorkflowAuditMissingTelemetry
+        expr: workflow_audit_events_written_total > 0 and absent(workflow_projection_lag_seconds)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Audit writes are occurring without the expected telemetry markers
