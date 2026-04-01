@@ -170,6 +170,117 @@ test('supports history pagination and writes explicit audit-access logs for read
   }, { historyLatencyRegressionThresholdMs: 0 });
 });
 
+test('supports AI-agent registry reads and assignment writes on the audit API path', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const createHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-204/events`, {
+      method: 'POST',
+      headers: createHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-204', payload: { title: 'Assigned task', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/ai-agents`, { headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }) });
+    assert.equal(response.status, 200);
+    const agents = await response.json();
+    assert.equal(agents.items.some(agent => agent.id === 'qa'), true);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-204/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+    const assigned = await response.json();
+    assert.equal(assigned.data.owner.agentId, 'qa');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-204/state`, { headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }) });
+    const state = await response.json();
+    assert.equal(state.assignee, 'qa');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-204/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: null }),
+    });
+    assert.equal(response.status, 200);
+    const unassigned = await response.json();
+    assert.equal(unassigned.data.owner, null);
+  });
+});
+
+test('rejects unauthorized or invalid AI-agent assignment attempts', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    await fetch(`${baseUrl}/tasks/TSK-205/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-205', payload: { title: 'Protected assignment task', initial_stage: 'BACKLOG' } }),
+    });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-205/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-205/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'not-real' }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'invalid_agent');
+  });
+});
+
+test('accepts /api-prefixed assignment and agent routes for docs compatibility', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    await fetch(`${baseUrl}/tasks/TSK-206/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-206', payload: { title: 'Doc compatibility task', initial_stage: 'BACKLOG' } }),
+    });
+
+    let response = await fetch(`${baseUrl}/api/ai-agents`, { headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }) });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).items.some(agent => agent.id === 'qa'), true);
+
+    response = await fetch(`${baseUrl}/api/tasks/TSK-206/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.owner.agentId, 'qa');
+  });
+});
+
 test('returns standardized error payload when feature flag kill switch is off', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const response = await fetch(`${baseUrl}/tasks/TSK-999/history`, {

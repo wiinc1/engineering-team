@@ -121,10 +121,14 @@ async function parseJsonResponse(response) {
 }
 
 function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders } = {}) {
-  const request = async (path) => {
+  const request = async (path, init = {}) => {
     const response = await fetchImpl(`${baseUrl}${path}`, {
-      method: 'GET',
-      headers: typeof getHeaders === 'function' ? await getHeaders() : undefined,
+      method: init.method || 'GET',
+      headers: {
+        ...(typeof getHeaders === 'function' ? await getHeaders() : undefined),
+        ...(init.headers || {}),
+      },
+      body: init.body,
     });
 
     return parseJsonResponse(response);
@@ -140,6 +144,18 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
     },
     fetchObservabilitySummary(taskId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/observability-summary`);
+    },
+    fetchAssignableAgents() {
+      return request('/ai-agents');
+    },
+    assignTaskOwner(taskId, agentId) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ agentId }),
+      });
     },
     async fetchTaskDetailScreenData(taskId, options = {}) {
       const [summary, history, telemetry] = await Promise.all([
