@@ -1,0 +1,17 @@
+{
+  "title": "Audit Foundation",
+  "panels": [
+    { "name": "workflow_audit_events_written_total", "type": "stat" },
+    { "name": "workflow_audit_write_failures_total", "type": "stat" },
+    { "name": "workflow_history_queries_total", "type": "stat" },
+    { "name": "workflow_history_errors_total", "type": "stat" },
+    { "name": "workflow_history_query_latency_regressions_total", "type": "stat" },
+    { "name": "workflow_projection_failures_total", "type": "stat" },
+    { "name": "workflow_outbox_publish_failures_total", "type": "stat" },
+    { "name": "last_write_duration_ms", "type": "timeseries" },
+    { "name": "last_history_query_duration_ms", "type": "timeseries" },
+    { "name": "workflow_projection_lag_seconds", "type": "timeseries" },
+    { "name": "projection_checkpoint", "type": "stat" },
+    { "name": "outbox_checkpoint", "type": "stat" }
+  ]
+}

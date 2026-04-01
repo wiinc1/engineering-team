@@ -1,0 +1,10 @@
+{
+  "title": "Task Assignment",
+  "description": "Dashboard for task assignment request rate, error rate, latency, and assignment success rate.",
+  "panels": [
+    { "title": "Request Rate", "metric": "feature_task_assignment_requests_total" },
+    { "title": "Error Rate", "metric": "feature_task_assignment_errors_total" },
+    { "title": "Latency p50/p95/p99", "metric": "feature_task_assignment_duration_seconds" },
+    { "title": "Assignment Success Rate", "metric": "feature_task_assignment_business_metric" }
+  ]
+}

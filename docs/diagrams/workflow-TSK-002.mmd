@@ -1,0 +1,22 @@
+flowchart TD
+    A[PM opens task detail page] --> B[System loads task data and current owner]
+    B --> C[PM opens AI agent selector]
+    C --> D[System loads valid active AI agents]
+    D --> E{Agent selected?}
+    E -- No --> F[No change]
+    E -- Yes --> G[PM submits assignment]
+    G --> H[API authenticates user]
+    H --> I{Authorized to manage tasks?}
+    I -- No --> J[Return 403 and show error]
+    I -- Yes --> K[Validate request payload and agent id]
+    K --> L{Valid task and valid active agent?}
+    L -- No --> M[Return 400 or 404 and keep owner unchanged]
+    L -- Yes --> N[Update task owner in persistence layer]
+    N --> O[Write audit log event with old and new owner]
+    O --> P[Return updated task payload]
+    P --> Q[UI refreshes task detail and task card]
+    Q --> R[Assigned agent queue/inbox reflects new ownership]
+
+    N --> S{Concurrent update conflict?}
+    S -- Yes --> T[Return 409 and prompt refresh]
+    S -- No --> O

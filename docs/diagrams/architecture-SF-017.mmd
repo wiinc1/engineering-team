@@ -1,0 +1,10 @@
+flowchart LR
+  CR[Discord command router] --> AUDIT[Audit store]
+  AUDIT --> EVENTS[(Append-only event stream)]
+  AUDIT --> IDEM[(Idempotency index)]
+  AUDIT --> PROJ1[(History projection)]
+  AUDIT --> PROJ2[(Current-state projection)]
+  AUDIT --> PROJ3[(Relationship projection)]
+  AUDIT --> OBS[Structured observability log]
+  UI[Task history consumer] --> PROJ1
+  OP[Operator telemetry workflow] --> OBS

@@ -1,0 +1,13 @@
+alerts:
+  - name: task-assignment-p0-unavailable
+    severity: P0
+    condition: assignment_endpoint_unavailable
+    route: pagerduty
+  - name: task-assignment-p1-error-rate
+    severity: P1
+    condition: error_rate_gt_1_percent_5m
+    route: slack:#incidents
+  - name: task-assignment-p2-latency-degradation
+    severity: P2
+    condition: p95_latency_gt_2x_baseline_10m
+    route: email

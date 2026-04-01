@@ -1,0 +1,294 @@
+openapi: 3.1.0
+info:
+  title: Task Detail History & Telemetry Read API
+  version: 0.2.0
+  description: Canonical read-side contracts for SF-019 / issue #27. These contracts are additive on top of the SF-017 audit foundation and are safe for the Task Detail UI to consume without frontend inference.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: x-tenant-id
+      in: header
+      required: false
+      description: Legacy-only fallback header when `ALLOW_LEGACY_HEADERS=true`; JWT bearer auth is the default contract.
+      schema: { type: string }
+    ActorHeader:
+      name: x-actor-id
+      in: header
+      required: false
+      description: Legacy-only fallback header when `ALLOW_LEGACY_HEADERS=true`; JWT bearer auth is the default contract.
+      schema: { type: string }
+  schemas:
+    StandardErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+    TaskSummaryResponse:
+      type: object
+      required: [task_id, tenant_id, title, priority, current_stage, current_owner, blocked, freshness, status_indicator, closed]
+      properties:
+        task_id: { type: string }
+        tenant_id: { type: string }
+        title: { type: string }
+        priority: { type: [string, 'null'] }
+        current_stage: { type: [string, 'null'] }
+        current_owner: { type: [string, 'null'] }
+        owner:
+          type: [object, 'null']
+          properties:
+            actor_id: { type: string }
+            display_name: { type: string }
+        blocked: { type: boolean }
+        waiting_state: { type: [string, 'null'] }
+        next_required_action: { type: [string, 'null'] }
+        freshness:
+          type: object
+          required: [status, last_updated_at]
+          properties:
+            status: { type: string, enum: [fresh, stale, unknown] }
+            last_updated_at: { type: [string, 'null'], format: date-time }
+        status_indicator: { type: string }
+        status:
+          type: object
+          required: [blocked, waiting_state, closed, freshness]
+          properties:
+            blocked: { type: boolean }
+            waiting_state: { type: [string, 'null'] }
+            closed: { type: boolean }
+            freshness: { type: string }
+        closed: { type: boolean }
+    TaskHistoryItem:
+      type: object
+      required: [item_id, event_id, event_type, occurred_at, actor, sequence_number, summary, display]
+      properties:
+        item_id: { type: string, description: Stable timeline item identifier. Equal to event_id for canonical audit events. }
+        event_id: { type: string }
+        tenant_id: { type: string }
+        event_type: { type: string }
+        event_type_label: { type: string }
+        occurred_at: { type: string, format: date-time }
+        recorded_at: { type: [string, 'null'], format: date-time }
+        actor:
+          type: object
+          required: [actor_id, actor_type]
+          properties:
+            actor_id: { type: string }
+            actor_type: { type: string }
+            display_name: { type: [string, 'null'] }
+        actor_id: { type: string }
+        actor_type: { type: string }
+        sequence_number: { type: integer }
+        summary: { type: string, description: Backend-generated canonical human-readable timeline summary. }
+        display:
+          type: object
+          required: [summary, event_type_label, is_known_type, fallback_used]
+          properties:
+            summary: { type: string }
+            event_type_label: { type: string }
+            is_known_type: { type: boolean }
+            fallback_used: { type: boolean }
+        correlation:
+          type: [object, 'null']
+          properties:
+            correlation_id: { type: [string, 'null'] }
+            trace_id: { type: [string, 'null'] }
+        source: { type: [string, 'null'] }
+        payload:
+          type: object
+          additionalProperties: true
+    PaginatedTaskHistoryResponse:
+      type: object
+      required: [items, page_info]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskHistoryItem'
+        page_info:
+          type: object
+          required: [limit, next_cursor, has_more]
+          properties:
+            limit: { type: integer }
+            next_cursor: { type: [string, 'null'] }
+            has_more: { type: boolean }
+    ObservabilitySummaryResponse:
+      type: object
+      required: [task_id, tenant_id, status, last_updated_at, freshness, degraded, event_count, key_signals, correlation, access]
+      properties:
+        task_id: { type: string }
+        tenant_id: { type: string }
+        status: { type: string, enum: [ok, degraded] }
+        last_updated_at: { type: [string, 'null'], format: date-time }
+        freshness:
+          type: object
+          required: [status, last_updated_at]
+          properties:
+            status: { type: string, enum: [fresh, stale] }
+            last_updated_at: { type: [string, 'null'], format: date-time }
+        degraded: { type: boolean }
+        stale: { type: boolean }
+        event_count: { type: integer }
+        key_signals:
+          type: object
+          additionalProperties: true
+        correlation:
+          type: object
+          required: [approved_correlation_ids, approved_links]
+          properties:
+            approved_correlation_ids:
+              type: array
+              items: { type: string }
+            approved_links:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+        access:
+          type: object
+          required: [restricted, scope, omission_applied, omitted_fields]
+          properties:
+            restricted: { type: boolean }
+            scope: { type: string, enum: [summary_only, operator] }
+            omission_applied: { type: boolean }
+            omitted_fields:
+              type: array
+              items: { type: string }
+        last_event_id: { type: string }
+        last_event_type: { type: string }
+        current_stage: { type: [string, 'null'] }
+        correlation_ids:
+          type: array
+          items: { type: string }
+        trace_ids:
+          type: array
+          items: { type: string }
+        metrics:
+          type: object
+          additionalProperties: true
+        links:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token / auth context
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+    Forbidden:
+      description: Authenticated caller lacks the required role permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+    FeatureDisabled:
+      description: Audit foundation is disabled by runtime feature flag
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+security:
+  - BearerAuth: []
+paths:
+  /tasks/{id}:
+    get:
+      summary: Canonical Task Detail summary contract
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Task summary for above-the-fold Task Detail rendering
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskSummaryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/FeatureDisabled' }
+  /tasks/{id}/history:
+    get:
+      summary: Query paginated projected task history, newest first
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+        - name: eventType
+          in: query
+          schema: { type: string }
+          description: Repeatable server-side event-type filter.
+        - name: actorId
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date-time }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 25 }
+        - name: cursor
+          in: query
+          schema: { type: integer, minimum: 0 }
+          description: Exclusive sequence-number cursor for the next page.
+      responses:
+        '200':
+          description: Paginated history timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTaskHistoryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/FeatureDisabled' }
+  /tasks/{id}/observability-summary:
+    get:
+      summary: Return role-appropriate telemetry summary and approved correlation pointers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Observability summary for Task Detail telemetry tab
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObservabilitySummaryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/FeatureDisabled' }

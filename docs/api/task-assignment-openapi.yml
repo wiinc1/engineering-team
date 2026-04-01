@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: Task Assignment API
+  version: 1.0.0
+  description: API contract for assigning an AI agent owner to a task.
+paths:
+  /api/tasks/{taskId}/assignment:
+    patch:
+      summary: Assign or reassign an AI agent owner to a task
+      operationId: assignTaskOwner
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - agentId
+              properties:
+                agentId:
+                  type: string
+                  description: Unique identifier of the active AI agent to assign
+                  example: qa-engineer
+      responses:
+        '200':
+          description: Task owner updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      taskId:
+                        type: string
+                        example: TSK-002
+                      owner:
+                        type: object
+                        properties:
+                          agentId:
+                            type: string
+                            example: qa-engineer
+                          displayName:
+                            type: string
+                            example: QA Engineer
+                          role:
+                            type: string
+                            example: QA
+                      updatedAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: Invalid or inactive agent id
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized
+        '404':
+          description: Task not found
+        '409':
+          description: Assignment conflict

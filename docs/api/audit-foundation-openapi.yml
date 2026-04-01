@@ -1,0 +1,274 @@
+openapi: 3.1.0
+info:
+  title: Audit Foundation API
+  version: 0.1.0
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantHeader:
+      name: x-tenant-id
+      in: header
+      required: false
+      description: Legacy-only fallback header when `ALLOW_LEGACY_HEADERS=true`; JWT bearer auth is the default contract.
+      schema: { type: string }
+    ActorHeader:
+      name: x-actor-id
+      in: header
+      required: false
+      description: Legacy-only fallback header when `ALLOW_LEGACY_HEADERS=true`; JWT bearer auth is the default contract.
+      schema: { type: string }
+  schemas:
+    TaskSummaryResponse:
+      type: object
+      properties:
+        task_id: { type: string }
+        title: { type: string }
+        owner:
+          type: [object, 'null']
+          properties:
+            actor_id: { type: string }
+            display_name: { type: string }
+    PaginatedTaskHistoryResponse:
+      type: object
+      required: [items, page_info]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        page_info:
+          type: object
+          required: [limit, next_cursor, has_more]
+          properties:
+            limit: { type: integer }
+            next_cursor: { type: [string, 'null'] }
+            has_more: { type: boolean }
+    StandardErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            request_id: { type: string }
+            details:
+              type: object
+              additionalProperties: true
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token / auth context
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+    Forbidden:
+      description: Authenticated caller lacks the required role permission
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+    FeatureDisabled:
+      description: Audit foundation is disabled by runtime feature flag
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+security:
+  - BearerAuth: []
+paths:
+  /tasks/{id}/events:
+    post:
+      summary: Append a workflow audit event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType, actorType, idempotencyKey]
+              properties:
+                eventType: { type: string }
+                actorId: { type: string }
+                actorType: { type: string }
+                idempotencyKey: { type: string }
+                payload: { type: object, additionalProperties: true }
+      responses:
+        '202':
+          description: Event accepted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}:
+    get:
+      summary: Canonical task detail summary response
+      responses:
+        '200':
+          description: Task summary response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskSummaryResponse'
+  /tasks/{id}/history:
+    get:
+      summary: Query projected task history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+        - name: eventType
+          in: query
+          schema: { type: string }
+        - name: actorId
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date-time }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500 }
+          description: Optional cursor-pagination page size. When present, the API returns `{ items, page_info }`.
+        - name: cursor
+          in: query
+          schema: { type: integer, minimum: 0 }
+          description: Exclusive sequence-number cursor for the next page.
+      responses:
+        '200':
+          description: Projected history rows
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  - $ref: '#/components/schemas/PaginatedTaskHistoryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/state:
+    get:
+      summary: Query projected current state for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Current state response
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/relationships:
+    get:
+      summary: Query projected relationship view for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Relationship response
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/observability-summary:
+    get:
+      summary: Return non-authoritative observability summary and approved_correlation_ids / correlation pointers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Summary response
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /metrics:
+    get:
+      summary: Export Prometheus-style audit metrics
+      responses:
+        '200':
+          description: Metrics payload
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /projections/process:
+    post:
+      summary: Trigger bounded projection queue processing
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 100
+      responses:
+        '202':
+          description: Projection processing accepted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
