@@ -1,15 +1,19 @@
 openapi: 3.0.3
 info:
   title: Task Assignment API
-  version: 1.0.0
-  description: API contract for assigning an AI agent owner to a task.
+  version: 1.1.0
+  description: |
+    API contract for assigning an AI agent owner to a task.
+    The runtime accepts both `/tasks/...` and `/api/tasks/...` paths; `/tasks/...` is the canonical route shape used elsewhere in this repo.
 paths:
-  /api/tasks/{taskId}/assignment:
+  /tasks/{taskId}/assignment:
     patch:
-      summary: Assign or reassign an AI agent owner to a task
+      summary: Assign, reassign, or clear an AI agent owner for a task
       operationId: assignTaskOwner
       tags:
         - Tasks
+      security:
+        - BearerAuth: []
       parameters:
         - name: taskId
           in: path
@@ -22,13 +26,20 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - agentId
               properties:
                 agentId:
+                  type:
+                    - string
+                    - 'null'
+                  description: Unique identifier of the active AI agent to assign. Use `null` or an empty string to clear assignment.
+                  example: qa
+                actorType:
                   type: string
-                  description: Unique identifier of the active AI agent to assign
-                  example: qa-engineer
+                  description: Optional actor type override for the generated audit event.
+                  example: user
+                idempotencyKey:
+                  type: string
+                  description: Optional caller-supplied idempotency key.
       responses:
         '200':
           description: Task owner updated
@@ -36,38 +47,53 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [success, data]
                 properties:
                   success:
                     type: boolean
                     example: true
                   data:
                     type: object
+                    required: [taskId, owner, updatedAt, duplicate, eventId]
                     properties:
                       taskId:
                         type: string
                         example: TSK-002
                       owner:
-                        type: object
-                        properties:
-                          agentId:
-                            type: string
-                            example: qa-engineer
-                          displayName:
-                            type: string
-                            example: QA Engineer
-                          role:
-                            type: string
-                            example: QA
+                        oneOf:
+                          - type: 'null'
+                          - type: object
+                            required: [agentId, displayName, role]
+                            properties:
+                              agentId:
+                                type: string
+                                example: qa
+                              displayName:
+                                type: string
+                                example: QA Engineer
+                              role:
+                                type: string
+                                nullable: true
+                                example: QA
                       updatedAt:
                         type: string
                         format: date-time
+                      duplicate:
+                        type: boolean
+                        description: True when the idempotent event write was deduplicated.
+                      eventId:
+                        type: string
         '400':
           description: Invalid or inactive agent id
         '401':
-          description: Unauthenticated
+          description: Missing or invalid bearer token
         '403':
-          description: Unauthorized
+          description: Caller lacks `assignment:write`
         '404':
           description: Task not found
-        '409':
-          description: Assignment conflict
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

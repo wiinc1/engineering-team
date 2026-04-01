@@ -71,6 +71,7 @@ A minimal Vite + React browser surface now mounts the task-detail feature throug
 - Route/page module still lives at `src/features/task-detail/route.js`
 - Feature shell still lives at `src/features/task-detail/`
 - Internal-use auth bootstrap is intentionally minimal: paste a bearer JWT into the session panel and the browser stores it in `sessionStorage` for the current tab only.
+- PM/admin tokens also unlock the task assignment control, which reads `GET /ai-agents` and writes `PATCH /tasks/:taskId/assignment`.
 
 Run it locally:
 - `npm install`

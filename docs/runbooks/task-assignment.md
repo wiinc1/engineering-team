@@ -3,14 +3,19 @@
 ## What this feature does
 Allows an authorized Product Manager to assign or reassign an AI agent as the owner of a task.
 
+## Live route shape
+- Canonical runtime route: `PATCH /tasks/{taskId}/assignment`
+- Compatibility alias also accepted by the API server: `PATCH /api/tasks/{taskId}/assignment`
+- Agent roster endpoint for the UI: `GET /ai-agents` (also accepts `/api/ai-agents`)
+
 ## How to verify the feature is working
-1. Open a task in an environment where `ff_assign-ai-agent-to-task` is enabled.
+1. Open a task in an environment where the audit/task-detail UI is enabled.
 2. Confirm the owner selector renders for authorized PM users.
 3. Assign a valid active AI agent.
 4. Verify the owner updates on the task detail page.
-5. Verify the task card/list view reflects the new owner.
+5. Verify `GET /tasks/{taskId}` returns the new `current_owner` and `owner` projection fields.
 6. Verify an audit log entry exists with previous owner and new owner.
-7. Verify the assigned agent queue shows the task.
+7. If a downstream list/queue surface is present in your deployment, verify it filters from the projected assignee state.
 
 ## How to rollback
 1. Disable `ff_assign-ai-agent-to-task`.
@@ -22,7 +27,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - **403 Authorization error** → verify user role includes task-management permission.
 - **400 Invalid agent** → verify selected agent exists and is active in the roster source.
 - **404 Task not found** → verify task id and tenant/workspace scope.
-- **409 Conflict** → refresh task detail and retry if concurrent update occurred.
+- **No queue/list update visible** → this repo projects assignee into task state, but does not yet include a dedicated board/inbox UI. Downstream consumers should read `current_owner`/`assignee` from the projection.
 
 ## Dashboards + alert links
 - Dashboard: `/monitoring/dashboards/task-assignment.json`

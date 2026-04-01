@@ -91,6 +91,11 @@ function formatFreshness(summary) {
   return `${summary.freshness.status || 'unknown'} · ${summary.freshness.last_updated_at}`;
 }
 
+function canManageAssignment(tokenClaims) {
+  const roles = Array.isArray(tokenClaims?.roles) ? tokenClaims.roles : [];
+  return roles.includes('pm') || roles.includes('admin');
+}
+
 function useLocationState() {
   const [locationState, setLocationState] = React.useState(() => ({
     pathname: window.location.pathname,
@@ -125,21 +130,33 @@ export function App() {
   const [model, setModel] = React.useState(() =>
     matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname),
   );
+  const [agentOptions, setAgentOptions] = React.useState([]);
+  const [assignmentDraft, setAssignmentDraft] = React.useState('');
+  const [assignmentStatus, setAssignmentStatus] = React.useState({ kind: 'idle', message: '' });
 
-  const pageModule = React.useMemo(() => {
+  const taskClient = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
-    return createTaskDetailPageModule({
-      client: createTaskDetailApiClient({
-        baseUrl,
-        fetchImpl: (...args) => window.fetch(...args),
-        getHeaders: () => buildAuthHeaders(sessionConfig),
-      }),
+    return createTaskDetailApiClient({
+      baseUrl,
+      fetchImpl: (...args) => window.fetch(...args),
+      getHeaders: () => buildAuthHeaders(sessionConfig),
     });
   }, [sessionConfig]);
+
+  const pageModule = React.useMemo(() => {
+    return createTaskDetailPageModule({
+      client: taskClient,
+    });
+  }, [taskClient]);
 
   React.useEffect(() => {
     setDraftSessionConfig(sessionConfig);
   }, [sessionConfig]);
+
+  React.useEffect(() => {
+    setAssignmentDraft(model.summary?.currentOwner || '');
+    setAssignmentStatus({ kind: 'idle', message: '' });
+  }, [model.summary?.taskId, model.summary?.currentOwner]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -176,6 +193,30 @@ export function App() {
     };
   }, [pageModule, pathname, search]);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
+
+    if (!canManageAssignment(tokenClaims)) {
+      setAgentOptions([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    taskClient.fetchAssignableAgents()
+      .then((payload) => {
+        if (!cancelled) setAgentOptions(payload.items || []);
+      })
+      .catch(() => {
+        if (!cancelled) setAgentOptions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [taskClient, sessionConfig.bearerToken]);
+
   const setTab = React.useCallback(
     (tab) => {
       navigate(pathname, writeTaskDetailUrlState({ tab }, search));
@@ -193,6 +234,13 @@ export function App() {
   const routeTaskId = model.route?.taskId || 'TSK-42';
   const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
+  const assignmentEnabled = Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
+
+  const reloadTask = React.useCallback(async () => {
+    setModel(buildLoadingModel(pathname, search));
+    const nextModel = await pageModule.load({ pathname, search });
+    setModel(nextModel);
+  }, [pageModule, pathname, search]);
 
   return (
     <main className="app-shell">
@@ -319,6 +367,58 @@ export function App() {
           <span>Freshness</span>
           <strong>{formatFreshness(model.summary)}</strong>
         </article>
+      </section>
+
+      <section className="assignment-panel" aria-label="Task assignment">
+        <div className="assignment-panel__header">
+          <div>
+            <p className="eyebrow">Assignment</p>
+            <h2>Assign AI agent owner</h2>
+            <p className="lede">Writes to the task assignment endpoint and refreshes the projected owner after success.</p>
+          </div>
+        </div>
+
+        {assignmentEnabled ? (
+          <form
+            className="assignment-form"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!model.route?.taskId) return;
+              try {
+                setAssignmentStatus({ kind: 'loading', message: 'Saving assignment…' });
+                await taskClient.assignTaskOwner(model.route.taskId, assignmentDraft || null);
+                await reloadTask();
+                setAssignmentStatus({ kind: 'success', message: assignmentDraft ? `Assigned to ${assignmentDraft}.` : 'Assignment cleared.' });
+              } catch (error) {
+                setAssignmentStatus({ kind: 'error', message: error.message || 'Assignment update failed.' });
+              }
+            }}
+          >
+            <label>
+              Owner
+              <select value={assignmentDraft} onChange={(event) => setAssignmentDraft(event.target.value)}>
+                <option value="">Unassigned</option>
+                {agentOptions.map((agent) => (
+                  <option key={agent.id} value={agent.id}>{agent.display_name}{agent.role ? ` · ${agent.role}` : ''}</option>
+                ))}
+              </select>
+            </label>
+            <div className="assignment-form__actions">
+              <button type="submit" disabled={assignmentStatus.kind === 'loading'}>
+                {assignmentStatus.kind === 'loading' ? 'Saving…' : 'Save owner'}
+              </button>
+            </div>
+            {assignmentStatus.kind !== 'idle' ? (
+              <p className={`assignment-status assignment-status--${assignmentStatus.kind}`} role={assignmentStatus.kind === 'error' ? 'alert' : 'status'}>
+                {assignmentStatus.message}
+              </p>
+            ) : null}
+          </form>
+        ) : (
+          <p className="assignment-status" role="status">
+            {model.route?.taskId ? 'Assignment controls are available to PM/admin bearer tokens.' : 'Open a task route to manage assignment.'}
+          </p>
+        )}
       </section>
 
       <TaskDetailActivityShell

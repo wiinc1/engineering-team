@@ -1,8 +1,9 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import axe from 'axe-core';
 import { App } from './App';
+import { clearBrowserSessionConfig, writeBrowserSessionConfig } from './session';
 
 function createJsonResponse(payload: unknown, status = 200) {
   return {
@@ -27,6 +28,15 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
         },
         403,
       );
+    }
+
+    if (url.endsWith('/ai-agents')) {
+      return createJsonResponse({
+        items: [
+          { id: 'qa', display_name: 'QA Engineer', role: 'QA', active: true },
+          { id: 'engineer', display_name: 'Engineer', role: 'Engineering', active: true },
+        ],
+      });
     }
 
     if (url.endsWith('/tasks/TSK-42')) {
@@ -87,6 +97,17 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/assignment')) {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          owner: { agentId: 'qa', displayName: 'QA Engineer', role: 'QA' },
+          updatedAt: '2026-04-01T15:01:00.000Z',
+        },
+      });
+    }
+
     throw new Error(`Unhandled fetch URL in test: ${url}`);
   });
 
@@ -104,6 +125,7 @@ function normalizeHtml(element: Element | null) {
 describe('Task detail browser runtime quality coverage', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/tasks/TSK-42');
+    clearBrowserSessionConfig();
   });
 
   afterEach(() => {
@@ -149,6 +171,8 @@ describe('Task detail browser runtime quality coverage', () => {
     expect(panel).toHaveAttribute('aria-labelledby', 'task-activity-tab-history');
     expect(screen.getByLabelText('History filters')).toBeInTheDocument();
     expect(screen.getByLabelText('Task ID')).toBeInTheDocument();
+    expect(screen.getByLabelText('Task assignment')).toBeInTheDocument();
+    expect(screen.getByText('Assignment controls are available to PM/admin bearer tokens.')).toBeInTheDocument();
 
     const axeResults = await axe.run(container, {
       rules: {
@@ -168,5 +192,25 @@ describe('Task detail browser runtime quality coverage', () => {
     const durationMs = performance.now() - started;
 
     expect(durationMs).toBeLessThan(200);
+  });
+
+  it('wires PM assignment controls to the assignment API and refreshes the owner summary', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJwbS0xIiwidGVuYW50X2lkIjoidGVuYW50LWEiLCJyb2xlcyI6WyJwbSJdfQ.signature',
+    });
+    const fetchMock = installTaskDetailFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+
+    fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
+
+    await screen.findByText('Assigned to qa.');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/tasks/TSK-42/assignment',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
   });
 });
