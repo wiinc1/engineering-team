@@ -1,0 +1,14 @@
+flowchart LR
+    UI[Task board UI /tasks?view=board] --> Router[Task browser route state]
+    Router --> Client[Browser API client]
+    Client --> API[Audit HTTP API GET /tasks]
+    API --> Projection[(Projected task current state)]
+    API --> AgentRegistry[(Assignable agent roster)]
+    Projection --> OwnerFields[current_owner + owner payload]
+    AgentRegistry --> Presenter[Owner presentation helper]
+    OwnerFields --> Presenter
+    Presenter --> Board[Board columns + owner badges + empty states]
+    Board --> Filter[Single-select owner filter]
+    Filter --> Board
+    Detail[Task detail PATCH /tasks/:id/assignment] --> Projection
+    Projection --> API

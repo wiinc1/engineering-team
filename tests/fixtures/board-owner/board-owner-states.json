@@ -1,0 +1,53 @@
+{
+  "tenant_id": "tenant-board-owner",
+  "agents": [
+    { "id": "qa", "display_name": "QA Engineer", "role": "QA", "active": true },
+    { "id": "engineer", "display_name": "Engineer", "role": "Engineering", "active": true },
+    { "id": "architect", "display_name": "Principal Architect With A Very Long Display Name", "role": "Architecture", "active": true }
+  ],
+  "tasks": [
+    {
+      "task_id": "TSK-BOARD-1",
+      "title": "Board owned task",
+      "initial_stage": "IMPLEMENT",
+      "priority": "P1",
+      "assigned_owner": "qa"
+    },
+    {
+      "task_id": "TSK-BOARD-2",
+      "title": "Board unassigned task",
+      "initial_stage": "TODO",
+      "priority": "P2",
+      "assigned_owner": null
+    },
+    {
+      "task_id": "TSK-BOARD-3",
+      "title": "Board reassigned task",
+      "initial_stage": "REVIEW",
+      "priority": "P3",
+      "assigned_owner": "engineer",
+      "reassigned_owner": "qa"
+    },
+    {
+      "task_id": "TSK-BOARD-4",
+      "title": "Board stale owner task",
+      "initial_stage": "BACKLOG",
+      "priority": "P2",
+      "assigned_owner": "ghost",
+      "owner": { "actor_id": "ghost", "display_name": "ghost" }
+    },
+    {
+      "task_id": "TSK-BOARD-5",
+      "title": "Board hidden owner task",
+      "initial_stage": "TODO",
+      "priority": "P2",
+      "assigned_owner": "masked",
+      "owner": { "actor_id": "masked", "display_name": "", "redacted": true }
+    }
+  ],
+  "roles": {
+    "writer": ["contributor"],
+    "reader": ["reader"],
+    "manager": ["pm"]
+  }
+}

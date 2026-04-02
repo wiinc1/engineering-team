@@ -11,10 +11,16 @@ import {
   resolveApiBaseUrl,
   writeBrowserSessionConfig,
 } from './session';
+import {
+  buildBoardColumns,
+  filterTaskList,
+  mapAgentOptions,
+  resolveOwnerPresentation,
+  summarizeListResults,
+  UNASSIGNED_FILTER_VALUE,
+} from './task-owner';
 
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
-const UNASSIGNED_FILTER_VALUE = '__unassigned__';
-const STAGE_ORDER = ['BACKLOG', 'TODO', 'IMPLEMENT', 'IN_PROGRESS', 'REVIEW', 'VERIFY', 'DONE', 'REOPEN'];
 
 function readRouteTask(pathname) {
   const match = ((pathname || '').replace(/\/+$/, '') || '/').match(/^\/tasks\/([^/]+)$/);
@@ -134,63 +140,6 @@ function formatFreshness(summary) {
 function canManageAssignment(tokenClaims) {
   const roles = Array.isArray(tokenClaims?.roles) ? tokenClaims.roles : [];
   return roles.includes('pm') || roles.includes('admin');
-}
-
-function mapAgentOptions(items = []) {
-  return items.map((agent) => ({
-    id: agent.id,
-    label: `${agent.display_name}${agent.role ? ` · ${agent.role}` : ''}`,
-  }));
-}
-
-function resolveOwnerPresentation(item, agentLookup) {
-  if (!item.current_owner) {
-    return { label: 'Unassigned', detail: 'No owner assigned', tone: 'unassigned', filterValue: UNASSIGNED_FILTER_VALUE };
-  }
-
-  const agent = agentLookup.get(item.current_owner);
-  if (agent) {
-    return { label: agent.label, detail: `Owner: ${agent.label}`, tone: 'assigned', filterValue: item.current_owner };
-  }
-
-  if (item.owner && !String(item.owner.display_name || '').trim()) {
-    return { label: 'Owner hidden', detail: 'Owner metadata is hidden on this surface', tone: 'fallback', filterValue: item.current_owner };
-  }
-
-  return { label: 'Unknown owner', detail: `Owner record unavailable for ${item.current_owner}`, tone: 'fallback', filterValue: item.current_owner };
-}
-
-function filterTaskList(items, ownerFilter) {
-  if (!ownerFilter) return items;
-  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return items.filter((item) => !item.current_owner);
-  return items.filter((item) => item.current_owner === ownerFilter);
-}
-
-function summarizeListResults(count, ownerFilter, agentLookup, view = 'list') {
-  const noun = view === 'board' ? 'cards' : 'tasks';
-  if (!ownerFilter) return `${count} ${noun} shown.`;
-  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return `${count} unassigned ${noun} shown.`;
-  return `${count} ${noun} shown for ${agentLookup.get(ownerFilter)?.label || ownerFilter}.`;
-}
-
-function compareStageName(a, b) {
-  const left = STAGE_ORDER.indexOf(a);
-  const right = STAGE_ORDER.indexOf(b);
-  if (left === -1 && right === -1) return a.localeCompare(b);
-  if (left === -1) return 1;
-  if (right === -1) return -1;
-  return left - right;
-}
-
-function buildBoardColumns(allItems, visibleItems, agentLookup) {
-  const visibleById = new Set(visibleItems.map((item) => item.task_id));
-  const stages = Array.from(new Set(allItems.map((item) => item.current_stage || 'Unspecified'))).sort(compareStageName);
-  return stages.map((stage) => ({
-    stage,
-    items: allItems
-      .filter((item) => (item.current_stage || 'Unspecified') === stage && visibleById.has(item.task_id))
-      .map((item) => ({ ...item, ownerPresentation: resolveOwnerPresentation(item, agentLookup) })),
-  }));
 }
 
 function useLocationState() {
@@ -594,9 +543,15 @@ export function App() {
                               <span className="task-board__label">Priority</span>
                               <span>{item.priority || '—'}</span>
                             </div>
-                            <div className="task-board__card-meta">
+                            <div className="task-board__card-meta task-board__card-meta--owner">
                               <span className="task-board__label">Owner</span>
-                              <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
+                              <span
+                                className={`owner-badge owner-badge--${item.ownerPresentation.tone} owner-badge--board`}
+                                title={item.ownerPresentation.label}
+                                aria-label={item.ownerPresentation.detail}
+                              >
+                                {item.ownerPresentation.label}
+                              </span>
                             </div>
                             <div className="task-list-meta">Read-only owner metadata</div>
                           </article>
