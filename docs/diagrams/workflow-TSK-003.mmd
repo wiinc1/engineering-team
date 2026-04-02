@@ -1,0 +1,13 @@
+flowchart TD
+    A[User opens /tasks list view] --> B[API reads projected task summaries]
+    B --> C[List renders owner metadata per row]
+    C --> D{Owner filter selected?}
+    D -- No --> E[Show full result set]
+    D -- Specific owner --> F[Show matching owner rows]
+    D -- Unassigned --> G[Show only unassigned rows]
+    F --> H[User clears filter]
+    G --> H
+    H --> E
+    I[PM reassigns task in detail view] --> J[Assignment event updates projected current owner]
+    J --> K[User refreshes or reloads /tasks]
+    K --> L[List shows updated owner]

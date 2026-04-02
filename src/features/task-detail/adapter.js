@@ -138,6 +138,9 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
     fetchTaskSummary(taskId) {
       return request(`/tasks/${encodeURIComponent(taskId)}`);
     },
+    fetchTaskList() {
+      return request('/tasks');
+    },
     fetchTaskHistory(taskId, { filters, pagination, range } = {}) {
       const query = buildHistoryQuery(filters, pagination, range).toString();
       return request(`/tasks/${encodeURIComponent(taskId)}/history${query ? `?${query}` : ''}`);
