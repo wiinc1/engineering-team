@@ -1,0 +1,21 @@
+flowchart TD
+    A[User opens /tasks?view=board] --> B[Browser loads projected task summaries from GET /tasks]
+    B --> C[Board groups cards by stage and resolves owner presentation]
+    C --> D{Owner state present?}
+    D -- Assigned and resolvable --> E[Show canonical owner display name]
+    D -- No current owner --> F[Show exact label Unassigned]
+    D -- Explicitly redacted owner metadata --> G[Show exact safe label Owner hidden]
+    D -- Stale or missing roster entry --> H[Show exact fallback label Unknown owner]
+    E --> I{Owner filter selected?}
+    F --> I
+    G --> I
+    H --> I
+    I -- No --> J[Render all board cards across visible columns]
+    I -- Single owner --> K[Keep matching cards and preserve empty columns]
+    I -- Unassigned --> L[Keep only unassigned cards and preserve empty columns]
+    K --> M[User clears filter in one action]
+    L --> M
+    M --> J
+    N[PM reassigns task in detail view] --> O[Assignment endpoint updates projected current owner]
+    O --> P[User refreshes or reloads board]
+    P --> Q[Board card shows updated owner from projected state]
