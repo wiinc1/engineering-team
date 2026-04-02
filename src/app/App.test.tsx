@@ -47,6 +47,7 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa' } = {}
           { task_id: 'TSK-42', tenant_id: 'tenant-a', title: 'Wire task detail', priority: 'P1', current_stage: 'IMPLEMENT', current_owner: currentOwner, owner: currentOwner ? { actor_id: currentOwner, display_name: currentOwner } : null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
           { task_id: 'TSK-43', tenant_id: 'tenant-a', title: 'Triage queue drift', priority: 'P2', current_stage: 'TODO', current_owner: null, owner: null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
           { task_id: 'TSK-44', tenant_id: 'tenant-a', title: 'Stale owner reference', priority: 'P3', current_stage: 'REVIEW', current_owner: 'ghost', owner: { actor_id: 'ghost', display_name: 'ghost' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-45', tenant_id: 'tenant-a', title: 'Restricted owner surface', priority: 'P2', current_stage: 'TODO', current_owner: 'masked', owner: { actor_id: 'masked', display_name: '' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
         ],
       });
     }
@@ -157,7 +158,8 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByRole('columnheader', { name: 'Owner' })).toBeInTheDocument();
     expect(screen.getByText('Wire task detail')).toBeInTheDocument();
     expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0);
-    expect(screen.getByText('Unknown owner (ghost)')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown owner').length).toBeGreaterThan(0);
+    expect(screen.getByText('Owner hidden')).toBeInTheDocument();
     expect(screen.getAllByText('Read-only owner metadata').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Save owner' })).not.toBeInTheDocument();
   });
@@ -178,9 +180,31 @@ describe('Task browser runtime coverage', () => {
     expect(screen.queryByText('Stale owner reference')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Clear filter' })[0]);
-    await screen.findByText('3 tasks shown.');
+    await screen.findByText('4 tasks shown.');
     expect(screen.getByText('Wire task detail')).toBeInTheDocument();
     expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
+  });
+
+
+  it('renders a board view with owner labels, preserved columns, and board-wide filtering', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks?view=board');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    await screen.findByText('4 cards shown.');
+    expect(screen.getByLabelText('Task board')).toBeInTheDocument();
+    expect(screen.getByLabelText('TODO column')).toBeInTheDocument();
+    expect(screen.getByLabelText('IMPLEMENT column')).toBeInTheDocument();
+    expect(screen.getByLabelText('REVIEW column')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown owner').length).toBeGreaterThan(0);
+    expect(screen.getByText('Owner hidden')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
+    await screen.findByText('1 unassigned cards shown.');
+    expect(within(screen.getByLabelText('TODO column')).getByText('Triage queue drift')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('IMPLEMENT column')).getByText('No matching tasks in this column.')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('REVIEW column')).getByText('No matching tasks in this column.')).toBeInTheDocument();
   });
 
   it('shows updated owner after reassignment and refresh from projected state', async () => {

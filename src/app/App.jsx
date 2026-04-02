@@ -14,6 +14,7 @@ import {
 
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
 const UNASSIGNED_FILTER_VALUE = '__unassigned__';
+const STAGE_ORDER = ['BACKLOG', 'TODO', 'IMPLEMENT', 'IN_PROGRESS', 'REVIEW', 'VERIFY', 'DONE', 'REOPEN'];
 
 function readRouteTask(pathname) {
   const match = ((pathname || '').replace(/\/+$/, '') || '/').match(/^\/tasks\/([^/]+)$/);
@@ -27,13 +28,18 @@ function matchTaskListRoute(pathname = '') {
 function readTaskListRouteState(search = '') {
   const params = new URLSearchParams(search);
   const owner = params.get('owner') || '';
-  return { owner };
+  const view = params.get('view') === 'board' ? 'board' : 'list';
+  return { owner, view };
 }
 
-function writeTaskListUrlState({ owner }, search = '') {
+function writeTaskListUrlState({ owner, view }, search = '') {
   const params = new URLSearchParams(search);
-  if (owner) params.set('owner', owner);
+  const nextOwner = owner ?? params.get('owner') ?? '';
+  const nextView = view ?? (params.get('view') === 'board' ? 'board' : 'list');
+  if (nextOwner) params.set('owner', nextOwner);
   else params.delete('owner');
+  if (nextView === 'board') params.set('view', 'board');
+  else params.delete('view');
   const next = params.toString();
   return next ? `?${next}` : '';
 }
@@ -147,7 +153,11 @@ function resolveOwnerPresentation(item, agentLookup) {
     return { label: agent.label, detail: `Owner: ${agent.label}`, tone: 'assigned', filterValue: item.current_owner };
   }
 
-  return { label: `Unknown owner (${item.current_owner})`, detail: `Owner record unavailable for ${item.current_owner}`, tone: 'fallback', filterValue: item.current_owner };
+  if (item.owner && !String(item.owner.display_name || '').trim()) {
+    return { label: 'Owner hidden', detail: 'Owner metadata is hidden on this surface', tone: 'fallback', filterValue: item.current_owner };
+  }
+
+  return { label: 'Unknown owner', detail: `Owner record unavailable for ${item.current_owner}`, tone: 'fallback', filterValue: item.current_owner };
 }
 
 function filterTaskList(items, ownerFilter) {
@@ -156,10 +166,31 @@ function filterTaskList(items, ownerFilter) {
   return items.filter((item) => item.current_owner === ownerFilter);
 }
 
-function summarizeListResults(count, ownerFilter, agentLookup) {
-  if (!ownerFilter) return `${count} tasks shown.`;
-  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return `${count} unassigned tasks shown.`;
-  return `${count} tasks shown for ${agentLookup.get(ownerFilter)?.label || ownerFilter}.`;
+function summarizeListResults(count, ownerFilter, agentLookup, view = 'list') {
+  const noun = view === 'board' ? 'cards' : 'tasks';
+  if (!ownerFilter) return `${count} ${noun} shown.`;
+  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return `${count} unassigned ${noun} shown.`;
+  return `${count} ${noun} shown for ${agentLookup.get(ownerFilter)?.label || ownerFilter}.`;
+}
+
+function compareStageName(a, b) {
+  const left = STAGE_ORDER.indexOf(a);
+  const right = STAGE_ORDER.indexOf(b);
+  if (left === -1 && right === -1) return a.localeCompare(b);
+  if (left === -1) return 1;
+  if (right === -1) return -1;
+  return left - right;
+}
+
+function buildBoardColumns(allItems, visibleItems, agentLookup) {
+  const visibleById = new Set(visibleItems.map((item) => item.task_id));
+  const stages = Array.from(new Set(allItems.map((item) => item.current_stage || 'Unspecified'))).sort(compareStageName);
+  return stages.map((stage) => ({
+    stage,
+    items: allItems
+      .filter((item) => (item.current_stage || 'Unspecified') === stage && visibleById.has(item.task_id))
+      .map((item) => ({ ...item, ownerPresentation: resolveOwnerPresentation(item, agentLookup) })),
+  }));
 }
 
 function useLocationState() {
@@ -339,6 +370,10 @@ export function App() {
     navigate('/tasks', writeTaskListUrlState({ owner }, search));
   }, [navigate, search]);
 
+  const setListView = React.useCallback((view) => {
+    navigate('/tasks', writeTaskListUrlState({ view }, search));
+  }, [navigate, search]);
+
   const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
@@ -359,7 +394,8 @@ export function App() {
   const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
   const listFilters = model.kind === 'list' ? model.list.filters : { owner: '' };
   const visibleListItems = model.kind === 'list' ? filterTaskList(model.list.items, listFilters.owner) : [];
-  const resultSummary = model.kind === 'list' ? summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup) : '';
+  const boardColumns = model.kind === 'list' ? buildBoardColumns(model.list.items, visibleListItems, agentLookup) : [];
+  const resultSummary = model.kind === 'list' ? summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup, listFilters.view) : '';
   const listState = model.kind === 'list' ? model.list.state : { kind: 'idle' };
 
   return (
@@ -487,6 +523,10 @@ export function App() {
               </select>
             </label>
             <div className="task-list-toolbar__actions">
+              <div className="view-toggle" role="tablist" aria-label="Task overview mode">
+                <button type="button" role="tab" aria-selected={listFilters.view === 'list'} className={listFilters.view === 'list' ? '' : 'button-secondary'} onClick={() => setListView('list')}>List</button>
+                <button type="button" role="tab" aria-selected={listFilters.view === 'board'} className={listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => setListView('board')}>Board</button>
+              </div>
               <button type="button" className="button-secondary" onClick={() => setListOwnerFilter('')} disabled={!listFilters.owner}>Clear filter</button>
               <button type="button" onClick={() => void reloadTask()}>Refresh</button>
             </div>
@@ -497,7 +537,7 @@ export function App() {
           {listState.kind === 'loading' ? <p role="status">Loading task list.</p> : null}
           {listState.kind === 'error' ? <p role="alert">{listState.message}</p> : null}
 
-          {listState.kind === 'ready' && visibleListItems.length ? (
+          {listState.kind === 'ready' && visibleListItems.length && listFilters.view === 'list' ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -530,6 +570,42 @@ export function App() {
                   })}
                 </tbody>
               </table>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && visibleListItems.length && listFilters.view === 'board' ? (
+            <div className="task-board" aria-label="Task board">
+              <div className="task-board__scroll">
+                <div className="task-board__columns">
+                  {boardColumns.map((column) => (
+                    <section key={column.stage} className="task-board__column" aria-label={`${column.stage} column`}>
+                      <div className="task-board__column-header">
+                        <h2>{column.stage}</h2>
+                        <span>{column.items.length}</span>
+                      </div>
+                      <div className="task-board__column-body">
+                        {column.items.length ? column.items.map((item) => (
+                          <article key={item.task_id} className="task-board__card">
+                            <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                              <strong>{item.title || item.task_id}</strong>
+                            </a>
+                            <div className="task-list-meta">{item.task_id}</div>
+                            <div className="task-board__card-meta">
+                              <span className="task-board__label">Priority</span>
+                              <span>{item.priority || '—'}</span>
+                            </div>
+                            <div className="task-board__card-meta">
+                              <span className="task-board__label">Owner</span>
+                              <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
+                            </div>
+                            <div className="task-list-meta">Read-only owner metadata</div>
+                          </article>
+                        )) : <p className="task-board__empty">No matching tasks in this column.</p>}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : null}
 
