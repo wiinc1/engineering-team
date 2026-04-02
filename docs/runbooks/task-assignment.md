@@ -7,6 +7,13 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Canonical runtime route: `PATCH /tasks/{taskId}/assignment`
 - Compatibility alias also accepted by the API server: `PATCH /api/tasks/{taskId}/assignment`
 - Agent roster endpoint for the UI: `GET /ai-agents` (also accepts `/api/ai-agents`)
+- Task-list read surface used by the thin browser runtime: `GET /tasks`
+
+## Owner visibility contract
+- Any authenticated caller with `state:read` can see additive owner metadata on `GET /tasks/{taskId}` and `GET /tasks` via `current_owner` and `owner`.
+- That visibility is intentionally read-only; it does **not** grant assignment capability.
+- Only callers with `assignment:write` (PM/admin in the current role map) can mutate owner state through `PATCH /tasks/{taskId}/assignment`.
+- Restricted telemetry behavior is separate: lower-privilege readers still get owner metadata, while `GET /tasks/{taskId}/observability-summary` omits privileged telemetry fields server-side.
 
 ## How to verify the feature is working
 1. Open a task in an environment where the audit/task-detail UI is enabled.
@@ -14,8 +21,9 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 3. Assign a valid active AI agent.
 4. Verify the owner updates on the task detail page.
 5. Verify `GET /tasks/{taskId}` returns the new `current_owner` and `owner` projection fields.
-6. Verify an audit log entry exists with previous owner and new owner.
-7. If a downstream list/queue surface is present in your deployment, verify it filters from the projected assignee state.
+6. Verify `GET /tasks` returns the same owner projection for list consumers, including `null` for unassigned tasks.
+7. Verify an audit log entry exists with previous owner and new owner.
+8. If a downstream list/queue surface is present in your deployment, verify it filters from the projected assignee state.
 
 ## How to rollback
 1. Disable `ff_assign-ai-agent-to-task`.

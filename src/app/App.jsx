@@ -13,15 +13,35 @@ import {
 } from './session';
 
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
+const UNASSIGNED_FILTER_VALUE = '__unassigned__';
 
 function readRouteTask(pathname) {
   const match = ((pathname || '').replace(/\/+$/, '') || '/').match(/^\/tasks\/([^/]+)$/);
   return match ? { taskId: decodeURIComponent(match[1]) } : null;
 }
 
+function matchTaskListRoute(pathname = '') {
+  return ((pathname || '').replace(/\/+$/, '') || '/') === '/tasks';
+}
+
+function readTaskListRouteState(search = '') {
+  const params = new URLSearchParams(search);
+  const owner = params.get('owner') || '';
+  return { owner };
+}
+
+function writeTaskListUrlState({ owner }, search = '') {
+  const params = new URLSearchParams(search);
+  if (owner) params.set('owner', owner);
+  else params.delete('owner');
+  const next = params.toString();
+  return next ? `?${next}` : '';
+}
+
 function buildLoadingModel(pathname, search) {
   const route = readRouteTask(pathname);
   return {
+    kind: 'detail',
     route: route
       ? { pathname: `/tasks/${encodeURIComponent(route.taskId)}`, taskId: route.taskId }
       : { pathname, taskId: null },
@@ -52,12 +72,26 @@ function buildLoadingModel(pathname, search) {
   };
 }
 
+function buildListLoadingModel(pathname, search) {
+  return {
+    kind: 'list',
+    route: { pathname: '/tasks', taskId: null },
+    list: {
+      filters: readTaskListRouteState(search),
+      items: [],
+      state: { kind: 'loading', message: 'Loading task list.' },
+      resultSummary: '',
+    },
+  };
+}
+
 function matchTaskRoute(pathname) {
   return Boolean(readRouteTask(pathname));
 }
 
 function buildRouteMissModel(pathname) {
   return {
+    kind: 'detail',
     route: { pathname, taskId: null },
     summary: {
       taskId: null,
@@ -96,6 +130,38 @@ function canManageAssignment(tokenClaims) {
   return roles.includes('pm') || roles.includes('admin');
 }
 
+function mapAgentOptions(items = []) {
+  return items.map((agent) => ({
+    id: agent.id,
+    label: `${agent.display_name}${agent.role ? ` · ${agent.role}` : ''}`,
+  }));
+}
+
+function resolveOwnerPresentation(item, agentLookup) {
+  if (!item.current_owner) {
+    return { label: 'Unassigned', detail: 'No owner assigned', tone: 'unassigned', filterValue: UNASSIGNED_FILTER_VALUE };
+  }
+
+  const agent = agentLookup.get(item.current_owner);
+  if (agent) {
+    return { label: agent.label, detail: `Owner: ${agent.label}`, tone: 'assigned', filterValue: item.current_owner };
+  }
+
+  return { label: `Unknown owner (${item.current_owner})`, detail: `Owner record unavailable for ${item.current_owner}`, tone: 'fallback', filterValue: item.current_owner };
+}
+
+function filterTaskList(items, ownerFilter) {
+  if (!ownerFilter) return items;
+  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return items.filter((item) => !item.current_owner);
+  return items.filter((item) => item.current_owner === ownerFilter);
+}
+
+function summarizeListResults(count, ownerFilter, agentLookup) {
+  if (!ownerFilter) return `${count} tasks shown.`;
+  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return `${count} unassigned tasks shown.`;
+  return `${count} tasks shown for ${agentLookup.get(ownerFilter)?.label || ownerFilter}.`;
+}
+
 function useLocationState() {
   const [locationState, setLocationState] = React.useState(() => ({
     pathname: window.location.pathname,
@@ -127,9 +193,10 @@ export function App() {
   const [{ pathname, search }, navigate] = useLocationState();
   const [sessionConfig, setSessionConfig] = React.useState(() => readBrowserSessionConfig());
   const [draftSessionConfig, setDraftSessionConfig] = React.useState(() => readBrowserSessionConfig());
-  const [model, setModel] = React.useState(() =>
-    matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname),
-  );
+  const [model, setModel] = React.useState(() => {
+    if (matchTaskListRoute(pathname)) return buildListLoadingModel(pathname, search);
+    return matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname);
+  });
   const [agentOptions, setAgentOptions] = React.useState([]);
   const [assignmentDraft, setAssignmentDraft] = React.useState('');
   const [assignmentStatus, setAssignmentStatus] = React.useState({ kind: 'idle', message: '' });
@@ -154,12 +221,50 @@ export function App() {
   }, [sessionConfig]);
 
   React.useEffect(() => {
-    setAssignmentDraft(model.summary?.currentOwner || '');
-    setAssignmentStatus({ kind: 'idle', message: '' });
-  }, [model.summary?.taskId, model.summary?.currentOwner]);
+    if (model.kind === 'detail') {
+      setAssignmentDraft(model.summary?.currentOwner || '');
+      setAssignmentStatus({ kind: 'idle', message: '' });
+    }
+  }, [model]);
 
   React.useEffect(() => {
     let cancelled = false;
+
+    if (matchTaskListRoute(pathname)) {
+      setModel(buildListLoadingModel(pathname, search));
+      taskClient.fetchTaskList()
+        .then((payload) => {
+          if (cancelled) return;
+          const filters = readTaskListRouteState(search);
+          setModel({
+            kind: 'list',
+            route: { pathname: '/tasks', taskId: null },
+            list: {
+              filters,
+              items: payload.items || [],
+              state: { kind: 'ready' },
+              resultSummary: '',
+            },
+          });
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setModel({
+              kind: 'list',
+              route: { pathname: '/tasks', taskId: null },
+              list: {
+                filters: readTaskListRouteState(search),
+                items: [],
+                state: { kind: 'error', message: error.message || 'Task list load failed.' },
+                resultSummary: '',
+              },
+            });
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     if (!pageModule.match(pathname)) {
       setModel(buildRouteMissModel(pathname));
@@ -173,7 +278,7 @@ export function App() {
     pageModule
       .load({ pathname, search })
       .then((nextModel) => {
-        if (!cancelled) setModel(nextModel);
+        if (!cancelled) setModel({ ...nextModel, kind: 'detail' });
       })
       .catch((error) => {
         if (!cancelled) {
@@ -191,18 +296,11 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [pageModule, pathname, search]);
+  }, [pageModule, pathname, search, taskClient]);
 
   React.useEffect(() => {
     let cancelled = false;
     const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
-
-    if (!canManageAssignment(tokenClaims)) {
-      setAgentOptions([]);
-      return () => {
-        cancelled = true;
-      };
-    }
 
     taskClient.fetchAssignableAgents()
       .then((payload) => {
@@ -211,6 +309,12 @@ export function App() {
       .catch(() => {
         if (!cancelled) setAgentOptions([]);
       });
+
+    if (!canManageAssignment(tokenClaims)) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     return () => {
       cancelled = true;
@@ -231,24 +335,44 @@ export function App() {
     [navigate, pathname, search],
   );
 
-  const routeTaskId = model.route?.taskId || 'TSK-42';
+  const setListOwnerFilter = React.useCallback((owner) => {
+    navigate('/tasks', writeTaskListUrlState({ owner }, search));
+  }, [navigate, search]);
+
   const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
-  const assignmentEnabled = Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
+  const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
+  const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
 
   const reloadTask = React.useCallback(async () => {
+    if (model.kind === 'list') {
+      setModel(buildListLoadingModel('/tasks', search));
+      const payload = await taskClient.fetchTaskList();
+      setModel({ kind: 'list', route: { pathname: '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '' } });
+      return;
+    }
     setModel(buildLoadingModel(pathname, search));
     const nextModel = await pageModule.load({ pathname, search });
-    setModel(nextModel);
-  }, [pageModule, pathname, search]);
+    setModel({ ...nextModel, kind: 'detail' });
+  }, [model.kind, pageModule, pathname, search, taskClient]);
+
+  const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
+  const listFilters = model.kind === 'list' ? model.list.filters : { owner: '' };
+  const visibleListItems = model.kind === 'list' ? filterTaskList(model.list.items, listFilters.owner) : [];
+  const resultSummary = model.kind === 'list' ? summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup) : '';
+  const listState = model.kind === 'list' ? model.list.state : { kind: 'idle' };
 
   return (
     <main className="app-shell">
       <header className="page-header">
         <div>
           <p className="eyebrow">Thin browser runtime for issue #26</p>
-          <h1>{model.summary.title || 'Task detail'}</h1>
-          <p className="lede">Route-mounted task detail screen using the existing adapter and page module contract.</p>
+          <h1>{model.kind === 'list' ? 'Task list' : model.summary.title || 'Task detail'}</h1>
+          <p className="lede">
+            {model.kind === 'list'
+              ? 'Overview list wired to the projected owner read model with single-select owner filtering.'
+              : 'Route-mounted task detail screen using the existing adapter and page module contract.'}
+          </p>
         </div>
 
         <div className="header-tools">
@@ -267,7 +391,10 @@ export function App() {
               Task ID
               <input name="taskId" defaultValue={routeTaskId} placeholder="TSK-42" />
             </label>
-            <button type="submit">Open</button>
+            <div className="route-form__actions">
+              <button type="submit">Open</button>
+              <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
+            </div>
           </form>
 
           <form
@@ -342,95 +469,171 @@ export function App() {
         </div>
       </header>
 
-      <section className="summary-grid" aria-label="Task summary">
-        <article>
-          <span>Task</span>
-          <strong>{model.summary.taskId || '—'}</strong>
-        </article>
-        <article>
-          <span>Tenant</span>
-          <strong>{model.summary.tenantId || '—'}</strong>
-        </article>
-        <article>
-          <span>Stage</span>
-          <strong>{model.summary.currentStage || '—'}</strong>
-        </article>
-        <article>
-          <span>Owner</span>
-          <strong>{model.summary.currentOwner || '—'}</strong>
-        </article>
-        <article>
-          <span>Priority</span>
-          <strong>{model.summary.priority || '—'}</strong>
-        </article>
-        <article>
-          <span>Freshness</span>
-          <strong>{formatFreshness(model.summary)}</strong>
-        </article>
-      </section>
-
-      <section className="assignment-panel" aria-label="Task assignment">
-        <div className="assignment-panel__header">
-          <div>
-            <p className="eyebrow">Assignment</p>
-            <h2>Assign AI agent owner</h2>
-            <p className="lede">Writes to the task assignment endpoint and refreshes the projected owner after success.</p>
-          </div>
-        </div>
-
-        {assignmentEnabled ? (
-          <form
-            className="assignment-form"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (!model.route?.taskId) return;
-              try {
-                setAssignmentStatus({ kind: 'loading', message: 'Saving assignment…' });
-                await taskClient.assignTaskOwner(model.route.taskId, assignmentDraft || null);
-                await reloadTask();
-                setAssignmentStatus({ kind: 'success', message: assignmentDraft ? `Assigned to ${assignmentDraft}.` : 'Assignment cleared.' });
-              } catch (error) {
-                setAssignmentStatus({ kind: 'error', message: error.message || 'Assignment update failed.' });
-              }
-            }}
-          >
+      {model.kind === 'list' ? (
+        <section className="task-list-panel" aria-label="Task list view">
+          <div className="task-list-toolbar">
             <label>
-              Owner
-              <select value={assignmentDraft} onChange={(event) => setAssignmentDraft(event.target.value)}>
-                <option value="">Unassigned</option>
-                {agentOptions.map((agent) => (
-                  <option key={agent.id} value={agent.id}>{agent.display_name}{agent.role ? ` · ${agent.role}` : ''}</option>
+              Owner filter
+              <select
+                aria-label="Owner filter"
+                value={listFilters.owner}
+                onChange={(event) => setListOwnerFilter(event.target.value)}
+              >
+                <option value="">All owners</option>
+                <option value={UNASSIGNED_FILTER_VALUE}>Unassigned</option>
+                {mapAgentOptions(agentOptions).map((agent) => (
+                  <option key={agent.id} value={agent.id}>{agent.label}</option>
                 ))}
               </select>
             </label>
-            <div className="assignment-form__actions">
-              <button type="submit" disabled={assignmentStatus.kind === 'loading'}>
-                {assignmentStatus.kind === 'loading' ? 'Saving…' : 'Save owner'}
-              </button>
+            <div className="task-list-toolbar__actions">
+              <button type="button" className="button-secondary" onClick={() => setListOwnerFilter('')} disabled={!listFilters.owner}>Clear filter</button>
+              <button type="button" onClick={() => void reloadTask()}>Refresh</button>
             </div>
-            {assignmentStatus.kind !== 'idle' ? (
-              <p className={`assignment-status assignment-status--${assignmentStatus.kind}`} role={assignmentStatus.kind === 'error' ? 'alert' : 'status'}>
-                {assignmentStatus.message}
-              </p>
-            ) : null}
-          </form>
-        ) : (
-          <p className="assignment-status" role="status">
-            {model.route?.taskId ? 'Assignment controls are available to PM/admin bearer tokens.' : 'Open a task route to manage assignment.'}
-          </p>
-        )}
-      </section>
+          </div>
 
-      <TaskDetailActivityShell
-        selectedTab={model.shell.selectedTab}
-        onTabChange={setTab}
-        historyState={model.shell.historyState}
-        telemetryState={model.shell.telemetryState}
-        historyItems={model.shell.historyItems}
-        telemetryCards={model.shell.telemetryCards}
-        filters={model.shell.filters}
-        onFiltersChange={setFilters}
-      />
+          <p className="task-list-results" role="status" aria-live="polite">{resultSummary}</p>
+
+          {listState.kind === 'loading' ? <p role="status">Loading task list.</p> : null}
+          {listState.kind === 'error' ? <p role="alert">{listState.message}</p> : null}
+
+          {listState.kind === 'ready' && visibleListItems.length ? (
+            <div className="task-list-table-wrap">
+              <table className="task-list-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Task</th>
+                    <th scope="col">Stage</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Owner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleListItems.map((item) => {
+                    const owner = resolveOwnerPresentation(item, agentLookup);
+                    return (
+                      <tr key={item.task_id}>
+                        <td>
+                          <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                            <strong>{item.title || item.task_id}</strong>
+                          </a>
+                          <div className="task-list-meta">{item.task_id}</div>
+                        </td>
+                        <td>{item.current_stage || '—'}</td>
+                        <td>{item.priority || '—'}</td>
+                        <td>
+                          <span className={`owner-badge owner-badge--${owner.tone}`}>{owner.label}</span>
+                          <div className="task-list-meta">Read-only owner metadata</div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !visibleListItems.length ? (
+            <div className="empty-state" role="status">
+              <h2>No matching tasks</h2>
+              <p>{listFilters.owner ? 'No tasks match the active owner filter.' : 'No tasks are available yet.'}</p>
+              {listFilters.owner ? <button type="button" onClick={() => setListOwnerFilter('')}>Clear filter</button> : null}
+            </div>
+          ) : null}
+        </section>
+      ) : (
+        <>
+          <section className="summary-grid" aria-label="Task summary">
+            <article>
+              <span>Task</span>
+              <strong>{model.summary.taskId || '—'}</strong>
+            </article>
+            <article>
+              <span>Tenant</span>
+              <strong>{model.summary.tenantId || '—'}</strong>
+            </article>
+            <article>
+              <span>Stage</span>
+              <strong>{model.summary.currentStage || '—'}</strong>
+            </article>
+            <article>
+              <span>Owner</span>
+              <strong>{model.summary.currentOwner || '—'}</strong>
+            </article>
+            <article>
+              <span>Priority</span>
+              <strong>{model.summary.priority || '—'}</strong>
+            </article>
+            <article>
+              <span>Freshness</span>
+              <strong>{formatFreshness(model.summary)}</strong>
+            </article>
+          </section>
+
+          <section className="assignment-panel" aria-label="Task assignment">
+            <div className="assignment-panel__header">
+              <div>
+                <p className="eyebrow">Assignment</p>
+                <h2>Assign AI agent owner</h2>
+                <p className="lede">Writes to the task assignment endpoint and refreshes the projected owner after success.</p>
+              </div>
+            </div>
+
+            {assignmentEnabled ? (
+              <form
+                className="assignment-form"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (!model.route?.taskId) return;
+                  try {
+                    setAssignmentStatus({ kind: 'loading', message: 'Saving assignment…' });
+                    await taskClient.assignTaskOwner(model.route.taskId, assignmentDraft || null);
+                    await reloadTask();
+                    setAssignmentStatus({ kind: 'success', message: assignmentDraft ? `Assigned to ${assignmentDraft}.` : 'Assignment cleared.' });
+                  } catch (error) {
+                    setAssignmentStatus({ kind: 'error', message: error.message || 'Assignment update failed.' });
+                  }
+                }}
+              >
+                <label>
+                  Owner
+                  <select value={assignmentDraft} onChange={(event) => setAssignmentDraft(event.target.value)}>
+                    <option value="">Unassigned</option>
+                    {agentOptions.map((agent) => (
+                      <option key={agent.id} value={agent.id}>{agent.display_name}{agent.role ? ` · ${agent.role}` : ''}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="assignment-form__actions">
+                  <button type="submit" disabled={assignmentStatus.kind === 'loading'}>
+                    {assignmentStatus.kind === 'loading' ? 'Saving…' : 'Save owner'}
+                  </button>
+                </div>
+                {assignmentStatus.kind !== 'idle' ? (
+                  <p className={`assignment-status assignment-status--${assignmentStatus.kind}`} role={assignmentStatus.kind === 'error' ? 'alert' : 'status'}>
+                    {assignmentStatus.message}
+                  </p>
+                ) : null}
+              </form>
+            ) : (
+              <p className="assignment-status" role="status">
+                {model.route?.taskId ? 'Assignment controls are available to PM/admin bearer tokens.' : 'Open a task route to manage assignment.'}
+              </p>
+            )}
+          </section>
+
+          <TaskDetailActivityShell
+            selectedTab={model.shell.selectedTab}
+            onTabChange={setTab}
+            historyState={model.shell.historyState}
+            telemetryState={model.shell.telemetryState}
+            historyItems={model.shell.historyItems}
+            telemetryCards={model.shell.telemetryCards}
+            filters={model.shell.filters}
+            onFiltersChange={setFilters}
+          />
+        </>
+      )}
     </main>
   );
 }

@@ -22,16 +22,38 @@ components:
       description: Legacy-only fallback header when `ALLOW_LEGACY_HEADERS=true`; JWT bearer auth is the default contract.
       schema: { type: string }
   schemas:
+    OwnerSummary:
+      type: [object, 'null']
+      properties:
+        actor_id: { type: string }
+        display_name: { type: string }
     TaskSummaryResponse:
       type: object
+      required: [task_id, tenant_id, title, current_stage, current_owner, owner, blocked, closed, freshness]
       properties:
         task_id: { type: string }
+        tenant_id: { type: string }
         title: { type: string }
+        priority: { type: [string, 'null'] }
+        current_stage: { type: [string, 'null'] }
+        current_owner: { type: [string, 'null'] }
         owner:
-          type: [object, 'null']
+          $ref: '#/components/schemas/OwnerSummary'
+        blocked: { type: boolean }
+        closed: { type: boolean }
+        freshness:
+          type: object
           properties:
-            actor_id: { type: string }
-            display_name: { type: string }
+            status: { type: string }
+            last_updated_at: { type: [string, 'null'], format: date-time }
+    TaskListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummaryResponse'
     PaginatedTaskHistoryResponse:
       type: object
       required: [items, page_info]
@@ -84,6 +106,26 @@ components:
 security:
   - BearerAuth: []
 paths:
+  /tasks:
+    get:
+      summary: List projected task summaries with additive owner metadata
+      description: |
+        Returns the projected task-list read surface used by the browser list view.
+        Any caller with `state:read` can see `current_owner`/`owner` as read-only metadata.
+        Assignment remains restricted to callers with `assignment:write`.
+      responses:
+        '200':
+          description: Task-list projection response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/events:
     post:
       summary: Append a workflow audit event
@@ -119,6 +161,9 @@ paths:
   /tasks/{id}:
     get:
       summary: Canonical task detail summary response
+      description: |
+        Returns the projected task detail summary. `current_owner` and `owner` are additive read fields
+        exposed to the same `state:read` audience as the rest of the task summary.
       responses:
         '200':
           description: Task summary response

@@ -293,3 +293,48 @@ test('returns standardized error payload when feature flag kill switch is off', 
     assert.ok(body.error.request_id);
   }, { auditFoundationEnabled: false });
 });
+
+
+test('lists projected task summaries with owner and unassigned states', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const writeHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-301/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-301', payload: { title: 'Owned task', initial_stage: 'BACKLOG', priority: 'P1' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-302/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-302', payload: { title: 'Unassigned task', initial_stage: 'TODO', priority: 'P2' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-301/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks`, { headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }) });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.items.length, 2);
+    const owned = payload.items.find(item => item.task_id === 'TSK-301');
+    const unassigned = payload.items.find(item => item.task_id === 'TSK-302');
+    assert.equal(owned.title, 'Owned task');
+    assert.equal(owned.current_owner, 'qa');
+    assert.equal(unassigned.current_owner, null);
+    assert.equal(unassigned.owner, null);
+  });
+});

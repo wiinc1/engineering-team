@@ -1,0 +1,32 @@
+{
+  "tenant_id": "tenant-task-list-owner",
+  "tasks": [
+    {
+      "task_id": "TSK-OWNER-1",
+      "title": "Owned task",
+      "initial_stage": "BACKLOG",
+      "priority": "P1",
+      "assigned_owner": "qa"
+    },
+    {
+      "task_id": "TSK-OWNER-2",
+      "title": "Unassigned task",
+      "initial_stage": "TODO",
+      "priority": "P2",
+      "assigned_owner": null
+    },
+    {
+      "task_id": "TSK-OWNER-3",
+      "title": "Reassigned task",
+      "initial_stage": "REVIEW",
+      "priority": "P3",
+      "assigned_owner": "engineer",
+      "reassigned_owner": "qa"
+    }
+  ],
+  "roles": {
+    "writer": ["contributor"],
+    "reader": ["reader"],
+    "manager": ["pm"]
+  }
+}

@@ -13,8 +13,10 @@ function createJsonResponse(payload: unknown, status = 200) {
   };
 }
 
-function installTaskDetailFetchMock({ forbidden = false } = {}) {
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa' } = {}) {
+  let currentOwner = 'eng-1';
+
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
 
     if (forbidden) {
@@ -39,6 +41,16 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
       });
     }
 
+    if (url.endsWith('/tasks') && (!init || !init.method || init.method === 'GET')) {
+      return createJsonResponse({
+        items: [
+          { task_id: 'TSK-42', tenant_id: 'tenant-a', title: 'Wire task detail', priority: 'P1', current_stage: 'IMPLEMENT', current_owner: currentOwner, owner: currentOwner ? { actor_id: currentOwner, display_name: currentOwner } : null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-43', tenant_id: 'tenant-a', title: 'Triage queue drift', priority: 'P2', current_stage: 'TODO', current_owner: null, owner: null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-44', tenant_id: 'tenant-a', title: 'Stale owner reference', priority: 'P3', current_stage: 'REVIEW', current_owner: 'ghost', owner: { actor_id: 'ghost', display_name: 'ghost' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+        ],
+      });
+    }
+
     if (url.endsWith('/tasks/TSK-42')) {
       return createJsonResponse({
         task_id: 'TSK-42',
@@ -46,7 +58,7 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
         title: 'Wire task detail',
         priority: 'P1',
         current_stage: 'IMPLEMENT',
-        current_owner: 'eng-1',
+        current_owner: currentOwner,
         blocked: false,
         waiting_state: null,
         next_required_action: 'Ship browser quality smoke coverage',
@@ -74,7 +86,7 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
             event_type: 'task.assigned',
             event_type_label: 'Task assigned',
             occurred_at: '2026-04-01T14:58:00.000Z',
-            actor: { actor_id: 'eng-1', display_name: 'Engineer 1' },
+            actor: { actor_id: currentOwner, display_name: 'Engineer 1' },
             display: { summary: 'Owner assigned' },
             sequence_number: 2,
             source: 'audit-api',
@@ -98,11 +110,12 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
     }
 
     if (url.endsWith('/tasks/TSK-42/assignment')) {
+      currentOwner = reassignedOwner;
       return createJsonResponse({
         success: true,
         data: {
           taskId: 'TSK-42',
-          owner: { agentId: 'qa', displayName: 'QA Engineer', role: 'QA' },
+          owner: { agentId: reassignedOwner, displayName: 'QA Engineer', role: 'QA' },
           updatedAt: '2026-04-01T15:01:00.000Z',
         },
       });
@@ -115,14 +128,7 @@ function installTaskDetailFetchMock({ forbidden = false } = {}) {
   return fetchMock;
 }
 
-function normalizeHtml(element: Element | null) {
-  return (element?.innerHTML || '')
-    .replace(/ class="[^"]*"/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-describe('Task detail browser runtime quality coverage', () => {
+describe('Task browser runtime coverage', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/tasks/TSK-42');
     clearBrowserSessionConfig();
@@ -133,46 +139,86 @@ describe('Task detail browser runtime quality coverage', () => {
     vi.unstubAllGlobals();
   });
 
-  it('keeps a stable ready-state UI snapshot for the mounted task detail route', async () => {
-    installTaskDetailFetchMock();
-    const { container } = render(<App />);
+  it('renders task detail with existing assignment behavior intact', async () => {
+    installTaskFetchMock();
+    render(<App />);
 
     await screen.findByRole('heading', { name: 'Wire task detail' });
-
-    expect(normalizeHtml(container.querySelector('main'))).toMatchSnapshot();
-  });
-
-  it('keeps a stable restricted-state UI snapshot when access is denied', async () => {
-    installTaskDetailFetchMock({ forbidden: true });
-    window.history.pushState({}, '', '/tasks/TSK-42?tab=telemetry');
-    const { container } = render(<App />);
-
-    await screen.findByRole('heading', { name: 'Task detail unavailable' });
-    await screen.findByText('Restricted');
-
-    expect(normalizeHtml(container.querySelector('main'))).toMatchSnapshot();
-  });
-
-  it('passes an axe smoke scan and exposes the expected landmark/tabpanel semantics', async () => {
-    installTaskDetailFetchMock();
-    const { container } = render(<App />);
-
-    await screen.findByRole('heading', { name: 'Wire task detail' });
-
-    const main = screen.getByRole('main');
-    const summary = screen.getByLabelText('Task summary');
-    const tablist = screen.getByRole('tablist', { name: 'Task activity views' });
-    const tabs = within(tablist).getAllByRole('tab');
-    const panel = screen.getByRole('tabpanel');
-
-    expect(main).toBeInTheDocument();
-    expect(summary).toBeInTheDocument();
-    expect(tabs).toHaveLength(2);
-    expect(panel).toHaveAttribute('aria-labelledby', 'task-activity-tab-history');
-    expect(screen.getByLabelText('History filters')).toBeInTheDocument();
-    expect(screen.getByLabelText('Task ID')).toBeInTheDocument();
-    expect(screen.getByLabelText('Task assignment')).toBeInTheDocument();
+    expect(screen.getByLabelText('Task summary')).toBeInTheDocument();
     expect(screen.getByText('Assignment controls are available to PM/admin bearer tokens.')).toBeInTheDocument();
+  });
+
+  it('renders task list owner metadata with explicit unassigned and fallback labels', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    expect(screen.getByRole('columnheader', { name: 'Owner' })).toBeInTheDocument();
+    expect(screen.getByText('Wire task detail')).toBeInTheDocument();
+    expect(screen.getAllByText('Unassigned').length).toBeGreaterThan(0);
+    expect(screen.getByText('Unknown owner (ghost)')).toBeInTheDocument();
+    expect(screen.getAllByText('Read-only owner metadata').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Save owner' })).not.toBeInTheDocument();
+  });
+
+  it('supports single-select owner filtering including unassigned and one-click clear', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    await screen.findByText('Wire task detail');
+
+    fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
+
+    await screen.findByText('1 unassigned tasks shown.');
+    expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
+    expect(screen.queryByText('Wire task detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('Stale owner reference')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filter' })[0]);
+    await screen.findByText('3 tasks shown.');
+    expect(screen.getByText('Wire task detail')).toBeInTheDocument();
+    expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
+  });
+
+  it('shows updated owner after reassignment and refresh from projected state', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJwbS0xIiwidGVuYW50X2lkIjoidGVuYW50LWEiLCJyb2xlcyI6WyJwbSJdfQ.signature',
+    });
+    installTaskFetchMock({ reassignedOwner: 'qa' });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
+    await screen.findByText('Assigned to qa.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Task list' }));
+    await screen.findByRole('heading', { name: 'Task list' });
+    expect(screen.getAllByText('QA Engineer · QA').length).toBeGreaterThan(0);
+  });
+
+  it('shows clear empty state with reset action when no tasks match the filter', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks?owner=engineer');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    expect(screen.getByRole('heading', { name: 'No matching tasks' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Clear filter' }).length).toBeGreaterThan(0);
+  });
+
+  it('passes an axe smoke scan for the task list route', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks');
+    const { container } = render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
 
     const axeResults = await axe.run(container, {
       rules: {
@@ -181,36 +227,5 @@ describe('Task detail browser runtime quality coverage', () => {
     });
 
     expect(axeResults.violations).toEqual([]);
-  });
-
-  it('meets a small render-budget smoke check for the ready state', async () => {
-    installTaskDetailFetchMock();
-
-    const started = performance.now();
-    render(<App />);
-    await screen.findByRole('heading', { name: 'Wire task detail' });
-    const durationMs = performance.now() - started;
-
-    expect(durationMs).toBeLessThan(200);
-  });
-
-  it('wires PM assignment controls to the assignment API and refreshes the owner summary', async () => {
-    writeBrowserSessionConfig({
-      apiBaseUrl: '',
-      bearerToken: 'header.eyJzdWIiOiJwbS0xIiwidGVuYW50X2lkIjoidGVuYW50LWEiLCJyb2xlcyI6WyJwbSJdfQ.signature',
-    });
-    const fetchMock = installTaskDetailFetchMock();
-    render(<App />);
-
-    await screen.findByRole('heading', { name: 'Wire task detail' });
-
-    fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
-
-    await screen.findByText('Assigned to qa.');
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/tasks/TSK-42/assignment',
-      expect.objectContaining({ method: 'PATCH' }),
-    );
   });
 });

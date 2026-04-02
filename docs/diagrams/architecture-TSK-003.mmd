@@ -1,0 +1,9 @@
+flowchart LR
+    UI[Task list UI /tasks] --> Client[Browser API client]
+    Client --> API[Audit HTTP API GET /tasks]
+    API --> Store[Audit store listTaskSummaries]
+    Store --> Projection[(audit_task_current_state / file projection)]
+    Store --> History[(task history projection for created title)]
+    API --> UI
+    Detail[Task detail assignment PATCH] --> Projection
+    Projection --> API

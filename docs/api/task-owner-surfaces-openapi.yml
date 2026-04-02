@@ -1,0 +1,88 @@
+openapi: 3.1.0
+info:
+  title: Task Owner Read Surfaces API
+  version: 1.0.0
+  description: |
+    Additive read-contract documentation for the owner visibility surfaces delivered by TSK-003.
+    This spec is intentionally narrow: it documents the existing task detail and task list read surfaces
+    that now expose projected owner metadata to authenticated readers.
+servers:
+  - url: https://engineering-team.example.com
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    OwnerSummary:
+      type: [object, 'null']
+      properties:
+        actor_id: { type: string }
+        display_name: { type: string }
+    Freshness:
+      type: object
+      required: [status, last_updated_at]
+      properties:
+        status: { type: string, enum: [fresh, stale, unknown] }
+        last_updated_at: { type: [string, 'null'], format: date-time }
+    TaskOwnerReadableSummary:
+      type: object
+      required: [task_id, tenant_id, title, current_stage, current_owner, owner, blocked, closed, freshness]
+      properties:
+        task_id: { type: string }
+        tenant_id: { type: string }
+        title: { type: string }
+        priority: { type: [string, 'null'] }
+        current_stage: { type: [string, 'null'] }
+        current_owner: { type: [string, 'null'] }
+        owner:
+          $ref: '#/components/schemas/OwnerSummary'
+        blocked: { type: boolean }
+        closed: { type: boolean }
+        freshness:
+          $ref: '#/components/schemas/Freshness'
+    TaskListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskOwnerReadableSummary'
+security:
+  - BearerAuth: []
+paths:
+  /tasks:
+    get:
+      summary: List task summaries with read-only owner metadata
+      description: |
+        Returns the projected task-list read surface for overview consumers.
+        Callers with `state:read` can see owner metadata for assigned tasks and explicit `null` values
+        for unassigned tasks. This endpoint is read-only and does not expose assignment controls.
+      responses:
+        '200':
+          description: Task-list summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+  /tasks/{id}:
+    get:
+      summary: Read task detail summary with additive owner metadata
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      description: |
+        Returns the projected task detail summary.
+        `current_owner` and `owner` are additive read fields exposed to the same `state:read`
+        audience as the rest of the task summary. Assignment mutation stays on `PATCH /tasks/{id}/assignment`.
+      responses:
+        '200':
+          description: Task detail summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskOwnerReadableSummary'

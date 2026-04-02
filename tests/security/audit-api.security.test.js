@@ -107,3 +107,43 @@ test('omits restricted telemetry fields for under-authorized task viewers', asyn
     assert.deepEqual(restricted.correlation.approved_correlation_ids, ['corr-sec-3']);
   });
 });
+
+test('reader scope keeps owner metadata visible while assignment remains forbidden', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const readerAuth = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-4/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-SEC-4', payload: { title: 'Owner visibility task', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-4/assignment`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-4`, { headers: readerAuth });
+    assert.equal(response.status, 200);
+    const summary = await response.json();
+    assert.equal(summary.current_owner, 'qa');
+    assert.deepEqual(summary.owner, { actor_id: 'qa', display_name: 'qa' });
+
+    response = await fetch(`${baseUrl}/tasks`, { headers: readerAuth });
+    assert.equal(response.status, 200);
+    const taskList = await response.json();
+    assert.equal(taskList.items[0].current_owner, 'qa');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-4/assignment`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...readerAuth },
+      body: JSON.stringify({ agentId: null }),
+    });
+    assert.equal(response.status, 403);
+  });
+});

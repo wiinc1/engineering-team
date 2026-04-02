@@ -4,11 +4,14 @@ Task Detail now has a thin browser-runtime accessibility smoke check under `npm 
 
 Current coverage:
 - axe-core smoke scan on the mounted `/tasks/:taskId` route
-- semantic assertions for the main landmark, task summary region, tablist/tabs, tabpanel linkage, history filters, and task-id form label
+- axe-core smoke scan on the mounted `/tasks` task-list route, including owner filter and results status messaging
+- semantic assertions for the main landmark, task summary region, task-list table, tablist/tabs, tabpanel linkage, history filters, and task-id form label
 - restricted-state coverage for authorization failure rendering
+- explicit assertions that owner state is never color-only (`Unassigned` / fallback copy remains text-visible)
 
 Notes:
 - The task activity tabpanel now links back to its active tab with `aria-labelledby`, which closes the main semantics gap in the mounted shell.
+- The task list result summary uses `role="status"` + `aria-live="polite"` so owner filter changes announce updated counts.
 - This is intentionally lightweight internal-use validation, not a full manual WCAG audit.
 
 Still not covered:

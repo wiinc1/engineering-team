@@ -35,8 +35,10 @@ async function withServer(run) {
 
 test('openapi contract documents the live audit routes and auth model', () => {
   const spec = fs.readFileSync(path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'), 'utf8');
+  const ownerReadSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-owner-surfaces-openapi.yml'), 'utf8');
 
   for (const snippet of [
+    '/tasks:',
     '/tasks/{id}:',
     '/tasks/{id}/events:',
     '/tasks/{id}/history:',
@@ -53,8 +55,19 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'dateFrom',
     'dateTo',
     'approved_correlation_ids',
+    'current_owner',
+    'List projected task summaries with additive owner metadata',
   ]) {
     assert.match(spec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const snippet of [
+    '/tasks:',
+    '/tasks/{id}:',
+    'List task summaries with read-only owner metadata',
+    'Assignment mutation stays on `PATCH /tasks/{id}/assignment`.',
+  ]) {
+    assert.match(ownerReadSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 
@@ -90,6 +103,13 @@ test('documented endpoints satisfy the runtime contract', async () => {
     assert.equal(response.status, 202);
 
     const readerHeaders = authHeaders(secret, { roles: ['reader'] });
+    response = await fetch(`${baseUrl}/tasks`, { headers: readerHeaders });
+    assert.equal(response.status, 200);
+    const taskList = await response.json();
+    assert.equal(taskList.items.length, 1);
+    assert.equal(taskList.items[0].task_id, 'TSK-CONTRACT-1');
+    assert.equal(taskList.items[0].current_owner, null);
+
     response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-1`, { headers: readerHeaders });
     assert.equal(response.status, 200);
     const taskSummary = await response.json();
