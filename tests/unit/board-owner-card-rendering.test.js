@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildBoardColumns, mapAgentOptions, resolveOwnerPresentation, UNASSIGNED_FILTER_VALUE } from '../../src/app/task-owner';
-import fixture from '../fixtures/board-owner/board-owner-states.json';
+import { buildBoardColumns, mapAgentOptions, resolveOwnerPresentation, UNASSIGNED_FILTER_VALUE } from '../../src/app/task-owner.js';
+import fixture from '../fixtures/board-owner/board-owner-states.json' with { type: 'json' };
 
 const agentLookup = new Map(mapAgentOptions(fixture.agents).map((agent) => [agent.id, agent]));
 

@@ -1,0 +1,14 @@
+flowchart TD
+    A[User opens /inbox/engineer or another role inbox] --> B[Browser loads projected task summaries from GET /tasks]
+    B --> C[Browser loads canonical assignable-agent roster from GET /ai-agents]
+    C --> D[Resolve current_owner to canonical role mapping]
+    D --> E{Owner mapping state}
+    E -- Engineer/Architect/QA/SRE --> F[Place task in exactly one matching role inbox list]
+    E -- Unassigned --> G[Exclude task from all role inboxes in this slice]
+    E -- Missing or stale owner mapping --> H[Keep task stable on general surfaces with fallback owner metadata]
+    F --> I[Render read-only row with owner label, stage, and routing cue]
+    G --> J[Show explicit empty inbox state when no tasks route here]
+    H --> J
+    K[PM reassigns task in detail view] --> L[PATCH assignment updates canonical projected owner]
+    L --> M[User refreshes or reloads inbox]
+    M --> N[Task leaves old role inbox and appears in the new matching inbox]

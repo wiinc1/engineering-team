@@ -300,6 +300,36 @@ button {
   color: #475569;
 }
 
+.role-inbox-toolbar {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.role-inbox-toolbar h2 {
+  margin: 0;
+}
+
+.role-inbox-toolbar__cue {
+  margin: 8px 0 0;
+  max-width: 70ch;
+  color: #475569;
+}
+
+.routing-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
 .view-toggle {
   display: inline-flex;
   gap: 8px;
@@ -504,6 +534,10 @@ button {
 
   .session-meta {
     grid-template-columns: 1fr;
+  }
+
+  .role-inbox-toolbar {
+    flex-direction: column;
   }
 }
 
