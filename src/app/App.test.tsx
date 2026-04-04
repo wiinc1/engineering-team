@@ -345,6 +345,40 @@ describe('Task browser runtime coverage', () => {
     expect(axeResults.violations).toEqual([]);
   });
 
+  it('renders the PM overview in grouped bucket order with fallback labels and no assignment controls', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/overview/pm');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'PM Overview' });
+    await screen.findByText('6 tasks shown across 5 buckets.');
+    expect(screen.getByRole('heading', { name: 'Needs routing attention' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Unassigned' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Architect' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Engineer' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'SRE' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Needs routing attention').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Role mapping unavailable').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Save owner' })).not.toBeInTheDocument();
+  });
+
+  it('filters the PM overview to one bucket and clears back to the grouped overview', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/overview/pm');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'PM Overview' });
+    fireEvent.change(screen.getByLabelText('Bucket filter'), { target: { value: 'engineer' } });
+
+    await screen.findByText('1 task shown in Engineer.');
+    expect(screen.getByRole('heading', { name: 'Engineer' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Needs routing attention' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filter' }));
+    await screen.findByText('6 tasks shown across 5 buckets.');
+    expect(screen.getByRole('heading', { name: 'Needs routing attention' })).toBeInTheDocument();
+  });
+
   it('passes an axe smoke scan for the QA inbox route and preserves read-only inbox semantics', async () => {
     installTaskFetchMock();
     window.history.pushState({}, '', '/inbox/qa');
@@ -355,6 +389,37 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'QA inbox view' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Owner filter')).not.toBeInTheDocument();
+
+    const axeResults = await axe.run(container, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
+
+    expect(axeResults.violations).toEqual([]);
+  });
+
+  it('keeps PM overview rows read-only while allowing task-detail navigation', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/overview/pm');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'PM Overview' });
+    const taskLink = screen.getByRole('link', { name: /Wire task detail/i });
+    expect(taskLink).toHaveAttribute('href', '/tasks/TSK-42');
+    expect(screen.queryByRole('button', { name: 'Save owner' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Owner')).not.toBeInTheDocument();
+  });
+
+  it('passes an axe smoke scan for the PM overview route', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/overview/pm');
+    const { container } = render(<App />);
+
+    await screen.findByRole('heading', { name: 'PM Overview' });
+    expect(screen.getByRole('region', { name: 'PM overview view' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Bucket filter')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('6 tasks shown across 5 buckets.');
 
     const axeResults = await axe.run(container, {
       rules: {
