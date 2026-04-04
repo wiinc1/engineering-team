@@ -1,8 +1,18 @@
 export const UNASSIGNED_FILTER_VALUE = '__unassigned__';
 export const STAGE_ORDER = ['BACKLOG', 'TODO', 'IMPLEMENT', 'IN_PROGRESS', 'REVIEW', 'VERIFY', 'DONE', 'REOPEN'];
 export const ROLE_INBOXES = ['architect', 'engineer', 'qa', 'sre'];
+export const PM_OVERVIEW_BUCKET_ORDER = ['needs-routing-attention', 'unassigned', ...ROLE_INBOXES];
 
 const ROLE_LABELS = {
+  architect: 'Architect',
+  engineer: 'Engineer',
+  qa: 'QA',
+  sre: 'SRE',
+};
+
+const PM_BUCKET_LABELS = {
+  'needs-routing-attention': 'Needs routing attention',
+  unassigned: 'Unassigned',
   architect: 'Architect',
   engineer: 'Engineer',
   qa: 'QA',
@@ -88,6 +98,80 @@ export function resolveRoleInboxMembership(item, agentLookup) {
     routingLabel: `Assigned owner ${item.current_owner} does not resolve to a canonical role mapping.`,
     isFallback: true,
   };
+}
+
+export function getPmOverviewBucketLabel(bucketKey) {
+  return PM_BUCKET_LABELS[bucketKey] || 'Unknown bucket';
+}
+
+export function resolvePmOverviewBucket(item, agentLookup) {
+  const routing = resolveRoleInboxMembership(item, agentLookup);
+  const ownerPresentation = resolveOwnerPresentation(item, agentLookup);
+
+  if (routing.reason === 'matched') {
+    return {
+      key: routing.inboxRole,
+      label: getPmOverviewBucketLabel(routing.inboxRole),
+      routingCue: `${getRoleInboxLabel(routing.inboxRole)} route`,
+      routingReason: routing.routingLabel,
+      ownerPresentation,
+    };
+  }
+
+  if (routing.reason === 'unassigned') {
+    return {
+      key: 'unassigned',
+      label: 'Unassigned',
+      routingCue: 'Unassigned',
+      routingReason: 'No owner is assigned, so this task is visible in the Unassigned bucket.',
+      ownerPresentation,
+    };
+  }
+
+  if (routing.reason === 'hidden') {
+    return {
+      key: 'needs-routing-attention',
+      label: 'Needs routing attention',
+      routingCue: 'Needs routing attention',
+      routingReason: 'Role mapping unavailable because owner metadata is intentionally hidden on this surface.',
+      ownerPresentation: { ...ownerPresentation, detail: `${ownerPresentation.detail}. Role mapping unavailable.` },
+      degradedLabel: 'Role mapping unavailable',
+    };
+  }
+
+  return {
+    key: 'needs-routing-attention',
+    label: 'Needs routing attention',
+    routingCue: 'Needs routing attention',
+    routingReason: 'Role mapping unavailable because the assigned owner does not resolve to a canonical role mapping.',
+    ownerPresentation,
+    degradedLabel: 'Role mapping unavailable',
+  };
+}
+
+export function buildPmOverviewSections(items, agentLookup) {
+  const grouped = new Map(PM_OVERVIEW_BUCKET_ORDER.map((bucket) => [bucket, []]));
+
+  items.forEach((item) => {
+    const bucket = resolvePmOverviewBucket(item, agentLookup);
+    grouped.get(bucket.key).push({
+      ...item,
+      ownerPresentation: bucket.ownerPresentation,
+      pmBucket: bucket,
+    });
+  });
+
+  return PM_OVERVIEW_BUCKET_ORDER.map((bucketKey) => ({
+    key: bucketKey,
+    label: getPmOverviewBucketLabel(bucketKey),
+    items: grouped.get(bucketKey),
+  }));
+}
+
+export function summarizePmOverviewResults(sections, activeBucket) {
+  const visibleCount = sections.reduce((sum, section) => sum + section.items.length, 0);
+  if (activeBucket) return `${visibleCount} task${visibleCount === 1 ? '' : 's'} shown in ${getPmOverviewBucketLabel(activeBucket)}.`;
+  return `${visibleCount} task${visibleCount === 1 ? '' : 's'} shown across ${sections.filter((section) => section.items.length).length} buckets.`;
 }
 
 export function filterTasksForRoleInbox(items, roleKey, agentLookup) {

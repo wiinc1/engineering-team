@@ -1,0 +1,17 @@
+flowchart TD
+    A[PM opens /overview/pm] --> B[Browser loads projected task summaries from GET /tasks]
+    B --> C[Browser loads canonical roster from GET /ai-agents]
+    C --> D[Client resolves current owner into one PM bucket]
+    D --> E{Bucket result}
+    E -- No owner --> F[Place task in Unassigned]
+    E -- Canonical role match --> G[Place task in Architect or Engineer or QA or SRE]
+    E -- Hidden or unresolved mapping --> H[Place task in Needs routing attention]
+    F --> I[Render grouped read-only sections]
+    G --> I
+    H --> I
+    I --> J{Single bucket filter active?}
+    J -- No --> K[Show non-empty sections in required order]
+    J -- Yes --> L[Show only the selected bucket section]
+    L --> M[Clear filter restores grouped overview]
+    K --> N[Refresh reloads projection and moves reassigned tasks between buckets]
+    M --> N

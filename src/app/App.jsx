@@ -13,13 +13,17 @@ import {
 } from './session';
 import {
   buildBoardColumns,
+  buildPmOverviewSections,
   buildRoleInboxItems,
   filterTaskList,
+  getPmOverviewBucketLabel,
   getRoleInboxLabel,
   mapAgentOptions,
+  PM_OVERVIEW_BUCKET_ORDER,
   resolveOwnerPresentation,
   ROLE_INBOXES,
   summarizeListResults,
+  summarizePmOverviewResults,
   summarizeRoleInboxResults,
   UNASSIGNED_FILTER_VALUE,
 } from './task-owner';
@@ -41,21 +45,30 @@ function matchRoleInboxRoute(pathname = '') {
   return match ? { role: match[1] } : null;
 }
 
+function matchPmOverviewRoute(pathname = '') {
+  const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
+  return normalizedPath === '/overview/pm' ? { scope: 'pm' } : null;
+}
+
 function readTaskListRouteState(search = '') {
   const params = new URLSearchParams(search);
   const owner = params.get('owner') || '';
   const view = params.get('view') === 'board' ? 'board' : 'list';
-  return { owner, view };
+  const bucket = params.get('bucket') || '';
+  return { owner, view, bucket };
 }
 
-function writeTaskListUrlState({ owner, view }, search = '') {
+function writeTaskListUrlState({ owner, view, bucket }, search = '') {
   const params = new URLSearchParams(search);
   const nextOwner = owner ?? params.get('owner') ?? '';
   const nextView = view ?? (params.get('view') === 'board' ? 'board' : 'list');
+  const nextBucket = bucket ?? params.get('bucket') ?? '';
   if (nextOwner) params.set('owner', nextOwner);
   else params.delete('owner');
   if (nextView === 'board') params.set('view', 'board');
   else params.delete('view');
+  if (nextBucket) params.set('bucket', nextBucket);
+  else params.delete('bucket');
   const next = params.toString();
   return next ? `?${next}` : '';
 }
@@ -96,15 +109,17 @@ function buildLoadingModel(pathname, search) {
 
 function buildListLoadingModel(pathname, search) {
   const roleInbox = matchRoleInboxRoute(pathname);
+  const pmOverview = matchPmOverviewRoute(pathname);
   return {
     kind: 'list',
-    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : '/tasks', taskId: null },
+    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : '/tasks', taskId: null },
     list: {
       filters: readTaskListRouteState(search),
       items: [],
-      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : 'Loading task list.' },
+      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : pmOverview ? 'Loading PM overview.' : 'Loading task list.' },
       resultSummary: '',
       inboxRole: roleInbox?.role || null,
+      isPmOverview: Boolean(pmOverview),
     },
   };
 }
@@ -186,7 +201,7 @@ export function App() {
   const [sessionConfig, setSessionConfig] = React.useState(() => readBrowserSessionConfig());
   const [draftSessionConfig, setDraftSessionConfig] = React.useState(() => readBrowserSessionConfig());
   const [model, setModel] = React.useState(() => {
-    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname)) return buildListLoadingModel(pathname, search);
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname)) return buildListLoadingModel(pathname, search);
     return matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname);
   });
   const [agentOptions, setAgentOptions] = React.useState([]);
@@ -223,22 +238,24 @@ export function App() {
   React.useEffect(() => {
     let cancelled = false;
 
-    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname)) {
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname)) {
       setModel(buildListLoadingModel(pathname, search));
       taskClient.fetchTaskList()
         .then((payload) => {
           if (cancelled) return;
           const filters = readTaskListRouteState(search);
           const roleInbox = matchRoleInboxRoute(pathname);
+          const pmOverview = matchPmOverviewRoute(pathname);
           setModel({
             kind: 'list',
-            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : '/tasks', taskId: null },
+            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : '/tasks', taskId: null },
             list: {
               filters,
               items: payload.items || [],
               state: { kind: 'ready' },
               resultSummary: '',
               inboxRole: roleInbox?.role || null,
+              isPmOverview: Boolean(pmOverview),
             },
           });
         })
@@ -253,6 +270,7 @@ export function App() {
                 state: { kind: 'error', message: error.message || 'Task list load failed.' },
                 resultSummary: '',
                 inboxRole: matchRoleInboxRoute(pathname)?.role || null,
+                isPmOverview: Boolean(matchPmOverviewRoute(pathname)),
               },
             });
           }
@@ -352,13 +370,15 @@ export function App() {
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
+  const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
       setModel(buildListLoadingModel(pathname, search));
       const payload = await taskClient.fetchTaskList();
       const roleInbox = matchRoleInboxRoute(pathname);
-      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null } });
+      const pmOverview = matchPmOverviewRoute(pathname);
+      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null, isPmOverview: Boolean(pmOverview) } });
       return;
     }
     setModel(buildLoadingModel(pathname, search));
@@ -367,9 +387,14 @@ export function App() {
   }, [model.kind, pageModule, pathname, search, taskClient]);
 
   const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
-  const listFilters = model.kind === 'list' ? model.list.filters : { owner: '' };
+  const listFilters = model.kind === 'list' ? model.list.filters : { owner: '', view: 'list', bucket: '' };
   const visibleListItems = model.kind === 'list' ? filterTaskList(model.list.items, listFilters.owner) : [];
   const roleInboxItems = model.kind === 'list' && activeInboxRole ? buildRoleInboxItems(model.list.items, activeInboxRole, agentLookup) : [];
+  const pmSections = model.kind === 'list' && isPmOverview ? buildPmOverviewSections(model.list.items, agentLookup) : [];
+  const activePmBucket = isPmOverview && PM_OVERVIEW_BUCKET_ORDER.includes(listFilters.bucket) ? listFilters.bucket : '';
+  const visiblePmSections = isPmOverview
+    ? pmSections.filter((section) => (activePmBucket ? section.key === activePmBucket : section.items.length > 0))
+    : [];
   const boardColumns = model.kind === 'list' ? buildBoardColumns(model.list.items, visibleListItems, agentLookup) : [];
   const listState = model.kind === 'list' ? model.list.state : { kind: 'idle' };
   const roleInboxState = !activeInboxRole
@@ -385,11 +410,13 @@ export function App() {
             }
           : { kind: 'ready', message: '' };
   const resultSummary = model.kind === 'list'
-    ? activeInboxRole
-      ? roleInboxState.kind === 'ready'
-        ? summarizeRoleInboxResults(roleInboxItems.length, activeInboxRole)
-        : roleInboxState.message
-      : summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup, listFilters.view)
+    ? isPmOverview
+      ? summarizePmOverviewResults(visiblePmSections, activePmBucket)
+      : activeInboxRole
+        ? roleInboxState.kind === 'ready'
+          ? summarizeRoleInboxResults(roleInboxItems.length, activeInboxRole)
+          : roleInboxState.message
+        : summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup, listFilters.view)
     : '';
 
   return (
@@ -397,12 +424,14 @@ export function App() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Thin browser runtime for issue #26</p>
-          <h1>{model.kind === 'list' ? (activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.summary.title || 'Task detail'}</h1>
+          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.summary.title || 'Task detail'}</h1>
           <p className="lede">
             {model.kind === 'list'
-              ? activeInboxRole
-                ? `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${getRoleInboxLabel(activeInboxRole)} role.`
-                : 'Overview list wired to the projected owner read model with single-select owner filtering.'
+              ? isPmOverview
+                ? 'Read-only grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping.'
+                : activeInboxRole
+                  ? `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${getRoleInboxLabel(activeInboxRole)} role.`
+                  : 'Overview list wired to the projected owner read model with single-select owner filtering.'
               : 'Route-mounted task detail screen using the existing adapter and page module contract.'}
           </p>
         </div>
@@ -426,6 +455,7 @@ export function App() {
             <div className="route-form__actions">
               <button type="submit">Open</button>
               <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
+              <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
               {ROLE_INBOXES.map((role) => (
                 <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
                   {getRoleInboxLabel(role)} inbox
@@ -507,9 +537,30 @@ export function App() {
       </header>
 
       {model.kind === 'list' ? (
-        <section className="task-list-panel" aria-label={activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
+        <section className="task-list-panel" aria-label={isPmOverview ? 'PM overview view' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
           <div className="task-list-toolbar">
-            {activeInboxRole ? (
+            {isPmOverview ? (
+              <div className="role-inbox-toolbar">
+                <div>
+                  <p className="eyebrow">Cross-role overview</p>
+                  <h2>PM grouped list overview</h2>
+                  <p className="role-inbox-toolbar__cue">Tasks are grouped into routing buckets in one read-only list. Use the single bucket filter to focus on one section and clear it to restore the grouped overview.</p>
+                </div>
+                <div className="task-list-toolbar__actions">
+                  <label>
+                    Bucket filter
+                    <select aria-label="Bucket filter" value={activePmBucket} onChange={(event) => navigate('/overview/pm', writeTaskListUrlState({ bucket: event.target.value }, search))}>
+                      <option value="">All buckets</option>
+                      {PM_OVERVIEW_BUCKET_ORDER.map((bucket) => (
+                        <option key={bucket} value={bucket}>{getPmOverviewBucketLabel(bucket)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" className="button-secondary" onClick={() => navigate('/overview/pm', writeTaskListUrlState({ bucket: '' }, search))} disabled={!activePmBucket}>Clear filter</button>
+                  <button type="button" onClick={() => void reloadTask()}>Refresh</button>
+                </div>
+              </div>
+            ) : activeInboxRole ? (
               <div className="role-inbox-toolbar">
                 <div>
                   <p className="eyebrow">Role inbox</p>
@@ -551,13 +602,64 @@ export function App() {
 
           <p className="task-list-results" role="status" aria-live="polite">{resultSummary}</p>
 
-          {(!activeInboxRole && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : 'Loading task list.'}</p> : null}
-          {(!activeInboxRole && listState.kind === 'error') ? <p role="alert">{listState.message}</p> : null}
+          {(isPmOverview && listState.kind === 'loading') || (!activeInboxRole && !isPmOverview && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : isPmOverview ? 'Loading PM overview.' : 'Loading task list.'}</p> : null}
+          {((!activeInboxRole && !isPmOverview && listState.kind === 'error') || (isPmOverview && listState.kind === 'error')) ? <p role="alert">{listState.message}</p> : null}
+          {isPmOverview && agentOptionsState.kind === 'error' && listState.kind === 'ready' ? (
+            <div className="empty-state" role="alert">
+              <h2>Some routing metadata is unavailable</h2>
+              <p>{agentOptionsState.message}</p>
+              <p className="task-list-meta">Tasks remain visible using safe fallback labels, but canonical bucket routing may place affected rows in Needs routing attention.</p>
+            </div>
+          ) : null}
           {activeInboxRole && roleInboxState.kind === 'error' ? (
             <div className="empty-state" role="alert">
               <h2>{getRoleInboxLabel(activeInboxRole)} inbox temporarily degraded</h2>
               <p>{roleInboxState.message}</p>
               <p className="task-list-meta">This inbox waits for both `/tasks` and `/ai-agents` before confirming empty or routed results.</p>
+            </div>
+          ) : null}
+
+          {isPmOverview && listState.kind === 'ready' && visiblePmSections.length ? (
+            <div className="task-list-table-wrap">
+              {visiblePmSections.map((section) => (
+                <section key={section.key} aria-labelledby={`pm-bucket-${section.key}`} className="pm-overview-section">
+                  <div className="task-board__column-header">
+                    <h2 id={`pm-bucket-${section.key}`}>{section.label}</h2>
+                    <span>{section.items.length}</span>
+                  </div>
+                  <table className="task-list-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Task</th>
+                        <th scope="col">Stage</th>
+                        <th scope="col">Owner</th>
+                        <th scope="col">Routing</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.items.map((item) => (
+                        <tr key={item.task_id}>
+                          <td>
+                            <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                              <strong>{item.title || item.task_id}</strong>
+                            </a>
+                            <div className="task-list-meta">{item.task_id}</div>
+                          </td>
+                          <td>{item.current_stage || '—'}</td>
+                          <td>
+                            <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
+                            <div className="task-list-meta">{item.pmBucket.degradedLabel || 'Read-only owner metadata'}</div>
+                          </td>
+                          <td>
+                            <span className="routing-badge">{item.pmBucket.routingCue}</span>
+                            <div className="task-list-meta">{item.pmBucket.routingReason}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              ))}
             </div>
           ) : null}
 
@@ -597,7 +699,7 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && visibleListItems.length && listFilters.view === 'list' ? (
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && visibleListItems.length && listFilters.view === 'list' ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -633,7 +735,7 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && visibleListItems.length && listFilters.view === 'board' ? (
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && visibleListItems.length && listFilters.view === 'board' ? (
             <div className="task-board" aria-label="Task board">
               <div className="task-board__scroll">
                 <div className="task-board__columns">
@@ -683,7 +785,15 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !visibleListItems.length ? (
+          {isPmOverview && listState.kind === 'ready' && !visiblePmSections.length ? (
+            <div className="empty-state" role="status">
+              <h2>{activePmBucket ? `No tasks in ${getPmOverviewBucketLabel(activePmBucket)}` : 'No tasks available'}</h2>
+              <p>{activePmBucket ? 'No tasks currently match the selected PM overview bucket.' : 'No tasks are available in the PM overview yet.'}</p>
+              {activePmBucket ? <button type="button" onClick={() => navigate('/overview/pm', writeTaskListUrlState({ bucket: '' }, search))}>Clear filter</button> : null}
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !visibleListItems.length ? (
             <div className="empty-state" role="status">
               <h2>No matching tasks</h2>
               <p>{listFilters.owner ? 'No tasks match the active owner filter.' : 'No tasks are available yet.'}</p>

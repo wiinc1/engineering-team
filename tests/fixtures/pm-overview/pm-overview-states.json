@@ -1,0 +1,21 @@
+{
+  "tenant_id": "tenant-pm-overview",
+  "agents": [
+    { "id": "architect", "display_name": "Architect", "role": "Architect" },
+    { "id": "engineer", "display_name": "Engineer", "role": "Engineering" },
+    { "id": "qa", "display_name": "QA Engineer", "role": "QA" },
+    { "id": "sre", "display_name": "SRE", "role": "SRE" }
+  ],
+  "tasks": [
+    { "task_id": "TSK-PM-1", "title": "Architecture review", "initial_stage": "BACKLOG", "priority": "P1", "assigned_owner": "architect" },
+    { "task_id": "TSK-PM-2", "title": "Implement feature", "initial_stage": "IMPLEMENT", "priority": "P1", "assigned_owner": "engineer", "reassigned_owner": "qa" },
+    { "task_id": "TSK-PM-3", "title": "Queue triage", "initial_stage": "TODO", "priority": "P2", "assigned_owner": null },
+    { "task_id": "TSK-PM-4", "title": "Unknown mapping", "initial_stage": "REVIEW", "priority": "P3", "assigned_owner": "ghost" },
+    { "task_id": "TSK-PM-5", "title": "Restricted owner", "initial_stage": "VERIFY", "priority": "P2", "assigned_owner": "masked", "owner_hidden": true }
+  ],
+  "roles": {
+    "writer": ["contributor"],
+    "reader": ["reader"],
+    "manager": ["pm"]
+  }
+}

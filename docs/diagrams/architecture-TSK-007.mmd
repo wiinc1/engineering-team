@@ -1,0 +1,11 @@
+flowchart LR
+    PM[PM user] --> Browser[Thin browser runtime]
+    Browser --> TasksAPI[GET /tasks]
+    Browser --> AgentsAPI[GET /ai-agents]
+    TasksAPI --> Projection[(Projected task summary read model)]
+    AgentsAPI --> Roster[(Canonical owner-role roster)]
+    Browser --> Routing[Client-side PM overview grouping helpers]
+    Projection --> Routing
+    Roster --> Routing
+    Routing --> Overview[Read-only PM grouped overview]
+    Overview --> Detail[Task detail route]
