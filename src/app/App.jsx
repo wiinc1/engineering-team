@@ -13,10 +13,14 @@ import {
 } from './session';
 import {
   buildBoardColumns,
+  buildRoleInboxItems,
   filterTaskList,
+  getRoleInboxLabel,
   mapAgentOptions,
   resolveOwnerPresentation,
+  ROLE_INBOXES,
   summarizeListResults,
+  summarizeRoleInboxResults,
   UNASSIGNED_FILTER_VALUE,
 } from './task-owner';
 
@@ -29,6 +33,12 @@ function readRouteTask(pathname) {
 
 function matchTaskListRoute(pathname = '') {
   return ((pathname || '').replace(/\/+$/, '') || '/') === '/tasks';
+}
+
+function matchRoleInboxRoute(pathname = '') {
+  const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
+  const match = normalizedPath.match(/^\/inbox\/(architect|engineer|qa|sre)$/);
+  return match ? { role: match[1] } : null;
 }
 
 function readTaskListRouteState(search = '') {
@@ -85,14 +95,16 @@ function buildLoadingModel(pathname, search) {
 }
 
 function buildListLoadingModel(pathname, search) {
+  const roleInbox = matchRoleInboxRoute(pathname);
   return {
     kind: 'list',
-    route: { pathname: '/tasks', taskId: null },
+    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : '/tasks', taskId: null },
     list: {
       filters: readTaskListRouteState(search),
       items: [],
-      state: { kind: 'loading', message: 'Loading task list.' },
+      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : 'Loading task list.' },
       resultSummary: '',
+      inboxRole: roleInbox?.role || null,
     },
   };
 }
@@ -174,10 +186,11 @@ export function App() {
   const [sessionConfig, setSessionConfig] = React.useState(() => readBrowserSessionConfig());
   const [draftSessionConfig, setDraftSessionConfig] = React.useState(() => readBrowserSessionConfig());
   const [model, setModel] = React.useState(() => {
-    if (matchTaskListRoute(pathname)) return buildListLoadingModel(pathname, search);
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname)) return buildListLoadingModel(pathname, search);
     return matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname);
   });
   const [agentOptions, setAgentOptions] = React.useState([]);
+  const [agentOptionsState, setAgentOptionsState] = React.useState({ kind: 'loading', message: 'Loading canonical role roster.' });
   const [assignmentDraft, setAssignmentDraft] = React.useState('');
   const [assignmentStatus, setAssignmentStatus] = React.useState({ kind: 'idle', message: '' });
 
@@ -210,20 +223,22 @@ export function App() {
   React.useEffect(() => {
     let cancelled = false;
 
-    if (matchTaskListRoute(pathname)) {
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname)) {
       setModel(buildListLoadingModel(pathname, search));
       taskClient.fetchTaskList()
         .then((payload) => {
           if (cancelled) return;
           const filters = readTaskListRouteState(search);
+          const roleInbox = matchRoleInboxRoute(pathname);
           setModel({
             kind: 'list',
-            route: { pathname: '/tasks', taskId: null },
+            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : '/tasks', taskId: null },
             list: {
               filters,
               items: payload.items || [],
               state: { kind: 'ready' },
               resultSummary: '',
+              inboxRole: roleInbox?.role || null,
             },
           });
         })
@@ -231,12 +246,13 @@ export function App() {
           if (!cancelled) {
             setModel({
               kind: 'list',
-              route: { pathname: '/tasks', taskId: null },
+              route: { pathname: matchRoleInboxRoute(pathname) ? pathname : '/tasks', taskId: null },
               list: {
                 filters: readTaskListRouteState(search),
                 items: [],
                 state: { kind: 'error', message: error.message || 'Task list load failed.' },
                 resultSummary: '',
+                inboxRole: matchRoleInboxRoute(pathname)?.role || null,
               },
             });
           }
@@ -282,12 +298,20 @@ export function App() {
     let cancelled = false;
     const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
 
+    setAgentOptionsState({ kind: 'loading', message: 'Loading canonical role roster.' });
     taskClient.fetchAssignableAgents()
       .then((payload) => {
-        if (!cancelled) setAgentOptions(payload.items || []);
+        if (cancelled) return;
+        setAgentOptions(payload.items || []);
+        setAgentOptionsState({ kind: 'ready', message: '' });
       })
-      .catch(() => {
-        if (!cancelled) setAgentOptions([]);
+      .catch((error) => {
+        if (cancelled) return;
+        setAgentOptions([]);
+        setAgentOptionsState({
+          kind: 'error',
+          message: error?.message || 'Canonical role roster unavailable. Role inbox routing cannot be confirmed right now.',
+        });
       });
 
     if (!canManageAssignment(tokenClaims)) {
@@ -327,12 +351,14 @@ export function App() {
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
+  const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
-      setModel(buildListLoadingModel('/tasks', search));
+      setModel(buildListLoadingModel(pathname, search));
       const payload = await taskClient.fetchTaskList();
-      setModel({ kind: 'list', route: { pathname: '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '' } });
+      const roleInbox = matchRoleInboxRoute(pathname);
+      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null } });
       return;
     }
     setModel(buildLoadingModel(pathname, search));
@@ -343,19 +369,40 @@ export function App() {
   const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
   const listFilters = model.kind === 'list' ? model.list.filters : { owner: '' };
   const visibleListItems = model.kind === 'list' ? filterTaskList(model.list.items, listFilters.owner) : [];
+  const roleInboxItems = model.kind === 'list' && activeInboxRole ? buildRoleInboxItems(model.list.items, activeInboxRole, agentLookup) : [];
   const boardColumns = model.kind === 'list' ? buildBoardColumns(model.list.items, visibleListItems, agentLookup) : [];
-  const resultSummary = model.kind === 'list' ? summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup, listFilters.view) : '';
   const listState = model.kind === 'list' ? model.list.state : { kind: 'idle' };
+  const roleInboxState = !activeInboxRole
+    ? { kind: 'idle', message: '' }
+    : listState.kind !== 'ready'
+      ? { kind: listState.kind, message: listState.message || '' }
+      : agentOptionsState.kind === 'loading'
+        ? { kind: 'loading', message: `Loading ${getRoleInboxLabel(activeInboxRole)} inbox routing.` }
+        : agentOptionsState.kind === 'error'
+          ? {
+              kind: 'error',
+              message: `${agentOptionsState.message} ${getRoleInboxLabel(activeInboxRole)} inbox counts stay hidden until canonical owner-to-role mapping is available.`,
+            }
+          : { kind: 'ready', message: '' };
+  const resultSummary = model.kind === 'list'
+    ? activeInboxRole
+      ? roleInboxState.kind === 'ready'
+        ? summarizeRoleInboxResults(roleInboxItems.length, activeInboxRole)
+        : roleInboxState.message
+      : summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup, listFilters.view)
+    : '';
 
   return (
     <main className="app-shell">
       <header className="page-header">
         <div>
           <p className="eyebrow">Thin browser runtime for issue #26</p>
-          <h1>{model.kind === 'list' ? 'Task list' : model.summary.title || 'Task detail'}</h1>
+          <h1>{model.kind === 'list' ? (activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.summary.title || 'Task detail'}</h1>
           <p className="lede">
             {model.kind === 'list'
-              ? 'Overview list wired to the projected owner read model with single-select owner filtering.'
+              ? activeInboxRole
+                ? `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${getRoleInboxLabel(activeInboxRole)} role.`
+                : 'Overview list wired to the projected owner read model with single-select owner filtering.'
               : 'Route-mounted task detail screen using the existing adapter and page module contract.'}
           </p>
         </div>
@@ -379,6 +426,11 @@ export function App() {
             <div className="route-form__actions">
               <button type="submit">Open</button>
               <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
+              {ROLE_INBOXES.map((role) => (
+                <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
+                  {getRoleInboxLabel(role)} inbox
+                </button>
+              ))}
             </div>
           </form>
 
@@ -455,38 +507,97 @@ export function App() {
       </header>
 
       {model.kind === 'list' ? (
-        <section className="task-list-panel" aria-label="Task list view">
+        <section className="task-list-panel" aria-label={activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
           <div className="task-list-toolbar">
-            <label>
-              Owner filter
-              <select
-                aria-label="Owner filter"
-                value={listFilters.owner}
-                onChange={(event) => setListOwnerFilter(event.target.value)}
-              >
-                <option value="">All owners</option>
-                <option value={UNASSIGNED_FILTER_VALUE}>Unassigned</option>
-                {mapAgentOptions(agentOptions).map((agent) => (
-                  <option key={agent.id} value={agent.id}>{agent.label}</option>
-                ))}
-              </select>
-            </label>
-            <div className="task-list-toolbar__actions">
-              <div className="view-toggle" role="tablist" aria-label="Task overview mode">
-                <button type="button" role="tab" aria-selected={listFilters.view === 'list'} className={listFilters.view === 'list' ? '' : 'button-secondary'} onClick={() => setListView('list')}>List</button>
-                <button type="button" role="tab" aria-selected={listFilters.view === 'board'} className={listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => setListView('board')}>Board</button>
+            {activeInboxRole ? (
+              <div className="role-inbox-toolbar">
+                <div>
+                  <p className="eyebrow">Role inbox</p>
+                  <h2>{getRoleInboxLabel(activeInboxRole)} inbox routing</h2>
+                  <p className="role-inbox-toolbar__cue">Tasks appear here only when their current assigned owner resolves to the {getRoleInboxLabel(activeInboxRole)} canonical role. Unassigned tasks appear in no role inbox.</p>
+                </div>
+                <div className="task-list-toolbar__actions">
+                  <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Open full task list</button>
+                  <button type="button" onClick={() => void reloadTask()}>Refresh</button>
+                </div>
               </div>
-              <button type="button" className="button-secondary" onClick={() => setListOwnerFilter('')} disabled={!listFilters.owner}>Clear filter</button>
-              <button type="button" onClick={() => void reloadTask()}>Refresh</button>
-            </div>
+            ) : (
+              <>
+                <label>
+                  Owner filter
+                  <select
+                    aria-label="Owner filter"
+                    value={listFilters.owner}
+                    onChange={(event) => setListOwnerFilter(event.target.value)}
+                  >
+                    <option value="">All owners</option>
+                    <option value={UNASSIGNED_FILTER_VALUE}>Unassigned</option>
+                    {mapAgentOptions(agentOptions).map((agent) => (
+                      <option key={agent.id} value={agent.id}>{agent.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="task-list-toolbar__actions">
+                  <div className="view-toggle" role="tablist" aria-label="Task overview mode">
+                    <button type="button" role="tab" aria-selected={listFilters.view === 'list'} className={listFilters.view === 'list' ? '' : 'button-secondary'} onClick={() => setListView('list')}>List</button>
+                    <button type="button" role="tab" aria-selected={listFilters.view === 'board'} className={listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => setListView('board')}>Board</button>
+                  </div>
+                  <button type="button" className="button-secondary" onClick={() => setListOwnerFilter('')} disabled={!listFilters.owner}>Clear filter</button>
+                  <button type="button" onClick={() => void reloadTask()}>Refresh</button>
+                </div>
+              </>
+            )}
           </div>
 
           <p className="task-list-results" role="status" aria-live="polite">{resultSummary}</p>
 
-          {listState.kind === 'loading' ? <p role="status">Loading task list.</p> : null}
-          {listState.kind === 'error' ? <p role="alert">{listState.message}</p> : null}
+          {(!activeInboxRole && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : 'Loading task list.'}</p> : null}
+          {(!activeInboxRole && listState.kind === 'error') ? <p role="alert">{listState.message}</p> : null}
+          {activeInboxRole && roleInboxState.kind === 'error' ? (
+            <div className="empty-state" role="alert">
+              <h2>{getRoleInboxLabel(activeInboxRole)} inbox temporarily degraded</h2>
+              <p>{roleInboxState.message}</p>
+              <p className="task-list-meta">This inbox waits for both `/tasks` and `/ai-agents` before confirming empty or routed results.</p>
+            </div>
+          ) : null}
 
-          {listState.kind === 'ready' && visibleListItems.length && listFilters.view === 'list' ? (
+          {roleInboxState.kind === 'ready' && activeInboxRole && roleInboxItems.length ? (
+            <div className="task-list-table-wrap">
+              <table className="task-list-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Task</th>
+                    <th scope="col">Stage</th>
+                    <th scope="col">Owner</th>
+                    <th scope="col">Routing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roleInboxItems.map((item) => (
+                    <tr key={item.task_id}>
+                      <td>
+                        <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                          <strong>{item.title || item.task_id}</strong>
+                        </a>
+                        <div className="task-list-meta">{item.task_id}</div>
+                      </td>
+                      <td>{item.current_stage || '—'}</td>
+                      <td>
+                        <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
+                        <div className="task-list-meta">Read-only owner metadata</div>
+                      </td>
+                      <td>
+                        <span className="routing-badge">{getRoleInboxLabel(activeInboxRole)} route</span>
+                        <div className="task-list-meta">{item.routing.routingLabel}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !activeInboxRole && visibleListItems.length && listFilters.view === 'list' ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -522,7 +633,7 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && visibleListItems.length && listFilters.view === 'board' ? (
+          {listState.kind === 'ready' && !activeInboxRole && visibleListItems.length && listFilters.view === 'board' ? (
             <div className="task-board" aria-label="Task board">
               <div className="task-board__scroll">
                 <div className="task-board__columns">
@@ -564,7 +675,15 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !visibleListItems.length ? (
+          {roleInboxState.kind === 'ready' && activeInboxRole && !roleInboxItems.length ? (
+            <div className="empty-state" role="status">
+              <h2>No tasks routed to {getRoleInboxLabel(activeInboxRole)}</h2>
+              <p>No assigned tasks currently resolve to the {getRoleInboxLabel(activeInboxRole)} role. This is not a loading state.</p>
+              <p className="task-list-meta">If owner-to-role mapping is stale or hidden, affected tasks remain stable in the general task list with safe fallback owner metadata instead of appearing in the wrong inbox.</p>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !activeInboxRole && !visibleListItems.length ? (
             <div className="empty-state" role="status">
               <h2>No matching tasks</h2>
               <p>{listFilters.owner ? 'No tasks match the active owner filter.' : 'No tasks are available yet.'}</p>

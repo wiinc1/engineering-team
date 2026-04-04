@@ -13,8 +13,8 @@ function createJsonResponse(payload: unknown, status = 200) {
   };
 }
 
-function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa' } = {}) {
-  let currentOwner = 'eng-1';
+function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAgentsStatus = 200 } = {}) {
+  let currentOwner = 'engineer';
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -33,10 +33,24 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa' } = {}
     }
 
     if (url.endsWith('/ai-agents')) {
+      if (aiAgentsStatus !== 200) {
+        return createJsonResponse(
+          {
+            error: {
+              code: 'canonical_roster_unavailable',
+              message: 'Canonical role roster unavailable.',
+            },
+          },
+          aiAgentsStatus,
+        );
+      }
+
       return createJsonResponse({
         items: [
+          { id: 'architect', display_name: 'Architect', role: 'Architect', active: true },
           { id: 'qa', display_name: 'QA Engineer', role: 'QA', active: true },
           { id: 'engineer', display_name: 'Engineer', role: 'Engineering', active: true },
+          { id: 'sre', display_name: 'SRE', role: 'SRE', active: true },
         ],
       });
     }
@@ -48,6 +62,8 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa' } = {}
           { task_id: 'TSK-43', tenant_id: 'tenant-a', title: 'Triage queue drift', priority: 'P2', current_stage: 'TODO', current_owner: null, owner: null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
           { task_id: 'TSK-44', tenant_id: 'tenant-a', title: 'Stale owner reference', priority: 'P3', current_stage: 'REVIEW', current_owner: 'ghost', owner: { actor_id: 'ghost', display_name: 'ghost' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
           { task_id: 'TSK-45', tenant_id: 'tenant-a', title: 'Restricted owner surface', priority: 'P2', current_stage: 'TODO', current_owner: 'masked', owner: { actor_id: 'masked', display_name: '', redacted: true }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-46', tenant_id: 'tenant-a', title: 'Review test plan', priority: 'P2', current_stage: 'VERIFY', current_owner: 'qa', owner: { actor_id: 'qa', display_name: 'qa' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-47', tenant_id: 'tenant-a', title: 'Design routing architecture', priority: 'P1', current_stage: 'BACKLOG', current_owner: 'architect', owner: { actor_id: 'architect', display_name: 'architect' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
         ],
       });
     }
@@ -180,7 +196,7 @@ describe('Task browser runtime coverage', () => {
     expect(screen.queryByText('Stale owner reference')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Clear filter' })[0]);
-    await screen.findByText('4 tasks shown.');
+    await screen.findByText('6 tasks shown.');
     expect(screen.getByText('Wire task detail')).toBeInTheDocument();
     expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
   });
@@ -192,7 +208,7 @@ describe('Task browser runtime coverage', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Task list' });
-    await screen.findByText('4 cards shown.');
+    await screen.findByText('6 cards shown.');
     expect(screen.getByLabelText('Task board')).toBeInTheDocument();
     expect(screen.getByLabelText('TODO column')).toBeInTheDocument();
     expect(screen.getByLabelText('IMPLEMENT column')).toBeInTheDocument();
@@ -215,7 +231,7 @@ describe('Task browser runtime coverage', () => {
     window.dispatchEvent(new Event('resize'));
     render(<App />);
 
-    await screen.findByText('4 cards shown.');
+    await screen.findByText('6 cards shown.');
     const ownerBadge = screen.getByTitle('Owner hidden');
     expect(ownerBadge).toHaveTextContent('Owner hidden');
     expect(ownerBadge.className).toContain('owner-badge--board');
@@ -241,12 +257,74 @@ describe('Task browser runtime coverage', () => {
 
   it('shows clear empty state with reset action when no tasks match the filter', async () => {
     installTaskFetchMock();
-    window.history.pushState({}, '', '/tasks?owner=engineer');
+    window.history.pushState({}, '', '/tasks?owner=nonexistent-owner');
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Task list' });
+    await screen.findByText('0 tasks shown for nonexistent-owner.');
     expect(screen.getByRole('heading', { name: 'No matching tasks' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Clear filter' }).length).toBeGreaterThan(0);
+  });
+
+  it('renders a read-only QA inbox with routing cue and excludes unassigned work', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/inbox/qa');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'QA Inbox' });
+    await screen.findByText('1 task routed to QA.');
+    expect(screen.getByText('Review test plan')).toBeInTheDocument();
+    expect(screen.queryByText('Triage queue drift')).not.toBeInTheDocument();
+    expect(screen.getByText('QA route')).toBeInTheDocument();
+    expect(screen.getByText(/current assigned owner resolves to the QA canonical role/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Owner filter')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save owner' })).not.toBeInTheDocument();
+  });
+
+  it('shows explicit empty state for a role inbox with no routed tasks', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/inbox/sre');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'SRE Inbox' });
+    await screen.findByText('0 tasks routed to SRE.');
+    expect(screen.getByRole('heading', { name: 'No tasks routed to SRE' })).toBeInTheDocument();
+    expect(screen.getByText(/This is not a loading state/i)).toBeInTheDocument();
+  });
+
+  it('keeps role inbox counts hidden and shows a degraded state when canonical roster loading fails', async () => {
+    installTaskFetchMock({ aiAgentsStatus: 503 });
+    window.history.pushState({}, '', '/inbox/sre');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'SRE Inbox' });
+    expect(screen.queryByText('0 tasks routed to SRE.')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'SRE inbox temporarily degraded' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Canonical role roster unavailable.');
+    expect(screen.getByRole('alert')).toHaveTextContent('counts stay hidden until canonical owner-to-role mapping is available');
+  });
+
+  it('moves reassigned work between role inboxes after refresh', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJwbS0xIiwidGVuYW50X2lkIjoidGVuYW50LWEiLCJyb2xlcyI6WyJwbSJdfQ.signature',
+    });
+    installTaskFetchMock({ reassignedOwner: 'qa' });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
+    await screen.findByText('Assigned to qa.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Engineer inbox' }));
+    await screen.findByRole('heading', { name: 'Engineer Inbox' });
+    await screen.findByText('0 tasks routed to Engineer.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'QA inbox' }));
+    await screen.findByRole('heading', { name: 'QA Inbox' });
+    expect(screen.getByText('2 tasks routed to QA.')).toBeInTheDocument();
+    expect(screen.getByText('Wire task detail')).toBeInTheDocument();
   });
 
   it('passes an axe smoke scan for the task list route', async () => {
@@ -257,6 +335,26 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Task list' });
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
+
+    const axeResults = await axe.run(container, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
+
+    expect(axeResults.violations).toEqual([]);
+  });
+
+  it('passes an axe smoke scan for the QA inbox route and preserves read-only inbox semantics', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/inbox/qa');
+    const { container } = render(<App />);
+
+    await screen.findByRole('heading', { name: 'QA Inbox' });
+    expect(screen.getByRole('status')).toHaveTextContent('1 task routed to QA.');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'QA inbox view' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Owner filter')).not.toBeInTheDocument();
 
     const axeResults = await axe.run(container, {
       rules: {

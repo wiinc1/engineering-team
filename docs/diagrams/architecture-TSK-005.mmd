@@ -1,0 +1,12 @@
+flowchart LR
+    UI[Role inbox UI /inbox/:role] --> Router[Browser route state]
+    Router --> Client[Task browser API client]
+    Client --> TasksAPI[GET /tasks projected read surface]
+    Client --> AgentsAPI[GET /ai-agents canonical roster]
+    TasksAPI --> Projection[(Projected task current state)]
+    AgentsAPI --> Roster[(Canonical owner-role mapping)]
+    Projection --> Routing[Role inbox routing helpers]
+    Roster --> Routing
+    Routing --> InboxList[Shared read-only inbox list pattern]
+    InboxList --> EmptyState[Explicit empty and fallback messaging]
+    Detail[Task detail PATCH /tasks/:id/assignment] --> Projection
