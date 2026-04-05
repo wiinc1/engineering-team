@@ -7,7 +7,7 @@ const { createAuditStore, WORKFLOW_AUDIT_EVENT_TYPES } = require('../../lib/audi
 
 function makeStore() {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-property-'));
-  return createAuditStore({ baseDir });
+  return createAuditStore({ baseDir, workflowEngineEnabled: false });
 }
 
 function seededRandom(seed) {
@@ -29,7 +29,7 @@ function buildPayload(eventType, n) {
     case 'task.created':
       return { title: `Task ${n}`, initial_stage: 'BACKLOG', priority: 'P1' };
     case 'task.stage_changed':
-      return { from_stage: 'BACKLOG', to_stage: n % 2 === 0 ? 'IN_PROGRESS' : 'REVIEW' };
+      return { from_stage: 'BACKLOG', to_stage: n % 2 === 0 ? 'IN_PROGRESS' : 'ARCHITECT_REVIEW' };
     case 'task.assigned':
       return { assignee: `engineer-${n % 3}` };
     case 'task.blocked':
@@ -49,7 +49,7 @@ function buildPayload(eventType, n) {
   }
 }
 
-test('property: generated event streams preserve monotonically increasing per-task ordering', () => {
+test('property: generated event streams preserve monotonically increasing per-task ordering', async () => {
   for (let seed = 1; seed <= 25; seed += 1) {
     const random = seededRandom(seed);
     const store = makeStore();
@@ -60,7 +60,7 @@ test('property: generated event streams preserve monotonically increasing per-ta
       const eventType = i === 0 && !expectedByTask.has(taskId) ? 'task.created' : randomChoice(random, EVENT_TYPES);
       const count = (expectedByTask.get(taskId) || 0) + 1;
       expectedByTask.set(taskId, count);
-      const result = store.appendEvent({
+      const result = await store.appendEvent({
         tenantId: 'tenant-prop',
         taskId,
         eventType,
@@ -74,20 +74,20 @@ test('property: generated event streams preserve monotonically increasing per-ta
     }
 
     for (const [taskId, count] of expectedByTask.entries()) {
-      const history = store.getTaskHistory(taskId, { tenantId: 'tenant-prop' });
+      const history = await store.getTaskHistory(taskId, { tenantId: 'tenant-prop' });
       assert.equal(history.length, count);
       assert.deepEqual(history.map(event => event.sequence_number), Array.from({ length: count }, (_, index) => count - index));
     }
   }
 });
 
-test('property: repeating identical idempotency keys never creates duplicate history entries', () => {
+test('property: repeating identical idempotency keys never creates duplicate history entries', async () => {
   for (let seed = 1; seed <= 50; seed += 1) {
     const store = makeStore();
     const taskId = `TSK-IDEMP-${seed}`;
     const key = `create:${taskId}`;
 
-    const first = store.appendEvent({
+    const first = await store.appendEvent({
       tenantId: 'tenant-idemp',
       taskId,
       eventType: 'task.created',
@@ -98,7 +98,7 @@ test('property: repeating identical idempotency keys never creates duplicate his
     });
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const duplicate = store.appendEvent({
+      const duplicate = await store.appendEvent({
         tenantId: 'tenant-idemp',
         taskId,
         eventType: 'task.created',
@@ -111,38 +111,42 @@ test('property: repeating identical idempotency keys never creates duplicate his
       assert.equal(duplicate.event.event_id, first.event.event_id);
     }
 
-    const history = store.getTaskHistory(taskId, { tenantId: 'tenant-idemp' });
+    const history = await store.getTaskHistory(taskId, { tenantId: 'tenant-idemp' });
     assert.equal(history.length, 1);
   }
 });
 
 const invalidPayloads = [null, undefined, '', 0, false];
 
-test('property: unsupported event types are always rejected and valid event types continue to work', () => {
+test('property: unsupported event types are always rejected and valid event types continue to work', async () => {
   for (let seed = 1; seed <= 20; seed += 1) {
     const store = makeStore();
     for (const bad of invalidPayloads) {
-      assert.throws(() => store.appendEvent({
-        taskId: `TSK-BAD-${seed}`,
-        eventType: bad,
-        actorType: 'agent',
-        actorId: 'validator',
-        idempotencyKey: `bad:${seed}:${String(bad)}`,
-      }));
+      await assert.rejects(
+        store.appendEvent({
+          taskId: `TSK-BAD-${seed}`,
+          eventType: bad,
+          actorType: 'agent',
+          actorId: 'validator',
+          idempotencyKey: `bad:${seed}:${String(bad)}`,
+        }),
+        (err) => err.message.includes('eventType is required') || err.message.includes('Invalid transition')
+      );
     }
 
     for (const eventType of WORKFLOW_AUDIT_EVENT_TYPES) {
       const taskId = `TSK-GOOD-${seed}-${eventType}`;
-      const result = store.appendEvent({
+      const result = await store.appendEvent({
         taskId,
         eventType,
         actorType: 'agent',
-        actorId: 'validator',
+        actorId: 'actor-validator',
         idempotencyKey: `good:${seed}:${eventType}`,
         payload: buildPayload(eventType, seed),
       });
       assert.equal(result.duplicate, false);
-      assert.equal(store.getTaskHistory(taskId).length, 1);
+      const history = await store.getTaskHistory(taskId, { tenantId: 'engineering-team' });
+      assert.equal(history.length, 1);
     }
   }
 });
