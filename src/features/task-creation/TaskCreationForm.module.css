@@ -43,6 +43,21 @@
   gap: 1.5rem;
 }
 
+.validationErrors {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.validationErrors li {
+  color: var(--text-danger, #d32f2f);
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(211, 47, 47, 0.05);
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
 .error {
   color: var(--text-danger, #d32f2f);
   font-size: 0.875rem;

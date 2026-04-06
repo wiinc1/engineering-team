@@ -1,3 +1,6 @@
+const { validateTaskCreatePayload, VALID_PRIORITIES, VALID_TASK_TYPES } = require('./schema');
+const { generateTaskId, isValidTaskId } = require('./types');
+
 function parseJsonResponse(response) {
   return response.json().then(payload => {
     if (!response.ok) {
@@ -28,17 +31,35 @@ function createTaskCreationApiClient({ baseUrl = '', fetchImpl = fetch, getHeade
   };
 
   return {
-    async createTask(taskData) {
+    async createTask(taskData, sequenceNumber) {
+      const validation = validateTaskCreatePayload(taskData);
+      if (!validation.valid) {
+        const error = new Error(`Validation failed: ${validation.errors.join(', ')}`);
+        error.code = 'VALIDATION_ERROR';
+        error.details = validation.errors;
+        throw error;
+      }
+
+      const taskId = generateTaskId(sequenceNumber);
+
       return request('/tasks', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify(taskData),
+        body: JSON.stringify({ ...taskData, taskId }),
       });
     },
     
     async saveDraft(taskData) {
+      const validation = validateTaskCreatePayload(taskData);
+      if (!validation.valid) {
+        const error = new Error(`Validation failed: ${validation.errors.join(', ')}`);
+        error.code = 'VALIDATION_ERROR';
+        error.details = validation.errors;
+        throw error;
+      }
+
       return request('/tasks/draft', {
         method: 'POST',
         headers: {
@@ -49,10 +70,22 @@ function createTaskCreationApiClient({ baseUrl = '', fetchImpl = fetch, getHeade
     },
     
     async fetchTaskDraft(taskId) {
+      if (!isValidTaskId(taskId)) {
+        const error = new Error(`Invalid task ID format: ${taskId}`);
+        error.code = 'INVALID_TASK_ID';
+        throw error;
+      }
+
       return request(`/tasks/draft/${taskId}`);
     },
     
     async deleteTaskDraft(taskId) {
+      if (!isValidTaskId(taskId)) {
+        const error = new Error(`Invalid task ID format: ${taskId}`);
+        error.code = 'INVALID_TASK_ID';
+        throw error;
+      }
+
       return request(`/tasks/draft/${taskId}`, {
         method: 'DELETE'
       });
@@ -62,4 +95,6 @@ function createTaskCreationApiClient({ baseUrl = '', fetchImpl = fetch, getHeade
 
 module.exports = {
   createTaskCreationApiClient,
+  VALID_PRIORITIES,
+  VALID_TASK_TYPES,
 };
