@@ -3,6 +3,8 @@ import { createTaskDetailApiClient } from '../features/task-detail/adapter';
 import { createTaskDetailPageModule } from '../features/task-detail/route';
 import { writeTaskDetailUrlState } from '../features/task-detail/urlState';
 import { TaskDetailActivityShell } from '../features/task-detail/TaskDetailActivityShell';
+import { StageTransition } from '../features/task-detail/StageTransition';
+import { TaskCreationPage } from '../features/task-creation/TaskCreationPage';
 import {
   buildAuthHeaders,
   clearBrowserSessionConfig,
@@ -37,6 +39,10 @@ function readRouteTask(pathname) {
 
 function matchTaskListRoute(pathname = '') {
   return ((pathname || '').replace(/\/+$/, '') || '/') === '/tasks';
+}
+
+function matchCreateTaskRoute(pathname = '') {
+  return ((pathname || '').replace(/\/+$/, '') || '/') === '/tasks/create';
 }
 
 function matchRoleInboxRoute(pathname = '') {
@@ -385,6 +391,10 @@ export function App() {
     const nextModel = await pageModule.load({ pathname, search });
     setModel({ ...nextModel, kind: 'detail' });
   }, [model.kind, pageModule, pathname, search, taskClient]);
+
+  const handleTaskCreated = React.useCallback(() => {
+    navigate('/tasks');
+  }, [navigate]);
 
   const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
   const listFilters = model.kind === 'list' ? model.list.filters : { owner: '', view: 'list', bucket: '' };
@@ -803,34 +813,46 @@ export function App() {
         </section>
       ) : (
         <>
-          <section className="summary-grid" aria-label="Task summary">
-            <article>
-              <span>Task</span>
-              <strong>{model.summary.taskId || '—'}</strong>
-            </article>
-            <article>
-              <span>Tenant</span>
-              <strong>{model.summary.tenantId || '—'}</strong>
-            </article>
-            <article>
-              <span>Stage</span>
-              <strong>{model.summary.currentStage || '—'}</strong>
-            </article>
-            <article>
-              <span>Owner</span>
-              <strong>{model.summary.currentOwner || '—'}</strong>
-            </article>
-            <article>
-              <span>Priority</span>
-              <strong>{model.summary.priority || '—'}</strong>
-            </article>
-            <article>
-              <span>Freshness</span>
-              <strong>{formatFreshness(model.summary)}</strong>
-            </article>
-          </section>
+           <section className="summary-grid" aria-label="Task summary">
+             <article>
+               <span>Task</span>
+               <strong>{model.summary.taskId || '—'}</strong>
+             </article>
+             <article>
+               <span>Tenant</span>
+               <strong>{model.summary.tenantId || '—'}</strong>
+             </article>
+             <article>
+               <span>Stage</span>
+               <strong>{model.summary.currentStage || '—'}</strong>
+             </article>
+             <article>
+               <span>Owner</span>
+               <strong>{model.summary.currentOwner || '—'}</strong>
+             </article>
+             <article>
+               <span>Priority</span>
+               <strong>{model.summary.priority || '—'}</strong>
+             </article>
+             <article>
+               <span>Freshness</span>
+               <strong>{formatFreshness(model.summary)}</strong>
+             </article>
+           </section>
+           <StageTransition 
+             currentStage={model.summary.currentStage || 'BACKLOG'} 
+             taskId={routeTaskId} 
+             onTransition={async (toStage, payload) => {
+               try {
+                 await taskClient.changeTaskStage(routeTaskId, toStage, payload);
+                 await reloadTask();
+               } catch (error) {
+                 throw error;
+               }
+             }}
+           />
+           <section className="assignment-panel" aria-label="Task assignment">
 
-          <section className="assignment-panel" aria-label="Task assignment">
             <div className="assignment-panel__header">
               <div>
                 <p className="eyebrow">Assignment</p>
