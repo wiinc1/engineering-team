@@ -1,16 +1,16 @@
-async function parseJsonResponse(response) {
-  const payload = await response.json();
+function parseJsonResponse(response) {
+  return response.json().then(payload => {
+    if (!response.ok) {
+      const error = new Error(payload?.error?.message || `Request failed with status ${response.status}`);
+      error.status = response.status;
+      error.code = payload?.error?.code;
+      error.details = payload?.error?.details;
+      error.requestId = payload?.error?.request_id;
+      throw error;
+    }
 
-  if (!response.ok) {
-    const error = new Error(payload?.error?.message || `Request failed with status ${response.status}`);
-    error.status = response.status;
-    error.code = payload?.error?.code;
-    error.details = payload?.error?.details;
-    error.requestId = payload?.error?.request_id;
-    throw error;
-  }
-
-  return payload;
+    return payload;
+  });
 }
 
 function createTaskCreationApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders } = {}) {
@@ -28,13 +28,33 @@ function createTaskCreationApiClient({ baseUrl = '', fetchImpl = fetch, getHeade
   };
 
   return {
-    createTask(taskData) {
+    async createTask(taskData) {
       return request('/tasks', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
         },
         body: JSON.stringify(taskData),
+      });
+    },
+    
+    async saveDraft(taskData) {
+      return request('/tasks/draft', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(taskData),
+      });
+    },
+    
+    async fetchTaskDraft(taskId) {
+      return request(`/tasks/draft/${taskId}`);
+    },
+    
+    async deleteTaskDraft(taskId) {
+      return request(`/tasks/draft/${taskId}`, {
+        method: 'DELETE'
       });
     },
   };
