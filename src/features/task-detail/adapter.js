@@ -91,6 +91,10 @@ function toTaskDetailScreenModel({ summary, history, telemetry, historyFilters }
       freshness: summary.freshness,
       statusIndicator: summary.status_indicator,
       closed: summary.closed,
+      businessContext: summary.business_context,
+      acceptanceCriteria: summary.acceptance_criteria,
+      definitionOfDone: summary.definition_of_done,
+      taskType: summary.task_type,
     },
     shell: {
       selectedTab: 'history',
@@ -158,6 +162,18 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
           'content-type': 'application/json',
         },
         body: JSON.stringify({ agentId }),
+      });
+    },
+    changeTaskStage(taskId, toStage, payload = {}) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/events`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventType: 'task.stage_changed',
+          payload: { to_stage: toStage, ...payload },
+        }),
       });
     },
     async fetchTaskDetailScreenData(taskId, options = {}) {
