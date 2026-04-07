@@ -23,7 +23,11 @@ function authHeaders(secret, roles) {
 async function withServer(run) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'task-list-owner-integration-'));
   const secret = 'task-list-owner-integration-secret';
-  const { server } = createAuditApiServer({ baseDir, jwtSecret: secret });
+  const { server } = createAuditApiServer({
+    baseDir,
+    jwtSecret: secret,
+    agentRegistry: fixture.agents,
+  });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
 

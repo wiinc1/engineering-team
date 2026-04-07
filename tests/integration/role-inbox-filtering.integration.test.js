@@ -23,7 +23,11 @@ function authHeaders(secret, roles) {
 async function withServer(run) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'role-inbox-integration-'));
   const secret = 'role-inbox-integration-secret';
-  const { server } = createAuditApiServer({ baseDir, jwtSecret: secret });
+  const { server } = createAuditApiServer({
+    baseDir,
+    jwtSecret: secret,
+    agentRegistry: fixture.agents,
+  });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   try {
@@ -44,7 +48,13 @@ async function createTask(baseUrl, secret, task) {
       eventType: 'task.created',
       actorType: 'agent',
       idempotencyKey: `create:${task.task_id}`,
-      payload: { title: task.title, initial_stage: task.initial_stage, priority: task.priority },
+      payload: {
+        title: task.title,
+        initial_stage: task.initial_stage,
+        priority: task.priority,
+        waiting_state: task.waiting_state || null,
+        next_required_action: task.next_required_action || null,
+      },
     }),
   });
   assert.equal(response.status, 202);
@@ -98,5 +108,68 @@ test('integration: projected task list supports canonical role inbox filtering a
     const reassigned = payload.items.find((item) => item.task_id === 'TSK-INBOX-2');
     assert.equal(reassigned.current_owner, 'qa');
     assert.deepEqual(reassigned.owner, { actor_id: 'qa', display_name: 'qa' });
+  });
+});
+
+test('integration: task summaries expose queue-entered and WIP semantics for PM and human routing', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    await createTask(baseUrl, secret, {
+      task_id: 'TSK-INBOX-PM',
+      title: 'Await PM triage',
+      initial_stage: 'TODO',
+      priority: 'P1',
+      waiting_state: 'awaiting_pm_decision',
+      next_required_action: 'PM triage required',
+    });
+
+    await createTask(baseUrl, secret, {
+      task_id: 'TSK-INBOX-HUMAN',
+      title: 'Await approval',
+      initial_stage: 'REVIEW',
+      priority: 'P2',
+      waiting_state: 'awaiting_human_approval',
+      next_required_action: 'Human approval required',
+    });
+
+    await createTask(baseUrl, secret, {
+      task_id: 'TSK-INBOX-WIP',
+      title: 'Work in progress',
+      initial_stage: 'TODO',
+      priority: 'P2',
+    });
+    await assignTask(baseUrl, secret, 'TSK-INBOX-WIP', 'engineer');
+    let response = await fetch(`${baseUrl}/tasks/TSK-INBOX-WIP/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, fixture.roles.writer),
+      },
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'stage:TSK-INBOX-WIP:in-progress',
+        payload: { to_stage: 'IN_PROGRESS' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks`, { headers: authHeaders(secret, fixture.roles.reader) });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    const pmTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-PM');
+    const humanTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-HUMAN');
+    const wipTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-WIP');
+
+    assert.equal(pmTask.waiting_state, 'awaiting_pm_decision');
+    assert.equal(pmTask.next_required_action, 'PM triage required');
+    assert.ok(pmTask.queue_entered_at);
+
+    assert.equal(humanTask.waiting_state, 'awaiting_human_approval');
+    assert.equal(humanTask.next_required_action, 'Human approval required');
+    assert.ok(humanTask.queue_entered_at);
+
+    assert.equal(wipTask.current_stage, 'IN_PROGRESS');
+    assert.equal(wipTask.wip_owner, 'engineer');
+    assert.ok(wipTask.wip_started_at);
   });
 });

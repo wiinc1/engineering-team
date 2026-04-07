@@ -49,7 +49,7 @@ pgTest('postgres audit flow covers migration -> ingest -> projection queue -> ou
         idempotencyKey: 'create:TSK-PG-001',
         traceId: 'trace-pg-1',
         correlationId: 'corr-pg-1',
-        payload: { title: 'Postgres e2e task', initial_stage: 'BACKLOG', priority: 'P0' },
+        payload: { title: 'Postgres e2e task', initial_stage: 'BACKLOG', priority: 'P0', waiting_state: 'awaiting_pm_decision', next_required_action: 'PM triage required' },
       }),
     });
     assert.equal(response.status, 202);
@@ -70,7 +70,7 @@ pgTest('postgres audit flow covers migration -> ingest -> projection queue -> ou
     const readHeaders = authHeaders(secret, { roles: ['reader'] });
     response = await fetch(`${baseUrl}/tasks/TSK-PG-001/history`, { headers: readHeaders });
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), []);
+    assert.deepEqual(await response.json(), { items: [], page_info: { limit: 25, next_cursor: null, has_more: false } });
 
     response = await fetch(`${baseUrl}/projections/process?limit=100`, {
       method: 'POST',
@@ -86,22 +86,28 @@ pgTest('postgres audit flow covers migration -> ingest -> projection queue -> ou
     assert.equal(published.length, 2);
 
     response = await fetch(`${baseUrl}/tasks/TSK-PG-001/history`, { headers: readHeaders });
-    const history = await response.json();
+    const historyPayload = await response.json();
+    const history = historyPayload.items;
     assert.equal(history.length, 2);
-    assert.equal(history[0].sequence_number, 1);
-    assert.equal(history[1].sequence_number, 2);
-    assert.equal(history[1].summary, 'Stage changed BACKLOG → IN_PROGRESS');
+    assert.equal(history[0].sequence_number, 2);
+    assert.equal(history[1].sequence_number, 1);
+    assert.equal(history[0].summary, 'Stage changed BACKLOG → IN_PROGRESS');
 
     response = await fetch(`${baseUrl}/tasks/TSK-PG-001/state`, { headers: readHeaders });
     const state = await response.json();
     assert.equal(state.current_stage, 'IN_PROGRESS');
     assert.equal(state.priority, 'P0');
+    assert.equal(state.waiting_state, null);
+    assert.equal(state.next_required_action, null);
+    assert.equal(state.wip_owner, 'principal-engineer');
+    assert.ok(state.wip_started_at);
+    assert.ok(state.queue_entered_at);
 
     response = await fetch(`${baseUrl}/tasks/TSK-PG-001/observability-summary`, { headers: readHeaders });
     const summary = await response.json();
     assert.equal(summary.event_count, 2);
-    assert.deepEqual(summary.trace_ids, ['trace-pg-1']);
-    assert.deepEqual(summary.correlation_ids.sort(), ['corr-pg-1', 'corr-pg-2']);
+    assert.deepEqual(summary.correlation.approved_correlation_ids.sort(), ['corr-pg-1', 'corr-pg-2']);
+    assert.equal(summary.access.restricted, true);
 
     const metrics = await store.readMetrics();
     assert.equal(metrics.workflow_audit_events_written_total, 2);
@@ -120,6 +126,10 @@ pgTest('postgres audit flow covers migration -> ingest -> projection queue -> ou
 
     const postRebuildHistory = await store.getTaskHistory('TSK-PG-001', { tenantId: 'tenant-int' });
     assert.equal(postRebuildHistory.length, 2);
+
+    const rebuiltState = await store.getTaskCurrentState('TSK-PG-001', { tenantId: 'tenant-int' });
+    assert.equal(rebuiltState.wip_owner, 'principal-engineer');
+    assert.ok(rebuiltState.wip_started_at);
   } finally {
     await new Promise(resolve => server.close(() => resolve()));
     await pool.end();

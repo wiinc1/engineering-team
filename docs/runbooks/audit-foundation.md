@@ -100,6 +100,7 @@ See `lib/audit/event-types.js`. The store handles the declared workflow event ty
 - `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; if omitted, runtime prefers `postgres` when `DATABASE_URL` is present and otherwise falls back to `file`
 - `ALLOW_LEGACY_HEADERS=true` — permit legacy non-JWT auth fallback
 - `DATABASE_URL=postgres://...` — required for PostgreSQL backend; in production this should be the Supabase Postgres connection string
+- `PGSSL_ACCEPT_SELF_SIGNED=1` — explicit dev-only escape hatch when a managed provider presents a chain your environment cannot validate
 - `ALLOW_FILE_AUDIT_BACKEND_IN_PRODUCTION=true` — emergency escape hatch only; normal production posture should leave this unset/false
 - `PUSHGATEWAY_URL=http://...` — optional worker metric push target
 
@@ -108,6 +109,7 @@ See `lib/audit/event-types.js`. The store handles the declared workflow event ty
 - **Local development / test:** use Dockerized Postgres by default. `docker-compose.yml` now runs Postgres with disposable storage (`tmpfs`), so `docker compose down -v` / `npm run dev:postgres:reset` gives a clean slate quickly.
 - **Fallback local harness:** file backend remains available for fast isolated runs. Set `AUDIT_STORE_BACKEND=file` and keep `NODE_ENV=development` or `test`.
 - **Managed Postgres in dev/staging:** use the same Postgres path as production by setting `DATABASE_URL`; no code-path change is required.
+- **TLS guidance:** prefer verified TLS. If a provider like Supabase is reachable only with an untrusted/self-signed chain in your current environment, set `PGSSL_ACCEPT_SELF_SIGNED=1` explicitly instead of hiding the relaxation in the connection string. Treat that as temporary dev/staging-only posture.
 
 ## Local Docker workflow
 ### Start disposable local Postgres

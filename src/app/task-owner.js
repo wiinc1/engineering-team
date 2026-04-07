@@ -1,13 +1,18 @@
 export const UNASSIGNED_FILTER_VALUE = '__unassigned__';
 export const STAGE_ORDER = ['BACKLOG', 'TODO', 'IMPLEMENT', 'IN_PROGRESS', 'REVIEW', 'VERIFY', 'DONE', 'REOPEN'];
-export const ROLE_INBOXES = ['architect', 'engineer', 'qa', 'sre'];
+export const ROLE_INBOXES = ['pm', 'architect', 'engineer', 'qa', 'sre', 'human'];
 export const PM_OVERVIEW_BUCKET_ORDER = ['needs-routing-attention', 'unassigned', ...ROLE_INBOXES];
 
+const PRIORITY_ORDER = { P0: 0, P1: 1, P2: 2, P3: 3 };
+const ACTIVE_STAGES = new Set(['IMPLEMENT', 'IN_PROGRESS']);
+
 const ROLE_LABELS = {
+  pm: 'PM',
   architect: 'Architect',
   engineer: 'Engineer',
   qa: 'QA',
   sre: 'SRE',
+  human: 'Human Stakeholder',
 };
 
 const PM_BUCKET_LABELS = {
@@ -34,6 +39,8 @@ export function normalizeRoleKey(role) {
   if (normalized === 'architecture') return 'architect';
   if (normalized === 'engineering') return 'engineer';
   if (normalized === 'quality assurance') return 'qa';
+  if (normalized === 'product' || normalized === 'product manager') return 'pm';
+  if (normalized === 'human stakeholder' || normalized === 'stakeholder') return 'human';
   return ROLE_INBOXES.includes(normalized) ? normalized : null;
 }
 
@@ -64,6 +71,27 @@ export function resolveOwnerPresentation(item, agentLookup) {
 }
 
 export function resolveRoleInboxMembership(item, agentLookup) {
+  const waitingState = String(item?.waiting_state || '').trim().toLowerCase();
+  const nextRequiredAction = String(item?.next_required_action || '').trim().toLowerCase();
+
+  if (waitingState.includes('pm') || nextRequiredAction.includes('pm')) {
+    return {
+      inboxRole: 'pm',
+      reason: 'waiting-pm',
+      routingLabel: 'Routed to PM because the task is explicitly waiting on PM action.',
+      isFallback: false,
+    };
+  }
+
+  if (waitingState.includes('human') || waitingState.includes('stakeholder') || nextRequiredAction.includes('human') || nextRequiredAction.includes('stakeholder') || nextRequiredAction.includes('approval')) {
+    return {
+      inboxRole: 'human',
+      reason: 'waiting-human',
+      routingLabel: 'Routed to Human Stakeholder because the task is explicitly waiting on human approval or escalation handling.',
+      isFallback: false,
+    };
+  }
+
   if (!item?.current_owner) {
     return {
       inboxRole: null,
@@ -217,10 +245,60 @@ export function buildBoardColumns(allItems, visibleItems, agentLookup) {
   }));
 }
 
+function comparePriority(left, right) {
+  const leftRank = PRIORITY_ORDER[left?.priority] ?? Number.MAX_SAFE_INTEGER;
+  const rightRank = PRIORITY_ORDER[right?.priority] ?? Number.MAX_SAFE_INTEGER;
+  if (leftRank !== rightRank) return leftRank - rightRank;
+  return 0;
+}
+
+function compareFreshnessTimestamp(left, right) {
+  const leftTs = Date.parse(left?.freshness?.last_updated_at || '') || 0;
+  const rightTs = Date.parse(right?.freshness?.last_updated_at || '') || 0;
+  if (leftTs !== rightTs) return leftTs - rightTs;
+  return 0;
+}
+
+function compareStableTaskId(left, right) {
+  return String(left?.task_id || '').localeCompare(String(right?.task_id || ''));
+}
+
+export function sortInboxItems(items = []) {
+  return [...items].sort((left, right) => comparePriority(left, right) || compareFreshnessTimestamp(left, right) || compareStableTaskId(left, right));
+}
+
+export function resolveQueueReason(item, roleKey) {
+  const normalizedRole = normalizeRoleKey(roleKey);
+  const priority = item?.priority || 'Unprioritized';
+  const active = ACTIVE_STAGES.has(item?.current_stage || '');
+  const actionNeeded = item?.next_required_action || null;
+  const queueEnteredAt = item?.queue_entered_at || item?.freshness?.last_updated_at || null;
+
+  if (actionNeeded) {
+    return {
+      label: actionNeeded,
+      detail: `Action needed from ${getRoleInboxLabel(normalizedRole)}. Ordered by priority first, then queue age (${queueEnteredAt || 'unknown'}), then task ID for stable tie-breaking.`,
+    };
+  }
+
+  if (active) {
+    return {
+      label: 'Active work retained',
+      detail: `${priority} task already in progress. Higher-priority queued work should not automatically preempt active work.`,
+    };
+  }
+
+  return {
+    label: `${priority} waiting work`,
+    detail: `Waiting for ${getRoleInboxLabel(normalizedRole)} action. Ordered by priority first, then queue age (${queueEnteredAt || 'unknown'}), then task ID for stable tie-breaking.`,
+  };
+}
+
 export function buildRoleInboxItems(items, roleKey, agentLookup) {
-  return filterTasksForRoleInbox(items, roleKey, agentLookup).map((item) => ({
+  return sortInboxItems(filterTasksForRoleInbox(items, roleKey, agentLookup)).map((item) => ({
     ...item,
     ownerPresentation: resolveOwnerPresentation(item, agentLookup),
     routing: resolveRoleInboxMembership(item, agentLookup),
+    queueReason: resolveQueueReason(item, roleKey),
   }));
 }
