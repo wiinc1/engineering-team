@@ -50,6 +50,7 @@ This repo now includes a materially more production-shaped `SF-017` slice:
 - `npm run test:chaos`
 - `npm run test:integration:docker`
 - `npm run audit:migrate` (with `DATABASE_URL` pointed at your target Postgres)
+- For managed Postgres providers like Supabase, prefer verified TLS. If your environment must temporarily accept a self-signed chain, set `PGSSL_ACCEPT_SELF_SIGNED=1` explicitly instead of relying on `sslmode=no-verify` in the URL.
 - `npm run audit:rebuild -- /path/to/repo-root`
 - `npm run audit:project -- /path/to/repo-root [batchSize]`
 - `npm run audit:outbox -- /path/to/repo-root [batchSize]`

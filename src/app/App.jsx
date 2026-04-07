@@ -47,7 +47,7 @@ function matchCreateTaskRoute(pathname = '') {
 
 function matchRoleInboxRoute(pathname = '') {
   const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
-  const match = normalizedPath.match(/^\/inbox\/(architect|engineer|qa|sre)$/);
+  const match = normalizedPath.match(/^\/inbox\/(pm|architect|engineer|qa|sre|human)$/);
   return match ? { role: match[1] } : null;
 }
 
@@ -680,7 +680,9 @@ export function App() {
                   <tr>
                     <th scope="col">Task</th>
                     <th scope="col">Stage</th>
+                    <th scope="col">Priority</th>
                     <th scope="col">Owner</th>
+                    <th scope="col">Queue reason</th>
                     <th scope="col">Routing</th>
                   </tr>
                 </thead>
@@ -694,9 +696,14 @@ export function App() {
                         <div className="task-list-meta">{item.task_id}</div>
                       </td>
                       <td>{item.current_stage || '—'}</td>
+                      <td>{item.priority || '—'}</td>
                       <td>
                         <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
                         <div className="task-list-meta">Read-only owner metadata</div>
+                      </td>
+                      <td>
+                        <span className="routing-badge">{item.queueReason.label}</span>
+                        <div className="task-list-meta">{item.queueReason.detail}</div>
                       </td>
                       <td>
                         <span className="routing-badge">{getRoleInboxLabel(activeInboxRole)} route</span>

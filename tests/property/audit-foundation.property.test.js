@@ -123,14 +123,19 @@ test('property: unsupported event types are always rejected and valid event type
     const store = makeStore();
     for (const bad of invalidPayloads) {
       await assert.rejects(
-        store.appendEvent({
-          taskId: `TSK-BAD-${seed}`,
-          eventType: bad,
-          actorType: 'agent',
-          actorId: 'validator',
-          idempotencyKey: `bad:${seed}:${String(bad)}`,
-        }),
-        (err) => err.message.includes('eventType is required') || err.message.includes('Invalid transition')
+        async () => {
+          await store.appendEvent({
+            taskId: `TSK-BAD-${seed}`,
+            eventType: bad,
+            actorType: 'agent',
+            actorId: 'validator',
+            idempotencyKey: `bad:${seed}:${String(bad)}`,
+          });
+        },
+        (err) => {
+          const message = err?.message || String(err);
+          return /eventType is required|Unsupported workflow audit event type|Invalid transition/.test(message);
+        }
       );
     }
 

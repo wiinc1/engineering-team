@@ -21,10 +21,11 @@ describe('pm overview routing', () => {
 
   it('builds sections in the required display order and summarizes filtered results', () => {
     const sections = buildPmOverviewSections(items, agentLookup);
-    expect(sections.map((section) => section.key)).toEqual(['needs-routing-attention', 'unassigned', 'architect', 'engineer', 'qa', 'sre']);
+    expect(sections.map((section) => section.key)).toEqual(['needs-routing-attention', 'unassigned', 'pm', 'architect', 'engineer', 'qa', 'sre', 'human']);
     expect(sections[0].items).toHaveLength(2);
     expect(sections[1].items).toHaveLength(1);
-    expect(sections[2].items).toHaveLength(1);
+    expect(sections[2].items).toHaveLength(0);
+    expect(sections[3].items).toHaveLength(1);
     expect(summarizePmOverviewResults(sections.filter((section) => section.items.length), '')).toBe('4 tasks shown across 3 buckets.');
     expect(summarizePmOverviewResults(sections.filter((section) => section.key === 'engineer'), 'engineer')).toBe('0 tasks shown in Engineer.');
   });

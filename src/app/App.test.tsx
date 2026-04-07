@@ -58,12 +58,12 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAge
     if (url.endsWith('/tasks') && (!init || !init.method || init.method === 'GET')) {
       return createJsonResponse({
         items: [
-          { task_id: 'TSK-42', tenant_id: 'tenant-a', title: 'Wire task detail', priority: 'P1', current_stage: 'IMPLEMENT', current_owner: currentOwner, owner: currentOwner ? { actor_id: currentOwner, display_name: currentOwner } : null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
-          { task_id: 'TSK-43', tenant_id: 'tenant-a', title: 'Triage queue drift', priority: 'P2', current_stage: 'TODO', current_owner: null, owner: null, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
-          { task_id: 'TSK-44', tenant_id: 'tenant-a', title: 'Stale owner reference', priority: 'P3', current_stage: 'REVIEW', current_owner: 'ghost', owner: { actor_id: 'ghost', display_name: 'ghost' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
-          { task_id: 'TSK-45', tenant_id: 'tenant-a', title: 'Restricted owner surface', priority: 'P2', current_stage: 'TODO', current_owner: 'masked', owner: { actor_id: 'masked', display_name: '', redacted: true }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
-          { task_id: 'TSK-46', tenant_id: 'tenant-a', title: 'Review test plan', priority: 'P2', current_stage: 'VERIFY', current_owner: 'qa', owner: { actor_id: 'qa', display_name: 'qa' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
-          { task_id: 'TSK-47', tenant_id: 'tenant-a', title: 'Design routing architecture', priority: 'P1', current_stage: 'BACKLOG', current_owner: 'architect', owner: { actor_id: 'architect', display_name: 'architect' }, blocked: false, closed: false, freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-42', tenant_id: 'tenant-a', title: 'Wire task detail', priority: 'P1', current_stage: 'IMPLEMENT', current_owner: currentOwner, owner: currentOwner ? { actor_id: currentOwner, display_name: currentOwner } : null, blocked: false, closed: false, waiting_state: null, next_required_action: null, queue_entered_at: '2026-04-01T15:00:00.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+          { task_id: 'TSK-43', tenant_id: 'tenant-a', title: 'Triage queue drift', priority: 'P2', current_stage: 'TODO', current_owner: null, owner: null, blocked: false, closed: false, waiting_state: 'awaiting_pm_decision', next_required_action: 'PM triage required', queue_entered_at: '2026-04-01T15:00:01.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:01.000Z' } },
+          { task_id: 'TSK-44', tenant_id: 'tenant-a', title: 'Stale owner reference', priority: 'P3', current_stage: 'REVIEW', current_owner: 'ghost', owner: { actor_id: 'ghost', display_name: 'ghost' }, blocked: false, closed: false, waiting_state: null, next_required_action: null, queue_entered_at: '2026-04-01T15:00:02.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:02.000Z' } },
+          { task_id: 'TSK-45', tenant_id: 'tenant-a', title: 'Restricted owner surface', priority: 'P2', current_stage: 'TODO', current_owner: 'masked', owner: { actor_id: 'masked', display_name: '', redacted: true }, blocked: false, closed: false, waiting_state: 'awaiting_human_approval', next_required_action: 'Human approval required', queue_entered_at: '2026-04-01T15:00:03.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:03.000Z' } },
+          { task_id: 'TSK-46', tenant_id: 'tenant-a', title: 'Review test plan', priority: 'P2', current_stage: 'VERIFY', current_owner: 'qa', owner: { actor_id: 'qa', display_name: 'qa' }, blocked: false, closed: false, waiting_state: null, next_required_action: null, queue_entered_at: '2026-04-01T15:00:04.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:04.000Z' } },
+          { task_id: 'TSK-47', tenant_id: 'tenant-a', title: 'Design routing architecture', priority: 'P1', current_stage: 'BACKLOG', current_owner: 'architect', owner: { actor_id: 'architect', display_name: 'architect' }, blocked: false, closed: false, waiting_state: null, next_required_action: null, queue_entered_at: '2026-04-01T15:00:05.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:05.000Z' } },
         ],
       });
     }
@@ -266,7 +266,7 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getAllByRole('button', { name: 'Clear filter' }).length).toBeGreaterThan(0);
   });
 
-  it('renders a read-only QA inbox with routing cue and excludes unassigned work', async () => {
+  it('renders a read-only QA inbox with deterministic ordering and queue reasons', async () => {
     installTaskFetchMock();
     window.history.pushState({}, '', '/inbox/qa');
     render(<App />);
@@ -277,6 +277,10 @@ describe('Task browser runtime coverage', () => {
     expect(screen.queryByText('Triage queue drift')).not.toBeInTheDocument();
     expect(screen.getByText('QA route')).toBeInTheDocument();
     expect(screen.getByText(/current assigned owner resolves to the QA canonical role/i)).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Priority' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Queue reason' })).toBeInTheDocument();
+    expect(screen.getByText('P2 waiting work')).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for QA action\. Ordered by priority first, then queue age/i)).toBeInTheDocument();
     expect(screen.queryByLabelText('Owner filter')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save owner' })).not.toBeInTheDocument();
   });
@@ -351,9 +355,8 @@ describe('Task browser runtime coverage', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'PM Overview' });
-    await screen.findByText('6 tasks shown across 5 buckets.');
+    await screen.findByText('6 tasks shown across 4 buckets.');
     expect(screen.getByRole('heading', { name: 'Needs routing attention' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Unassigned' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Architect' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Engineer' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'SRE' })).not.toBeInTheDocument();
@@ -375,7 +378,7 @@ describe('Task browser runtime coverage', () => {
     expect(screen.queryByRole('heading', { name: 'Needs routing attention' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear filter' }));
-    await screen.findByText('6 tasks shown across 5 buckets.');
+    await screen.findByText('6 tasks shown across 4 buckets.');
     expect(screen.getByRole('heading', { name: 'Needs routing attention' })).toBeInTheDocument();
   });
 
@@ -411,6 +414,28 @@ describe('Task browser runtime coverage', () => {
     expect(screen.queryByLabelText('Owner')).not.toBeInTheDocument();
   });
 
+  it('renders a PM inbox route for tasks explicitly waiting on PM action', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/inbox/pm');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'PM Inbox' });
+    expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
+    expect(screen.getByText('PM triage required')).toBeInTheDocument();
+    expect(screen.getByText(/Routed to PM because the task is explicitly waiting on PM action/i)).toBeInTheDocument();
+  });
+
+  it('renders a Human Stakeholder inbox route for approval-driven work', async () => {
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/inbox/human');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Human Stakeholder Inbox' });
+    expect(screen.getByText('Restricted owner surface')).toBeInTheDocument();
+    expect(screen.getByText('Human approval required')).toBeInTheDocument();
+    expect(screen.getByText(/waiting on human approval or escalation handling/i)).toBeInTheDocument();
+  });
+
   it('passes an axe smoke scan for the PM overview route', async () => {
     installTaskFetchMock();
     window.history.pushState({}, '', '/overview/pm');
@@ -419,7 +444,7 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'PM Overview' });
     expect(screen.getByRole('region', { name: 'PM overview view' })).toBeInTheDocument();
     expect(screen.getByLabelText('Bucket filter')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('6 tasks shown across 5 buckets.');
+    expect(screen.getByRole('status')).toHaveTextContent('6 tasks shown across 4 buckets.');
 
     const axeResults = await axe.run(container, {
       rules: {
