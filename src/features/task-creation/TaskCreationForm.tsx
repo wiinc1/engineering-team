@@ -1,25 +1,37 @@
 import React from 'react';
 import { Button } from '../../components/Button';
 import styles from './TaskCreationForm.module.css';
+import type { TaskCreatePayload } from './schema';
+import { validateTaskCreatePayload } from './schema';
 
 export interface TaskCreationFormProps {
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: TaskCreatePayload) => Promise<void>;
   loading?: boolean;
   error?: string;
 }
 
 export function TaskCreationForm({ onSubmit, loading, error }: TaskCreationFormProps) {
+  const [validationErrors, setValidationErrors] = React.useState<string[]>([]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const data = {
+    const data: TaskCreatePayload = {
       title: formData.get('title') as string,
       business_context: formData.get('business_context') as string,
       acceptance_criteria: formData.get('acceptance_criteria') as string,
       definition_of_done: formData.get('definition_of_done') as string,
-      priority: formData.get('priority') as string,
-      task_type: formData.get('task_type') as string,
+      priority: formData.get('priority') as string as TaskCreatePayload['priority'],
+      task_type: formData.get('task_type') as string as TaskCreatePayload['task_type'],
     };
+
+    const validation = validateTaskCreatePayload(data);
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      return;
+    }
+
+    setValidationErrors([]);
     await onSubmit(data);
   };
 
@@ -69,6 +81,14 @@ export function TaskCreationForm({ onSubmit, loading, error }: TaskCreationFormP
           </select>
         </div>
       </div>
+
+      {validationErrors.length > 0 && (
+        <ul className={styles.validationErrors}>
+          {validationErrors.map((err, i) => (
+            <li key={i}>{err}</li>
+          ))}
+        </ul>
+      )}
 
       {error && <p className={styles.error}>{error}</p>}
 
