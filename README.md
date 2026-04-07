@@ -101,6 +101,12 @@ It currently includes:
 - axe-core smoke coverage for the mounted route semantics
 - a small render-budget smoke check for the ready state
 
+### Specialist delegation and truthful attribution
+- A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
+- Delegation artifacts are written to `observability/specialist-delegation.jsonl`.
+- Structured logs for attempts, success, fallback, and attribution mismatches are written to `observability/workflow-audit.log`.
+- Rollout is controlled by `FF_SPECIALIST_DELEGATION` and documented in `docs/runbooks/specialist-delegation.md`.
+
 ### Remaining verification gap
 - This is still lightweight internal-use coverage, not full cross-browser visual regression.
 - No Lighthouse/Core Web Vitals run is wired yet; the current performance check is a fast render-budget smoke test in jsdom.

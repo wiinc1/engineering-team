@@ -10,6 +10,8 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { createAuditStore, assertAuditBackendConfiguration, isLocalLikeEnvironment, resolveAuditBackend } = require('../lib/audit');
+const { createSpecialistCoordinator, createDelegationMetrics } = require('../lib/software-factory/delegation');
+const { dispatchTaskToSpecialist } = require('../lib/software-factory/task-dispatch');
 
 // Config
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
@@ -24,6 +26,11 @@ const auditBackendConfig = isLocalLikeEnvironment()
       }
     : assertAuditBackendConfiguration();
 const auditStore = createAuditStore({ baseDir: path.join(__dirname, '..'), ...auditBackendConfig });
+const delegationMetrics = createDelegationMetrics();
+const specialistCoordinator = createSpecialistCoordinator({
+    baseDir: WORKSPACE_DIR,
+    metrics: delegationMetrics,
+});
 
 let lastMessageId = null;
 let processedIds = new Set(); // dedup across restarts
@@ -86,9 +93,23 @@ async function handleMessage(msg) {
     if (msg.author.bot) return;
     
     const text = msg.content.trim();
-    if (!text.startsWith(COMMAND_PREFIX)) return;
     if (processedIds.has(msg.id)) return;
     processedIds.add(msg.id);
+
+    if (!text.startsWith(COMMAND_PREFIX)) {
+        const delegated = await specialistCoordinator.handleRequest(text, {
+            coordinatorAgent: 'main',
+            actorId: msg.author.username,
+            messageId: msg.id,
+            channelId: msg.channel_id,
+        });
+        if (delegated.mode === 'coordinator' && delegated.specialist === null) {
+            return;
+        }
+        await sendReply(msg.channel_id, msg.id, formatDelegationReply(delegated));
+        lastMessageId = msg.id;
+        return;
+    }
 
     // Keep set bounded
     if (processedIds.size > 1000) {
@@ -145,6 +166,37 @@ function buildIdempotencyKey(parts) {
     return parts.filter(Boolean).join(':');
 }
 
+function buildSpecialistResponse(specialist, request) {
+    switch (specialist) {
+        case 'architect':
+            return `Architecture triage for: ${request}`;
+        case 'engineer':
+            return `Implementation triage for: ${request}`;
+        case 'qa':
+            return `QA verification plan for: ${request}`;
+        case 'sre':
+            return `Reliability and observability review for: ${request}`;
+        default:
+            return request;
+    }
+}
+
+function formatDelegationReply(result) {
+    const metadataLine = result.metadata?.sessionId
+        ? `\n\n_attribution: ${result.attribution.handledBy} · session: ${result.metadata.sessionId} · delegation: ${result.metadata.delegationId}_`
+        : `\n\n_attribution: ${result.attribution.handledBy} · delegation: ${result.metadata.delegationId}_`;
+
+    if (result.mode === 'fallback') {
+        return `${result.message}${metadataLine}`;
+    }
+
+    if (result.mode === 'delegated') {
+        return `${result.message}${metadataLine}`;
+    }
+
+    return `${result.message}${metadataLine}`;
+}
+
 function recordAuditEvent({ taskId, eventType, actorId, payload, idempotencyKey, occurredAt, causationId }) {
     return auditStore.appendEvent({
         tenantId: 'engineering-team',
@@ -181,7 +233,7 @@ SRE gate: VERIFY state requires Site Reliability Engineer sign-off`;
 }
 
 async function cmdBoard(args) {
-    const boardPath = path.join(WORKSPACE_DIR, 'engineering-team', 'BOARD.md');
+    const boardPath = path.join(WORKSPACE_DIR, 'BOARD.md');
     const board = fs.readFileSync(boardPath, 'utf8');
     
     const lines = board.split('\n');
@@ -244,7 +296,7 @@ async function taskCreate(argsStr, msg) {
     const agent = agentMatch ? agentMatch[1].toLowerCase() : 'dev';
     const description = descMatch ? descMatch[1].trim() : 'No description provided.';
     
-    const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+    const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
     const existing = fs.readdirSync(tasksDir).filter(f => f.startsWith('TSK-'));
     const maxNum = existing.reduce((max, f) => {
         const n = parseInt(f.match(/TSK-(\d+)/)?.[1] || 0);
@@ -322,7 +374,7 @@ ${description}
     });
     
     // Update BOARD.md
-    const boardPath = path.join(WORKSPACE_DIR, 'engineering-team', 'BOARD.md');
+    const boardPath = path.join(WORKSPACE_DIR, 'BOARD.md');
     let board = fs.readFileSync(boardPath, 'utf8');
     
     board = board.replace(/(\| — \| — \| — \| — \|\n)/, `| ${taskId} | ${priority} | ${agent} | BACKLOG | ${date} |\n`);
@@ -333,7 +385,20 @@ ${description}
     return `✅ **Task Created:** ${taskId}\n**Title:** ${title}\n**Priority:** ${priority}\n**Agent:** ${agent}\n**Description:** ${description}\n\nUpdate board → BACKLOG`;
 }
 
-async function taskMove(argsStr, msg) {
+function formatTaskDelegationReply(result) {
+    if (!result) return '';
+
+    if (result.mode === 'delegated') {
+        const sessionLine = result.metadata?.sessionId
+            ? ` Runtime specialist session \`${result.metadata.sessionId}\` owns this run.`
+            : '';
+        return `\n\n🤝 Runtime delegation confirmed: **${result.specialist}** is handling this work.${sessionLine}`;
+    }
+
+    return `\n\n⚠️ Runtime delegation not confirmed: ${result.message}`;
+}
+
+async function taskMove(argsStr, msg, options = {}) {
     const parts = argsStr.trim().split(' ');
     const taskId = parts[0];
     const newStatus = parts[1]?.toUpperCase();
@@ -347,7 +412,7 @@ async function taskMove(argsStr, msg) {
         return `Invalid status. Use: ${validStatuses.join(' | ')}`;
     }
     
-    const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+    const tasksDir = path.join(options.baseDir || WORKSPACE_DIR, 'tasks');
     const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md'));
     
     const taskFile = taskFiles.find(f => f.toLowerCase().includes(taskId.toLowerCase()));
@@ -358,6 +423,8 @@ async function taskMove(argsStr, msg) {
     
     const oldStatusMatch = content.match(/\*\*Status:\*\* (\w+)/);
     const oldStatus = oldStatusMatch ? oldStatusMatch[1] : 'UNKNOWN';
+    const taskTypeMatch = content.match(/\*\*Type:\*\* (\w+)/i);
+    const taskType = taskTypeMatch ? taskTypeMatch[1] : null;
     
     const now = new Date().toISOString();
     const date = now.slice(0, 10);
@@ -393,6 +460,22 @@ async function taskMove(argsStr, msg) {
     
     let reply = `✅ **${taskId}** moved: \`${oldStatus}\` → **\`${newStatus}\`**`;
     if (note) reply += `\n_Note: ${note}_`;
+
+    if (newStatus === 'IN_PROGRESS') {
+        const delegation = await dispatchTaskToSpecialist({
+            id: taskId,
+            type: taskType,
+            title: taskId,
+            description: note || 'Task moved into IN_PROGRESS from Discord command router.',
+            prompt: note ? `${taskId}: ${note}` : `${taskId} moved to IN_PROGRESS`,
+        }, {
+            ...options,
+            baseDir: options.baseDir || WORKSPACE_DIR,
+            coordinatorAgent: 'main',
+            metrics: options.metrics || delegationMetrics,
+        });
+        reply += formatTaskDelegationReply(delegation);
+    }
     
     if (newStatus === 'VERIFY') {
         reply += '\n\n⚠️ **SRE Gate** — task now requires SRE verification before DONE.';
@@ -405,7 +488,7 @@ async function taskMove(argsStr, msg) {
 }
 
 async function taskShow(taskId) {
-    const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+    const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
     const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md'));
     const taskFile = taskFiles.find(f => f.toLowerCase().includes(taskId.toLowerCase()));
     
@@ -430,7 +513,7 @@ async function taskList(argsStr) {
     const statusMatch = argsStr.match(/--status\s+(\w+)/i);
     const priorityMatch = argsStr.match(/--priority\s+(\w+)/i);
     
-    const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+    const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
     const files = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md') && (f.startsWith('TSK-') || f.startsWith('task-')));
     
     let tasks = files.map(f => {
@@ -462,7 +545,7 @@ async function taskAssign(argsStr) {
     
     if (!taskId || !agent) return 'Usage: `!task assign <TSK-XXX> <agent>`';
     
-    const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+    const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
     const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md'));
     const taskFile = taskFiles.find(f => f.toLowerCase().includes(taskId.toLowerCase()));
     
@@ -498,7 +581,7 @@ async function cmdSre(args, msg) {
         const taskId = args.replace(sub, '').trim();
         if (!taskId) return 'Usage: `!sre approve <TSK-XXX>`';
         
-        const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+        const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
         const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md'));
         const taskFile = taskFiles.find(f => f.toLowerCase().includes(taskId.toLowerCase()));
         
@@ -546,7 +629,7 @@ async function cmdSre(args, msg) {
         const finding = findingMatch ? findingMatch[1].trim() : 'Issues found during verification.';
         const action = actionMatch ? actionMatch[1].trim() : 'Dev needs to address.';
         
-        const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+        const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
         const taskFiles = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md'));
         const taskFile = taskFiles.find(f => f.toLowerCase().includes(taskId.toLowerCase()));
         
@@ -594,7 +677,7 @@ async function cmdSprint(args, msg) {
     
     if (sub === 'start') {
         const name = args.replace(sub, '').trim() || 'Unnamed Sprint';
-        const sessionPath = path.join(WORKSPACE_DIR, 'engineering-team', 'SESSION.md');
+        const sessionPath = path.join(WORKSPACE_DIR, 'SESSION.md');
         const now = new Date().toISOString();
         const date = now.slice(0, 10);
         const time = now.slice(11, 16) + ' CDT';
@@ -646,7 +729,7 @@ _Archived sessions → \`sessions/\` directory_
         const note = args.replace(sub, '').trim();
         if (!note) return 'Usage: `!sprint log <note>`';
         
-        const sessionPath = path.join(WORKSPACE_DIR, 'engineering-team', 'SESSION.md');
+        const sessionPath = path.join(WORKSPACE_DIR, 'SESSION.md');
         let content = fs.readFileSync(sessionPath, 'utf8');
         
         const now = new Date().toISOString();
@@ -666,7 +749,7 @@ _Archived sessions → \`sessions/\` directory_
 }
 
 async function cmdStats() {
-    const tasksDir = path.join(WORKSPACE_DIR, 'engineering-team', 'tasks');
+    const tasksDir = path.join(WORKSPACE_DIR, 'tasks');
     const files = fs.readdirSync(tasksDir).filter(f => f.endsWith('.md') && (f.startsWith('TSK-') || f.startsWith('task-')));
     
     const counts = { BACKLOG: 0, TODO: 0, IN_PROGRESS: 0, VERIFY: 0, DONE: 0, REOPEN: 0 };
@@ -689,7 +772,9 @@ Total tasks: ${total}
 In flight: ${counts.IN_PROGRESS + counts.VERIFY} (${counts.IN_PROGRESS} in progress, ${counts.VERIFY} in verify)
 Done: ${counts.DONE} (${doneRate}%)
 
-Board: \`${counts.BACKLOG}\` backlog · \`${counts.TODO}\` todo · \`${counts.IN_PROGRESS}\` in progress · \`${counts.VERIFY}\` verify · \`${counts.DONE}\` done · \`${counts.REOPEN}\` reopened`;
+Board: \`${counts.BACKLOG}\` backlog · \`${counts.TODO}\` todo · \`${counts.IN_PROGRESS}\` in progress · \`${counts.VERIFY}\` verify · \`${counts.DONE}\` done · \`${counts.REOPEN}\` reopened
+
+Delegation attempts: ${Object.values(delegationMetrics.snapshot().delegationAttemptsByAgent).reduce((sum, value) => sum + value, 0)} · fallbacks: ${delegationMetrics.snapshot().fallbackToCoordinatorCount} · attribution mismatches: ${delegationMetrics.snapshot().attributionMismatchCount}`;
 }
 
 // ─── Discord reply ─────────────────────────────────────────────────────────────
@@ -716,23 +801,35 @@ async function poll() {
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
-console.log('🚀 Software Factory Command Router (REST polling) starting...');
-console.log('[config] Workspace:', WORKSPACE_DIR);
-console.log('[config] Channel:', CHANNEL_ID);
+function startRouter() {
+    console.log('🚀 Software Factory Command Router (REST polling) starting...');
+    console.log('[config] Workspace:', WORKSPACE_DIR);
+    console.log('[config] Channel:', CHANNEL_ID);
 
-if (!BOT_TOKEN) {
-    console.error('[config] Missing DISCORD_BOT_TOKEN');
-    process.exit(1);
+    if (!BOT_TOKEN) {
+        console.error('[config] Missing DISCORD_BOT_TOKEN');
+        process.exit(1);
+    }
+
+    discordRequest('GET', '/users/@me').then(user => {
+        console.log('[auth] Bot logged in as:', user.username || 'unknown');
+    }).catch(err => {
+        console.error('[auth] Failed:', err.message);
+        process.exit(1);
+    });
+
+    setInterval(poll, POLL_INTERVAL);
+    console.log('[poll] Polling every', POLL_INTERVAL, 'ms');
 }
 
-// Test auth on startup
-discordRequest('GET', '/users/@me').then(user => {
-    console.log('[auth] Bot logged in as:', user.username || 'unknown');
-}).catch(err => {
-    console.error('[auth] Failed:', err.message);
-    process.exit(1);
-});
+if (require.main === module) {
+    startRouter();
+}
 
-// Start polling
-setInterval(poll, POLL_INTERVAL);
-console.log('[poll] Polling every', POLL_INTERVAL, 'ms');
+module.exports = {
+    buildIdempotencyKey,
+    formatDelegationReply,
+    formatTaskDelegationReply,
+    taskMove,
+    startRouter,
+};
