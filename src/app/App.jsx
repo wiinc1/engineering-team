@@ -196,6 +196,17 @@ function renderBlockerMeta(blocker = {}) {
   return entries.join(' · ');
 }
 
+function formatReviewQuestionState(state) {
+  switch (state) {
+    case 'answered':
+      return 'Answered, awaiting PM resolution';
+    case 'resolved':
+      return 'Resolved';
+    default:
+      return 'Open, awaiting PM response';
+  }
+}
+
 function formatStatusIcon(status) {
   switch (status) {
     case 'blocked': return '⛔';
@@ -868,6 +879,24 @@ export function App() {
         </section>
       ) : (
         <>
+          {model.detail?.reviewQuestions?.pinned?.length ? (
+            <section className="review-question-banner" aria-label="Architect review blockers" role="alert" aria-live="assertive">
+              <div>
+                <p className="eyebrow">Architect review blockers</p>
+                <h2>Pending PM answers are blocking architect review</h2>
+                <p className="review-question-banner__lede">These workflow threads stay pinned until PM resolves every blocking architect review question.</p>
+              </div>
+              <ul className="review-question-list">
+                {model.detail.reviewQuestions.pinned.map((question) => (
+                  <li key={question.id}>
+                    <strong>{question.prompt}</strong>
+                    <span>{formatReviewQuestionState(question.state)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {model.detail?.blockers?.length ? (
             <section className="blocker-banner" aria-label="Task blockers" role="alert" aria-live="assertive">
               <div>

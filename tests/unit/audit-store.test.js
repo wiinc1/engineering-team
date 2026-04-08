@@ -10,10 +10,10 @@ function makeStore() {
   return { baseDir, store: createAuditStore({ baseDir }) };
 }
 
-test('appends canonical events and updates projections', () => {
+test('appends canonical events and updates projections', async () => {
   const { baseDir, store } = makeStore();
 
-  const created = store.appendEvent({
+  const created = await store.appendEvent({
     taskId: 'TSK-100',
     eventType: 'task.created',
     actorType: 'agent',
@@ -28,7 +28,7 @@ test('appends canonical events and updates projections', () => {
     occurredAt: '2026-03-31T18:00:00.000Z',
   });
 
-  const moved = store.appendEvent({
+  const moved = await store.appendEvent({
     taskId: 'TSK-100',
     eventType: 'task.stage_changed',
     actorType: 'agent',
@@ -59,9 +59,9 @@ test('appends canonical events and updates projections', () => {
   assert.equal(rawEvents.length, 2);
 });
 
-test('deduplicates by idempotency key', () => {
+test('deduplicates by idempotency key', async () => {
   const { store } = makeStore();
-  const first = store.appendEvent({
+  const first = await store.appendEvent({
     taskId: 'TSK-101',
     eventType: 'task.created',
     actorType: 'agent',
@@ -70,7 +70,7 @@ test('deduplicates by idempotency key', () => {
     payload: { title: 'Test task', initial_stage: 'BACKLOG' },
   });
 
-  const duplicate = store.appendEvent({
+  const duplicate = await store.appendEvent({
     taskId: 'TSK-101',
     eventType: 'task.created',
     actorType: 'agent',
@@ -85,10 +85,10 @@ test('deduplicates by idempotency key', () => {
   assert.equal(store.getTaskHistory('TSK-101').length, 1);
 });
 
-test('scopes idempotency and file projections by tenant for the same task id', () => {
+test('scopes idempotency and file projections by tenant for the same task id', async () => {
   const { baseDir, store } = makeStore();
 
-  const firstTenant = store.appendEvent({
+  const firstTenant = await store.appendEvent({
     taskId: 'TSK-SHARED',
     tenantId: 'tenant-a',
     eventType: 'task.created',
@@ -97,7 +97,7 @@ test('scopes idempotency and file projections by tenant for the same task id', (
     idempotencyKey: 'create:TSK-SHARED',
     payload: { title: 'Tenant A', initial_stage: 'BACKLOG' },
   });
-  const secondTenant = store.appendEvent({
+  const secondTenant = await store.appendEvent({
     taskId: 'TSK-SHARED',
     tenantId: 'tenant-b',
     eventType: 'task.created',
@@ -119,9 +119,9 @@ test('scopes idempotency and file projections by tenant for the same task id', (
   assert.deepEqual(Object.keys(currentState).sort(), ['tenant-a::TSK-SHARED', 'tenant-b::TSK-SHARED']);
 });
 
-test('records explicit audit write failures and history latency regressions in metrics', () => {
+test('records explicit audit write failures and history latency regressions in metrics', async () => {
   const { store } = makeStore();
-  assert.throws(() => store.appendEvent({
+  await assert.rejects(() => store.appendEvent({
     taskId: 'TSK-BAD',
     tenantId: 'tenant-a',
     eventType: 'task.created',
@@ -134,7 +134,7 @@ test('records explicit audit write failures and history latency regressions in m
 
   const thresholdBaseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-store-threshold-'));
   const thresholdStore = createAuditStore({ baseDir: thresholdBaseDir, historyLatencyRegressionThresholdMs: -1 });
-  thresholdStore.appendEvent({
+  await thresholdStore.appendEvent({
     taskId: 'TSK-LAT',
     tenantId: 'tenant-a',
     eventType: 'task.created',
@@ -150,10 +150,10 @@ test('records explicit audit write failures and history latency regressions in m
   assert.equal(slowMetrics.workflow_history_query_latency_regressions_total >= 1, true);
 });
 
-test('supports history pagination via cursor + limit', () => {
+test('supports history pagination via cursor + limit', async () => {
   const { store } = makeStore();
   for (let sequence = 1; sequence <= 3; sequence += 1) {
-    store.appendEvent({
+    await store.appendEvent({
       taskId: 'TSK-PAGE',
       tenantId: 'tenant-a',
       eventType: sequence === 1 ? 'task.created' : 'task.comment_workflow_recorded',
@@ -170,9 +170,87 @@ test('supports history pagination via cursor + limit', () => {
   assert.deepEqual(secondPage.map(event => event.sequence_number), [1]);
 });
 
-test('filters history without mixing telemetry records', () => {
+test('blocks architect handoff while blocking review questions remain unresolved', async () => {
   const { store } = makeStore();
-  store.appendEvent({
+  await store.appendEvent({
+    taskId: 'TSK-RQ-BLOCK',
+    tenantId: 'tenant-a',
+    eventType: 'task.created',
+    actorType: 'agent',
+    actorId: 'principal-engineer',
+    idempotencyKey: 'create:TSK-RQ-BLOCK',
+    payload: { title: 'Architect review task', initial_stage: 'BACKLOG' },
+  });
+  await store.appendEvent({
+    taskId: 'TSK-RQ-BLOCK',
+    tenantId: 'tenant-a',
+    eventType: 'task.stage_changed',
+    actorType: 'agent',
+    actorId: 'principal-engineer',
+    idempotencyKey: 'move:TSK-RQ-BLOCK:ARCHITECT_REVIEW',
+    payload: { from_stage: 'BACKLOG', to_stage: 'ARCHITECT_REVIEW' },
+  });
+  await store.appendEvent({
+    taskId: 'TSK-RQ-BLOCK',
+    tenantId: 'tenant-a',
+    eventType: 'task.review_question_asked',
+    actorType: 'user',
+    actorId: 'architect-user',
+    idempotencyKey: 'rq:TSK-RQ-BLOCK:1',
+    payload: {
+      question_id: 'rq-1',
+      prompt: 'Clarify acceptance criteria',
+      blocking: true,
+      state: 'open',
+      blocked: true,
+      waiting_state: 'pm_review_question_resolution',
+      next_required_action: 'Resolve blocking architect review questions',
+    },
+  });
+
+  await assert.rejects(() => store.appendEvent({
+    taskId: 'TSK-RQ-BLOCK',
+    tenantId: 'tenant-a',
+    eventType: 'task.stage_changed',
+    actorType: 'agent',
+    actorId: 'principal-engineer',
+    idempotencyKey: 'move:TSK-RQ-BLOCK:TECHNICAL_SPEC',
+    payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' },
+  }), /blocking review questions remain unresolved/);
+
+  await store.appendEvent({
+    taskId: 'TSK-RQ-BLOCK',
+    tenantId: 'tenant-a',
+    eventType: 'task.review_question_resolved',
+    actorType: 'user',
+    actorId: 'pm-user',
+    idempotencyKey: 'rq:TSK-RQ-BLOCK:1:resolved',
+    payload: {
+      question_id: 'rq-1',
+      resolution: 'Approved',
+      blocking: true,
+      state: 'resolved',
+      blocked: false,
+      waiting_state: null,
+      next_required_action: null,
+    },
+  });
+
+  const result = await store.appendEvent({
+    taskId: 'TSK-RQ-BLOCK',
+    tenantId: 'tenant-a',
+    eventType: 'task.stage_changed',
+    actorType: 'agent',
+    actorId: 'principal-engineer',
+    idempotencyKey: 'move:TSK-RQ-BLOCK:TECHNICAL_SPEC:after',
+    payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' },
+  });
+  assert.equal(result.duplicate, false);
+});
+
+test('filters history without mixing telemetry records', async () => {
+  const { store } = makeStore();
+  await store.appendEvent({
     taskId: 'TSK-102',
     eventType: 'task.created',
     actorType: 'agent',
@@ -181,7 +259,7 @@ test('filters history without mixing telemetry records', () => {
     payload: { title: 'Task', initial_stage: 'BACKLOG' },
     occurredAt: '2026-03-31T18:00:00.000Z',
   });
-  store.appendEvent({
+  await store.appendEvent({
     taskId: 'TSK-102',
     eventType: 'task.assigned',
     actorType: 'agent',
@@ -190,7 +268,7 @@ test('filters history without mixing telemetry records', () => {
     payload: { assignee: 'qa' },
     occurredAt: '2026-03-31T18:01:00.000Z',
   });
-  store.appendEvent({
+  await store.appendEvent({
     taskId: 'TSK-102',
     eventType: 'task.stage_changed',
     actorType: 'agent',
