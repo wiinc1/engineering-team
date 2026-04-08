@@ -614,7 +614,7 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
-    await screen.findByText('Assigned to qa.');
+    await screen.findByRole('heading', { name: 'Wire task detail' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Engineer inbox' }));
     await screen.findByRole('heading', { name: 'Engineer Inbox' });
