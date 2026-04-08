@@ -13,7 +13,27 @@ function createJsonResponse(payload: unknown, status = 200) {
   };
 }
 
-function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAgentsStatus = 200 } = {}) {
+function mergeValue(base: any, override: any): any {
+  if (override == null) return base;
+  if (Array.isArray(base) || Array.isArray(override)) return override;
+  if (typeof base === 'object' && typeof override === 'object') {
+    return Object.entries(override).reduce((acc, [key, value]) => {
+      acc[key] = mergeValue(base?.[key], value);
+      return acc;
+    }, { ...base });
+  }
+  return override;
+}
+
+function installTaskFetchMock({
+  forbidden = false,
+  reassignedOwner = 'qa',
+  aiAgentsStatus = 200,
+  detailOverride,
+  summaryOverride,
+  telemetryOverride,
+  historyOverride,
+} = {}) {
   let currentOwner = 'engineer';
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -68,8 +88,54 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAge
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/detail')) {
+      const detailPayload = mergeValue(
+        {
+          task: { id: 'TSK-42', title: 'Wire task detail', priority: 'P1', stage: 'IMPLEMENT', status: 'active' },
+          summary: {
+            owner: { id: currentOwner, label: currentOwner, kind: 'assigned' },
+            workflowStage: { value: 'IMPLEMENT', label: 'Implement' },
+            nextAction: { label: 'Ship browser quality smoke coverage', source: 'system', overdue: false, waitingOn: null },
+            prStatus: { label: '1 open PR linked', state: 'active', total: 1, openCount: 1, mergedCount: 0, draftCount: 0 },
+            childStatus: { label: 'No child tasks', state: 'empty', total: 0, blockedCount: 0 },
+            timers: { queueAgeLabel: '5m', lastUpdatedAt: '2026-04-01T15:00:00.000Z', freshness: 'fresh' },
+            blockedState: { isBlocked: false, label: 'Active', waitingOn: null },
+          },
+          blockers: [],
+          context: {
+            businessContext: 'Make task state legible in one place.',
+            acceptanceCriteria: ['Given a task page loads, the summary is visible above the fold.'],
+            definitionOfDone: ['Task detail page shipped with smoke coverage.'],
+            technicalSpec: 'Server-rendered technical spec',
+            monitoringSpec: 'Server-rendered monitoring spec',
+          },
+          relations: { linkedPrs: [{ id: 'pr-12', number: 12, title: 'feat: task detail', state: 'open', merged: false, draft: false, repository: 'wiinc1/engineering-team' }], childTasks: [{ id: 'TSK-43', title: 'Triage queue drift', stage: 'TODO', status: 'waiting', owner: { label: 'qa' }, blocked: false }] },
+          activity: {
+            comments: [],
+            auditLog: [
+              { id: 'evt-1', type: 'task.created', summary: 'Task created', actor: { id: 'pm-1', label: 'PM 1' }, occurredAt: '2026-04-01T14:55:00.000Z' },
+              { id: 'evt-2', type: 'task.assigned', summary: 'Owner assigned', actor: { id: currentOwner, label: 'Engineer 1' }, occurredAt: '2026-04-01T14:58:00.000Z' },
+            ],
+          },
+          telemetry: { availability: 'available', lastUpdatedAt: '2026-04-01T15:00:00.000Z', summary: {}, emptyStateReason: null, access: { restricted: false, omission_applied: false, omitted_fields: [] } },
+          meta: {
+            permissions: {
+              canViewComments: true,
+              canViewAuditLog: true,
+              canViewTelemetry: true,
+              canViewChildTasks: true,
+              canViewLinkedPrMetadata: true,
+            },
+            freshness: { status: 'fresh', lastUpdatedAt: '2026-04-01T15:00:00.000Z' },
+          },
+        },
+        typeof detailOverride === 'function' ? detailOverride({ currentOwner }) : detailOverride,
+      );
+      return createJsonResponse(detailPayload);
+    }
+
     if (url.endsWith('/tasks/TSK-42')) {
-      return createJsonResponse({
+      return createJsonResponse(mergeValue({
         task_id: 'TSK-42',
         tenant_id: 'tenant-a',
         title: 'Wire task detail',
@@ -82,11 +148,11 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAge
         freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
         status_indicator: 'fresh',
         closed: false,
-      });
+      }, typeof summaryOverride === 'function' ? summaryOverride({ currentOwner }) : summaryOverride));
     }
 
     if (url.includes('/tasks/TSK-42/history')) {
-      return createJsonResponse({
+      return createJsonResponse(mergeValue({
         items: [
           {
             item_id: 'evt-1',
@@ -110,11 +176,11 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAge
           },
         ],
         page_info: { next_cursor: null },
-      });
+      }, typeof historyOverride === 'function' ? historyOverride({ currentOwner }) : historyOverride));
     }
 
     if (url.endsWith('/tasks/TSK-42/observability-summary')) {
-      return createJsonResponse({
+      return createJsonResponse(mergeValue({
         status: 'ok',
         degraded: false,
         stale: false,
@@ -123,7 +189,7 @@ function installTaskFetchMock({ forbidden = false, reassignedOwner = 'qa', aiAge
         freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
         correlation: { approved_correlation_ids: ['corr-1', 'corr-2'] },
         access: { restricted: false, omission_applied: false, omitted_fields: [] },
-      });
+      }, typeof telemetryOverride === 'function' ? telemetryOverride({ currentOwner }) : telemetryOverride));
     }
 
     if (url.endsWith('/tasks/TSK-42/assignment')) {
@@ -163,6 +229,197 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     expect(screen.getByLabelText('Task summary')).toBeInTheDocument();
     expect(screen.getByText('Assignment controls are available to PM/admin bearer tokens.')).toBeInTheDocument();
+  });
+
+  it('renders linked PR, child task, and spec detail from the dedicated detail model', async () => {
+    installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('1 open PR linked')).toBeInTheDocument();
+    expect(screen.getByText('Server-rendered technical spec')).toBeInTheDocument();
+    expect(screen.getByText('Server-rendered monitoring spec')).toBeInTheDocument();
+    expect(screen.getByText('feat: task detail')).toBeInTheDocument();
+    expect(screen.getByText(/Triage queue drift/)).toBeInTheDocument();
+  });
+
+
+  it('renders blocker banner semantics with source and age metadata', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        task: { status: 'blocked' },
+        summary: { blockedState: { isBlocked: true, label: 'Blocked', waitingOn: null } },
+        blockers: [{ id: 'blk-1', label: 'Awaiting security sign-off', source: 'Security review', owner: { label: 'Security' }, ageLabel: '2d' }],
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const blockerAlert = screen.getByRole('alert');
+    expect(blockerAlert).toHaveAccessibleName('Task blockers');
+    expect(within(blockerAlert).getByText('Awaiting security sign-off')).toBeInTheDocument();
+    expect(within(blockerAlert).getByText('Source: Security review · Owner: Security · Age: 2d')).toBeInTheDocument();
+  });
+
+  it('distinguishes waiting work from blocked work in the above-the-fold summary', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        task: { status: 'waiting' },
+        summary: {
+          blockedState: { isBlocked: false, label: 'Waiting', waitingOn: 'PM decision' },
+          nextAction: { label: 'Await PM decision', source: 'pm' },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const summary = screen.getByRole('region', { name: 'Task summary' });
+    expect(within(summary).getAllByText('Waiting').length).toBeGreaterThan(1);
+    expect(within(summary).getByText('Waiting on PM decision')).toBeInTheDocument();
+    expect(within(summary).getByText('Source: pm')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('renders degraded and empty task-detail states for missing specs, next action, linked resources, and stale telemetry', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        summary: {
+          nextAction: { label: '', source: null },
+          prStatus: { label: 'No linked PRs', state: 'empty', total: 0 },
+          childStatus: { label: 'No child tasks', state: 'empty', total: 0 },
+        },
+        context: {
+          technicalSpec: '',
+          monitoringSpec: '',
+        },
+        relations: {
+          linkedPrs: [],
+          childTasks: [],
+        },
+        telemetry: {
+          availability: 'stale',
+          lastUpdatedAt: '2026-04-01T14:00:00.000Z',
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('No next step defined')).toBeInTheDocument();
+    expect(screen.getAllByText('Technical spec is missing.').length).toBeGreaterThan(0);
+    expect(screen.getByText('Monitoring spec is missing.')).toBeInTheDocument();
+    expect(screen.getByText('No linked PRs yet.')).toBeInTheDocument();
+    expect(screen.getByText('No child tasks linked yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Telemetry' }));
+    expect(await screen.findByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByText('Telemetry freshness is degraded.')).toBeInTheDocument();
+  });
+
+  it('surfaces fresh telemetry metadata with explicit freshness and timestamp evidence', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        telemetry: { availability: 'available', lastUpdatedAt: '2026-04-01T15:00:00.000Z' },
+        meta: { freshness: { status: 'fresh', lastUpdatedAt: '2026-04-01T15:00:00.000Z' } },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('5m')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Telemetry' }));
+    expect(await screen.findByText('Freshness')).toBeInTheDocument();
+    expect(screen.getByText('fresh')).toBeInTheDocument();
+    expect(screen.getByText('2026-04-01T15:00:00.000Z')).toBeInTheDocument();
+  });
+
+  it('renders telemetry error copy and hides restricted non-telemetry sections when permissions remove access', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        relations: { linkedPrs: [{ id: 'pr-12', title: 'feat: task detail' }], childTasks: [{ id: 'TSK-43', title: 'Triage queue drift', status: 'waiting' }] },
+        activity: { comments: [{ id: 'c-1', actor: { label: 'PM 1' }, summary: 'Need follow-up' }], auditLog: [{ id: 'evt-1', type: 'task.created', summary: 'Task created', actor: { label: 'PM 1' }, occurredAt: '2026-04-01T14:55:00.000Z' }] },
+        telemetry: { availability: 'error', emptyStateReason: 'Telemetry pipeline failed.' },
+        meta: {
+          permissions: {
+            canViewComments: false,
+            canViewAuditLog: true,
+            canViewTelemetry: true,
+            canViewChildTasks: false,
+            canViewLinkedPrMetadata: false,
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('Linked PR metadata is hidden for this session.')).toBeInTheDocument();
+    expect(screen.getByText('Child task relationships are hidden for this session.')).toBeInTheDocument();
+    expect(screen.getByText('Workflow comments are hidden for this session.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Telemetry' }));
+    expect(await screen.findByText('Could not load activity')).toBeInTheDocument();
+    expect(screen.getByText('Telemetry pipeline failed.')).toBeInTheDocument();
+    expect(screen.queryByText('feat: task detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('Need follow-up')).not.toBeInTheDocument();
+  });
+
+  it('keeps task-detail activity controls usable in a narrow viewport with telemetry-to-history switching', async () => {
+    installTaskFetchMock();
+    window.innerWidth = 390;
+    window.dispatchEvent(new Event('resize'));
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const tablist = screen.getByRole('tablist', { name: 'Task activity views' });
+    expect(within(tablist).getByRole('tab', { name: 'History' })).toBeInTheDocument();
+    expect(within(tablist).getByRole('tab', { name: 'Telemetry' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Telemetry' }));
+    expect(await screen.findByText('Freshness', { selector: 'p' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'History' }));
+    expect(await screen.findByLabelText('History filters')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Filter event type')).toBeInTheDocument();
+  });
+
+  it('uses roving tab semantics for task-detail activity tabs', async () => {
+    installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const historyTab = screen.getByRole('tab', { name: 'History' });
+    const telemetryTab = screen.getByRole('tab', { name: 'Telemetry' });
+
+    historyTab.focus();
+    expect(historyTab).toHaveFocus();
+    expect(historyTab).toHaveAttribute('tabindex', '0');
+    expect(telemetryTab).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.keyDown(historyTab, { key: 'ArrowRight' });
+
+    expect(telemetryTab).toHaveFocus();
+    expect(telemetryTab).toHaveAttribute('tabindex', '0');
+    expect(historyTab).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'task-activity-tab-telemetry');
+    expect(await screen.findByText('Freshness', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('passes an axe smoke scan for the task detail route and preserves task-detail tab semantics', async () => {
+    installTaskFetchMock();
+    const { container } = render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('region', { name: 'Task summary' })).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Task activity views' })).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'task-activity-tab-history');
+
+    const axeResults = await axe.run(container, {
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
+
+    expect(axeResults.violations).toEqual([]);
   });
 
   it('renders task list owner metadata with explicit unassigned and fallback labels', async () => {

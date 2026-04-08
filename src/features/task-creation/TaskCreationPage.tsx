@@ -1,8 +1,16 @@
 import React from 'react';
 import { TaskCreationForm } from './TaskCreationForm';
-import { createTaskCreationApiClient } from './adapter';
-import { buildAuthHeaders } from '../../app/session';
-import { resolveApiBaseUrl } from '../../app/session';
+
+function buildAuthHeaders(config: { bearerToken?: string } = {}) {
+  const headers: Record<string, string> = {};
+  const token = typeof config?.bearerToken === 'string' ? config.bearerToken.trim() : '';
+  if (token) headers.authorization = `Bearer ${token}`;
+  return headers;
+}
+
+function resolveApiBaseUrl(config: { apiBaseUrl?: string } = {}, envApiBaseUrl = '') {
+  return (typeof config?.apiBaseUrl === 'string' && config.apiBaseUrl.trim()) || envApiBaseUrl.trim() || '';
+}
 
 export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }) {
   const [loading, setLoading] = React.useState(false);
@@ -10,11 +18,25 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
 
   const client = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
-    return createTaskCreationApiClient({
-      baseUrl,
-      fetchImpl: (...args) => window.fetch(...args),
-      getHeaders: () => buildAuthHeaders(sessionConfig),
-    });
+    return {
+      async createTask(data: unknown) {
+        const response = await window.fetch(`${baseUrl}/tasks`, {
+          method: 'POST',
+          headers: {
+            ...buildAuthHeaders(sessionConfig),
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error((payload as { error?: { message?: string } })?.error?.message || 'Failed to create task');
+        }
+
+        return payload;
+      },
+    };
   }, [sessionConfig, envApiBaseUrl]);
 
   const handleSubmit = async (data) => {

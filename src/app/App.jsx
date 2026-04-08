@@ -1,6 +1,6 @@
 import React from 'react';
-import { createTaskDetailApiClient } from '../features/task-detail/adapter';
-import { createTaskDetailPageModule } from '../features/task-detail/route';
+import { createTaskDetailApiClient } from '../features/task-detail/adapter.browser';
+import { createTaskDetailPageModule } from '../features/task-detail/route.browser';
 import { writeTaskDetailUrlState } from '../features/task-detail/urlState';
 import { TaskDetailActivityShell } from '../features/task-detail/TaskDetailActivityShell';
 import { StageTransition } from '../features/task-detail/StageTransition';
@@ -12,7 +12,7 @@ import {
   readBrowserSessionConfig,
   resolveApiBaseUrl,
   writeBrowserSessionConfig,
-} from './session';
+} from './session.browser';
 import {
   buildBoardColumns,
   buildPmOverviewSections,
@@ -168,6 +168,53 @@ function buildRouteMissModel(pathname) {
 function formatFreshness(summary) {
   if (!summary?.freshness?.last_updated_at) return '—';
   return `${summary.freshness.status || 'unknown'} · ${summary.freshness.last_updated_at}`;
+}
+
+function formatStatusLabel(status) {
+  switch (status) {
+    case 'blocked': return 'Blocked';
+    case 'waiting': return 'Waiting';
+    case 'done': return 'Done';
+    default: return 'Active';
+  }
+}
+
+function formatBlockedStateLabel(blockedState, fallbackStatus) {
+  if (blockedState?.label) return blockedState.label;
+  if (fallbackStatus === 'blocked') return 'Blocked';
+  if (fallbackStatus === 'waiting') return 'Waiting';
+  return 'Active';
+}
+
+function renderBlockerMeta(blocker = {}) {
+  const entries = [
+    blocker.source ? `Source: ${blocker.source}` : null,
+    blocker.owner?.label ? `Owner: ${blocker.owner.label}` : 'Owner: No owner',
+    blocker.ageLabel ? `Age: ${blocker.ageLabel}` : null,
+  ].filter(Boolean);
+
+  return entries.join(' · ');
+}
+
+function formatStatusIcon(status) {
+  switch (status) {
+    case 'blocked': return '⛔';
+    case 'waiting': return '⏳';
+    case 'done': return '✅';
+    default: return '▶';
+  }
+}
+
+function renderList(items, emptyLabel) {
+  if (!items || !items.length) {
+    return <p className="empty-copy">{emptyLabel}</p>;
+  }
+
+  return (
+    <ul className="detail-bullets">
+      {items.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+    </ul>
+  );
 }
 
 function canManageAssignment(tokenClaims) {
@@ -377,6 +424,7 @@ export function App() {
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
+  const detailPermissions = model.kind === 'detail' ? (model.detail?.meta?.permissions || {}) : {};
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
@@ -434,7 +482,7 @@ export function App() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Thin browser runtime for issue #26</p>
-          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.summary.title || 'Task detail'}</h1>
+          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
           <p className="lede">
             {model.kind === 'list'
               ? isPmOverview
@@ -820,46 +868,155 @@ export function App() {
         </section>
       ) : (
         <>
-           <section className="summary-grid" aria-label="Task summary">
-             <article>
-               <span>Task</span>
-               <strong>{model.summary.taskId || '—'}</strong>
-             </article>
-             <article>
-               <span>Tenant</span>
-               <strong>{model.summary.tenantId || '—'}</strong>
-             </article>
-             <article>
-               <span>Stage</span>
-               <strong>{model.summary.currentStage || '—'}</strong>
-             </article>
-             <article>
-               <span>Owner</span>
-               <strong>{model.summary.currentOwner || '—'}</strong>
-             </article>
-             <article>
-               <span>Priority</span>
-               <strong>{model.summary.priority || '—'}</strong>
-             </article>
-             <article>
-               <span>Freshness</span>
-               <strong>{formatFreshness(model.summary)}</strong>
-             </article>
-           </section>
-           <StageTransition 
-             currentStage={model.summary.currentStage || 'BACKLOG'} 
-             taskId={routeTaskId} 
-             onTransition={async (toStage, payload) => {
-               try {
-                 await taskClient.changeTaskStage(routeTaskId, toStage, payload);
-                 await reloadTask();
-               } catch (error) {
-                 throw error;
-               }
-             }}
-           />
-           <section className="assignment-panel" aria-label="Task assignment">
+          {model.detail?.blockers?.length ? (
+            <section className="blocker-banner" aria-label="Task blockers" role="alert" aria-live="assertive">
+              <div>
+                <p className="eyebrow">Blockers</p>
+                <h2>Work is currently blocked</h2>
+              </div>
+              <ul className="blocker-list">
+                {model.detail.blockers.map((blocker) => (
+                  <li key={blocker.id}>
+                    <strong>{blocker.label}</strong>
+                    <span>{renderBlockerMeta(blocker)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
+          <section className="task-detail-hero" aria-label="Task summary">
+            <div className="task-detail-hero__title">
+              <div className="task-status-pill" data-status={model.detail?.task?.status || 'active'}>
+                <span aria-hidden="true">{formatStatusIcon(model.detail?.task?.status)}</span>
+                <span>{formatStatusLabel(model.detail?.task?.status)}</span>
+              </div>
+              <div className="priority-pill">{model.summary.priority || 'No priority'}</div>
+            </div>
+            <div className="summary-grid summary-grid--hero">
+              <article>
+                <span>Owner</span>
+                <strong>{model.detail?.summary?.owner?.label || model.summary.currentOwner || 'Unassigned'}</strong>
+              </article>
+              <article>
+                <span>Workflow stage</span>
+                <strong>{model.detail?.summary?.workflowStage?.label || model.summary.currentStage || '—'}</strong>
+              </article>
+              <article>
+                <span>Status</span>
+                <strong>{formatBlockedStateLabel(model.detail?.summary?.blockedState, model.detail?.task?.status)}</strong>
+                {model.detail?.summary?.blockedState?.waitingOn ? <small>Waiting on {model.detail.summary.blockedState.waitingOn}</small> : null}
+              </article>
+              <article>
+                <span>Next action</span>
+                <strong>{model.detail?.summary?.nextAction?.label || model.summary.nextRequiredAction || 'No next step defined'}</strong>
+                {model.detail?.summary?.nextAction?.source ? <small>Source: {model.detail.summary.nextAction.source}</small> : null}
+              </article>
+              <article>
+                <span>PR status</span>
+                <strong>{model.detail?.summary?.prStatus?.label || 'No linked PRs'}</strong>
+              </article>
+              <article>
+                <span>Child tasks</span>
+                <strong>{model.detail?.summary?.childStatus?.label || 'No child tasks'}</strong>
+              </article>
+              <article>
+                <span>Timers and freshness</span>
+                <strong>{model.detail?.summary?.timers?.queueAgeLabel || formatFreshness(model.summary)}</strong>
+              </article>
+            </div>
+          </section>
+
+          <section className="detail-sections" aria-label="Task detail sections">
+            <section className="detail-card">
+              <h2>Overview</h2>
+              <p>{model.detail?.context?.businessContext || model.summary.businessContext || 'Business context is missing.'}</p>
+              <h3>Acceptance criteria</h3>
+              {renderList(model.detail?.context?.acceptanceCriteria || model.summary.acceptanceCriteria, 'Acceptance criteria are missing.')}
+              <h3>Definition of Done</h3>
+              {renderList(model.detail?.context?.definitionOfDone || model.summary.definitionOfDone, 'Definition of Done is missing.')}
+            </section>
+
+            <section className="detail-card">
+              <h2>Delivery</h2>
+              <h3>Technical spec</h3>
+              <p>{model.detail?.context?.technicalSpec || 'Technical spec is missing.'}</p>
+              <h3>Monitoring spec</h3>
+              <p>{model.detail?.context?.monitoringSpec || 'Monitoring spec is missing.'}</p>
+              <h3>Linked delivery artifacts</h3>
+              {detailPermissions.canViewLinkedPrMetadata === false ? (
+                <p>Linked PR metadata is hidden for this session.</p>
+              ) : model.detail?.relations?.linkedPrs?.length ? (
+                <ul className="detail-bullets">
+                  {model.detail.relations.linkedPrs.map((pr) => (
+                    <li key={pr.id}>
+                      <strong>{pr.title}</strong>
+                      <span>{pr.number ? ` · #${pr.number}` : ''}{pr.repository ? ` · ${pr.repository}` : ''}{pr.state ? ` · ${pr.state}` : ''}{pr.merged ? ' · merged' : ''}{pr.draft ? ' · draft' : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p>No linked PRs yet.</p>}
+              {detailPermissions.canViewChildTasks === false ? (
+                <p>Child task relationships are hidden for this session.</p>
+              ) : model.detail?.relations?.childTasks?.length ? (
+                <ul className="detail-bullets">
+                  {model.detail.relations.childTasks.map((childTask) => (
+                    <li key={childTask.id}>
+                      <strong>{childTask.title}</strong>
+                      <span>{childTask.stage || 'No stage'} · {formatStatusLabel(childTask.status)} · {childTask.owner?.label || 'Unassigned'}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p>No child tasks linked yet.</p>}
+            </section>
+
+            <section className="detail-card">
+              <h2>Discussion</h2>
+              {detailPermissions.canViewComments === false ? (
+                <p>Workflow comments are hidden for this session.</p>
+              ) : model.detail?.activity?.comments?.length ? (
+                <ul className="detail-feed">
+                  {model.detail.activity.comments.map((comment) => (
+                    <li key={comment.id}>
+                      <strong>{comment.actor?.label || 'Unknown actor'}</strong>
+                      <span>{comment.summary}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p>No workflow comments yet.</p>}
+            </section>
+
+            <section className="detail-card">
+              <h2>History</h2>
+              <p className="task-list-meta">
+                Telemetry: {model.detail?.telemetry?.availability || 'unknown'}{model.detail?.telemetry?.lastUpdatedAt ? ` · ${model.detail.telemetry.lastUpdatedAt}` : ''}
+              </p>
+              <TaskDetailActivityShell
+                selectedTab={model.shell.selectedTab}
+                onTabChange={setTab}
+                historyState={model.shell.historyState}
+                telemetryState={model.shell.telemetryState}
+                historyItems={model.shell.historyItems}
+                telemetryCards={model.shell.telemetryCards}
+                filters={model.shell.filters}
+                onFiltersChange={setFilters}
+              />
+            </section>
+          </section>
+
+          <StageTransition 
+            currentStage={model.summary.currentStage || 'BACKLOG'} 
+            taskId={routeTaskId} 
+            onTransition={async (toStage, payload) => {
+              try {
+                await taskClient.changeTaskStage(routeTaskId, toStage, payload);
+                await reloadTask();
+              } catch (error) {
+                throw error;
+              }
+            }}
+          />
+          <section className="assignment-panel" aria-label="Task assignment">
             <div className="assignment-panel__header">
               <div>
                 <p className="eyebrow">Assignment</p>
@@ -910,17 +1067,6 @@ export function App() {
               </p>
             )}
           </section>
-
-          <TaskDetailActivityShell
-            selectedTab={model.shell.selectedTab}
-            onTabChange={setTab}
-            historyState={model.shell.historyState}
-            telemetryState={model.shell.telemetryState}
-            historyItems={model.shell.historyItems}
-            telemetryCards={model.shell.telemetryCards}
-            filters={model.shell.filters}
-            onFiltersChange={setFilters}
-          />
         </>
       )}
     </main>

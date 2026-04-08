@@ -4,4 +4,4 @@ export * from './mockData';
 export * from './TaskHistoryTimeline';
 export * from './TelemetrySummary';
 export * from './TaskDetailActivityShell';
-export * from './adapter';
+export * from './adapter.browser';

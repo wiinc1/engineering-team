@@ -1,8 +1,43 @@
 import React from 'react';
 import { Button } from '../../components/Button';
 import styles from './TaskCreationForm.module.css';
-import type { TaskCreatePayload } from './schema';
-import { validateTaskCreatePayload } from './schema';
+
+type TaskCreatePayload = {
+  title: string;
+  business_context: string;
+  acceptance_criteria: string;
+  definition_of_done: string;
+  priority: string;
+  task_type: string;
+};
+
+const VALID_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+const VALID_TASK_TYPES = ['Feature', 'Bug', 'Refactor', 'Debt', 'Docs'];
+
+function validateTaskCreatePayload(data: TaskCreatePayload) {
+  const errors: string[] = [];
+
+  if (typeof data.title !== 'string' || data.title.trim().length === 0) {
+    errors.push('title is required and must be a non-empty string');
+  }
+  if (typeof data.business_context !== 'string' || data.business_context.trim().length === 0) {
+    errors.push('business_context is required and must be a non-empty string');
+  }
+  if (typeof data.acceptance_criteria !== 'string' || data.acceptance_criteria.trim().length === 0) {
+    errors.push('acceptance_criteria is required and must be a non-empty string');
+  }
+  if (typeof data.definition_of_done !== 'string' || data.definition_of_done.trim().length === 0) {
+    errors.push('definition_of_done is required and must be a non-empty string');
+  }
+  if (!VALID_PRIORITIES.includes(data.priority)) {
+    errors.push(`priority must be one of: ${VALID_PRIORITIES.join(', ')}, got: ${String(data.priority)}`);
+  }
+  if (!VALID_TASK_TYPES.includes(data.task_type)) {
+    errors.push(`task_type must be one of: ${VALID_TASK_TYPES.join(', ')}, got: ${String(data.task_type)}`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
 
 export interface TaskCreationFormProps {
   onSubmit: (data: TaskCreatePayload) => Promise<void>;
