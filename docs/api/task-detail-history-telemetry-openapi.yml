@@ -184,6 +184,173 @@ components:
           items:
             type: object
             additionalProperties: true
+    TaskDetailActor:
+      type: object
+      required: [id, label, kind]
+      properties:
+        id: { type: [string, 'null'] }
+        label: { type: string }
+        kind: { type: string, enum: [assigned, unassigned, restricted, missing] }
+    TaskDetailStatusRollup:
+      type: object
+      required: [label, state, total]
+      properties:
+        label: { type: string }
+        state: { type: string, enum: [empty, active, waiting, blocked, done, draft, mixed] }
+        total: { type: integer }
+        mergedCount: { type: integer }
+        openCount: { type: integer }
+        draftCount: { type: integer }
+        blockedCount: { type: integer }
+    TaskDetailViewResponse:
+      type: object
+      required: [task, summary, blockers, context, relations, activity, telemetry, meta]
+      properties:
+        task:
+          type: object
+          required: [id, title, priority, stage, status]
+          properties:
+            id: { type: string }
+            title: { type: string }
+            priority: { type: [string, 'null'] }
+            stage: { type: [string, 'null'] }
+            status: { type: string, enum: [active, waiting, blocked, done] }
+        summary:
+          type: object
+          required: [owner, workflowStage, nextAction, prStatus, childStatus, timers, blockedState]
+          properties:
+            owner:
+              $ref: '#/components/schemas/TaskDetailActor'
+            workflowStage:
+              type: object
+              required: [value, label]
+              properties:
+                value: { type: [string, 'null'] }
+                label: { type: string }
+            nextAction:
+              type: object
+              required: [label, source, overdue, waitingOn]
+              properties:
+                label: { type: string }
+                source: { type: string }
+                overdue: { type: boolean }
+                waitingOn: { type: [string, 'null'] }
+            prStatus:
+              $ref: '#/components/schemas/TaskDetailStatusRollup'
+            childStatus:
+              $ref: '#/components/schemas/TaskDetailStatusRollup'
+            timers:
+              type: object
+              required: [queueEnteredAt, queueAgeLabel, lastUpdatedAt, freshness]
+              properties:
+                queueEnteredAt: { type: [string, 'null'], format: date-time }
+                queueAgeLabel: { type: string }
+                lastUpdatedAt: { type: [string, 'null'], format: date-time }
+                freshness: { type: string, enum: [fresh, stale, unknown] }
+            blockedState:
+              type: object
+              required: [isBlocked, label, waitingOn]
+              properties:
+                isBlocked: { type: boolean }
+                label: { type: string, enum: [Active, Waiting, Blocked, Done] }
+                waitingOn: { type: [string, 'null'] }
+        blockers:
+          type: array
+          items:
+            type: object
+            required: [id, type, label, source, owner, ageLabel, occurredAt]
+            properties:
+              id: { type: string }
+              type: { type: string }
+              label: { type: string }
+              source: { type: string }
+              owner:
+                $ref: '#/components/schemas/TaskDetailActor'
+              ageLabel: { type: string }
+              occurredAt: { type: [string, 'null'], format: date-time }
+        context:
+          type: object
+          required: [businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec]
+          properties:
+            businessContext: { type: [string, 'null'] }
+            acceptanceCriteria:
+              type: array
+              items: { type: string }
+            definitionOfDone:
+              type: array
+              items: { type: string }
+            technicalSpec: { type: [string, 'null'] }
+            monitoringSpec: { type: [string, 'null'] }
+        relations:
+          type: object
+          required: [linkedPrs, childTasks]
+          properties:
+            linkedPrs:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            childTasks:
+              type: array
+              items:
+                type: object
+                required: [id, title, stage, status, owner, blocked]
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  stage: { type: [string, 'null'] }
+                  status: { type: string, enum: [active, waiting, blocked, done] }
+                  owner:
+                    $ref: '#/components/schemas/TaskDetailActor'
+                  blocked: { type: boolean }
+        activity:
+          type: object
+          required: [comments, auditLog]
+          properties:
+            comments:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            auditLog:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+        telemetry:
+          type: object
+          required: [availability, lastUpdatedAt, summary, emptyStateReason, access]
+          properties:
+            availability: { type: string, enum: [available, empty, error, stale, restricted] }
+            lastUpdatedAt: { type: [string, 'null'], format: date-time }
+            summary:
+              type: object
+              additionalProperties: true
+            emptyStateReason: { type: [string, 'null'] }
+            access:
+              type: [object, 'null']
+              additionalProperties: true
+        meta:
+          type: object
+          required: [permissions, freshness]
+          properties:
+            permissions:
+              type: object
+              required: [canViewComments, canViewAuditLog, canViewTelemetry, canViewChildTasks, canViewLinkedPrMetadata]
+              properties:
+                canViewComments: { type: boolean }
+                canViewAuditLog: { type: boolean }
+                canViewTelemetry: { type: boolean }
+                canViewChildTasks: { type: boolean }
+                canViewLinkedPrMetadata: { type: boolean }
+            freshness:
+              type: object
+              required: [status, lastUpdatedAt, liveUpdates, refreshBehavior]
+              properties:
+                status: { type: string, enum: [fresh, stale, unknown] }
+                lastUpdatedAt: { type: [string, 'null'], format: date-time }
+                liveUpdates: { type: boolean }
+                refreshBehavior: { type: string }
   responses:
     Unauthorized:
       description: Missing or invalid bearer token / auth context
@@ -289,6 +456,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ObservabilitySummaryResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/FeatureDisabled' }
+  /tasks/{id}/detail:
+    get:
+      summary: Canonical server-prepared task detail read model for the task detail page
+      description: Returns the full task detail view model used by the task detail UI, including summary, blockers, grouped context, relations, activity, telemetry, and explicit permission/freshness metadata.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Canonical task detail page payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailViewResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '503': { $ref: '#/components/responses/FeatureDisabled' }

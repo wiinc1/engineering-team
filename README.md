@@ -74,6 +74,10 @@ Task-detail contract notes for approval readiness:
 - Local performance budget: the detail view model should resolve in one `/detail` request, and the browser smoke budget stays under 1s for local mock-backed first contentful paint / DOMContentLoaded checks.
 - Freshness semantics: `summary.freshness` is the workflow/read-model freshness source of truth, `telemetry.lastUpdatedAt` is telemetry-specific recency, and stale/degraded telemetry must be rendered explicitly instead of being treated as fresh.
 - Rollout flag: `FF_TASK_DETAIL_PAGE=0` disables the `/tasks/:id/detail` surface and returns a standardized `feature_disabled` response referencing `ff_task_detail_page`.
+- Deterministic status precedence for the detail view is `done` > `blocked` > `waiting` > `active`.
+- Detail payload truncation for v1 is explicit: comments are capped at 10 entries and audit log items at 20 entries in the `/detail` response.
+- Manual refresh is the v1 consistency model. Live updates are not required in this pass.
+- See `docs/reports/ISSUE_7_COMPLETION_AUDIT.md` for the issue-7 completion mapping, derivation rules, permissions behavior, and freshness notes.
 
 - Browser entry: `index.html`
 - App runtime: `src/app/`
@@ -114,12 +118,6 @@ It currently includes:
 - Chromium verification that mobile task-activity tabs collapse into the intended 2-column accessible pattern
 - Chromium verification that compressed board owner metadata remains readable on mobile
 - browser `performance` timing evidence for local route render latency beyond request-count-only smoke
-
-### Specialist delegation and truthful attribution
-- A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
-- Delegation artifacts are written to `observability/specialist-delegation.jsonl`.
-- Structured logs for attempts, success, fallback, and attribution mismatches are written to `observability/workflow-audit.log`.
-- Rollout is controlled by `FF_SPECIALIST_DELEGATION` and documented in `docs/runbooks/specialist-delegation.md`.
 
 ### Specialist delegation and truthful attribution
 - A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
