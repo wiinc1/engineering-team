@@ -21,3 +21,5 @@ Still not covered:
 - contrast verification in a real browser engine
 - screen-reader behavior validation
 - full per-state axe coverage beyond the route states currently snapshotted
+
+Related browser evidence now lives under `npm run test:browser`, which verifies responsive layout behavior and basic local render timing in Chromium, but it is not a full accessibility audit.

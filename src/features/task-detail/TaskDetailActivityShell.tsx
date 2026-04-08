@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import styles from './TaskDetailActivityShell.module.css';
 import { TaskHistoryTimeline } from './TaskHistoryTimeline';
 import { TelemetrySummary } from './TelemetrySummary';
@@ -106,6 +106,49 @@ export function TaskDetailActivityShell({
   onFiltersChange,
 }: TaskDetailActivityShellProps) {
   const activeState = selectedTab === 'history' ? historyState : telemetryState;
+  const tabOrder: TaskDetailTab[] = ['history', 'telemetry'];
+  const tabRefs = useRef<Record<TaskDetailTab, HTMLButtonElement | null>>({
+    history: null,
+    telemetry: null,
+  });
+
+  const selectTab = (tab: TaskDetailTab, focusTab = false) => {
+    onTabChange?.(tab);
+
+    if (focusTab) {
+      tabRefs.current[tab]?.focus();
+    }
+  };
+
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, tab: TaskDetailTab) => {
+    const currentIndex = tabOrder.indexOf(tab);
+
+    if (currentIndex === -1) return;
+
+    let nextTab: TaskDetailTab | null = null;
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextTab = tabOrder[(currentIndex + 1) % tabOrder.length];
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextTab = tabOrder[(currentIndex - 1 + tabOrder.length) % tabOrder.length];
+        break;
+      case 'Home':
+        nextTab = tabOrder[0];
+        break;
+      case 'End':
+        nextTab = tabOrder[tabOrder.length - 1];
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    selectTab(nextTab, true);
+  };
 
   return (
     <section className={styles.shell} aria-label="Task activity">
@@ -116,8 +159,8 @@ export function TaskDetailActivityShell({
           <p className={styles.subtitle}>History is the default view. Telemetry stays adjacent, not mixed into the audit stream.</p>
         </div>
 
-        <div className={styles.tabs} role="tablist" aria-label="Task activity views">
-          {(['history', 'telemetry'] as TaskDetailTab[]).map((tab) => {
+        <div className={styles.tabs} role="tablist" aria-label="Task activity views" aria-orientation="horizontal">
+          {tabOrder.map((tab) => {
             const isActive = selectedTab === tab;
 
             return (
@@ -129,7 +172,12 @@ export function TaskDetailActivityShell({
                 aria-selected={isActive}
                 aria-controls={`task-activity-panel-${tab}`}
                 className={`${styles.tab} ${isActive ? styles.tabActive : ''}`.trim()}
-                onClick={() => onTabChange?.(tab)}
+                tabIndex={isActive ? 0 : -1}
+                ref={(node) => {
+                  tabRefs.current[tab] = node;
+                }}
+                onClick={() => selectTab(tab)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab)}
               >
                 {tab === 'history' ? 'History' : 'Telemetry'}
               </button>

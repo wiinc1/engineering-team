@@ -141,3 +141,26 @@
   border-color: var(--task-detail-restricted-border, #a78bfa);
   background: var(--task-detail-restricted-bg, #f5f3ff);
 }
+
+
+@media (max-width: 960px) {
+  .header {
+    align-items: stretch;
+  }
+
+  .tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tab {
+    justify-content: center;
+  }
+}

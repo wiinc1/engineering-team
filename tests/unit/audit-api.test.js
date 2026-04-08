@@ -92,11 +92,19 @@ test('returns state, relationships, observability summary, and metrics from proj
 
     await fetch(`${baseUrl}/tasks/TSK-201/events`, {
       method: 'POST', headers: writeHeaders,
-      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-201', traceId: 'trace-1', correlationId: 'corr-1', payload: { title: 'Projection task', initial_stage: 'BACKLOG', priority: 'P0' } }),
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-201', traceId: 'trace-1', correlationId: 'corr-1', payload: { title: 'Projection task', initial_stage: 'BACKLOG', priority: 'P0', technical_spec: 'Initial technical spec', monitoring_spec: 'Initial monitoring spec', linked_prs: [{ id: 'pr-7', number: 7, title: 'feat: task detail', state: 'open', repository: 'wiinc1/engineering-team' }] } }),
     });
     await fetch(`${baseUrl}/tasks/TSK-201/events`, {
       method: 'POST', headers: writeHeaders,
       body: JSON.stringify({ eventType: 'task.child_link_added', actorType: 'agent', idempotencyKey: 'child:TSK-201', payload: { child_task_id: 'TSK-202' } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-202/events`, {
+      method: 'POST', headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-202', payload: { title: 'Child task', initial_stage: 'REVIEW' } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-201/events`, {
+      method: 'POST', headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.comment_workflow_recorded', actorType: 'agent', idempotencyKey: 'comment:TSK-201', payload: { technical_spec: 'Revised technical spec', monitoring_spec: 'Revised monitoring spec' } }),
     });
 
     const readHeaders = authHeaders(secret, { tenant_id: 'tenant-z', roles: ['reader'] });
@@ -119,16 +127,69 @@ test('returns state, relationships, observability summary, and metrics from proj
     const summaryRes = await fetch(`${baseUrl}/tasks/TSK-201/observability-summary`, { headers: readHeaders });
     const summary = await summaryRes.json();
     assert.equal(summaryRes.status, 200);
-    assert.equal(summary.event_count, 2);
+    assert.equal(summary.event_count, 3);
     assert.equal(summary.access.restricted, true);
-    assert.deepEqual(summary.correlation.approved_correlation_ids, ['child:TSK-201', 'corr-1']);
+    assert.deepEqual(summary.correlation.approved_correlation_ids, ['comment:TSK-201', 'child:TSK-201', 'corr-1']);
     assert.equal(summary.trace_ids, undefined);
+
+    const detailRes = await fetch(`${baseUrl}/tasks/TSK-201/detail`, { headers: readHeaders });
+    const detail = await detailRes.json();
+    assert.equal(detailRes.status, 200);
+    assert.equal(detail.task.id, 'TSK-201');
+    assert.equal(detail.task.status, 'active');
+    assert.equal(detail.summary.prStatus.label, '1 open PR linked');
+    assert.equal(detail.summary.childStatus.total, 1);
+    assert.equal(detail.context.technicalSpec, 'Revised technical spec');
+    assert.equal(detail.context.monitoringSpec, 'Revised monitoring spec');
+    assert.equal(detail.meta.permissions.canViewLinkedPrMetadata, true);
+    assert.equal(detail.relations.linkedPrs[0].number, 7);
+    assert.equal(detail.relations.childTasks[0].stage, 'REVIEW');
+    assert.equal(detail.relations.childTasks[0].id, 'TSK-202');
 
     const metricsRes = await fetch(`${baseUrl}/metrics`, { headers: authHeaders(secret, { tenant_id: 'tenant-z', roles: ['admin'] }) });
     const metrics = await metricsRes.text();
     assert.equal(metricsRes.status, 200);
-    assert.match(metrics, /workflow_audit_events_written_total 2/);
+    assert.match(metrics, /workflow_audit_events_written_total 4/);
     assert.match(metrics, /workflow_projection_lag_seconds 0/);
+  });
+});
+
+test('omits restricted detail sections server-side for low-permission viewers', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const writeHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-z', roles: ['contributor'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-301/events`, {
+      method: 'POST', headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-301', payload: { title: 'Restricted detail', initial_stage: 'BACKLOG', child_task_ids: ['TSK-302'] } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-302/events`, {
+      method: 'POST', headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-302', payload: { title: 'Restricted child', initial_stage: 'TODO' } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-301/events`, {
+      method: 'POST', headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.comment_workflow_recorded', actorType: 'agent', idempotencyKey: 'comment:TSK-301', payload: { body: 'Hidden comment', linked_prs: [{ number: 12, title: 'feat: hidden detail' }] } }),
+    });
+
+    const response = await fetch(`${baseUrl}/tasks/TSK-301/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-z', roles: ['stakeholder'] }),
+    });
+    const detail = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(detail.activity.comments, []);
+    assert.deepEqual(detail.activity.auditLog, []);
+    assert.deepEqual(detail.relations.linkedPrs, []);
+    assert.deepEqual(detail.relations.childTasks, []);
+    assert.equal(detail.telemetry.availability, 'restricted');
+    assert.equal(detail.meta.permissions.canViewComments, false);
+    assert.equal(detail.meta.permissions.canViewAuditLog, false);
+    assert.equal(detail.meta.permissions.canViewTelemetry, false);
+    assert.equal(detail.meta.permissions.canViewChildTasks, false);
+    assert.equal(detail.meta.permissions.canViewLinkedPrMetadata, false);
   });
 });
 
@@ -294,6 +355,26 @@ test('returns standardized error payload when feature flag kill switch is off', 
   }, { auditFoundationEnabled: false });
 });
 
+test('returns standardized error payload when task detail page feature flag is off', async () => {
+  const prior = process.env.FF_TASK_DETAIL_PAGE;
+  process.env.FF_TASK_DETAIL_PAGE = '0';
+
+  try {
+    await withServer(async ({ baseUrl, secret }) => {
+      const response = await fetch(`${baseUrl}/tasks/TSK-999/detail`, {
+        headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }),
+      });
+      assert.equal(response.status, 503);
+      const body = await response.json();
+      assert.equal(body.error.code, 'feature_disabled');
+      assert.equal(body.error.details.feature, 'ff_task_detail_page');
+      assert.ok(body.error.request_id);
+    });
+  } finally {
+    if (prior == null) delete process.env.FF_TASK_DETAIL_PAGE;
+    else process.env.FF_TASK_DETAIL_PAGE = prior;
+  }
+});
 
 test('lists projected task summaries with owner and unassigned states', async () => {
   await withServer(async ({ baseUrl, secret }) => {

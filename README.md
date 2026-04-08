@@ -67,6 +67,14 @@ This repo now includes a materially more production-shaped `SF-017` slice:
 ### Browser task-detail runtime (#26)
 A minimal Vite + React browser surface now mounts the task-detail feature through the existing adapter + route layer.
 
+Task-detail contract notes for approval readiness:
+- `GET /tasks/:id/detail` is the canonical read model for the page. Raw history, relationships, and telemetry remain backing inputs, not the UI source of truth.
+- Server-side omission/redaction is authoritative. Restricted callers receive empty/omitted comments, audit log, linked PR metadata, child-task relationships, and telemetry sections in the `/detail` payload instead of relying on client-side hiding.
+- Child-task detail summaries are resolved from projected task summaries, not per-child history fetches, to avoid child-history N+1 fanout on detail loads.
+- Local performance budget: the detail view model should resolve in one `/detail` request, and the browser smoke budget stays under 1s for local mock-backed first contentful paint / DOMContentLoaded checks.
+- Freshness semantics: `summary.freshness` is the workflow/read-model freshness source of truth, `telemetry.lastUpdatedAt` is telemetry-specific recency, and stale/degraded telemetry must be rendered explicitly instead of being treated as fresh.
+- Rollout flag: `FF_TASK_DETAIL_PAGE=0` disables the `/tasks/:id/detail` surface and returns a standardized `feature_disabled` response referencing `ff_task_detail_page`.
+
 - Browser entry: `index.html`
 - App runtime: `src/app/`
 - Route/page module still lives at `src/features/task-detail/route.js`
@@ -95,12 +103,17 @@ Build/package the thin browser app:
 
 ### Browser quality coverage for SF-019
 A thin jsdom-based UI harness now covers the mounted task-detail route via `npm run test:ui`.
+A real Chromium browser harness now adds route-level verification via `npm run test:browser`.
 
 It currently includes:
 - ready-state structural snapshot coverage
 - restricted-state structural snapshot coverage
 - axe-core smoke coverage for the mounted route semantics
 - a small render-budget smoke check for the ready state
+- Chromium verification that tablet task-detail summaries stay visible without horizontal overflow
+- Chromium verification that mobile task-activity tabs collapse into the intended 2-column accessible pattern
+- Chromium verification that compressed board owner metadata remains readable on mobile
+- browser `performance` timing evidence for local route render latency beyond request-count-only smoke
 
 ### Specialist delegation and truthful attribution
 - A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
@@ -110,5 +123,6 @@ It currently includes:
 
 ### Remaining verification gap
 - This is still lightweight internal-use coverage, not full cross-browser visual regression.
-- No Lighthouse/Core Web Vitals run is wired yet; the current performance check is a fast render-budget smoke test in jsdom.
+- No Lighthouse/Core Web Vitals run is wired yet; performance evidence is now browser-timing based, but still local/mock-backed rather than a deployed environment measurement.
+- The browser harness currently runs on Chromium only.
 - The task-detail browser runtime is still intentionally thin: no broader app shell, login flow, or external identity provider integration has been added beyond the minimum needed to render `/tasks/:taskId`.

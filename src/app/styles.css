@@ -167,11 +167,128 @@ button {
   overflow-wrap: anywhere;
 }
 
+.blocker-banner {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+}
+
+.blocker-banner h2 {
+  margin: 0;
+}
+
+.blocker-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.blocker-list li span {
+  display: block;
+  color: #7f1d1d;
+}
+
+.task-detail-hero {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.task-detail-hero__title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.task-status-pill,
+.priority-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.task-status-pill[data-status='blocked'] {
+  background: #fee2e2;
+}
+
+.task-status-pill[data-status='waiting'] {
+  background: #fef3c7;
+}
+
+.task-status-pill[data-status='done'] {
+  background: #dcfce7;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
+}
+
+.summary-grid--hero {
+  margin-bottom: 0;
+}
+
+.summary-grid--hero article {
+  display: grid;
+  gap: 4px;
+}
+
+.summary-grid--hero small {
+  color: #475569;
+}
+
+.detail-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.detail-card {
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #dbe4ee;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+}
+
+.detail-card h2,
+.detail-card h3 {
+  margin-top: 0;
+}
+
+.detail-bullets,
+.detail-feed {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.detail-feed li,
+.detail-bullets li {
+  margin-bottom: 8px;
+}
+
+.detail-feed li span {
+  display: block;
+  color: #475569;
+}
+
+.empty-copy {
+  margin: 0;
+  color: #64748b;
 }
 
 .summary-grid article {
@@ -521,6 +638,15 @@ button {
   font-weight: 600;
 }
 
+@media (max-width: 960px) {
+  .task-detail-hero__title,
+  .summary-grid--hero,
+  .task-activity .header,
+  .task-activity .tabs {
+    width: 100%;
+  }
+}
+
 @media (max-width: 800px) {
   .page-header {
     flex-direction: column;
@@ -538,6 +664,10 @@ button {
 
   .role-inbox-toolbar {
     flex-direction: column;
+  }
+
+  .detail-sections {
+    grid-template-columns: 1fr;
   }
 }
 

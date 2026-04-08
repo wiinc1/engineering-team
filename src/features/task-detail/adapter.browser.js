@@ -39,7 +39,6 @@ function deriveTelemetryFreshness(summary = {}) {
   const freshnessStatus = String(summary.freshness?.status || '').toLowerCase() || 'unknown';
   const lastUpdatedAt = summary.last_updated_at || summary.freshness?.last_updated_at || null;
   const isWarning = summary.stale || freshnessStatus === 'stale' || freshnessStatus === 'degraded';
-
   return {
     value: freshnessStatus,
     hint: lastUpdatedAt || 'No telemetry timestamp available.',
@@ -53,7 +52,6 @@ function toTelemetryCards(summary) {
     ? `Restricted server-side fields omitted: ${(summary.access.omitted_fields || []).join(', ') || 'none'}`
     : undefined;
   const freshness = deriveTelemetryFreshness(summary);
-
   return [
     { id: 'telemetry-status', label: 'Status', value: summary.status, hint: summary.degraded ? 'Backend marked the task telemetry as degraded.' : restrictedHint, tone: summary.degraded ? 'warning' : 'info' },
     { id: 'telemetry-freshness', label: 'Freshness', value: freshness.value, hint: freshness.hint, tone: freshness.tone },
@@ -167,7 +165,7 @@ async function parseJsonResponse(response) {
   return payload;
 }
 
-function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders } = {}) {
+export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders } = {}) {
   const request = async (path, init = {}) => {
     const response = await fetchImpl(`${baseUrl}${path}`, {
       method: init.method || 'GET',
@@ -199,7 +197,6 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
       } catch (error) {
         if (error?.status && error.status !== 404) throw error;
       }
-
       const [summary, history, telemetry] = await Promise.all([
         request(`/tasks/${encodeURIComponent(taskId)}`),
         this.fetchTaskHistory(taskId, options),
@@ -210,13 +207,12 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
   };
 }
 
-module.exports = {
+export {
   buildHistoryQuery,
-  createTaskDetailApiClient,
+  deriveTelemetryFreshness,
   parseJsonResponse,
   toHistoryTimelineItem,
   toTaskDetailScreenModel,
-  deriveTelemetryFreshness,
   toTelemetryCards,
   toneForHistoryEvent,
 };
