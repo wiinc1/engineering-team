@@ -1,7 +1,7 @@
 export const UNASSIGNED_FILTER_VALUE = '__unassigned__';
 export const STAGE_ORDER = ['BACKLOG', 'TODO', 'IMPLEMENT', 'IN_PROGRESS', 'REVIEW', 'VERIFY', 'DONE', 'REOPEN'];
 export const ROLE_INBOXES = ['pm', 'architect', 'engineer', 'qa', 'sre', 'human'];
-export const PM_OVERVIEW_BUCKET_ORDER = ['needs-routing-attention', 'unassigned', ...ROLE_INBOXES];
+export const PM_OVERVIEW_BUCKET_ORDER = ['needs-routing-attention', 'unassigned', 'architect', 'engineer', 'qa', 'sre'];
 
 const PRIORITY_ORDER = { P0: 0, P1: 1, P2: 2, P3: 3 };
 const ACTIVE_STAGES = new Set(['IMPLEMENT', 'IN_PROGRESS']);
@@ -23,6 +23,8 @@ const PM_BUCKET_LABELS = {
   qa: 'QA',
   sre: 'SRE',
 };
+
+const PM_OVERVIEW_ROLE_BUCKETS = new Set(['architect', 'engineer', 'qa', 'sre']);
 
 export function mapAgentOptions(items = []) {
   return items.map((agent) => ({
@@ -133,20 +135,10 @@ export function getPmOverviewBucketLabel(bucketKey) {
 }
 
 export function resolvePmOverviewBucket(item, agentLookup) {
-  const routing = resolveRoleInboxMembership(item, agentLookup);
   const ownerPresentation = resolveOwnerPresentation(item, agentLookup);
+  const ownerId = item?.current_owner;
 
-  if (routing.reason === 'matched') {
-    return {
-      key: routing.inboxRole,
-      label: getPmOverviewBucketLabel(routing.inboxRole),
-      routingCue: `${getRoleInboxLabel(routing.inboxRole)} route`,
-      routingReason: routing.routingLabel,
-      ownerPresentation,
-    };
-  }
-
-  if (routing.reason === 'unassigned') {
+  if (!ownerId) {
     return {
       key: 'unassigned',
       label: 'Unassigned',
@@ -156,7 +148,30 @@ export function resolvePmOverviewBucket(item, agentLookup) {
     };
   }
 
-  if (routing.reason === 'hidden') {
+  const agent = agentLookup.get(ownerId);
+
+  if (agent?.role && PM_OVERVIEW_ROLE_BUCKETS.has(agent.role)) {
+    return {
+      key: agent.role,
+      label: getPmOverviewBucketLabel(agent.role),
+      routingCue: `${getRoleInboxLabel(agent.role)} route`,
+      routingReason: `Routed to ${getRoleInboxLabel(agent.role)} because the assigned owner maps to that canonical role.`,
+      ownerPresentation,
+    };
+  }
+
+  if (agent?.role) {
+    return {
+      key: 'needs-routing-attention',
+      label: 'Needs routing attention',
+      routingCue: 'Needs routing attention',
+      routingReason: `Role mapping unavailable because canonical role ${getRoleInboxLabel(agent.role)} is outside the PM overview buckets for this slice.`,
+      ownerPresentation: { ...ownerPresentation, detail: `${ownerPresentation.detail}. Role mapping unavailable.` },
+      degradedLabel: 'Role mapping unavailable',
+    };
+  }
+
+  if (isOwnerExplicitlyHidden(item.owner)) {
     return {
       key: 'needs-routing-attention',
       label: 'Needs routing attention',

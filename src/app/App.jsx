@@ -624,8 +624,11 @@ export function App() {
   const roleInboxItems = model.kind === 'list' && activeInboxRole ? buildRoleInboxItems(model.list.items, activeInboxRole, agentLookup) : [];
   const pmSections = model.kind === 'list' && isPmOverview ? buildPmOverviewSections(model.list.items, agentLookup) : [];
   const activePmBucket = isPmOverview && PM_OVERVIEW_BUCKET_ORDER.includes(listFilters.bucket) ? listFilters.bucket : '';
+  const selectedPmSection = activePmBucket ? pmSections.find((section) => section.key === activePmBucket) || null : null;
   const visiblePmSections = isPmOverview
-    ? pmSections.filter((section) => (activePmBucket ? section.key === activePmBucket : section.items.length > 0))
+    ? activePmBucket
+      ? selectedPmSection?.items.length ? [selectedPmSection] : []
+      : pmSections.filter((section) => section.items.length > 0)
     : [];
   const boardColumns = model.kind === 'list' ? buildBoardColumns(model.list.items, visibleListItems, agentLookup) : [];
   const listState = model.kind === 'list' ? model.list.state : { kind: 'idle' };

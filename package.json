@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "serve:browser": "node scripts/serve-browser-dist.js",
     "docker:browser": "docker build -f Dockerfile.browser -t engineering-team-task-browser .",
-    "test": "npm run test:unit && node --test tests/contract/*.test.js tests/e2e/*.test.js tests/property/*.test.js tests/performance/*.test.js tests/security/*.test.js chaos/*.test.js && npm run test:browser",
+    "test": "npm run test:unit && node --test tests/contract/*.test.js tests/integration/role-inbox-filtering.integration.test.js tests/integration/pm-overview-filtering.integration.test.js tests/integration/task-list-owner-filters.integration.test.js tests/e2e/*.test.js tests/property/*.test.js tests/performance/*.test.js tests/security/*.test.js chaos/*.test.js && npm run test:browser",
     "test:unit": "node --test tests/unit/audit-api.test.js tests/unit/browser-session-storage.test.js tests/unit/task-detail-adapter.test.js tests/unit/task-detail-responsive.test.js tests/unit/specialist-delegation.test.js && npm run test:ui:vitest",
     "test:contract": "node --test tests/contract/*.test.js",
     "test:e2e": "node --test tests/e2e/*.test.js",
