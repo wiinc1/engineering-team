@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fixture = require('../fixtures/pm-overview/pm-overview-states.json');
 
 async function loadRouting() {
-  return import('../../src/app/task-owner.js');
+  return import('../../src/app/task-owner.mjs');
 }
 
 function toProjectedItems(tasks, reassignedOwner = null) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fixture from '../fixtures/pm-overview/pm-overview-states.json' with { type: 'json' };
-import { buildPmOverviewSections, mapAgentOptions, resolvePmOverviewBucket, summarizePmOverviewResults } from '../../src/app/task-owner.js';
+import { buildPmOverviewSections, mapAgentOptions, resolvePmOverviewBucket, summarizePmOverviewResults } from '../../src/app/task-owner.mjs';
 
 const agentLookup = new Map(mapAgentOptions(fixture.agents).map((agent) => [agent.id, agent]));
 

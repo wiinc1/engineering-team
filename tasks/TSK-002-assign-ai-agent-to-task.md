@@ -1,9 +1,20 @@
 # TSK-002 — Assign AI Agent to a Task
 
 **Created:** 2026-04-01 10:51 CDT
-**Updated:** 2026-04-01 10:51 CDT
+**Updated:** 2026-04-09 17:35 CDT
 **ID:** TSK-002
 **Status:** BACKLOG
+
+## 0. Reassessment
+
+Core assignment behavior described by this task is already implemented in the current repo:
+- UI assignment controls exist in `src/app/App.jsx`
+- Browser/client assignment calls exist in `src/features/task-detail/adapter.js` and `src/features/task-detail/adapter.browser.js`
+- Canonical API support exists in `lib/audit/http.js`
+- OpenAPI and runbook artifacts exist under `docs/api/` and `docs/runbooks/`
+- Unit, integration, e2e, and security tests already exercise assignment flows
+
+This item is not a clean greenfield implementation task anymore. Leave it in backlog only if you want to re-scope it into a smaller follow-up such as extra accessibility, visual-regression, or rollout-observability work.
 
 ## Template Tier
 
