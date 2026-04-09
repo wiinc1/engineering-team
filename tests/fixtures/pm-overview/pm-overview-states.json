@@ -1,6 +1,7 @@
 {
   "tenant_id": "tenant-pm-overview",
   "agents": [
+    { "id": "pm-1", "display_name": "PM", "role": "Product Manager" },
     { "id": "architect", "display_name": "Architect", "role": "Architect" },
     { "id": "engineer", "display_name": "Engineer", "role": "Engineering" },
     { "id": "qa", "display_name": "QA Engineer", "role": "QA" },
