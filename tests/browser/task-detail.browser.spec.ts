@@ -99,7 +99,7 @@ async function installApiMocks(page) {
 }
 
 async function openRoute(page, route: string, expectedHeading: string | null = 'Wire task detail') {
-  await page.goto(route);
+  await page.goto(route, { waitUntil: 'domcontentloaded' });
   if (expectedHeading) {
     await expect(page.getByRole('heading', { name: expectedHeading })).toBeVisible();
   }
