@@ -184,6 +184,8 @@ test.describe('task detail browser verification', () => {
   });
 
   test('meets a local browser render budget stronger than request-count smoke alone', async ({ page }) => {
+    test.skip(test.info().project.name === 'firefox', 'Firefox paint/navigation timing differs enough that this local budget is currently Chromium-based.');
+
     await page.setViewportSize({ width: 1280, height: 900 });
     const startedAt = Date.now();
     await openRoute(page, '/tasks/TSK-42');
@@ -208,6 +210,21 @@ test.describe('task detail browser verification', () => {
     });
 
     expect(Number(perfMarks['first-contentful-paint'] ?? 0)).toBeLessThan(1000);
+  });
+
+  test('preserves task-detail structure across supported browser engines', async ({ page, browserName }) => {
+    test.skip(browserName !== 'firefox', 'Cross-engine assertion is targeted at the non-Chromium coverage path.');
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openRoute(page, '/tasks/TSK-42');
+
+    await expect(page.getByRole('region', { name: 'Task summary' })).toContainText('Engineer');
+    await expect(page.getByRole('alert')).toContainText('Awaiting security sign-off');
+    await expect(page.getByRole('tablist', { name: 'Task activity views' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Telemetry' }).click();
+    await expect(page.getByRole('region', { name: 'Telemetry summary' })).toContainText('Freshness');
+    await page.getByRole('tab', { name: 'History' }).click();
+    await expect(page.getByLabel('Task history timeline')).toBeVisible();
   });
 
   test('supports keyboard-first navigation to blockers and activity tabs on mobile', async ({ page }) => {

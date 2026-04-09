@@ -17,7 +17,7 @@
 
 | Task | Priority | Age |
 |------|----------|-----|
-| — | — | — |
+| TSK-002 — Assign AI Agent to a Task (needs re-scope; core behavior already shipped) | P1 | 8d |
 
 ---
 
@@ -42,13 +42,13 @@ BACKLOG → TODO → IN_PROGRESS → VERIFY → DONE
 ## 📊 Metrics
 
 ```
-Open:        0
+Open:        1
 In Progress: 0
 Verify:      0
-Done:        0
+Done:        1
 Reopened:    0
 ```
 
 ---
 
-_Last sync: pending_
+_Last sync: 2026-04-09_

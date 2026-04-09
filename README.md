@@ -107,17 +107,24 @@ Build/package the thin browser app:
 
 ### Browser quality coverage for SF-019
 A thin jsdom-based UI harness now covers the mounted task-detail route via `npm run test:ui`.
-A real Chromium browser harness now adds route-level verification via `npm run test:browser`.
+A Playwright browser harness now adds route-level verification via `npm run test:browser`.
 
 It currently includes:
 - ready-state structural snapshot coverage
 - restricted-state structural snapshot coverage
 - axe-core smoke coverage for the mounted route semantics
 - a small render-budget smoke check for the ready state
-- Chromium verification that tablet task-detail summaries stay visible without horizontal overflow
-- Chromium verification that mobile task-activity tabs collapse into the intended 2-column accessible pattern
-- Chromium verification that compressed board owner metadata remains readable on mobile
+- Chromium and Firefox verification that the task-detail shell preserves its core structure across supported browser engines
+- Chromium and mobile Chrome verification that tablet task-detail summaries stay visible without horizontal overflow
+- Chromium and mobile Chrome verification that mobile task-activity tabs collapse into the intended 2-column accessible pattern
+- Chromium and mobile Chrome verification that compressed board owner metadata remains readable on mobile
 - browser `performance` timing evidence for local route render latency beyond request-count-only smoke
+
+Current default browser matrix:
+- Desktop Chrome (`chromium`)
+- Desktop Firefox (`firefox`)
+- Mobile Chrome (`mobile-chrome`)
+- Optional Mobile Safari (`PLAYWRIGHT_INCLUDE_WEBKIT=1 npm run test:browser`)
 
 ### Specialist delegation and truthful attribution
 - A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
@@ -128,5 +135,5 @@ It currently includes:
 ### Remaining verification gap
 - This is still lightweight internal-use coverage, not full cross-browser visual regression.
 - No Lighthouse/Core Web Vitals run is wired yet; performance evidence is now browser-timing based, but still local/mock-backed rather than a deployed environment measurement.
-- The browser harness currently runs on Chromium only.
+- WebKit coverage remains opt-in rather than part of the default local matrix.
 - The task-detail browser runtime is still intentionally thin: no broader app shell, login flow, or external identity provider integration has been added beyond the minimum needed to render `/tasks/:taskId`.

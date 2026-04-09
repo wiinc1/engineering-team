@@ -28,7 +28,7 @@ import {
   summarizePmOverviewResults,
   summarizeRoleInboxResults,
   UNASSIGNED_FILTER_VALUE,
-} from './task-owner';
+} from './task-owner.mjs';
 
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;

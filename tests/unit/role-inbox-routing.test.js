@@ -9,7 +9,7 @@ import {
   resolveRoleInboxMembership,
   sortInboxItems,
   summarizeRoleInboxResults,
-} from '../../src/app/task-owner.js';
+} from '../../src/app/task-owner.mjs';
 
 const agentLookup = new Map(mapAgentOptions(fixture.agents).map((agent) => [agent.id, agent]));
 
