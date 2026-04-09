@@ -216,6 +216,38 @@ function formatStatusIcon(status) {
   }
 }
 
+function normalizeArchitectHandoffDraft(handoff = {}) {
+  return {
+    readyForEngineering: Boolean(handoff.readyForEngineering),
+    engineerTier: handoff.engineerTier || 'Sr',
+    tierRationale: handoff.tierRationale || '',
+    technicalSpec: {
+      summary: handoff.technicalSpec?.summary || '',
+      scope: handoff.technicalSpec?.scope || '',
+      design: handoff.technicalSpec?.design || '',
+      rolloutPlan: handoff.technicalSpec?.rolloutPlan || '',
+    },
+    monitoringSpec: {
+      service: handoff.monitoringSpec?.service || '',
+      dashboardUrls: Array.isArray(handoff.monitoringSpec?.dashboardUrls) ? handoff.monitoringSpec.dashboardUrls.join('\n') : '',
+      alertPolicies: Array.isArray(handoff.monitoringSpec?.alertPolicies) ? handoff.monitoringSpec.alertPolicies.join('\n') : '',
+      runbook: handoff.monitoringSpec?.runbook || '',
+      successMetrics: Array.isArray(handoff.monitoringSpec?.successMetrics) ? handoff.monitoringSpec.successMetrics.join('\n') : '',
+    },
+  };
+}
+
+function engineerTierDescription(tier) {
+  switch (tier) {
+    case 'Principal':
+      return 'Complex cross-team implementation with high-risk technical ownership.';
+    case 'Jr':
+      return 'Well-bounded implementation with close guidance and review.';
+    default:
+      return 'Standard implementation scope with experienced engineer ownership.';
+  }
+}
+
 function renderList(items, emptyLabel) {
   if (!items || !items.length) {
     return <p className="empty-copy">{emptyLabel}</p>;
@@ -239,6 +271,10 @@ function hasAnyRole(tokenClaims, expectedRoles) {
 }
 
 function canAskReviewQuestion(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['architect', 'admin']);
+}
+
+function canManageArchitectHandoff(tokenClaims) {
   return hasAnyRole(tokenClaims, ['architect', 'admin']);
 }
 
@@ -312,6 +348,8 @@ export function App() {
   const [newReviewQuestionBlocking, setNewReviewQuestionBlocking] = React.useState(true);
   const [reviewQuestionDrafts, setReviewQuestionDrafts] = React.useState({});
   const [reviewQuestionStatus, setReviewQuestionStatus] = React.useState({ kind: 'idle', message: '', questionId: null, action: null });
+  const [architectHandoffDraft, setArchitectHandoffDraft] = React.useState(() => normalizeArchitectHandoffDraft());
+  const [architectHandoffStatus, setArchitectHandoffStatus] = React.useState({ kind: 'idle', message: '' });
 
   const taskClient = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -340,6 +378,8 @@ export function App() {
       setNewReviewQuestionBlocking(true);
       setReviewQuestionDrafts({});
       setReviewQuestionStatus({ kind: 'idle', message: '', questionId: null, action: null });
+      setArchitectHandoffDraft(normalizeArchitectHandoffDraft(model.detail?.context?.architectHandoff));
+      setArchitectHandoffStatus({ kind: 'idle', message: '' });
     }
   }, [model]);
 
@@ -476,6 +516,7 @@ export function App() {
   const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
+  const architectHandoffEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageArchitectHandoff(tokenClaims);
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
@@ -1048,10 +1089,175 @@ export function App() {
 
             <section className="detail-card">
               <h2>Delivery</h2>
+              {model.detail?.context?.architectHandoff ? (
+                <div className="architect-handoff-summary">
+                  <div className="summary-grid review-question-summary-grid">
+                    <article>
+                      <span>Engineer tier</span>
+                      <strong>{model.detail.context.architectHandoff.engineerTier}</strong>
+                    </article>
+                    <article>
+                      <span>Handoff version</span>
+                      <strong>v{model.detail.context.architectHandoff.version}</strong>
+                    </article>
+                    <article>
+                      <span>Readiness</span>
+                      <strong>{model.detail.context.architectHandoff.readyForEngineering ? 'Ready for engineering' : 'Draft'}</strong>
+                    </article>
+                    <article>
+                      <span>Submitted by</span>
+                      <strong>{model.detail.context.architectHandoff.submittedBy || 'Unknown'}</strong>
+                    </article>
+                  </div>
+                  <p className="task-list-meta">{engineerTierDescription(model.detail.context.architectHandoff.engineerTier)}</p>
+                  <h3>Tier rationale</h3>
+                  <p>{model.detail.context.architectHandoff.tierRationale || 'Tier rationale is missing.'}</p>
+                </div>
+              ) : null}
               <h3>Technical spec</h3>
               <p>{model.detail?.context?.technicalSpec || 'Technical spec is missing.'}</p>
               <h3>Monitoring spec</h3>
               <p>{model.detail?.context?.monitoringSpec || 'Monitoring spec is missing.'}</p>
+              <h3>Engineering handoff</h3>
+              {architectHandoffEnabled ? (
+                <form
+                  className="architect-handoff-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    try {
+                      setArchitectHandoffStatus({ kind: 'loading', message: 'Submitting engineering handoff…' });
+                      await taskClient.submitArchitectHandoff(routeTaskId, {
+                        readyForEngineering: architectHandoffDraft.readyForEngineering,
+                        engineerTier: architectHandoffDraft.engineerTier,
+                        tierRationale: architectHandoffDraft.tierRationale,
+                        technicalSpec: architectHandoffDraft.technicalSpec,
+                        monitoringSpec: architectHandoffDraft.monitoringSpec,
+                      });
+                      await reloadTask();
+                      setArchitectHandoffStatus({ kind: 'success', message: 'Engineering handoff submitted.' });
+                    } catch (error) {
+                      setArchitectHandoffStatus({ kind: 'error', message: error.message || 'Engineering handoff failed.' });
+                    }
+                  }}
+                >
+                  <div className="summary-grid architect-handoff-grid">
+                    <label>
+                      Technical summary
+                      <textarea
+                        value={architectHandoffDraft.technicalSpec.summary}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, technicalSpec: { ...current.technicalSpec, summary: event.target.value } }))}
+                        placeholder="Summarize the implementation contract and boundaries."
+                      />
+                    </label>
+                    <label>
+                      Scope and constraints
+                      <textarea
+                        value={architectHandoffDraft.technicalSpec.scope}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, technicalSpec: { ...current.technicalSpec, scope: event.target.value } }))}
+                        placeholder="Call out scope, constraints, and assumptions."
+                      />
+                    </label>
+                    <label>
+                      Design and interfaces
+                      <textarea
+                        value={architectHandoffDraft.technicalSpec.design}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, technicalSpec: { ...current.technicalSpec, design: event.target.value } }))}
+                        placeholder="Describe components, APIs, data contracts, and dependencies."
+                      />
+                    </label>
+                    <label>
+                      Rollout plan
+                      <textarea
+                        value={architectHandoffDraft.technicalSpec.rolloutPlan}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, technicalSpec: { ...current.technicalSpec, rolloutPlan: event.target.value } }))}
+                        placeholder="Explain rollout sequencing, migrations, and fallback."
+                      />
+                    </label>
+                    <label>
+                      Monitored service
+                      <input
+                        value={architectHandoffDraft.monitoringSpec.service}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, monitoringSpec: { ...current.monitoringSpec, service: event.target.value } }))}
+                        placeholder="workflow-audit-api"
+                      />
+                    </label>
+                    <label>
+                      Dashboard URLs
+                      <textarea
+                        value={architectHandoffDraft.monitoringSpec.dashboardUrls}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, monitoringSpec: { ...current.monitoringSpec, dashboardUrls: event.target.value } }))}
+                        placeholder="One URL per line"
+                      />
+                    </label>
+                    <label>
+                      Alert policies
+                      <textarea
+                        value={architectHandoffDraft.monitoringSpec.alertPolicies}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, monitoringSpec: { ...current.monitoringSpec, alertPolicies: event.target.value } }))}
+                        placeholder="One alert policy per line"
+                      />
+                    </label>
+                    <label>
+                      Runbook
+                      <input
+                        value={architectHandoffDraft.monitoringSpec.runbook}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, monitoringSpec: { ...current.monitoringSpec, runbook: event.target.value } }))}
+                        placeholder="docs/runbooks/example.md"
+                      />
+                    </label>
+                    <label>
+                      Success metrics
+                      <textarea
+                        value={architectHandoffDraft.monitoringSpec.successMetrics}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, monitoringSpec: { ...current.monitoringSpec, successMetrics: event.target.value } }))}
+                        placeholder="One metric per line"
+                      />
+                    </label>
+                    <label>
+                      Engineer tier
+                      <select
+                        value={architectHandoffDraft.engineerTier}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, engineerTier: event.target.value }))}
+                      >
+                        <option value="Principal">Principal</option>
+                        <option value="Sr">Sr</option>
+                        <option value="Jr">Jr</option>
+                      </select>
+                      <small>{engineerTierDescription(architectHandoffDraft.engineerTier)}</small>
+                    </label>
+                    <label className="architect-handoff-grid__full">
+                      Tier rationale
+                      <textarea
+                        value={architectHandoffDraft.tierRationale}
+                        onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, tierRationale: event.target.value }))}
+                        placeholder="Explain why this level of engineering ownership is required."
+                      />
+                    </label>
+                  </div>
+                  <label className="review-question-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={architectHandoffDraft.readyForEngineering}
+                      onChange={(event) => setArchitectHandoffDraft((current) => ({ ...current, readyForEngineering: event.target.checked }))}
+                    />
+                    Ready for engineering. This formal handoff is required before implementation begins.
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={architectHandoffStatus.kind === 'loading'}>
+                      {architectHandoffStatus.kind === 'loading' ? 'Submitting…' : 'Submit engineering handoff'}
+                    </button>
+                  </div>
+                  {architectHandoffStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${architectHandoffStatus.kind}`} role={architectHandoffStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {architectHandoffStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : (
+                <p className="assignment-status" role="status">
+                  Engineering handoff controls are available to architect/admin bearer tokens.
+                </p>
+              )}
               <h3>Linked delivery artifacts</h3>
               {detailPermissions.canViewLinkedPrMetadata === false ? (
                 <p>Linked PR metadata is hidden for this session.</p>
