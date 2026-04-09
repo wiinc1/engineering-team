@@ -188,6 +188,29 @@ test('detail endpoint non-404 failures do not fan out into legacy fallback reque
   assert.deepEqual(calls, ['http://audit.local/tasks/TSK-503/detail']);
 });
 
+test('task detail client submits architect handoff payloads to the dedicated endpoint', async () => {
+  const calls = [];
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, json: async () => ({ success: true }) };
+    },
+  });
+
+  await client.submitArchitectHandoff('TSK-88', {
+    readyForEngineering: true,
+    engineerTier: 'Sr',
+    tierRationale: 'Standard scope.',
+    technicalSpec: { summary: 'a', scope: 'b', design: 'c', rolloutPlan: 'd' },
+    monitoringSpec: { service: 'svc', dashboardUrls: 'x', alertPolicies: 'y', runbook: 'z', successMetrics: 'm' },
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'http://audit.local/tasks/TSK-88/architect-handoff');
+  assert.equal(calls[0].init.method, 'PUT');
+});
+
 test('deriveTelemetryFreshness promotes fresh and stale signals from freshness metadata', () => {
   assert.deepEqual(
     deriveTelemetryFreshness({ freshness: { status: 'fresh', last_updated_at: '2026-04-01T12:00:00.000Z' } }),

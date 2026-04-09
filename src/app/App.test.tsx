@@ -204,6 +204,19 @@ function installTaskFetchMock({
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/architect-handoff') && init?.method === 'PUT') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          version: 1,
+          engineerTier: 'Sr',
+          readyForEngineering: true,
+          updatedAt: '2026-04-01T15:01:30.000Z',
+        },
+      });
+    }
+
     if (url.endsWith('/tasks/TSK-42/review-questions') && init?.method === 'POST') {
       return createJsonResponse({
         questionId: 'rq-new',
@@ -259,6 +272,92 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Server-rendered monitoring spec')).toBeInTheDocument();
     expect(screen.getByText('feat: task detail')).toBeInTheDocument();
     expect(screen.getByText(/Triage queue drift/)).toBeInTheDocument();
+  });
+
+  it('renders structured architect handoff details when the backend supplies them', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        context: {
+          architectHandoff: {
+            version: 2,
+            readyForEngineering: true,
+            engineerTier: 'Principal',
+            tierRationale: 'Cross-team rollout and migration coordination.',
+            technicalSpec: {
+              summary: 'Summary',
+              scope: 'Scope',
+              design: 'Design',
+              rolloutPlan: 'Rollout',
+            },
+            monitoringSpec: {
+              service: 'workflow-audit-api',
+              dashboardUrls: ['https://dash.example/1'],
+              alertPolicies: ['Latency budget breach'],
+              runbook: 'docs/runbooks/audit-foundation.md',
+              successMetrics: ['p95 under 250ms'],
+            },
+            submittedAt: '2026-04-01T15:00:00.000Z',
+            submittedBy: 'architect-1',
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('v2')).toBeInTheDocument();
+    expect(screen.getByText('Principal')).toBeInTheDocument();
+    expect(screen.getByText('Ready for engineering')).toBeInTheDocument();
+    expect(screen.getByText('Cross-team rollout and migration coordination.')).toBeInTheDocument();
+  });
+
+  it('lets architects submit the engineering handoff from task detail', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJhcmNoaXRlY3QtMSIsInRlbmFudF9pZCI6InRlbmFudC1hIiwicm9sZXMiOlsiYXJjaGl0ZWN0IiwiY29udHJpYnV0b3IiXX0.signature',
+    });
+    const fetchMock = installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('Technical summary'), { target: { value: 'Document API and queue boundaries.' } });
+    fireEvent.change(screen.getByLabelText('Scope and constraints'), { target: { value: 'No cross-tenant writes.' } });
+    fireEvent.change(screen.getByLabelText('Design and interfaces'), { target: { value: 'PATCH plus audit event.' } });
+    fireEvent.change(screen.getByLabelText('Rollout plan'), { target: { value: 'Ship behind feature flag.' } });
+    fireEvent.change(screen.getByLabelText('Monitored service'), { target: { value: 'workflow-audit-api' } });
+    fireEvent.change(screen.getByLabelText('Dashboard URLs'), { target: { value: 'https://dash.example/1' } });
+    fireEvent.change(screen.getByLabelText('Alert policies'), { target: { value: 'Latency budget breach' } });
+    fireEvent.change(screen.getByLabelText('Runbook'), { target: { value: 'docs/runbooks/audit-foundation.md' } });
+    fireEvent.change(screen.getByLabelText('Success metrics'), { target: { value: 'p95 under 250ms' } });
+    fireEvent.change(screen.getByLabelText('Tier rationale'), { target: { value: 'Standard backend feature with audit and UI touch points.' } });
+    fireEvent.click(screen.getByLabelText(/Ready for engineering/));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit engineering handoff' }));
+
+    await screen.findByText('Engineering handoff submitted.');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/tasks/TSK-42/architect-handoff'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({
+          readyForEngineering: true,
+          engineerTier: 'Sr',
+          tierRationale: 'Standard backend feature with audit and UI touch points.',
+          technicalSpec: {
+            summary: 'Document API and queue boundaries.',
+            scope: 'No cross-tenant writes.',
+            design: 'PATCH plus audit event.',
+            rolloutPlan: 'Ship behind feature flag.',
+          },
+          monitoringSpec: {
+            service: 'workflow-audit-api',
+            dashboardUrls: 'https://dash.example/1',
+            alertPolicies: 'Latency budget breach',
+            runbook: 'docs/runbooks/audit-foundation.md',
+            successMetrics: 'p95 under 250ms',
+          },
+        }),
+      }),
+    );
   });
 
 

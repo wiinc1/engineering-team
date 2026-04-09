@@ -213,6 +213,13 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
         body: JSON.stringify(payload),
       });
     },
+    submitArchitectHandoff(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/architect-handoff`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
     fetchAssignableAgents() { return request('/ai-agents'); },
     assignTaskOwner(taskId, agentId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });

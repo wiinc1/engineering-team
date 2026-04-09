@@ -353,6 +353,179 @@ test('supports review question workflow endpoints and blocks architect handoff u
   });
 });
 
+test('records structured architect handoff details, versions revisions, and blocks implementation until ready', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-handoff', roles: ['architect', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-HO-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-HO-1', payload: { title: 'Architect handoff task', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-HO-1:ARCHITECT_REVIEW', payload: { from_stage: 'BACKLOG', to_stage: 'ARCHITECT_REVIEW' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-HO-1:TECHNICAL_SPEC', payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-HO-1:IMPLEMENTATION:blocked', payload: { from_stage: 'TECHNICAL_SPEC', to_stage: 'IMPLEMENTATION' } }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'workflow_violation');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/architect-handoff`, {
+      method: 'PUT',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        readyForEngineering: true,
+        engineerTier: 'Sr',
+        tierRationale: 'Standard scope with audit and UI work.',
+        technicalSpec: {
+          summary: 'Define API contract.',
+          scope: 'No cross-tenant writes.',
+          design: 'Dedicated handoff endpoint.',
+          rolloutPlan: 'Ship behind ff-architect-spec-tiering.',
+        },
+        monitoringSpec: {
+          service: 'workflow-audit-api',
+          dashboardUrls: ['https://dash.example/handoff'],
+          alertPolicies: ['Latency budget breach'],
+          runbook: 'docs/runbooks/audit-foundation.md',
+          successMetrics: ['p95 under 250ms'],
+        },
+      }),
+    });
+    assert.equal(response.status, 200);
+    const firstHandoff = await response.json();
+    assert.equal(firstHandoff.data.version, 1);
+    assert.equal(firstHandoff.data.engineerTier, 'Sr');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-handoff', roles: ['reader'] }),
+    });
+    const detail = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(detail.context.architectHandoff.version, 1);
+    assert.equal(detail.context.architectHandoff.engineerTier, 'Sr');
+    assert.equal(detail.context.architectHandoff.tierRationale, 'Standard scope with audit and UI work.');
+    assert.equal(detail.context.architectHandoff.monitoringSpec.dashboardUrls[0], 'https://dash.example/handoff');
+    assert.match(detail.context.technicalSpec, /Define API contract/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/architect-handoff`, {
+      method: 'PUT',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        readyForEngineering: true,
+        engineerTier: 'Principal',
+        tierRationale: 'Scope expanded to cross-team migration.',
+        technicalSpec: {
+          summary: 'Define API contract and migration path.',
+          scope: 'Coordinate rollout across services.',
+          design: 'Dedicated endpoint plus versioned handoff.',
+          rolloutPlan: 'Canary then default on.',
+        },
+        monitoringSpec: {
+          service: 'workflow-audit-api',
+          dashboardUrls: ['https://dash.example/handoff-v2'],
+          alertPolicies: ['Latency budget breach', 'Error budget breach'],
+          runbook: 'docs/runbooks/audit-foundation.md',
+          successMetrics: ['p95 under 250ms', 'error rate under 1%'],
+        },
+      }),
+    });
+    assert.equal(response.status, 200);
+    const revisedHandoff = await response.json();
+    assert.equal(revisedHandoff.data.version, 2);
+    assert.equal(revisedHandoff.data.engineerTier, 'Principal');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-HO-1:IMPLEMENTATION:ok', payload: { from_stage: 'TECHNICAL_SPEC', to_stage: 'IMPLEMENTATION' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-HO-1/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-handoff', roles: ['reader'] }),
+    });
+    const state = await response.json();
+    assert.equal(state.engineer_tier, 'Principal');
+    assert.equal(state.architect_handoff_version, 2);
+    assert.equal(state.ready_for_engineering, true);
+  });
+});
+
+test('validates required architect handoff fields and feature flag state', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-handoff', roles: ['architect', 'contributor'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-HO-2/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-HO-2', payload: { title: 'Architect handoff validation', initial_stage: 'ARCHITECT_REVIEW' } }),
+    });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-HO-2/architect-handoff`, {
+      method: 'PUT',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        readyForEngineering: false,
+        engineerTier: '',
+        tierRationale: '',
+        technicalSpec: { summary: '', scope: '', design: '', rolloutPlan: '' },
+        monitoringSpec: { service: '', dashboardUrls: [], alertPolicies: [], runbook: '', successMetrics: [] },
+      }),
+    });
+    assert.equal(response.status, 400);
+    const invalidBody = await response.json();
+    assert.equal(invalidBody.error.code, 'missing_required_architect_fields');
+    assert.ok(invalidBody.error.details.missing_fields.includes('technicalSpec.summary'));
+    assert.ok(invalidBody.error.details.missing_fields.includes('readyForEngineering'));
+  });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-handoff', roles: ['architect', 'contributor'] }),
+    };
+
+    const response = await fetch(`${baseUrl}/tasks/TSK-HO-3/architect-handoff`, {
+      method: 'PUT',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        readyForEngineering: true,
+        engineerTier: 'Sr',
+        tierRationale: 'Disabled path test.',
+        technicalSpec: { summary: 'a', scope: 'b', design: 'c', rolloutPlan: 'd' },
+        monitoringSpec: { service: 'svc', dashboardUrls: ['x'], alertPolicies: ['y'], runbook: 'z', successMetrics: ['m'] },
+      }),
+    });
+    assert.equal(response.status, 503);
+    const disabledBody = await response.json();
+    assert.equal(disabledBody.error.code, 'feature_disabled');
+    assert.equal(disabledBody.error.details.feature, 'ff_architect_spec_tiering');
+  }, { architectSpecTieringEnabled: false });
+});
+
 test('supports AI-agent registry reads and assignment writes on the audit API path', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const createHeaders = {

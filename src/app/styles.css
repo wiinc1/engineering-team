@@ -97,7 +97,10 @@ button {
 .route-form input,
 .session-form input,
 .session-form textarea,
-.assignment-form select {
+.assignment-form select,
+.architect-handoff-form input,
+.architect-handoff-form textarea,
+.architect-handoff-form select {
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   padding: 10px 12px;
@@ -564,6 +567,37 @@ button {
 .assignment-form {
   display: grid;
   gap: 12px;
+}
+
+.architect-handoff-summary {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.architect-handoff-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.architect-handoff-grid {
+  align-items: start;
+}
+
+.architect-handoff-grid label {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+}
+
+.architect-handoff-grid textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.architect-handoff-grid__full {
+  grid-column: 1 / -1;
 }
 
 .assignment-form label {
