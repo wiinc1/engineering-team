@@ -211,6 +211,26 @@ test('task detail client submits architect handoff payloads to the dedicated end
   assert.equal(calls[0].init.method, 'PUT');
 });
 
+test('task detail client submits engineer metadata to the dedicated endpoint', async () => {
+  const calls = [];
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, json: async () => ({ success: true }) };
+    },
+  });
+
+  await client.submitEngineerSubmission('TSK-89', {
+    commitSha: 'abc1234',
+    prUrl: 'https://github.com/acme/platform/pull/42',
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'http://audit.local/tasks/TSK-89/engineer-submission');
+  assert.equal(calls[0].init.method, 'PUT');
+});
+
 test('deriveTelemetryFreshness promotes fresh and stale signals from freshness metadata', () => {
   assert.deepEqual(
     deriveTelemetryFreshness({ freshness: { status: 'fresh', last_updated_at: '2026-04-01T12:00:00.000Z' } }),
