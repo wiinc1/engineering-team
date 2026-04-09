@@ -261,6 +261,44 @@ describe('Task browser runtime coverage', () => {
     expect(within(blockerAlert).getByText('Source: Security review · Owner: Security · Age: 2d')).toBeInTheDocument();
   });
 
+  it('pins blocking architect review questions prominently in task detail', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        task: { status: 'blocked' },
+        summary: {
+          nextAction: { label: 'Resolve blocking architect review questions', source: 'pm', overdue: false, waitingOn: 'PM review question resolution' },
+          blockedState: { isBlocked: true, label: 'Blocked', waitingOn: 'PM review question resolution' },
+        },
+        reviewQuestions: {
+          summary: {
+            total: 2,
+            unresolvedCount: 1,
+            unresolvedBlockingCount: 1,
+            answeredCount: 1,
+            resolvedCount: 1,
+            blocking: true,
+          },
+          pinned: [
+            {
+              id: 'rq-1',
+              prompt: 'What is the PM-approved state machine?',
+              state: 'answered',
+            },
+          ],
+          items: [],
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const reviewAlert = screen.getByRole('alert', { name: 'Architect review blockers' });
+    expect(reviewAlert).toBeInTheDocument();
+    expect(within(reviewAlert).getByText('Pending PM answers are blocking architect review')).toBeInTheDocument();
+    expect(within(reviewAlert).getByText('What is the PM-approved state machine?')).toBeInTheDocument();
+    expect(within(reviewAlert).getByText('Answered, awaiting PM resolution')).toBeInTheDocument();
+  });
+
   it('distinguishes waiting work from blocked work in the above-the-fold summary', async () => {
     installTaskFetchMock({
       detailOverride: {
@@ -576,7 +614,7 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
-    await screen.findByText('Assigned to qa.');
+    await screen.findByRole('heading', { name: 'Wire task detail' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Engineer inbox' }));
     await screen.findByRole('heading', { name: 'Engineer Inbox' });

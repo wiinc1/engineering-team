@@ -231,6 +231,128 @@ test('supports history pagination and writes explicit audit-access logs for read
   }, { historyLatencyRegressionThresholdMs: 0 });
 });
 
+test('supports review question workflow endpoints and blocks architect handoff until blocking questions are resolved', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-rq', roles: ['contributor', 'architect'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-RQ-1', payload: { title: 'Review question task', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-RQ-1:ARCHITECT_REVIEW', payload: { from_stage: 'BACKLOG', to_stage: 'ARCHITECT_REVIEW' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ prompt: 'What is the PM-approved state machine?', blocking: true }),
+    });
+    assert.equal(response.status, 201);
+    const createdQuestion = await response.json();
+    assert.ok(createdQuestion.questionId);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-rq', roles: ['reader'] }),
+    });
+    const summary = await response.json();
+    assert.equal(summary.blocked, true);
+    assert.equal(summary.waiting_state, 'pm_review_question_resolution');
+    assert.equal(summary.next_required_action, 'Resolve blocking architect review questions');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-rq', roles: ['reader'] }),
+    });
+    const detail = await response.json();
+    assert.equal(detail.reviewQuestions.summary.unresolvedBlockingCount, 1);
+    assert.equal(detail.reviewQuestions.items[0].state, 'open');
+    assert.equal(detail.reviewQuestions.pinned.length, 1);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-RQ-1:TECHNICAL_SPEC:blocked', payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' } }),
+    });
+    const blockedTransition = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(blockedTransition.error.code, 'workflow_violation');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/answers`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-user', tenant_id: 'tenant-rq', roles: ['pm', 'contributor'] }),
+      },
+      body: JSON.stringify({ body: 'Use open, answered, resolved, reopened.' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/resolve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'observer', tenant_id: 'tenant-rq', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ resolution: 'Looks good' }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/resolve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-user', tenant_id: 'tenant-rq', roles: ['pm', 'contributor'] }),
+      },
+      body: JSON.stringify({ resolution: 'PM resolved after answer' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/reopen`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-rq', roles: ['architect', 'contributor'] }),
+      },
+      body: JSON.stringify({ reason: 'Need more detail' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/resolve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-user', tenant_id: 'tenant-rq', roles: ['pm', 'contributor'] }),
+      },
+      body: JSON.stringify({ resolution: 'Resolved again' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-rq', roles: ['reader'] }),
+    });
+    const questions = await response.json();
+    assert.equal(questions.summary.unresolvedBlockingCount, 0);
+    assert.equal(questions.items[0].resolvedBy, 'pm-user');
+    assert.equal(questions.items[0].state, 'resolved');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-RQ-1:TECHNICAL_SPEC:ok', payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' } }),
+    });
+    assert.equal(response.status, 202);
+  });
+});
+
 test('supports AI-agent registry reads and assignment writes on the audit API path', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const createHeaders = {

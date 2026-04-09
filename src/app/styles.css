@@ -181,6 +181,41 @@ button {
   margin: 0;
 }
 
+.review-question-banner {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid #fbbf24;
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(245, 158, 11, 0.08)),
+    #fffbeb;
+  box-shadow: 0 10px 24px rgba(180, 83, 9, 0.08);
+}
+
+.review-question-banner h2 {
+  margin: 0;
+}
+
+.review-question-banner__lede {
+  margin: 8px 0 0;
+  max-width: 70ch;
+  color: #78350f;
+}
+
+.review-question-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.review-question-list li span {
+  display: block;
+  color: #92400e;
+}
+
 .blocker-list {
   display: grid;
   gap: 10px;
