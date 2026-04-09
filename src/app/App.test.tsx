@@ -217,6 +217,24 @@ function installTaskFetchMock({
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/engineer-submission') && init?.method === 'PUT') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          version: 1,
+          commitSha: 'abc1234',
+          prUrl: 'https://github.com/wiinc1/engineering-team/pull/14',
+          primaryReference: {
+            type: 'pr_url',
+            label: 'https://github.com/wiinc1/engineering-team/pull/14',
+            value: 'https://github.com/wiinc1/engineering-team/pull/14',
+          },
+          updatedAt: '2026-04-01T15:01:45.000Z',
+        },
+      });
+    }
+
     if (url.endsWith('/tasks/TSK-42/review-questions') && init?.method === 'POST') {
       return createJsonResponse({
         questionId: 'rq-new',
@@ -320,7 +338,7 @@ describe('Task browser runtime coverage', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Wire task detail' });
-    fireEvent.change(screen.getByLabelText('Technical summary'), { target: { value: 'Document API and queue boundaries.' } });
+    fireEvent.change(screen.getByPlaceholderText('Summarize the implementation contract and boundaries.'), { target: { value: 'Document API and queue boundaries.' } });
     fireEvent.change(screen.getByLabelText('Scope and constraints'), { target: { value: 'No cross-tenant writes.' } });
     fireEvent.change(screen.getByLabelText('Design and interfaces'), { target: { value: 'PATCH plus audit event.' } });
     fireEvent.change(screen.getByLabelText('Rollout plan'), { target: { value: 'Ship behind feature flag.' } });
@@ -358,6 +376,76 @@ describe('Task browser runtime coverage', () => {
         }),
       }),
     );
+  });
+
+  it('renders implementation handoff details when the backend supplies engineer metadata', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        context: {
+          engineerSubmission: {
+            version: 3,
+            commitSha: 'abc1234def5678',
+            prUrl: 'https://github.com/wiinc1/engineering-team/pull/14',
+            primaryReference: {
+              type: 'pr_url',
+              label: 'https://github.com/wiinc1/engineering-team/pull/14',
+              value: 'https://github.com/wiinc1/engineering-team/pull/14',
+            },
+            submittedAt: '2026-04-01T16:00:00.000Z',
+            submittedBy: 'engineer-1',
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('Ready for QA handoff')).toBeInTheDocument();
+    expect(screen.getByText('abc1234def5678')).toBeInTheDocument();
+    expect(screen.getAllByText('https://github.com/wiinc1/engineering-team/pull/14')).toHaveLength(2);
+    expect(screen.getByText('v3')).toBeInTheDocument();
+  });
+
+  it('lets engineers submit implementation metadata from task detail', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJlbmdpbmVlci0xIiwidGVuYW50X2lkIjoidGVuYW50LWEiLCJyb2xlcyI6WyJlbmdpbmVlciIsImNvbnRyaWJ1dG9yIl19.signature',
+    });
+    const fetchMock = installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByPlaceholderText('7-40 hex characters'), { target: { value: 'abc1234' } });
+    fireEvent.change(screen.getByPlaceholderText('https://github.com/owner/repo/pull/123'), { target: { value: 'https://github.com/wiinc1/engineering-team/pull/14' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit implementation handoff' }));
+
+    await screen.findByText('Implementation metadata submitted.');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/tasks/TSK-42/engineer-submission'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({
+          commitSha: 'abc1234',
+          prUrl: 'https://github.com/wiinc1/engineering-team/pull/14',
+        }),
+      }),
+    );
+  });
+
+  it('shows inline validation when engineer metadata is malformed', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJlbmdpbmVlci0xIiwidGVuYW50X2lkIjoidGVuYW50LWEiLCJyb2xlcyI6WyJlbmdpbmVlciIsImNvbnRyaWJ1dG9yIl19.signature',
+    });
+    installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText(/Commit SHA/), { target: { value: 'bad sha' } });
+    fireEvent.change(screen.getByLabelText(/GitHub PR URL/), { target: { value: 'https://example.com/not-github' } });
+
+    expect(screen.getByText('Commit SHA must be 7-40 hexadecimal characters.')).toBeInTheDocument();
+    expect(screen.getByText('GitHub PR URL must look like `https://github.com/<owner>/<repo>/pull/<number>`.')).toBeInTheDocument();
   });
 
 

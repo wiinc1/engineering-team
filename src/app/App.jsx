@@ -31,6 +31,8 @@ import {
 } from './task-owner';
 
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
+const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
+const GITHUB_PR_URL_PATTERN = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+(?:\/?\S*)?$/i;
 
 function readRouteTask(pathname) {
   const match = ((pathname || '').replace(/\/+$/, '') || '/').match(/^\/tasks\/([^/]+)$/);
@@ -248,6 +250,35 @@ function engineerTierDescription(tier) {
   }
 }
 
+function normalizeEngineerSubmissionDraft(submission = {}) {
+  return {
+    commitSha: submission.commitSha || '',
+    prUrl: submission.prUrl || '',
+  };
+}
+
+function validateEngineerSubmissionDraft(draft = {}) {
+  const commitSha = String(draft.commitSha || '').trim();
+  const prUrl = String(draft.prUrl || '').trim();
+  const invalidFields = [];
+
+  if (commitSha && !COMMIT_SHA_PATTERN.test(commitSha)) invalidFields.push('commitSha');
+  if (prUrl && !GITHUB_PR_URL_PATTERN.test(prUrl)) invalidFields.push('prUrl');
+
+  return {
+    commitSha,
+    prUrl,
+    missingAll: !commitSha && !prUrl,
+    invalidFields,
+    isValid: invalidFields.length === 0 && (Boolean(commitSha) || Boolean(prUrl)),
+    primaryReference: prUrl || commitSha || null,
+  };
+}
+
+function isImplementationStage(stage) {
+  return ['IMPLEMENT', 'IMPLEMENTATION', 'IN_PROGRESS'].includes(String(stage || '').toUpperCase());
+}
+
 function renderList(items, emptyLabel) {
   if (!items || !items.length) {
     return <p className="empty-copy">{emptyLabel}</p>;
@@ -276,6 +307,10 @@ function canAskReviewQuestion(tokenClaims) {
 
 function canManageArchitectHandoff(tokenClaims) {
   return hasAnyRole(tokenClaims, ['architect', 'admin']);
+}
+
+function canManageEngineerSubmission(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['engineer', 'admin']);
 }
 
 function canAnswerReviewQuestion(tokenClaims) {
@@ -350,6 +385,8 @@ export function App() {
   const [reviewQuestionStatus, setReviewQuestionStatus] = React.useState({ kind: 'idle', message: '', questionId: null, action: null });
   const [architectHandoffDraft, setArchitectHandoffDraft] = React.useState(() => normalizeArchitectHandoffDraft());
   const [architectHandoffStatus, setArchitectHandoffStatus] = React.useState({ kind: 'idle', message: '' });
+  const [engineerSubmissionDraft, setEngineerSubmissionDraft] = React.useState(() => normalizeEngineerSubmissionDraft());
+  const [engineerSubmissionStatus, setEngineerSubmissionStatus] = React.useState({ kind: 'idle', message: '' });
 
   const taskClient = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -380,6 +417,8 @@ export function App() {
       setReviewQuestionStatus({ kind: 'idle', message: '', questionId: null, action: null });
       setArchitectHandoffDraft(normalizeArchitectHandoffDraft(model.detail?.context?.architectHandoff));
       setArchitectHandoffStatus({ kind: 'idle', message: '' });
+      setEngineerSubmissionDraft(normalizeEngineerSubmissionDraft(model.detail?.context?.engineerSubmission));
+      setEngineerSubmissionStatus({ kind: 'idle', message: '' });
     }
   }, [model]);
 
@@ -517,6 +556,7 @@ export function App() {
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
   const architectHandoffEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageArchitectHandoff(tokenClaims);
+  const engineerSubmissionEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageEngineerSubmission(tokenClaims);
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
@@ -526,6 +566,8 @@ export function App() {
   const canAnswerQuestions = architectReviewEnabled && canAnswerReviewQuestion(tokenClaims);
   const canResolveQuestions = architectReviewEnabled && canResolveReviewQuestion(tokenClaims);
   const canReopenQuestions = architectReviewEnabled && canReopenReviewQuestion(tokenClaims);
+  const engineerSubmissionValidation = validateEngineerSubmissionDraft(engineerSubmissionDraft);
+  const engineerSubmissionAllowedForStage = model.kind === 'detail' && isImplementationStage(model.detail?.task?.stage || model.summary.currentStage);
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
@@ -1256,6 +1298,133 @@ export function App() {
               ) : (
                 <p className="assignment-status" role="status">
                   Engineering handoff controls are available to architect/admin bearer tokens.
+                </p>
+              )}
+              <h3>Implementation handoff</h3>
+              {model.detail?.context?.engineerSubmission ? (
+                <div className="architect-handoff-summary">
+                  <div className="summary-grid review-question-summary-grid">
+                    <article>
+                      <span>Primary reference</span>
+                      <strong>{model.detail.context.engineerSubmission.primaryReference?.label || 'Pending submission'}</strong>
+                    </article>
+                    <article>
+                      <span>Submission version</span>
+                      <strong>v{model.detail.context.engineerSubmission.version}</strong>
+                    </article>
+                    <article>
+                      <span>Submitted by</span>
+                      <strong>{model.detail.context.engineerSubmission.submittedBy || 'Unknown'}</strong>
+                    </article>
+                    <article>
+                      <span>QA readiness</span>
+                      <strong>{model.detail.context.engineerSubmission.primaryReference ? 'Ready for QA handoff' : 'Metadata missing'}</strong>
+                    </article>
+                  </div>
+                  {model.detail.context.engineerSubmission.commitSha ? (
+                    <>
+                      <h3>Commit SHA</h3>
+                      <p className="implementation-reference implementation-reference--mono">{model.detail.context.engineerSubmission.commitSha}</p>
+                    </>
+                  ) : null}
+                  {model.detail.context.engineerSubmission.prUrl ? (
+                    <>
+                      <h3>Pull request</h3>
+                      <p className="implementation-reference implementation-reference--mono">{model.detail.context.engineerSubmission.prUrl}</p>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+              {engineerSubmissionEnabled ? (
+                <form
+                  className="architect-handoff-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (!engineerSubmissionAllowedForStage) {
+                      setEngineerSubmissionStatus({ kind: 'error', message: 'Implementation metadata can only be submitted while the task is in implementation.' });
+                      return;
+                    }
+                    if (!engineerSubmissionValidation.isValid) {
+                      setEngineerSubmissionStatus({ kind: 'error', message: engineerSubmissionValidation.missingAll
+                        ? 'Provide a commit SHA, a GitHub PR URL, or both before handing off to QA.'
+                        : 'Fix the invalid implementation reference format before submitting.' });
+                      return;
+                    }
+                    try {
+                      setEngineerSubmissionStatus({ kind: 'loading', message: 'Submitting implementation metadata…' });
+                      await taskClient.submitEngineerSubmission(routeTaskId, {
+                        commitSha: engineerSubmissionValidation.commitSha,
+                        prUrl: engineerSubmissionValidation.prUrl,
+                      });
+                      await reloadTask();
+                      setEngineerSubmissionStatus({ kind: 'success', message: 'Implementation metadata submitted.' });
+                    } catch (error) {
+                      setEngineerSubmissionStatus({ kind: 'error', message: error.message || 'Implementation metadata submission failed.' });
+                    }
+                  }}
+                >
+                  <div className="summary-grid architect-handoff-grid">
+                    <label>
+                      Commit SHA
+                      <input
+                        value={engineerSubmissionDraft.commitSha}
+                        onChange={(event) => setEngineerSubmissionDraft((current) => ({ ...current, commitSha: event.target.value }))}
+                        placeholder="7-40 hex characters"
+                        aria-describedby="engineer-submission-commit-help"
+                      />
+                      <small id="engineer-submission-commit-help">Accepted format: 7-40 hexadecimal characters from local git.</small>
+                    </label>
+                    <label>
+                      GitHub PR URL
+                      <input
+                        value={engineerSubmissionDraft.prUrl}
+                        onChange={(event) => setEngineerSubmissionDraft((current) => ({ ...current, prUrl: event.target.value }))}
+                        placeholder="https://github.com/owner/repo/pull/123"
+                        aria-describedby="engineer-submission-pr-help"
+                      />
+                      <small id="engineer-submission-pr-help">Accepted format: full GitHub pull request URL. Optional if a commit SHA is provided.</small>
+                    </label>
+                    <div className="architect-handoff-grid__full implementation-preview" aria-live="polite">
+                      <span className="implementation-preview__label">QA handoff preview</span>
+                      <strong>{engineerSubmissionValidation.primaryReference || 'A primary implementation reference is required before QA handoff.'}</strong>
+                      <p>
+                        {engineerSubmissionValidation.missingAll
+                          ? 'Provide a commit SHA, a GitHub PR URL, or both. The first available reference becomes the auditable primary implementation reference.'
+                          : engineerSubmissionValidation.invalidFields.length
+                            ? 'Fix the highlighted format issue before submission. Accepted formats are shown below each field.'
+                            : 'This reference will be recorded in audit history and used as the implementation handoff to QA.'}
+                      </p>
+                    </div>
+                  </div>
+                  {!engineerSubmissionAllowedForStage ? (
+                    <p className="assignment-status" role="status">
+                      Implementation metadata can only be submitted while the task is in implementation.
+                    </p>
+                  ) : null}
+                  {engineerSubmissionValidation.invalidFields.includes('commitSha') ? (
+                    <p className="assignment-status assignment-status--error" role="alert">
+                      Commit SHA must be 7-40 hexadecimal characters.
+                    </p>
+                  ) : null}
+                  {engineerSubmissionValidation.invalidFields.includes('prUrl') ? (
+                    <p className="assignment-status assignment-status--error" role="alert">
+                      GitHub PR URL must look like `https://github.com/&lt;owner&gt;/&lt;repo&gt;/pull/&lt;number&gt;`.
+                    </p>
+                  ) : null}
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={engineerSubmissionStatus.kind === 'loading' || !engineerSubmissionAllowedForStage}>
+                      {engineerSubmissionStatus.kind === 'loading' ? 'Submitting…' : 'Submit implementation handoff'}
+                    </button>
+                  </div>
+                  {engineerSubmissionStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${engineerSubmissionStatus.kind}`} role={engineerSubmissionStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {engineerSubmissionStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : (
+                <p className="assignment-status" role="status">
+                  Implementation handoff controls are available to engineer/admin bearer tokens.
                 </p>
               )}
               <h3>Linked delivery artifacts</h3>

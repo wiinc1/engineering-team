@@ -254,6 +254,16 @@ test('supports review question workflow endpoints and blocks architect handoff u
 
     response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions`, {
       method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'observer', tenant_id: 'tenant-rq', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ prompt: 'Unauthorized review question', blocking: true }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions`, {
+      method: 'POST',
       headers: contributorHeaders,
       body: JSON.stringify({ prompt: 'What is the PM-approved state machine?', blocking: true }),
     });
@@ -285,6 +295,16 @@ test('supports review question workflow endpoints and blocks architect handoff u
     const blockedTransition = await response.json();
     assert.equal(response.status, 400);
     assert.equal(blockedTransition.error.code, 'workflow_violation');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/answers`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'observer', tenant_id: 'tenant-rq', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ body: 'Trying to answer without PM role.' }),
+    });
+    assert.equal(response.status, 403);
 
     response = await fetch(`${baseUrl}/tasks/TSK-RQ-1/review-questions/${createdQuestion.questionId}/answers`, {
       method: 'POST',
@@ -524,6 +544,179 @@ test('validates required architect handoff fields and feature flag state', async
     assert.equal(disabledBody.error.code, 'feature_disabled');
     assert.equal(disabledBody.error.details.feature, 'ff_architect_spec_tiering');
   }, { architectSpecTieringEnabled: false });
+});
+
+test('records engineer implementation metadata, exposes the primary reference in detail, and blocks QA until submitted', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-engineer', roles: ['architect', 'contributor'] }),
+    };
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-engineer', roles: ['engineer', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ENG-1', payload: { title: 'Engineer handoff validation', initial_stage: 'ARCHITECT_REVIEW' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-ENG-1:TECHNICAL_SPEC', payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/architect-handoff`, {
+      method: 'PUT',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        readyForEngineering: true,
+        engineerTier: 'Sr',
+        tierRationale: 'Standard implementation ownership.',
+        technicalSpec: {
+          summary: 'Engineers need the full architected implementation plan.',
+          scope: 'Keep tenant isolation intact.',
+          design: 'Submit implementation metadata before QA.',
+          rolloutPlan: 'Feature-flag the handoff path.',
+        },
+        monitoringSpec: {
+          service: 'workflow-audit-api',
+          dashboardUrls: ['https://dash.example/engineer'],
+          alertPolicies: ['Implementation queue latency breach'],
+          runbook: 'docs/runbooks/audit-foundation.md',
+          successMetrics: ['submission coverage 100%'],
+        },
+      }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-ENG-1:IMPLEMENTATION', payload: { from_stage: 'TECHNICAL_SPEC', to_stage: 'IMPLEMENTATION' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-ENG-1:QA_TESTING:blocked', payload: { from_stage: 'IMPLEMENTATION', to_stage: 'QA_TESTING' } }),
+    });
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error.message, /QA handoff cannot be completed until engineer submission includes a commit SHA or PR URL/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        commitSha: 'abc1234def5678',
+        prUrl: 'https://github.com/wiinc1/engineering-team/pull/14',
+      }),
+    });
+    assert.equal(response.status, 200);
+    const submissionBody = await response.json();
+    assert.equal(submissionBody.data.version, 1);
+    assert.equal(submissionBody.data.primaryReference.type, 'pr_url');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-engineer', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.engineerSubmission.version, 1);
+    assert.equal(detail.context.engineerSubmission.commitSha, 'abc1234def5678');
+    assert.equal(detail.context.engineerSubmission.primaryReference.label, 'https://github.com/wiinc1/engineering-team/pull/14');
+    assert.match(detail.activity.auditLog[0].summary, /Engineer submission recorded/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-ENG-1:QA_TESTING:ok', payload: { from_stage: 'IMPLEMENTATION', to_stage: 'QA_TESTING' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-engineer', roles: ['reader'] }),
+    });
+    const state = await response.json();
+    assert.equal(state.current_stage, 'QA_TESTING');
+    assert.equal(state.implementation_commit_sha, 'abc1234def5678');
+    assert.equal(state.implementation_pr_url, 'https://github.com/wiinc1/engineering-team/pull/14');
+  });
+});
+
+test('validates engineer metadata formats, stage restrictions, and feature flag state', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-engineer', roles: ['engineer', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-ENG-2/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ENG-2', payload: { title: 'Engineer metadata validation', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-2/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: '', prUrl: '' }),
+    });
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error.code, 'invalid_stage');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-2/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-ENG-2:IN_PROGRESS', payload: { from_stage: 'BACKLOG', to_stage: 'IN_PROGRESS' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-2/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'bad sha', prUrl: 'https://example.com/pull/14' }),
+    });
+    assert.equal(response.status, 400);
+    const invalidBody = await response.json();
+    assert.equal(invalidBody.error.code, 'invalid_engineer_metadata');
+    assert.ok(invalidBody.error.details.invalid_fields.includes('commitSha'));
+    assert.ok(invalidBody.error.details.invalid_fields.includes('prUrl'));
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-2/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: '', prUrl: '' }),
+    });
+    assert.equal(response.status, 400);
+    const missingBody = await response.json();
+    assert.equal(missingBody.error.code, 'missing_required_engineer_metadata');
+    assert.ok(missingBody.error.details.missing_fields.includes('commitShaOrPrUrl'));
+  });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-engineer', roles: ['engineer', 'contributor'] }),
+    };
+
+    const response = await fetch(`${baseUrl}/tasks/TSK-ENG-3/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'abc1234' }),
+    });
+    assert.equal(response.status, 503);
+    const disabledBody = await response.json();
+    assert.equal(disabledBody.error.code, 'feature_disabled');
+    assert.equal(disabledBody.error.details.feature, 'ff_engineer_submission');
+  }, { engineerSubmissionEnabled: false });
 });
 
 test('supports AI-agent registry reads and assignment writes on the audit API path', async () => {
