@@ -183,6 +183,34 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
       return request(`/tasks/${encodeURIComponent(taskId)}/history${query ? `?${query}` : ''}`);
     },
     fetchObservabilitySummary(taskId) { return request(`/tasks/${encodeURIComponent(taskId)}/observability-summary`); },
+    askReviewQuestion(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/review-questions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    answerReviewQuestion(taskId, questionId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/review-questions/${encodeURIComponent(questionId)}/answers`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    resolveReviewQuestion(taskId, questionId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/review-questions/${encodeURIComponent(questionId)}/resolve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    reopenReviewQuestion(taskId, questionId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/review-questions/${encodeURIComponent(questionId)}/reopen`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
     fetchAssignableAgents() { return request('/ai-agents'); },
     assignTaskOwner(taskId, agentId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });

@@ -204,6 +204,24 @@ function installTaskFetchMock({
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/review-questions') && init?.method === 'POST') {
+      return createJsonResponse({
+        questionId: 'rq-new',
+        eventId: 'evt-rq-new',
+        occurredAt: '2026-04-01T15:02:00.000Z',
+      }, 201);
+    }
+
+    if (/\/tasks\/TSK-42\/review-questions\/[^/]+\/(answers|resolve|reopen)$/.test(url) && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        event: {
+          event_id: 'evt-rq-update',
+          occurred_at: '2026-04-01T15:03:00.000Z',
+        },
+      }, 202);
+    }
+
     throw new Error(`Unhandled fetch URL in test: ${url}`);
   });
 
@@ -297,6 +315,116 @@ describe('Task browser runtime coverage', () => {
     expect(within(reviewAlert).getByText('Pending PM answers are blocking architect review')).toBeInTheDocument();
     expect(within(reviewAlert).getByText('What is the PM-approved state machine?')).toBeInTheDocument();
     expect(within(reviewAlert).getByText('Answered, awaiting PM resolution')).toBeInTheDocument();
+  });
+
+  it('renders architect review question threads with answers, resolutions, and event history in task detail', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        task: { stage: 'ARCHITECT_REVIEW', status: 'blocked' },
+        reviewQuestions: {
+          summary: {
+            total: 2,
+            unresolvedCount: 1,
+            unresolvedBlockingCount: 1,
+            answeredCount: 1,
+            resolvedCount: 1,
+            blocking: true,
+          },
+          pinned: [
+            {
+              id: 'rq-1',
+              prompt: 'What state machine did PM approve?',
+              state: 'answered',
+            },
+          ],
+          items: [
+            {
+              id: 'rq-1',
+              prompt: 'What state machine did PM approve?',
+              blocking: true,
+              state: 'answered',
+              createdAt: '2026-04-01T14:30:00.000Z',
+              createdBy: 'architect-1',
+              answer: 'Open, answered, resolved, reopened.',
+              resolution: null,
+              resolvedAt: null,
+              resolvedBy: null,
+              lastUpdatedAt: '2026-04-01T14:35:00.000Z',
+              messages: [
+                { id: 'rq-msg-1', eventType: 'task.review_question_asked', actorId: 'architect-1', occurredAt: '2026-04-01T14:30:00.000Z', body: 'What state machine did PM approve?' },
+                { id: 'rq-msg-2', eventType: 'task.review_question_answered', actorId: 'pm-1', occurredAt: '2026-04-01T14:35:00.000Z', body: 'Open, answered, resolved, reopened.' },
+              ],
+            },
+            {
+              id: 'rq-2',
+              prompt: 'Was the handoff approved?',
+              blocking: false,
+              state: 'resolved',
+              createdAt: '2026-04-01T14:00:00.000Z',
+              createdBy: 'architect-1',
+              answer: 'Yes.',
+              resolution: 'Resolved after PM confirmed approval.',
+              resolvedAt: '2026-04-01T14:10:00.000Z',
+              resolvedBy: 'pm-1',
+              lastUpdatedAt: '2026-04-01T14:10:00.000Z',
+              messages: [
+                { id: 'rq-msg-3', eventType: 'task.review_question_resolved', actorId: 'pm-1', occurredAt: '2026-04-01T14:10:00.000Z', body: 'Resolved after PM confirmed approval.' },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const reviewSection = screen.getByRole('heading', { name: 'Architect review questions' }).closest('section');
+    expect(reviewSection).not.toBeNull();
+    expect(within(reviewSection as HTMLElement).getAllByText('What state machine did PM approve?').length).toBeGreaterThan(0);
+    expect(within(reviewSection as HTMLElement).getAllByText('Open, answered, resolved, reopened.').length).toBeGreaterThan(0);
+    expect(within(reviewSection as HTMLElement).getAllByText('Resolved after PM confirmed approval.').length).toBeGreaterThan(0);
+    expect(within(reviewSection as HTMLElement).getByText('Question asked')).toBeInTheDocument();
+    expect(within(reviewSection as HTMLElement).getByText('Answer recorded')).toBeInTheDocument();
+    expect(within(reviewSection as HTMLElement).getAllByText('Resolved').length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText('New architect review question')).not.toBeInTheDocument();
+  });
+
+  it('lets architects create review questions directly from task detail during architect review', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJhcmNoaXRlY3QtMSIsInRlbmFudF9pZCI6InRlbmFudC1hIiwicm9sZXMiOlsiYXJjaGl0ZWN0Il19.signature',
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        task: { stage: 'ARCHITECT_REVIEW' },
+        reviewQuestions: {
+          summary: {
+            total: 0,
+            unresolvedCount: 0,
+            unresolvedBlockingCount: 0,
+            answeredCount: 0,
+            resolvedCount: 0,
+            blocking: false,
+          },
+          pinned: [],
+          items: [],
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('New architect review question'), { target: { value: 'What telemetry budget did PM approve?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ask question' }));
+
+    await screen.findByText('Architect review question created.');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/tasks/TSK-42/review-questions'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ prompt: 'What telemetry budget did PM approve?', blocking: true }),
+      }),
+    );
   });
 
   it('distinguishes waiting work from blocked work in the above-the-fold summary', async () => {

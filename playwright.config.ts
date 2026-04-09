@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const includeWebkit = process.env.PLAYWRIGHT_INCLUDE_WEBKIT === '1';
+
 export default defineConfig({
   testDir: './tests/browser',
   timeout: 30_000,
@@ -25,9 +27,9 @@ export default defineConfig({
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'] },
     },
-    {
+    ...(includeWebkit ? [{
       name: 'mobile-safari',
       use: { ...devices['iPhone 12'] },
-    },
+    }] : []),
   ],
 });

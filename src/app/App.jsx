@@ -233,6 +233,42 @@ function canManageAssignment(tokenClaims) {
   return roles.includes('pm') || roles.includes('admin');
 }
 
+function hasAnyRole(tokenClaims, expectedRoles) {
+  const roles = Array.isArray(tokenClaims?.roles) ? tokenClaims.roles : [];
+  return expectedRoles.some((role) => roles.includes(role));
+}
+
+function canAskReviewQuestion(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['architect', 'admin']);
+}
+
+function canAnswerReviewQuestion(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'admin']);
+}
+
+function canResolveReviewQuestion(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'admin']);
+}
+
+function canReopenReviewQuestion(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['architect', 'pm', 'admin']);
+}
+
+function formatReviewQuestionActionLabel(eventType) {
+  switch (eventType) {
+    case 'task.review_question_asked':
+      return 'Question asked';
+    case 'task.review_question_answered':
+      return 'Answer recorded';
+    case 'task.review_question_resolved':
+      return 'Resolved';
+    case 'task.review_question_reopened':
+      return 'Reopened';
+    default:
+      return 'Update recorded';
+  }
+}
+
 function useLocationState() {
   const [locationState, setLocationState] = React.useState(() => ({
     pathname: window.location.pathname,
@@ -272,6 +308,10 @@ export function App() {
   const [agentOptionsState, setAgentOptionsState] = React.useState({ kind: 'loading', message: 'Loading canonical role roster.' });
   const [assignmentDraft, setAssignmentDraft] = React.useState('');
   const [assignmentStatus, setAssignmentStatus] = React.useState({ kind: 'idle', message: '' });
+  const [newReviewQuestionDraft, setNewReviewQuestionDraft] = React.useState('');
+  const [newReviewQuestionBlocking, setNewReviewQuestionBlocking] = React.useState(true);
+  const [reviewQuestionDrafts, setReviewQuestionDrafts] = React.useState({});
+  const [reviewQuestionStatus, setReviewQuestionStatus] = React.useState({ kind: 'idle', message: '', questionId: null, action: null });
 
   const taskClient = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -296,6 +336,10 @@ export function App() {
     if (model.kind === 'detail') {
       setAssignmentDraft(model.summary?.currentOwner || '');
       setAssignmentStatus({ kind: 'idle', message: '' });
+      setNewReviewQuestionDraft('');
+      setNewReviewQuestionBlocking(true);
+      setReviewQuestionDrafts({});
+      setReviewQuestionStatus({ kind: 'idle', message: '', questionId: null, action: null });
     }
   }, [model]);
 
@@ -436,6 +480,11 @@ export function App() {
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
   const detailPermissions = model.kind === 'detail' ? (model.detail?.meta?.permissions || {}) : {};
+  const architectReviewEnabled = model.kind === 'detail' && Boolean(model.detail?.reviewQuestions);
+  const canAskQuestions = architectReviewEnabled && canAskReviewQuestion(tokenClaims) && model.detail?.task?.stage === 'ARCHITECT_REVIEW';
+  const canAnswerQuestions = architectReviewEnabled && canAnswerReviewQuestion(tokenClaims);
+  const canResolveQuestions = architectReviewEnabled && canResolveReviewQuestion(tokenClaims);
+  const canReopenQuestions = architectReviewEnabled && canReopenReviewQuestion(tokenClaims);
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
@@ -450,6 +499,37 @@ export function App() {
     const nextModel = await pageModule.load({ pathname, search });
     setModel({ ...nextModel, kind: 'detail' });
   }, [model.kind, pageModule, pathname, search, taskClient]);
+
+  const updateReviewQuestionDraft = React.useCallback((questionId, value) => {
+    setReviewQuestionDrafts((current) => ({ ...current, [questionId]: value }));
+  }, []);
+
+  const runReviewQuestionAction = React.useCallback(async ({ action, questionId = null, payload, successMessage }) => {
+    if (!routeTaskId) return;
+    setReviewQuestionStatus({ kind: 'loading', message: 'Saving review question update…', questionId, action });
+
+    try {
+      if (action === 'ask') {
+        await taskClient.askReviewQuestion(routeTaskId, payload);
+      } else if (action === 'answer') {
+        await taskClient.answerReviewQuestion(routeTaskId, questionId, payload);
+      } else if (action === 'resolve') {
+        await taskClient.resolveReviewQuestion(routeTaskId, questionId, payload);
+      } else if (action === 'reopen') {
+        await taskClient.reopenReviewQuestion(routeTaskId, questionId, payload);
+      }
+
+      await reloadTask();
+      setReviewQuestionStatus({ kind: 'success', message: successMessage, questionId, action });
+    } catch (error) {
+      setReviewQuestionStatus({
+        kind: 'error',
+        message: error?.message || 'Review question update failed.',
+        questionId,
+        action,
+      });
+    }
+  }, [reloadTask, routeTaskId, taskClient]);
 
   const handleTaskCreated = React.useCallback(() => {
     navigate('/tasks');
@@ -997,6 +1077,212 @@ export function App() {
                   ))}
                 </ul>
               ) : <p>No child tasks linked yet.</p>}
+            </section>
+
+            <section className="detail-card detail-card--full">
+              <h2>Architect review questions</h2>
+              <div className="summary-grid review-question-summary-grid">
+                <article>
+                  <span>Total threads</span>
+                  <strong>{model.detail?.reviewQuestions?.summary?.total ?? 0}</strong>
+                </article>
+                <article>
+                  <span>Open</span>
+                  <strong>{model.detail?.reviewQuestions?.summary?.unresolvedCount ?? 0}</strong>
+                </article>
+                <article>
+                  <span>Blocking</span>
+                  <strong>{model.detail?.reviewQuestions?.summary?.unresolvedBlockingCount ?? 0}</strong>
+                </article>
+                <article>
+                  <span>Resolved</span>
+                  <strong>{model.detail?.reviewQuestions?.summary?.resolvedCount ?? 0}</strong>
+                </article>
+              </div>
+
+              {canAskQuestions ? (
+                <form
+                  className="review-question-composer"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const prompt = newReviewQuestionDraft.trim();
+                    if (!prompt) {
+                      setReviewQuestionStatus({ kind: 'error', message: 'Review question prompt is required.', questionId: null, action: 'ask' });
+                      return;
+                    }
+                    await runReviewQuestionAction({
+                      action: 'ask',
+                      payload: { prompt, blocking: newReviewQuestionBlocking },
+                      successMessage: 'Architect review question created.',
+                    });
+                  }}
+                >
+                  <label>
+                    New architect review question
+                    <textarea
+                      value={newReviewQuestionDraft}
+                      onChange={(event) => setNewReviewQuestionDraft(event.target.value)}
+                      placeholder="What decision or PM clarification is needed before architect review can proceed?"
+                    />
+                  </label>
+                  <label className="review-question-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={newReviewQuestionBlocking}
+                      onChange={(event) => setNewReviewQuestionBlocking(event.target.checked)}
+                    />
+                    Blocks architect handoff until PM resolves it
+                  </label>
+                  <div className="review-question-composer__actions">
+                    <button type="submit" disabled={reviewQuestionStatus.kind === 'loading' && reviewQuestionStatus.action === 'ask'}>
+                      {reviewQuestionStatus.kind === 'loading' && reviewQuestionStatus.action === 'ask' ? 'Saving…' : 'Ask question'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {reviewQuestionStatus.kind !== 'idle' ? (
+                <p
+                  className={`review-question-status review-question-status--${reviewQuestionStatus.kind}`}
+                  role={reviewQuestionStatus.kind === 'error' ? 'alert' : 'status'}
+                >
+                  {reviewQuestionStatus.message}
+                </p>
+              ) : null}
+
+              {model.detail?.reviewQuestions?.items?.length ? (
+                <div className="review-question-thread-list">
+                  {model.detail.reviewQuestions.items.map((question) => {
+                    const draftValue = reviewQuestionDrafts[question.id] || '';
+                    const isPending = reviewQuestionStatus.kind === 'loading' && reviewQuestionStatus.questionId === question.id;
+
+                    return (
+                      <article key={question.id} className="review-question-thread">
+                        <div className="review-question-thread__header">
+                          <div>
+                            <div className="review-question-thread__badges">
+                              <span className={`review-question-badge review-question-badge--${question.state}`}>{formatReviewQuestionState(question.state)}</span>
+                              {question.blocking ? <span className="review-question-badge review-question-badge--blocking">Blocking</span> : <span className="review-question-badge review-question-badge--nonblocking">Non-blocking</span>}
+                            </div>
+                            <h3>{question.prompt}</h3>
+                          </div>
+                          <dl className="review-question-meta">
+                            <div>
+                              <dt>Created</dt>
+                              <dd>{question.createdAt || '—'}</dd>
+                            </div>
+                            <div>
+                              <dt>Updated</dt>
+                              <dd>{question.lastUpdatedAt || '—'}</dd>
+                            </div>
+                            <div>
+                              <dt>Owner</dt>
+                              <dd>{question.createdBy || 'Unknown'}</dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        {question.answer ? (
+                          <div className="review-question-note">
+                            <span>PM answer</span>
+                            <p>{question.answer}</p>
+                          </div>
+                        ) : null}
+
+                        {question.resolution ? (
+                          <div className="review-question-note review-question-note--resolution">
+                            <span>Resolution</span>
+                            <p>{question.resolution}</p>
+                          </div>
+                        ) : null}
+
+                        {question.messages?.length ? (
+                          <ul className="review-question-history">
+                            {question.messages.map((message) => (
+                              <li key={message.id}>
+                                <strong>{formatReviewQuestionActionLabel(message.eventType)}</strong>
+                                <span>{message.actorId || 'Unknown actor'} · {message.occurredAt || 'No timestamp'}</span>
+                                {message.body ? <p>{message.body}</p> : null}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+
+                        {(canAnswerQuestions || canResolveQuestions || (canReopenQuestions && question.state === 'resolved')) ? (
+                          <form
+                            className="review-question-thread__actions"
+                            onSubmit={(event) => event.preventDefault()}
+                          >
+                            <label>
+                              {question.state === 'resolved' ? 'Reopen note' : 'PM response / resolution note'}
+                              <textarea
+                                value={draftValue}
+                                onChange={(event) => updateReviewQuestionDraft(question.id, event.target.value)}
+                                placeholder={question.state === 'resolved' ? 'Explain why architect review needs another pass.' : 'Capture the PM answer or resolution note.'}
+                              />
+                            </label>
+                            <div className="review-question-thread__buttons">
+                              {canAnswerQuestions && question.state !== 'resolved' ? (
+                                <button
+                                  type="button"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    const body = draftValue.trim();
+                                    if (!body) {
+                                      setReviewQuestionStatus({ kind: 'error', message: 'Review question answer is required.', questionId: question.id, action: 'answer' });
+                                      return;
+                                    }
+                                    runReviewQuestionAction({
+                                      action: 'answer',
+                                      questionId: question.id,
+                                      payload: { body },
+                                      successMessage: 'Review question answered.',
+                                    });
+                                  }}
+                                >
+                                  Answer
+                                </button>
+                              ) : null}
+                              {canResolveQuestions && question.state !== 'resolved' ? (
+                                <button
+                                  type="button"
+                                  className="button-secondary"
+                                  disabled={isPending}
+                                  onClick={() => runReviewQuestionAction({
+                                    action: 'resolve',
+                                    questionId: question.id,
+                                    payload: { resolution: draftValue.trim() || 'Resolved from task detail UI.' },
+                                    successMessage: 'Review question resolved.',
+                                  })}
+                                >
+                                  Resolve
+                                </button>
+                              ) : null}
+                              {canReopenQuestions && question.state === 'resolved' ? (
+                                <button
+                                  type="button"
+                                  className="button-secondary"
+                                  disabled={isPending}
+                                  onClick={() => runReviewQuestionAction({
+                                    action: 'reopen',
+                                    questionId: question.id,
+                                    payload: { reason: draftValue.trim() || 'Reopened from task detail UI.' },
+                                    successMessage: 'Review question reopened.',
+                                  })}
+                                >
+                                  Reopen
+                                </button>
+                              ) : null}
+                            </div>
+                          </form>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p>No architect review questions recorded yet.</p>
+              )}
             </section>
 
             <section className="detail-card">
