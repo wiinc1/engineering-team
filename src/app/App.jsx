@@ -36,6 +36,21 @@ import {
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
 const GITHUB_PR_URL_PATTERN = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+(?:\/?\S*)?$/i;
+const WORKFLOW_COMMENT_TYPES = [
+  { value: 'question', label: 'Question' },
+  { value: 'escalation', label: 'Escalation' },
+  { value: 'consultation', label: 'Consultation' },
+  { value: 'decision', label: 'Decision' },
+  { value: 'note', label: 'Note' },
+];
+const WORKFLOW_NOTIFICATION_TARGET_LABELS = {
+  pm: 'PM',
+  architect: 'Architect',
+  engineer: 'Engineer',
+  qa: 'QA',
+  sre: 'SRE',
+  followers: 'Followers',
+};
 const SIGN_IN_PATH = '/sign-in';
 const SIGN_IN_TIMEOUT_MS = 5000;
 
@@ -352,6 +367,72 @@ function validateEngineerSubmissionDraft(draft = {}) {
   };
 }
 
+function normalizeWorkflowThreadDraft(thread = {}) {
+  return {
+    commentType: thread.commentType || 'question',
+    title: thread.title || '',
+    body: thread.body || '',
+    blocking: Boolean(thread.blocking),
+    linkedEventId: thread.linkedEventId || '',
+  };
+}
+
+function normalizeQaResultDraft(result = {}) {
+  return {
+    outcome: result.outcome || 'fail',
+    summary: result.summary || '',
+    scenarios: Array.isArray(result.scenarios) ? result.scenarios.join('\n') : '',
+    findings: Array.isArray(result.findings) ? result.findings.join('\n') : '',
+    reproductionSteps: Array.isArray(result.reproductionSteps) ? result.reproductionSteps.join('\n') : '',
+    stackTraces: Array.isArray(result.stackTraces) ? result.stackTraces.join('\n') : '',
+    envLogs: Array.isArray(result.envLogs) ? result.envLogs.join('\n') : '',
+    retestScope: Array.isArray(result.reTestScope) ? result.reTestScope.join('\n') : '',
+  };
+}
+
+function splitTextareaLines(value) {
+  return String(value || '')
+    .split(/\n+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function formatWorkflowCommentType(type) {
+  const match = WORKFLOW_COMMENT_TYPES.find((entry) => entry.value === type);
+  return match ? match.label : 'Note';
+}
+
+function defaultWorkflowNotificationTargets(commentType, blocking) {
+  switch (commentType) {
+    case 'question':
+      return blocking ? ['pm', 'architect'] : ['architect'];
+    case 'escalation':
+      return ['pm', 'engineer', 'sre'];
+    case 'consultation':
+      return ['architect', 'engineer'];
+    case 'decision':
+      return ['pm', 'architect', 'engineer', 'qa'];
+    default:
+      return blocking ? ['pm', 'architect'] : ['followers'];
+  }
+}
+
+function formatWorkflowNotificationTarget(target) {
+  return WORKFLOW_NOTIFICATION_TARGET_LABELS[target] || String(target || '').trim() || 'Unknown';
+}
+
+function deriveQaDraftMissingFields(draft = {}) {
+  if (draft.outcome !== 'fail') return [];
+  const checks = [
+    ['scenarios', splitTextareaLines(draft.scenarios)],
+    ['findings', splitTextareaLines(draft.findings)],
+    ['reproduction steps', splitTextareaLines(draft.reproductionSteps)],
+    ['stack traces', splitTextareaLines(draft.stackTraces)],
+    ['environment logs', splitTextareaLines(draft.envLogs)],
+  ];
+  return checks.filter(([, entries]) => entries.length === 0).map(([label]) => label);
+}
+
 function isImplementationStage(stage) {
   return ['IMPLEMENT', 'IMPLEMENTATION', 'IN_PROGRESS'].includes(String(stage || '').toUpperCase());
 }
@@ -467,8 +548,16 @@ export function App() {
   const [architectHandoffStatus, setArchitectHandoffStatus] = React.useState({ kind: 'idle', message: '' });
   const [engineerSubmissionDraft, setEngineerSubmissionDraft] = React.useState(() => normalizeEngineerSubmissionDraft());
   const [engineerSubmissionStatus, setEngineerSubmissionStatus] = React.useState({ kind: 'idle', message: '' });
+  const [taskLockStatus, setTaskLockStatus] = React.useState({ kind: 'idle', message: '' });
+  const [workflowThreadDraft, setWorkflowThreadDraft] = React.useState(() => normalizeWorkflowThreadDraft());
+  const [workflowThreadDrafts, setWorkflowThreadDrafts] = React.useState({});
+  const [workflowThreadStatus, setWorkflowThreadStatus] = React.useState({ kind: 'idle', message: '', threadId: null, action: null });
+  const [expandedWorkflowThreads, setExpandedWorkflowThreads] = React.useState({});
+  const [expandedQaPackages, setExpandedQaPackages] = React.useState({});
+  const [qaResultDraft, setQaResultDraft] = React.useState(() => normalizeQaResultDraft());
+  const [qaResultStatus, setQaResultStatus] = React.useState({ kind: 'idle', message: '' });
   const signInState = React.useMemo(() => readSignInState(search), [search]);
-  const tokenClaims = readSessionClaims(sessionConfig);
+  const tokenClaims = React.useMemo(() => readSessionClaims(sessionConfig), [sessionConfig]);
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const isAuthenticated = isAuthenticatedSession(sessionConfig);
 
@@ -544,6 +633,14 @@ export function App() {
       setArchitectHandoffStatus({ kind: 'idle', message: '' });
       setEngineerSubmissionDraft(normalizeEngineerSubmissionDraft(model.detail?.context?.engineerSubmission));
       setEngineerSubmissionStatus({ kind: 'idle', message: '' });
+      setTaskLockStatus({ kind: 'idle', message: '' });
+      setWorkflowThreadDraft(normalizeWorkflowThreadDraft());
+      setWorkflowThreadDrafts({});
+      setWorkflowThreadStatus({ kind: 'idle', message: '', threadId: null, action: null });
+      setExpandedWorkflowThreads({});
+      setExpandedQaPackages({});
+      setQaResultDraft(normalizeQaResultDraft(model.detail?.context?.qaResults?.latest));
+      setQaResultStatus({ kind: 'idle', message: '' });
     }
   }, [model]);
 
@@ -703,6 +800,28 @@ export function App() {
   const canReopenQuestions = architectReviewEnabled && canReopenReviewQuestion(tokenClaims);
   const engineerSubmissionValidation = validateEngineerSubmissionDraft(engineerSubmissionDraft);
   const engineerSubmissionAllowedForStage = model.kind === 'detail' && isImplementationStage(model.detail?.task?.stage || model.summary.currentStage);
+  const canManageTaskLock = model.kind === 'detail' && Boolean(model.route?.taskId) && (canManageAssignment(tokenClaims) || canManageEngineerSubmission(tokenClaims) || canManageArchitectHandoff(tokenClaims) || hasAnyRole(tokenClaims, ['qa', 'contributor', 'admin']));
+  const activeTaskLock = model.kind === 'detail' ? (model.detail?.meta?.lock || null) : null;
+  const workflowThreads = model.kind === 'detail' ? (model.detail?.activity?.workflowThreads?.items || []) : [];
+  const workflowThreadSummary = model.kind === 'detail' ? (model.detail?.activity?.workflowThreads?.summary || { total: 0, unresolvedCount: 0, unresolvedBlockingCount: 0, resolvedCount: 0 }) : { total: 0, unresolvedCount: 0, unresolvedBlockingCount: 0, resolvedCount: 0 };
+  const canManageWorkflowThreads = model.kind === 'detail' && hasAnyRole(tokenClaims, ['architect', 'engineer', 'qa', 'pm', 'contributor', 'admin']);
+  const qaStageEnabled = model.kind === 'detail' && model.detail?.task?.stage === 'QA_TESTING';
+  const canSubmitQaResult = qaStageEnabled && hasAnyRole(tokenClaims, ['qa', 'admin', 'contributor']);
+  const workflowThreadNotificationTargets = defaultWorkflowNotificationTargets(workflowThreadDraft.commentType, workflowThreadDraft.blocking);
+  const latestQaResult = model.kind === 'detail' ? (model.detail?.context?.qaResults?.latest || null) : null;
+  const latestFailedQa = model.kind === 'detail' ? (model.detail?.context?.qaResults?.items || []).find((item) => item.outcome === 'fail') || null : null;
+  const currentImplementationVersion = model.kind === 'detail' ? (model.detail?.context?.implementationHistory?.[0]?.version || 0) : 0;
+  const qaRetestContext = latestFailedQa && currentImplementationVersion > (latestFailedQa.implementationVersion || 0)
+    ? {
+        priorRunId: latestFailedQa.runId,
+        priorQaActorId: latestFailedQa.submittedBy || null,
+        scope: latestFailedQa.reTestScope || [],
+      }
+    : null;
+  const qaDraftMissingFields = deriveQaDraftMissingFields(qaResultDraft);
+  const qaRoutePreview = qaResultDraft.outcome === 'pass'
+    ? 'SRE monitoring'
+    : 'implementation fix loop';
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
@@ -748,6 +867,84 @@ export function App() {
       });
     }
   }, [reloadTask, routeTaskId, taskClient]);
+
+  const updateWorkflowThreadDraft = React.useCallback((threadId, value) => {
+    setWorkflowThreadDrafts((current) => ({ ...current, [threadId]: value }));
+  }, []);
+
+  const toggleWorkflowThreadExpanded = React.useCallback((threadId) => {
+    setExpandedWorkflowThreads((current) => ({ ...current, [threadId]: !current[threadId] }));
+  }, []);
+
+  const toggleQaPackageExpanded = React.useCallback((runId) => {
+    setExpandedQaPackages((current) => ({ ...current, [runId]: !current[runId] }));
+  }, []);
+
+  const runWorkflowThreadAction = React.useCallback(async ({ action, threadId = null, payload, successMessage }) => {
+    if (!routeTaskId) return;
+    setWorkflowThreadStatus({ kind: 'loading', message: 'Saving workflow thread update…', threadId, action });
+    try {
+      if (action === 'create') {
+        await taskClient.createWorkflowThread(routeTaskId, payload);
+      } else if (action === 'reply') {
+        await taskClient.replyToWorkflowThread(routeTaskId, threadId, payload);
+      } else if (action === 'resolve') {
+        await taskClient.resolveWorkflowThread(routeTaskId, threadId, payload);
+      } else if (action === 'reopen') {
+        await taskClient.reopenWorkflowThread(routeTaskId, threadId, payload);
+      }
+      await reloadTask();
+      setWorkflowThreadStatus({ kind: 'success', message: successMessage, threadId, action });
+    } catch (error) {
+      setWorkflowThreadStatus({ kind: 'error', message: error?.message || 'Workflow thread update failed.', threadId, action });
+    }
+  }, [reloadTask, routeTaskId, taskClient]);
+
+  const acquireTaskLock = React.useCallback(async () => {
+    if (!routeTaskId) return;
+    setTaskLockStatus({ kind: 'loading', message: 'Acquiring task lock…' });
+    try {
+      await taskClient.acquireTaskLock(routeTaskId, { reason: 'Manual task detail editing session', action: 'task_detail_edit' });
+      await reloadTask();
+      setTaskLockStatus({ kind: 'success', message: 'Task lock acquired.' });
+    } catch (error) {
+      setTaskLockStatus({ kind: 'error', message: error?.message || 'Task lock acquisition failed.' });
+    }
+  }, [reloadTask, routeTaskId, taskClient]);
+
+  const releaseTaskLock = React.useCallback(async () => {
+    if (!routeTaskId) return;
+    setTaskLockStatus({ kind: 'loading', message: 'Releasing task lock…' });
+    try {
+      await taskClient.releaseTaskLock(routeTaskId);
+      await reloadTask();
+      setTaskLockStatus({ kind: 'success', message: 'Task lock released.' });
+    } catch (error) {
+      setTaskLockStatus({ kind: 'error', message: error?.message || 'Task lock release failed.' });
+    }
+  }, [reloadTask, routeTaskId, taskClient]);
+
+  const submitQaResult = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setQaResultStatus({ kind: 'loading', message: 'Submitting QA result…' });
+    try {
+      await taskClient.submitQaResult(routeTaskId, {
+        outcome: qaResultDraft.outcome,
+        summary: qaResultDraft.summary,
+        scenarios: splitTextareaLines(qaResultDraft.scenarios),
+        findings: splitTextareaLines(qaResultDraft.findings),
+        reproductionSteps: splitTextareaLines(qaResultDraft.reproductionSteps),
+        stackTraces: splitTextareaLines(qaResultDraft.stackTraces),
+        envLogs: splitTextareaLines(qaResultDraft.envLogs),
+        retestScope: splitTextareaLines(qaResultDraft.retestScope),
+      });
+      await reloadTask();
+      setQaResultStatus({ kind: 'success', message: qaResultDraft.outcome === 'pass' ? 'QA approved the task and routed it to SRE monitoring.' : 'QA failure routed the task back to implementation.' });
+    } catch (error) {
+      setQaResultStatus({ kind: 'error', message: error?.message || 'QA result submission failed.' });
+    }
+  }, [qaResultDraft, reloadTask, routeTaskId, taskClient]);
 
   const handleSignIn = React.useCallback(async (event) => {
     event.preventDefault();
@@ -1249,6 +1446,24 @@ export function App() {
             </section>
           ) : null}
 
+          {workflowThreads.filter((thread) => thread.blocking && thread.state !== 'resolved').length ? (
+            <section className="review-question-banner" aria-label="Workflow thread blockers" role="alert" aria-live="assertive">
+              <div>
+                <p className="eyebrow">Workflow blockers</p>
+                <h2>Blocking workflow threads need resolution</h2>
+                <p className="review-question-banner__lede">Blocking questions, escalations, decisions, and consultations stay pinned here until the thread owner resolves them.</p>
+              </div>
+              <ul className="review-question-list">
+                {workflowThreads.filter((thread) => thread.blocking && thread.state !== 'resolved').map((thread) => (
+                  <li key={thread.id}>
+                    <strong>{thread.title}</strong>
+                    <span>{formatWorkflowCommentType(thread.commentType)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {model.detail?.blockers?.length ? (
             <section className="blocker-banner" aria-label="Task blockers" role="alert" aria-live="assertive">
               <div>
@@ -1307,6 +1522,63 @@ export function App() {
               </article>
             </div>
           </section>
+
+          {activeTaskLock ? (
+            <section className="detail-card detail-card--full" aria-label="Task lock status">
+              <h2>Task lock</h2>
+              <p>This task is locked by <strong>{activeTaskLock.ownerId}</strong>{activeTaskLock.reason ? ` for ${activeTaskLock.reason}` : ''}.</p>
+              <p className="task-list-meta">Expires at {activeTaskLock.expiresAt || 'unknown'}{activeTaskLock.action ? ` · Action: ${activeTaskLock.action}` : ''}. Refresh or retry after the lock expires if you are not the lock holder.</p>
+              {canManageTaskLock ? (
+                <div className="assignment-form__actions">
+                  {activeTaskLock.ownerId === tokenClaims?.sub ? (
+                    <>
+                      <button type="button" onClick={acquireTaskLock} disabled={taskLockStatus.kind === 'loading'}>
+                        {taskLockStatus.kind === 'loading' ? 'Renewing…' : 'Renew lock'}
+                      </button>
+                      <button type="button" className="button-secondary" onClick={releaseTaskLock} disabled={taskLockStatus.kind === 'loading'}>
+                        Release lock
+                      </button>
+                      <button type="button" className="button-secondary" onClick={() => void reloadTask()} disabled={taskLockStatus.kind === 'loading'}>
+                        Refresh task state
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={acquireTaskLock} disabled={taskLockStatus.kind === 'loading'}>
+                        {taskLockStatus.kind === 'loading' ? 'Refreshing…' : 'Retry acquire after refresh'}
+                      </button>
+                      <button type="button" className="button-secondary" onClick={() => void reloadTask()} disabled={taskLockStatus.kind === 'loading'}>
+                        Refresh task state
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
+              {taskLockStatus.kind !== 'idle' ? (
+                <p className={`assignment-status assignment-status--${taskLockStatus.kind}`} role={taskLockStatus.kind === 'error' ? 'alert' : 'status'}>
+                  {taskLockStatus.message}
+                </p>
+              ) : null}
+            </section>
+          ) : canManageTaskLock ? (
+            <section className="detail-card detail-card--full" aria-label="Task lock controls">
+              <h2>Task lock</h2>
+              <p>No active lock. Acquire one before making a larger workflow change if you need to keep the task stable while editing.</p>
+              <div className="assignment-form__actions">
+                <button type="button" onClick={acquireTaskLock} disabled={taskLockStatus.kind === 'loading'}>
+                  {taskLockStatus.kind === 'loading' ? 'Acquiring…' : 'Acquire lock'}
+                </button>
+                <button type="button" className="button-secondary" onClick={() => void reloadTask()} disabled={taskLockStatus.kind === 'loading'}>
+                  Refresh task state
+                </button>
+              </div>
+              {taskLockStatus.kind !== 'idle' ? (
+                <p className={`assignment-status assignment-status--${taskLockStatus.kind}`} role={taskLockStatus.kind === 'error' ? 'alert' : 'status'}>
+                  {taskLockStatus.message}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className="detail-sections" aria-label="Task detail sections">
             <section className="detail-card">
@@ -1523,6 +1795,19 @@ export function App() {
                     </>
                   ) : null}
                 </div>
+              ) : null}
+              {model.detail?.context?.implementationHistory?.length > 1 ? (
+                <>
+                  <h3>Previous fix history</h3>
+                  <ul className="detail-feed">
+                    {model.detail.context.implementationHistory.map((entry) => (
+                      <li key={`${entry.version}-${entry.eventId || entry.submittedAt}`}>
+                        <strong>v{entry.version} · {entry.primaryReference?.label || entry.commitSha || entry.prUrl || 'Implementation reference missing'}</strong>
+                        <span>{entry.submittedBy || 'Unknown engineer'} · {entry.submittedAt || 'No timestamp'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               ) : null}
               {engineerSubmissionEnabled ? (
                 <form
@@ -1851,18 +2136,360 @@ export function App() {
 
             <section className="detail-card">
               <h2>Discussion</h2>
-              {detailPermissions.canViewComments === false ? (
+              <div className="summary-grid review-question-summary-grid">
+                <article>
+                  <span>Total threads</span>
+                  <strong>{workflowThreadSummary.total}</strong>
+                </article>
+                <article>
+                  <span>Open</span>
+                  <strong>{workflowThreadSummary.unresolvedCount}</strong>
+                </article>
+                <article>
+                  <span>Blocking</span>
+                  <strong>{workflowThreadSummary.unresolvedBlockingCount}</strong>
+                </article>
+                <article>
+                  <span>Resolved</span>
+                  <strong>{workflowThreadSummary.resolvedCount}</strong>
+                </article>
+              </div>
+              {canManageWorkflowThreads ? (
+                <form
+                  className="review-question-composer"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    runWorkflowThreadAction({
+                      action: 'create',
+                      payload: workflowThreadDraft,
+                      successMessage: 'Workflow thread created.',
+                    });
+                  }}
+                >
+                  <div className="summary-grid architect-handoff-grid">
+                    <label>
+                      Thread type
+                      <select
+                        value={workflowThreadDraft.commentType}
+                        onChange={(event) => setWorkflowThreadDraft((current) => ({ ...current, commentType: event.target.value }))}
+                      >
+                        {WORKFLOW_COMMENT_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      Linked workflow event ID
+                      <input
+                        value={workflowThreadDraft.linkedEventId}
+                        onChange={(event) => setWorkflowThreadDraft((current) => ({ ...current, linkedEventId: event.target.value }))}
+                        placeholder="Optional audit event id"
+                      />
+                    </label>
+                    <label className="architect-handoff-grid__full">
+                      Thread title
+                      <input
+                        value={workflowThreadDraft.title}
+                        onChange={(event) => setWorkflowThreadDraft((current) => ({ ...current, title: event.target.value }))}
+                        placeholder="Short summary of the question, escalation, or decision"
+                      />
+                    </label>
+                    <label className="architect-handoff-grid__full">
+                      Thread body
+                      <textarea
+                        value={workflowThreadDraft.body}
+                        onChange={(event) => setWorkflowThreadDraft((current) => ({ ...current, body: event.target.value }))}
+                        placeholder="Capture the typed workflow context in a structured, auditable way."
+                      />
+                    </label>
+                  </div>
+                  <label className="review-question-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={workflowThreadDraft.blocking}
+                      onChange={(event) => setWorkflowThreadDraft((current) => ({ ...current, blocking: event.target.checked }))}
+                    />
+                    Pin this thread near the top of task detail until it is resolved
+                  </label>
+                  <div className="review-question-note">
+                    <span>Notification routing</span>
+                    <p>{workflowThreadDraft.blocking ? 'Blocking threads notify the people who can unblock the work first.' : 'Advisory threads keep the most relevant workflow roles in the loop.'}</p>
+                    <p className="task-list-meta">Targets: {workflowThreadNotificationTargets.map(formatWorkflowNotificationTarget).join(' · ')}</p>
+                  </div>
+                  <div className="review-question-composer__actions">
+                    <button type="submit" disabled={workflowThreadStatus.kind === 'loading' && workflowThreadStatus.action === 'create'}>
+                      {workflowThreadStatus.kind === 'loading' && workflowThreadStatus.action === 'create' ? 'Saving…' : 'Create thread'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+              {workflowThreadStatus.kind !== 'idle' ? (
+                <p className={`review-question-status review-question-status--${workflowThreadStatus.kind}`} role={workflowThreadStatus.kind === 'error' ? 'alert' : 'status'}>
+                  {workflowThreadStatus.message}
+                </p>
+              ) : null}
+              {workflowThreads.length ? (
+                <div className="review-question-thread-list">
+                  {workflowThreads.map((thread) => {
+                    const draftValue = workflowThreadDrafts[thread.id] || '';
+                    const isPending = workflowThreadStatus.kind === 'loading' && workflowThreadStatus.threadId === thread.id;
+                    const isExpanded = Boolean(expandedWorkflowThreads[thread.id]);
+                    const visibleMessages = isExpanded ? (thread.messages || []) : (thread.messages || []).slice(0, 2);
+                    return (
+                      <article key={thread.id} className="review-question-thread">
+                        <div className="review-question-thread__header">
+                          <div>
+                            <div className="review-question-thread__badges">
+                              <span className={`review-question-badge review-question-badge--${thread.state}`}>{thread.state === 'resolved' ? 'Resolved' : 'Open'}</span>
+                              <span className={`review-question-badge review-question-badge--type-${thread.commentType}`}>{formatWorkflowCommentType(thread.commentType)}</span>
+                              {thread.blocking ? <span className="review-question-badge review-question-badge--blocking">Blocking</span> : null}
+                            </div>
+                            <h3>{thread.title}</h3>
+                          </div>
+                          <dl className="review-question-meta">
+                            <div>
+                              <dt>Created</dt>
+                              <dd>{thread.createdAt || '—'}</dd>
+                            </div>
+                            <div>
+                              <dt>Updated</dt>
+                              <dd>{thread.lastUpdatedAt || '—'}</dd>
+                            </div>
+                            <div>
+                              <dt>Owner</dt>
+                              <dd>{thread.createdBy || 'Unknown'}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                        <div className="review-question-note">
+                          <span>Thread context</span>
+                          <p>{thread.body}</p>
+                          {thread.linkedEventId ? <p className="task-list-meta">Linked workflow event: {thread.linkedEventId}</p> : null}
+                          <p className="task-list-meta">Notification targets: {(thread.notificationTargets?.length ? thread.notificationTargets : defaultWorkflowNotificationTargets(thread.commentType, thread.blocking)).map(formatWorkflowNotificationTarget).join(' · ')}</p>
+                        </div>
+                        {thread.messages?.length ? (
+                          <ul className="review-question-history">
+                            {visibleMessages.map((message) => (
+                              <li key={message.id}>
+                                <strong>{message.actorId || 'Unknown actor'}</strong>
+                                <span>{message.occurredAt || 'No timestamp'}</span>
+                                {message.body ? <p>{message.body}</p> : null}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {thread.messages?.length > 2 ? (
+                          <button type="button" className="thread-toggle" onClick={() => toggleWorkflowThreadExpanded(thread.id)}>
+                            {isExpanded ? 'Collapse thread history' : `Show ${thread.messages.length - 2} older thread updates`}
+                          </button>
+                        ) : null}
+                        {canManageWorkflowThreads ? (
+                          <form className="review-question-thread__actions" onSubmit={(event) => event.preventDefault()}>
+                            <label>
+                              {thread.state === 'resolved' ? 'Reopen note' : 'Reply / resolution note'}
+                              <textarea
+                                value={draftValue}
+                                onChange={(event) => updateWorkflowThreadDraft(thread.id, event.target.value)}
+                                placeholder={thread.state === 'resolved' ? 'Explain why the thread needs another pass.' : 'Add a reply or capture the resolution note.'}
+                              />
+                            </label>
+                            <div className="review-question-thread__buttons">
+                              {thread.state !== 'resolved' ? (
+                                <>
+                                  <button type="button" disabled={isPending} onClick={() => runWorkflowThreadAction({ action: 'reply', threadId: thread.id, payload: { body: draftValue.trim() }, successMessage: 'Workflow thread updated.' })}>
+                                    Reply
+                                  </button>
+                                  <button type="button" className="button-secondary" disabled={isPending} onClick={() => runWorkflowThreadAction({ action: 'resolve', threadId: thread.id, payload: { resolution: draftValue.trim() || 'Resolved from task detail UI.' }, successMessage: 'Workflow thread resolved.' })}>
+                                    Resolve
+                                  </button>
+                                </>
+                              ) : (
+                                <button type="button" className="button-secondary" disabled={isPending} onClick={() => runWorkflowThreadAction({ action: 'reopen', threadId: thread.id, payload: { body: draftValue.trim() || 'Reopened from task detail UI.' }, successMessage: 'Workflow thread reopened.' })}>
+                                  Reopen
+                                </button>
+                              )}
+                            </div>
+                          </form>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : detailPermissions.canViewComments === false ? (
                 <p>Workflow comments are hidden for this session.</p>
-              ) : model.detail?.activity?.comments?.length ? (
+              ) : (
+                <p>No structured workflow threads yet.</p>
+              )}
+            </section>
+
+            <section className="detail-card">
+              <h2>QA</h2>
+              <div className="summary-grid review-question-summary-grid">
+                <article>
+                  <span>Total runs</span>
+                  <strong>{model.detail?.context?.qaResults?.summary?.total ?? 0}</strong>
+                </article>
+                <article>
+                  <span>Passed</span>
+                  <strong>{model.detail?.context?.qaResults?.summary?.passedCount ?? 0}</strong>
+                </article>
+                <article>
+                  <span>Failed</span>
+                  <strong>{model.detail?.context?.qaResults?.summary?.failedCount ?? 0}</strong>
+                </article>
+                <article>
+                  <span>Re-tests</span>
+                  <strong>{model.detail?.context?.qaResults?.summary?.retestCount ?? 0}</strong>
+                </article>
+              </div>
+              {latestQaResult ? (
+                <div className="review-question-note">
+                  <span>Latest QA result</span>
+                  <p>{latestQaResult.summary}</p>
+                  <p className="task-list-meta">
+                    {latestQaResult.outcome === 'pass' ? 'Passed' : 'Failed'}
+                    {latestQaResult.runKind === 'retest' ? ' · Re-test' : ' · Initial run'}
+                    {latestQaResult.implementationReference?.label ? ` · ${latestQaResult.implementationReference.label}` : ''}
+                  </p>
+                </div>
+              ) : <p>No QA result has been recorded yet.</p>}
+              {canSubmitQaResult ? (
+                <form className="architect-handoff-form" onSubmit={submitQaResult}>
+                  <div className="summary-grid architect-handoff-grid">
+                    <label>
+                      Outcome
+                      <select value={qaResultDraft.outcome} onChange={(event) => setQaResultDraft((current) => ({ ...current, outcome: event.target.value }))}>
+                        <option value="fail">Fail back to implementation</option>
+                        <option value="pass">Pass to SRE monitoring</option>
+                      </select>
+                    </label>
+                    <label className="architect-handoff-grid__full">
+                      QA summary
+                      <textarea value={qaResultDraft.summary} onChange={(event) => setQaResultDraft((current) => ({ ...current, summary: event.target.value }))} placeholder="Summarize the test outcome and the most important signal." />
+                    </label>
+                    <label>
+                      Scenarios
+                      <textarea value={qaResultDraft.scenarios} onChange={(event) => setQaResultDraft((current) => ({ ...current, scenarios: event.target.value }))} placeholder="One scenario per line" />
+                    </label>
+                    <label>
+                      Findings
+                      <textarea value={qaResultDraft.findings} onChange={(event) => setQaResultDraft((current) => ({ ...current, findings: event.target.value }))} placeholder="One finding per line" />
+                    </label>
+                    <label>
+                      Reproduction steps
+                      <textarea value={qaResultDraft.reproductionSteps} onChange={(event) => setQaResultDraft((current) => ({ ...current, reproductionSteps: event.target.value }))} placeholder="One reproduction step per line" />
+                    </label>
+                    <label>
+                      Re-test scope
+                      <textarea value={qaResultDraft.retestScope} onChange={(event) => setQaResultDraft((current) => ({ ...current, retestScope: event.target.value }))} placeholder="Optional scoped re-test plan" />
+                    </label>
+                    <label>
+                      Stack traces
+                      <textarea value={qaResultDraft.stackTraces} onChange={(event) => setQaResultDraft((current) => ({ ...current, stackTraces: event.target.value }))} placeholder="One stack trace summary per line" />
+                    </label>
+                    <label>
+                      Environment logs
+                      <textarea value={qaResultDraft.envLogs} onChange={(event) => setQaResultDraft((current) => ({ ...current, envLogs: event.target.value }))} placeholder="One log summary per line" />
+                    </label>
+                  </div>
+                  <div className="review-question-note">
+                    <span>Route preview</span>
+                    <p>{qaResultDraft.outcome === 'pass' ? 'A passing result routes this task forward to SRE monitoring.' : 'A failing result routes this task back to the implementation fix loop with a packaged escalation.'}</p>
+                    <p className="task-list-meta">Next stage: {qaRoutePreview}</p>
+                    {qaRetestContext ? (
+                      <p className="task-list-meta">Scoped re-test for run {qaRetestContext.priorRunId} stays with {qaRetestContext.priorQaActorId || 'the previous QA owner'} and should cover {qaRetestContext.scope.join(', ') || 'the prior failing scenarios'}.</p>
+                    ) : null}
+                  </div>
+                  {qaDraftMissingFields.length ? (
+                    <p className="assignment-status assignment-status--error" role="alert">
+                      Missing failure context: {qaDraftMissingFields.join(', ')}.
+                    </p>
+                  ) : null}
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={qaResultStatus.kind === 'loading' || qaDraftMissingFields.length > 0}>
+                      {qaResultStatus.kind === 'loading' ? 'Submitting…' : 'Submit QA result'}
+                    </button>
+                  </div>
+                  {qaResultStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${qaResultStatus.kind}`} role={qaResultStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {qaResultStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
+              {model.detail?.context?.qaResults?.items?.length ? (
                 <ul className="detail-feed">
-                  {model.detail.activity.comments.map((comment) => (
-                    <li key={comment.id}>
-                      <strong>{comment.actor?.label || 'Unknown actor'}</strong>
-                      <span>{comment.summary}</span>
+                  {model.detail.context.qaResults.items.map((run) => (
+                    <li key={run.runId}>
+                      <strong>{run.outcome === 'pass' ? 'Pass' : 'Fail'}{run.runKind === 'retest' ? ' · Re-test' : ''}</strong>
+                      <span>{run.submittedBy || 'Unknown QA'} · {run.submittedAt || 'No timestamp'}</span>
+                      <p>{run.summary}</p>
+                      {run.escalationPackage ? (
+                        <>
+                          <p className="task-list-meta">Escalation target: {run.escalationPackage.routing?.recipient_agent_id || run.escalationPackage.routing?.recipient_role || 'engineer'} · Required tier: {run.escalationPackage.routing?.required_engineer_tier || '—'}</p>
+                          <div className="qa-package">
+                            <strong>Escalation package</strong>
+                            <p className="task-list-meta">Reproduction steps come first, then failing scenarios, findings, and condensed logs/traces.</p>
+                            {run.escalationPackage.notification_preview ? (
+                              <div className="qa-package__section">
+                                <span>Notification preview</span>
+                                <p>{run.escalationPackage.notification_preview.headline}</p>
+                                <p className="task-list-meta">
+                                  Route: {run.escalationPackage.notification_preview.recipient_agent_id || run.escalationPackage.notification_preview.recipient_role || 'engineer'}
+                                  {run.escalationPackage.notification_preview.required_engineer_tier ? ` · Required tier: ${run.escalationPackage.notification_preview.required_engineer_tier}` : ''}
+                                </p>
+                                {renderList(run.escalationPackage.notification_preview.highlights, 'No notification highlights captured.')}
+                              </div>
+                            ) : null}
+                            <div className="qa-package__section">
+                              <span>Reproduction steps</span>
+                              {renderList(run.escalationPackage.reproduction_steps, 'No reproduction steps captured.')}
+                            </div>
+                            <div className="qa-package__section">
+                              <span>Failing scenarios</span>
+                              {renderList(run.escalationPackage.failing_scenarios, 'No failing scenarios captured.')}
+                            </div>
+                            <div className="qa-package__section">
+                              <span>Findings</span>
+                              {renderList(run.escalationPackage.findings, 'No findings captured.')}
+                            </div>
+                            <button type="button" className="thread-toggle" onClick={() => toggleQaPackageExpanded(run.runId)}>
+                              {expandedQaPackages[run.runId] ? 'Hide logs and traces' : 'Show logs and traces'}
+                            </button>
+                            {expandedQaPackages[run.runId] ? (
+                              <div className="qa-package__expanded">
+                                <div className="qa-package__section">
+                                  <span>Stack traces</span>
+                                  {renderList(run.escalationPackage.stack_traces, 'No stack traces captured.')}
+                                </div>
+                                <div className="qa-package__section">
+                                  <span>Environment logs</span>
+                                  {renderList(run.escalationPackage.env_logs, 'No environment logs captured.')}
+                                </div>
+                                <div className="qa-package__section">
+                                  <span>Escalation chain</span>
+                                  <p>{(run.escalationPackage.routing?.escalation_chain || []).join(' -> ') || 'No escalation chain captured.'}</p>
+                                </div>
+                                <div className="qa-package__section">
+                                  <span>Previous fix history</span>
+                                  {run.escalationPackage.previous_fix_history?.length ? (
+                                    <ul className="detail-feed">
+                                      {run.escalationPackage.previous_fix_history.map((entry) => (
+                                        <li key={`${run.runId}-${entry.version}`}>
+                                          <strong>v{entry.version} · {entry.primary_reference?.label || entry.commit_sha || entry.pr_url || 'Reference missing'}</strong>
+                                          <span>{entry.submitted_by || 'Unknown engineer'} · {entry.submitted_at || 'No timestamp'}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : <p className="empty-copy">No previous fix history captured.</p>}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
-              ) : <p>No workflow comments yet.</p>}
+              ) : null}
             </section>
 
             <section className="detail-card">

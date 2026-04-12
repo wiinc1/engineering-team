@@ -234,6 +234,56 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
         body: JSON.stringify(payload),
       });
     },
+    fetchTaskLock(taskId) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/lock`);
+    },
+    acquireTaskLock(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/lock`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    releaseTaskLock(taskId) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/lock`, {
+        method: 'DELETE',
+      });
+    },
+    createWorkflowThread(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/workflow-threads`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    replyToWorkflowThread(taskId, threadId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/workflow-threads/${encodeURIComponent(threadId)}/replies`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    resolveWorkflowThread(taskId, threadId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/workflow-threads/${encodeURIComponent(threadId)}/resolve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    reopenWorkflowThread(taskId, threadId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/workflow-threads/${encodeURIComponent(threadId)}/reopen`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    submitQaResult(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/qa-results`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
     fetchAssignableAgents() { return request('/ai-agents'); },
     assignTaskOwner(taskId, agentId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });

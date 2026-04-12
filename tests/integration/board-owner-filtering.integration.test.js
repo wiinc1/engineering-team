@@ -107,7 +107,7 @@ describe('board owner filtering integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
     await screen.findByText('Assigned to qa.');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Task list' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Task list' })[0]);
     fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
     await screen.findByText('5 cards shown.');
     expect(screen.getAllByText('QA Engineer · QA').length).toBeGreaterThan(0);

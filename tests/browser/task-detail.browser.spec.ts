@@ -56,9 +56,20 @@ const taskDetailPayload = {
 
 async function installApiMocks(page) {
   await page.addInitScript(() => {
+    const claims = {
+      sub: 'pm-1',
+      tenant_id: 'tenant-a',
+      roles: ['pm', 'reader'],
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+    };
+    const payload = btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     window.sessionStorage.setItem(
       'engineering-team.task-browser-session',
-      JSON.stringify({ bearerToken: '', apiBaseUrl: '/api' }),
+      JSON.stringify({
+        bearerToken: `header.${payload}.signature`,
+        apiBaseUrl: '/api',
+        expiresAt: new Date(Date.now() + (60 * 60 * 1000)).toISOString(),
+      }),
     );
   });
 

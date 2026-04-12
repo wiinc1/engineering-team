@@ -1,0 +1,163 @@
+# Workflow Delivery Loop
+
+This runbook documents the delivery-loop primitives implemented for:
+
+- `SF-005` task locking and concurrency control
+- `SF-007` structured threaded workflow comments
+- `SF-009` engineer implementation handoff
+- `SF-011` QA testing stage and re-test loop
+- `SF-012` QA-to-engineer escalation package and context transfer
+
+## Task locking
+
+### Lock model
+
+The implementation uses a short-lived pessimistic lock recorded in append-only audit history.
+
+- Acquire: `task.lock_acquired`
+- Release: `task.lock_released`
+- Conflict audit: `task.lock_conflict`
+
+### Lock-protected operations
+
+These task mutations are rejected while another active lock holder owns the task:
+
+- stage transitions through `task.stage_changed`
+- assignment writes
+- architect handoff submission
+- engineer implementation submission
+- structured workflow thread create/reply/resolve/reopen
+- review question create/answer/resolve/reopen
+- structured QA result submission
+
+### Exemption
+
+Architect read-only check-ins use `task.comment_workflow_recorded` with `comment_type=architect_check_in` and do not require a lock.
+
+### Expiry and renewal
+
+- Default TTL: 15 minutes
+- Renewal: the current lock holder may call the same lock acquisition path again to extend the expiration window
+- Recovery: once `lock_expires_at` is in the past, the lock is treated as inactive and the next mutation may proceed
+
+### User-facing behavior
+
+- Task detail shows the lock holder, expiry time, reason, and next action
+- Lock holder sees `Renew lock` and `Release lock`
+- Other users see retry/refresh guidance without concurrency jargon
+- Successful stage transitions by the active lock holder automatically release the lock so completed handoffs do not strand the task
+
+## Structured workflow threads
+
+### Typed thread schema
+
+Workflow threads are typed objects with normalized semantics:
+
+- `commentType`: `question | escalation | consultation | decision | note`
+- `blocking`: boolean
+- `state`: `open | resolved`
+- `linkedEventId`: optional workflow event reference
+- `notificationTargets`: role-oriented routing hints stored with the thread
+
+### Notification rules
+
+The codebase persists routing hints per type:
+
+- `question`: architect, plus PM when blocking
+- `escalation`: PM, engineer, SRE
+- `consultation`: architect, engineer
+- `decision`: PM, architect, engineer, QA
+- `note`: followers, or PM/architect when blocking
+
+These are stored in the thread payload and can drive later notifier integrations.
+
+Task detail previews the current notification targets before a thread is submitted and keeps the stored targets visible on each thread card.
+
+### Readability policy
+
+- unresolved blocking threads are pinned near the top of task detail
+- per-type badges provide distinct visual grammar
+- long thread histories collapse after the most recent two updates until expanded
+
+### Retention/edit policy
+
+Threads are append-only workflow objects. Updates are represented as reply/resolve/reopen events rather than in-place mutation.
+
+## Engineer implementation handoff
+
+### Required reference model
+
+At least one implementation reference is required before QA handoff:
+
+- commit SHA
+- GitHub PR URL
+
+The primary implementation reference is:
+
+- PR URL when provided
+- otherwise commit SHA
+
+### Local git vs GitHub
+
+QA progression does not depend on GitHub availability. A valid local commit SHA is sufficient.
+
+### Fix history
+
+Every engineer submission is versioned and preserved in audit history. Task detail exposes the prior implementation history so QA failures can route back with full fix lineage.
+
+## QA result schema
+
+Structured QA results are recorded as `task.qa_result_recorded` with:
+
+- `outcome`: `pass | fail`
+- `run_kind`: `initial | retest`
+- `prior_run_id`: previous failing run for re-tests
+- `implementation_version`
+- `implementation_reference`
+- `summary`
+- `scenarios`
+- `findings`
+- `reproduction_steps`
+- `stack_traces`
+- `env_logs`
+- `retest_scope`
+- `routed_to_stage`
+- `escalation_package` for failing runs
+
+## QA routing rules
+
+- `pass` routes `QA_TESTING -> SRE_MONITORING`
+- `fail` routes `QA_TESTING -> IMPLEMENTATION`
+- A re-test is inferred when a new implementation submission version exists after the last failed QA run
+
+## Full regression vs scoped re-test
+
+- Default first QA run is treated as full coverage for the task
+- After a failed QA run and a newer engineer submission, QA may provide a scoped re-test plan through `retest_scope`
+- The scoped re-test remains linked to the earlier failing run through `prior_run_id`
+
+## Escalation package schema
+
+Failing QA runs generate a packaged engineer-facing artifact containing:
+
+- QA summary
+- failing scenarios
+- findings
+- reproduction steps
+- stack traces
+- environment logs
+- PM requirements: business context, acceptance criteria, DoD
+- architect context: tier, rationale, technical spec, monitoring spec
+- previous fix history
+- routing metadata: recipient role/agent, required engineer tier, escalation chain
+- notification preview: headline, top actionable highlights, collapsed log/trace counts
+- attachment strategy for stack traces and environment logs
+
+## Escalation package presentation rules
+
+- reproduction steps first
+- failing scenarios next
+- findings next
+- notification preview before the full package details
+- logs and traces collapsed by default behind an expand affordance
+- previous fix history always available from the same package view
