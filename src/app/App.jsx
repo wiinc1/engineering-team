@@ -7,10 +7,13 @@ import { StageTransition } from '../features/task-detail/StageTransition';
 import { TaskCreationPage } from '../features/task-creation/TaskCreationPage';
 import {
   buildAuthHeaders,
-  clearBrowserSessionConfig,
-  decodeJwtPayload,
+  hasSessionExpired,
+  isAuthenticatedSession,
   readBrowserSessionConfig,
+  readSessionClaims,
   resolveApiBaseUrl,
+  sanitizeNextRoute,
+  splitRouteTarget,
   writeBrowserSessionConfig,
 } from './session.browser';
 import {
@@ -33,6 +36,80 @@ import {
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
 const GITHUB_PR_URL_PATTERN = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+(?:\/?\S*)?$/i;
+const SIGN_IN_PATH = '/sign-in';
+const SIGN_IN_TIMEOUT_MS = 5000;
+
+function matchSignInRoute(pathname = '') {
+  return ((pathname || '').replace(/\/+$/, '') || '/') === SIGN_IN_PATH;
+}
+
+function isProtectedRoute(pathname = '') {
+  const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
+  return normalizedPath === '/'
+    || matchTaskListRoute(normalizedPath)
+    || matchCreateTaskRoute(normalizedPath)
+    || Boolean(matchRoleInboxRoute(normalizedPath))
+    || Boolean(matchPmOverviewRoute(normalizedPath))
+    || Boolean(readRouteTask(normalizedPath));
+}
+
+function buildSignInSearch(nextPath = '/tasks', reason = '') {
+  const params = new URLSearchParams();
+  const next = sanitizeNextRoute(nextPath);
+  if (next && next !== '/tasks') params.set('next', next);
+  if (reason) params.set('reason', reason);
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+function readSignInState(search = '') {
+  const params = new URLSearchParams(search);
+  return {
+    next: sanitizeNextRoute(params.get('next') || '/tasks'),
+    reason: params.get('reason') || '',
+  };
+}
+
+function defaultSignInDraft(apiBaseUrl = '') {
+  return {
+    apiBaseUrl,
+    authCode: '',
+  };
+}
+
+function toSessionConfigFromExchange(data, apiBaseUrl) {
+  return writeBrowserSessionConfig({
+    bearerToken: data?.accessToken || '',
+    apiBaseUrl,
+    expiresAt: data?.expiresAt || '',
+  });
+}
+
+async function exchangeSessionForAuthCode({ apiBaseUrl, authCode, fetchImpl = window.fetch.bind(window) }) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), SIGN_IN_TIMEOUT_MS);
+
+  try {
+    const response = await fetchImpl(`${apiBaseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ authCode }),
+      signal: controller.signal,
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error?.message || 'Sign-in failed.');
+    }
+    return payload?.data || {};
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('Sign-in timed out. Try again.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 function readRouteTask(pathname) {
   const match = ((pathname || '').replace(/\/+$/, '') || '/').match(/^\/tasks\/([^/]+)$/);
@@ -358,9 +435,10 @@ function useLocationState() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  const navigate = React.useCallback((pathname, search = '') => {
+  const navigate = React.useCallback((pathname, search = '', options = {}) => {
     const nextUrl = `${pathname}${search}`;
-    window.history.pushState({}, '', nextUrl);
+    if (options.replace) window.history.replaceState({}, '', nextUrl);
+    else window.history.pushState({}, '', nextUrl);
     setLocationState({ pathname, search });
   }, []);
 
@@ -370,7 +448,9 @@ function useLocationState() {
 export function App() {
   const [{ pathname, search }, navigate] = useLocationState();
   const [sessionConfig, setSessionConfig] = React.useState(() => readBrowserSessionConfig());
-  const [draftSessionConfig, setDraftSessionConfig] = React.useState(() => readBrowserSessionConfig());
+  const [signInDraft, setSignInDraft] = React.useState(() => defaultSignInDraft(readBrowserSessionConfig().apiBaseUrl || envApiBaseUrl));
+  const [signInStatus, setSignInStatus] = React.useState({ kind: 'idle', message: '' });
+  const [authNotice, setAuthNotice] = React.useState('');
   const [model, setModel] = React.useState(() => {
     if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname)) return buildListLoadingModel(pathname, search);
     return matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname);
@@ -387,6 +467,20 @@ export function App() {
   const [architectHandoffStatus, setArchitectHandoffStatus] = React.useState({ kind: 'idle', message: '' });
   const [engineerSubmissionDraft, setEngineerSubmissionDraft] = React.useState(() => normalizeEngineerSubmissionDraft());
   const [engineerSubmissionStatus, setEngineerSubmissionStatus] = React.useState({ kind: 'idle', message: '' });
+  const signInState = React.useMemo(() => readSignInState(search), [search]);
+  const tokenClaims = readSessionClaims(sessionConfig);
+  const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
+  const isAuthenticated = isAuthenticatedSession(sessionConfig);
+
+  const clearSessionForSignIn = React.useCallback((message, reason = 'expired') => {
+    const preserved = writeBrowserSessionConfig({
+      apiBaseUrl: resolvedApiBaseUrl,
+    });
+    setSessionConfig(preserved);
+    setSignInDraft((current) => ({ ...current, apiBaseUrl: preserved.apiBaseUrl || current.apiBaseUrl }));
+    setAuthNotice(message);
+    navigate(SIGN_IN_PATH, buildSignInSearch(`${pathname}${search}`, reason), { replace: true });
+  }, [navigate, pathname, resolvedApiBaseUrl, search]);
 
   const taskClient = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -394,8 +488,9 @@ export function App() {
       baseUrl,
       fetchImpl: (...args) => window.fetch(...args),
       getHeaders: () => buildAuthHeaders(sessionConfig),
+      onAuthFailure: () => clearSessionForSignIn('Your session expired. Sign in again to continue.'),
     });
-  }, [sessionConfig]);
+  }, [clearSessionForSignIn, sessionConfig]);
 
   const pageModule = React.useMemo(() => {
     return createTaskDetailPageModule({
@@ -404,8 +499,38 @@ export function App() {
   }, [taskClient]);
 
   React.useEffect(() => {
-    setDraftSessionConfig(sessionConfig);
-  }, [sessionConfig]);
+    setSignInDraft((current) => ({
+      ...current,
+      apiBaseUrl: resolvedApiBaseUrl || current.apiBaseUrl,
+    }));
+  }, [resolvedApiBaseUrl]);
+
+  React.useEffect(() => {
+    if (hasSessionExpired(sessionConfig) && String(sessionConfig.bearerToken || '').trim()) {
+      clearSessionForSignIn('Your session expired. Sign in again to continue.');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      if (matchSignInRoute(pathname)) return;
+      if (!isProtectedRoute(pathname)) {
+        navigate(SIGN_IN_PATH, buildSignInSearch('/tasks'), { replace: true });
+        return;
+      }
+      navigate(SIGN_IN_PATH, buildSignInSearch(`${pathname}${search}`), { replace: true });
+      return;
+    }
+
+    if (pathname === '/') {
+      navigate('/tasks', '', { replace: true });
+      return;
+    }
+
+    if (matchSignInRoute(pathname)) {
+      const nextRoute = splitRouteTarget(signInState.next);
+      navigate(nextRoute.pathname, nextRoute.search, { replace: true });
+    }
+  }, [clearSessionForSignIn, isAuthenticated, navigate, pathname, search, sessionConfig, signInState.next]);
 
   React.useEffect(() => {
     if (model.kind === 'detail') {
@@ -424,6 +549,12 @@ export function App() {
 
   React.useEffect(() => {
     let cancelled = false;
+
+    if (!isAuthenticated) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
     if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname)) {
       setModel(buildListLoadingModel(pathname, search));
@@ -497,11 +628,17 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [pageModule, pathname, search, taskClient]);
+  }, [isAuthenticated, pageModule, pathname, search, taskClient]);
 
   React.useEffect(() => {
     let cancelled = false;
-    const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
+    if (!isAuthenticated) {
+      setAgentOptions([]);
+      setAgentOptionsState({ kind: 'idle', message: '' });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     setAgentOptionsState({ kind: 'loading', message: 'Loading canonical role roster.' });
     taskClient.fetchAssignableAgents()
@@ -528,7 +665,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [taskClient, sessionConfig.bearerToken]);
+  }, [isAuthenticated, taskClient, tokenClaims]);
 
   const setTab = React.useCallback(
     (tab) => {
@@ -552,8 +689,6 @@ export function App() {
     navigate('/tasks', writeTaskListUrlState({ view }, search));
   }, [navigate, search]);
 
-  const tokenClaims = decodeJwtPayload(sessionConfig.bearerToken || '');
-  const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
   const architectHandoffEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageArchitectHandoff(tokenClaims);
   const engineerSubmissionEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageEngineerSubmission(tokenClaims);
@@ -614,6 +749,33 @@ export function App() {
     }
   }, [reloadTask, routeTaskId, taskClient]);
 
+  const handleSignIn = React.useCallback(async (event) => {
+    event.preventDefault();
+    const apiBaseUrl = String(signInDraft.apiBaseUrl || '').trim().replace(/\/+$/, '');
+    const authCode = String(signInDraft.authCode || '').trim();
+
+    setSignInStatus({ kind: 'loading', message: 'Signing in…' });
+
+    try {
+      const sessionData = await exchangeSessionForAuthCode({
+        apiBaseUrl,
+        authCode,
+      });
+      const nextConfig = toSessionConfigFromExchange(sessionData, apiBaseUrl);
+      setSessionConfig(nextConfig);
+      setAuthNotice('');
+      setSignInStatus({ kind: 'success', message: 'Signed in.' });
+      const nextRoute = splitRouteTarget(signInState.next);
+      navigate(nextRoute.pathname, nextRoute.search, { replace: true });
+    } catch (error) {
+      setSignInStatus({ kind: 'error', message: error?.message || 'Sign-in failed.' });
+    }
+  }, [navigate, signInDraft, signInState.next]);
+
+  const handleSignOut = React.useCallback(() => {
+    clearSessionForSignIn('You signed out of the workflow app.', 'signed_out');
+  }, [clearSessionForSignIn]);
+
   const handleTaskCreated = React.useCallback(() => {
     navigate('/tasks');
   }, [navigate]);
@@ -652,13 +814,81 @@ export function App() {
           ? summarizeRoleInboxResults(roleInboxItems.length, activeInboxRole)
           : roleInboxState.message
         : summarizeListResults(visibleListItems.length, listFilters.owner, agentLookup, listFilters.view)
-    : '';
+      : '';
+
+  if (!isAuthenticated) {
+    return (
+      <main className="app-shell app-shell--auth">
+        <section className="auth-card" aria-label="Sign-in screen">
+          <div className="auth-card__intro">
+            <p className="eyebrow">Authenticated browser shell for US-002</p>
+            <h1>Sign in to the workflow app</h1>
+            <p className="lede">Submit a trusted internal browser auth code to start a tab-scoped session for the task list, board, PM overview, inboxes, and task detail routes.</p>
+          </div>
+
+          {authNotice ? (
+            <p className="auth-status auth-status--notice" role="status">
+              {authNotice}
+            </p>
+          ) : null}
+
+          <form className="session-form auth-form" onSubmit={handleSignIn}>
+            <label>
+              Trusted auth code
+              <input
+                name="authCode"
+                value={signInDraft.authCode}
+                onChange={(event) => setSignInDraft((current) => ({ ...current, authCode: event.target.value }))}
+                placeholder="Paste the signed browser auth code"
+              />
+            </label>
+
+            <label>
+              API base URL
+              <input
+                name="apiBaseUrl"
+                value={signInDraft.apiBaseUrl}
+                onChange={(event) => setSignInDraft((current) => ({ ...current, apiBaseUrl: event.target.value }))}
+                placeholder={envApiBaseUrl || 'same-origin'}
+              />
+            </label>
+
+            <div className="session-form__actions">
+              <button type="submit" disabled={signInStatus.kind === 'loading'}>
+                {signInStatus.kind === 'loading' ? 'Signing in…' : 'Sign in'}
+              </button>
+            </div>
+
+            {signInStatus.kind === 'error' ? (
+              <p className="auth-status auth-status--error" role="alert">{signInStatus.message}</p>
+            ) : null}
+          </form>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell">
+      <nav className="app-nav" aria-label="Primary navigation">
+        <div className="app-nav__links">
+          <button type="button" className={model.kind === 'list' && !isPmOverview && !activeInboxRole && listFilters.view !== 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks')}>Task list</button>
+          <button type="button" className={model.kind === 'list' && !isPmOverview && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
+          <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
+          {ROLE_INBOXES.map((role) => (
+            <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
+              {getRoleInboxLabel(role)} inbox
+            </button>
+          ))}
+        </div>
+        <div className="app-nav__session">
+          <span>{tokenClaims?.sub || 'unknown actor'} · {tokenClaims?.tenant_id || 'unknown tenant'}</span>
+          <button type="button" className="button-secondary" onClick={handleSignOut}>Sign out</button>
+        </div>
+      </nav>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Thin browser runtime for issue #26</p>
+          <p className="eyebrow">Authenticated browser shell for US-002</p>
           <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
           <p className="lede">
             {model.kind === 'list'
@@ -699,54 +929,10 @@ export function App() {
             </div>
           </form>
 
-          <form
-            className="session-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const nextConfig = writeBrowserSessionConfig(draftSessionConfig);
-              setSessionConfig(nextConfig);
-            }}
-          >
+          <section className="session-form session-form--summary" aria-label="Current session">
             <div className="session-form__header">
-              <strong>Session bootstrap</strong>
-              <span>Tab-scoped bearer token for internal use.</span>
-            </div>
-
-            <label>
-              API base URL
-              <input
-                name="apiBaseUrl"
-                value={draftSessionConfig.apiBaseUrl}
-                placeholder={envApiBaseUrl || 'same-origin'}
-                onChange={(event) => setDraftSessionConfig((current) => ({ ...current, apiBaseUrl: event.target.value }))}
-              />
-            </label>
-
-            <label>
-              Bearer token
-              <textarea
-                name="bearerToken"
-                value={draftSessionConfig.bearerToken}
-                placeholder="Paste a JWT for the audit/task-detail APIs"
-                onChange={(event) => setDraftSessionConfig((current) => ({ ...current, bearerToken: event.target.value }))}
-                rows={4}
-              />
-            </label>
-
-            <div className="session-form__actions">
-              <button type="submit">Apply session</button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => {
-                  clearBrowserSessionConfig();
-                  const cleared = { bearerToken: '', apiBaseUrl: '' };
-                  setDraftSessionConfig(cleared);
-                  setSessionConfig(cleared);
-                }}
-              >
-                Clear
-              </button>
+              <strong>Current session</strong>
+              <span>Signed-in browser access for internal use.</span>
             </div>
 
             <dl className="session-meta">
@@ -767,7 +953,7 @@ export function App() {
                 <dd>{Array.isArray(tokenClaims?.roles) && tokenClaims.roles.length ? tokenClaims.roles.join(', ') : 'none'}</dd>
               </div>
             </dl>
-          </form>
+          </section>
         </div>
       </header>
 

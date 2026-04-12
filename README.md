@@ -83,15 +83,16 @@ Task-detail contract notes for approval readiness:
 - App runtime: `src/app/`
 - Route/page module still lives at `src/features/task-detail/route.js`
 - Feature shell still lives at `src/features/task-detail/`
-- Internal-use auth bootstrap is intentionally minimal: paste a bearer JWT into the session panel and the browser stores it in `sessionStorage` for the current tab only.
+- Internal-use auth bootstrap now starts at `/sign-in` and exchanges a trusted browser auth code for a tab-scoped JWT session stored in `sessionStorage`.
+- The app protects `/tasks`, `/tasks?view=board`, `/overview/pm`, `/inbox/:role`, and `/tasks/:taskId`; unauthenticated or expired sessions are redirected back to `/sign-in`.
 - PM/admin tokens also unlock the task assignment control, which reads `GET /ai-agents` and writes `PATCH /tasks/:taskId/assignment`.
 - Reader-level tokens still see owner metadata on `GET /tasks/:taskId` and `GET /tasks`; they just do not get assignment controls.
 
 Run it locally:
 - `npm install`
 - `npm run dev`
-- open `http://127.0.0.1:5173/tasks/TSK-42`
-- if the API requires auth, paste a JWT into the **Session bootstrap** panel
+- open `http://127.0.0.1:5173/`
+- sign in through the internal browser auth form using a trusted browser auth code from the approved internal auth source
 
 Point the browser app at the API:
 - same-origin default: leave `VITE_TASK_API_BASE_URL` empty

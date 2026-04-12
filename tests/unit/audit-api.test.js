@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit/http');
+const { signBrowserAuthCode } = require('../../lib/auth/jwt');
 
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -17,6 +18,15 @@ function authHeaders(secret, payload = {}) {
   return {
     authorization: `Bearer ${sign({ sub: 'principal-engineer', tenant_id: 'tenant-a', roles: ['admin'], exp: Math.floor(Date.now() / 1000) + 60, ...payload }, secret)}`,
   };
+}
+
+function browserAuthCode(secret, payload = {}, options = {}) {
+  return signBrowserAuthCode({
+    actorId: 'pm-1',
+    tenantId: 'tenant-a',
+    roles: ['pm', 'reader'],
+    ...payload,
+  }, secret, options);
 }
 
 async function withServer(run, options = {}) {
@@ -63,6 +73,100 @@ test('enforces bearer-token auth context and isolates reads by tenant claim', as
     assert.equal(wrongTenantState.status, 404);
     assert.equal((await wrongTenantState.json()).error.code, 'task_not_found');
   });
+});
+
+test('issues browser bootstrap sessions from the auth exchange endpoint and supports the /api alias', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret),
+      }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.success, true);
+    assert.ok(payload.data.accessToken);
+    assert.equal(payload.data.claims.actor_id, 'pm-1');
+    assert.equal(payload.data.claims.tenant_id, 'tenant-a');
+    assert.deepEqual(payload.data.claims.roles, ['pm', 'reader']);
+
+    const sessionRead = await fetch(`${baseUrl}/tasks`, {
+      headers: {
+        authorization: `Bearer ${payload.data.accessToken}`,
+      },
+    });
+    assert.equal(sessionRead.status, 200);
+
+    response = await fetch(`${baseUrl}/api/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret, {
+          actorId: 'engineer-1',
+          roles: ['engineer', 'reader', 'contributor'],
+        }),
+      }),
+    });
+    assert.equal(response.status, 200);
+    const aliasPayload = await response.json();
+    assert.equal(aliasPayload.success, true);
+    assert.equal(aliasPayload.data.claims.actor_id, 'engineer-1');
+  });
+});
+
+test('rejects malformed browser auth bootstrap requests', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'missing_auth_code');
+
+    response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ authCode: 'tenant=tenant-a;roles=reader' }),
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_auth_code');
+
+    response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ authCode: `${browserAuthCode(secret)}tampered` }),
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_auth_code');
+  });
+});
+
+test('browser bootstrap session tokens include configured issuer and audience claims', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret),
+      }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+
+    const sessionRead = await fetch(`${baseUrl}/tasks`, {
+      headers: {
+        authorization: `Bearer ${payload.data.accessToken}`,
+      },
+    });
+    assert.equal(sessionRead.status, 200);
+
+    const claims = JSON.parse(Buffer.from(payload.data.accessToken.split('.')[1], 'base64url').toString('utf8'));
+    assert.equal(claims.iss, 'expected-issuer');
+    assert.equal(claims.aud, 'expected-audience');
+  }, { jwtIssuer: 'expected-issuer', jwtAudience: 'expected-audience' });
 });
 
 test('enforces role-based permissions for writes and metrics', async () => {

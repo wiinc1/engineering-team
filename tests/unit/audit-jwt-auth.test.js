@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
-const { verifyHmacJwt } = require('../../lib/auth/jwt');
+const { signBrowserAuthCode, verifyBrowserAuthCode, verifyHmacJwt } = require('../../lib/auth/jwt');
 
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -16,4 +16,33 @@ test('verifies HS256 bearer tokens', () => {
   const claims = verifyHmacJwt(token, secret);
   assert.equal(claims.sub, 'principal-engineer');
   assert.equal(claims.tenant_id, 'tenant-a');
+});
+
+test('signs and verifies trusted browser auth codes with normalized claims', () => {
+  const secret = 'browser-auth-secret';
+  const authCode = signBrowserAuthCode({
+    actorId: 'pm-1',
+    tenantId: 'tenant-a',
+    roles: ['pm', 'reader'],
+  }, secret, {
+    issuer: 'internal-auth',
+    audience: 'browser-shell',
+  });
+
+  const verified = verifyBrowserAuthCode(authCode, secret, {
+    issuer: 'internal-auth',
+    audience: 'browser-shell',
+  });
+
+  assert.equal(verified.actorId, 'pm-1');
+  assert.equal(verified.tenantId, 'tenant-a');
+  assert.deepEqual(verified.roles, ['pm', 'reader']);
+  assert.equal(verified.claims.sub, 'pm-1');
+  assert.equal(verified.claims.tenant_id, 'tenant-a');
+  assert.deepEqual(verified.claims.roles, ['pm', 'reader']);
+  assert.equal(verified.claims.token_use, 'browser_auth_code');
+  assert.equal(verified.claims.iss, 'internal-auth');
+  assert.equal(verified.claims.aud, 'browser-shell');
+  assert.equal(typeof verified.claims.iat, 'number');
+  assert.equal(typeof verified.claims.exp, 'number');
 });

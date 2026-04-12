@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  title: Authenticated Browser App Session API
+  version: 0.1.0
+  description: Browser-facing internal auth bootstrap endpoint for the authenticated app shell.
+paths:
+  /auth/session:
+    post:
+      summary: Exchange a trusted internal browser auth code for a browser JWT session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - authCode
+              properties:
+                authCode:
+                  type: string
+                  description: Signed browser bootstrap artifact from the trusted internal auth source.
+            examples:
+              trustedBootstrap:
+                value:
+                  authCode: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.trusted-browser-bootstrap.signature
+      responses:
+        '200':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  data:
+                    type: object
+                    required:
+                      - accessToken
+                      - expiresAt
+                      - claims
+                    properties:
+                      accessToken:
+                        type: string
+                        description: Bearer JWT for the task and audit APIs.
+                      expiresAt:
+                        type: string
+                        format: date-time
+                      claims:
+                        type: object
+                        required:
+                          - tenant_id
+                          - actor_id
+                          - roles
+                        properties:
+                          tenant_id:
+                            type: string
+                          actor_id:
+                            type: string
+                          roles:
+                            type: array
+                            items:
+                              type: string
+        '400':
+          description: Missing authCode
+        '401':
+          description: Invalid, expired, or untrusted auth bootstrap code
+  /api/auth/session:
+    post:
+      summary: Compatibility alias for the browser session bootstrap endpoint
+      responses:
+        '200':
+          description: Same contract as POST /auth/session
