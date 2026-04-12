@@ -1,0 +1,15 @@
+flowchart LR
+  User[Internal workflow user]
+  Browser[Authenticated browser shell\nsrc/app/App.jsx]
+  Session[Session helpers\nsrc/app/session.browser.js]
+  DetailClient[Task browser data client\nsrc/features/task-detail/adapter.browser.js]
+  AuditApi[Audit API\nlib/audit/http.js]
+  Jwt[JWT signing and verification\nlib/auth/jwt.js]
+
+  User --> Browser
+  Browser --> Session
+  Browser --> DetailClient
+  Browser --> AuditApi
+  DetailClient --> AuditApi
+  AuditApi --> Jwt
+  Session --> Jwt
