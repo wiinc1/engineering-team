@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit/http');
+const { signBrowserAuthCode } = require('../../lib/auth/jwt');
 
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -33,9 +34,19 @@ async function withServer(run) {
   }
 }
 
+function browserAuthCode(secret, payload = {}, options = {}) {
+  return signBrowserAuthCode({
+    actorId: 'pm-1',
+    tenantId: 'tenant-contract',
+    roles: ['pm', 'reader'],
+    ...payload,
+  }, secret, options);
+}
+
 test('openapi contract documents the live audit routes and auth model', () => {
   const spec = fs.readFileSync(path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'), 'utf8');
   const ownerReadSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-owner-surfaces-openapi.yml'), 'utf8');
+  const browserAuthSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/authenticated-browser-app-openapi.yml'), 'utf8');
 
   for (const snippet of [
     '/tasks:',
@@ -68,6 +79,17 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'Assignment mutation stays on `PATCH /tasks/{id}/assignment`.',
   ]) {
     assert.match(ownerReadSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const snippet of [
+    '/auth/session:',
+    '/api/auth/session:',
+    'authCode',
+    'accessToken',
+    'expiresAt',
+    'Signed browser bootstrap artifact from the trusted internal auth source.',
+  ]) {
+    assert.match(browserAuthSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 
@@ -160,5 +182,24 @@ test('documented endpoints satisfy the runtime contract', async () => {
       headers: authHeaders(secret, { roles: ['admin'] }),
     });
     assert.equal(response.status, 202);
+  });
+});
+
+test('browser auth bootstrap endpoint satisfies the documented session contract', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret),
+      }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.success, true);
+    assert.equal(typeof payload.data.accessToken, 'string');
+    assert.equal(payload.data.claims.actor_id, 'pm-1');
+    assert.equal(payload.data.claims.tenant_id, 'tenant-contract');
+    assert.deepEqual(payload.data.claims.roles, ['pm', 'reader']);
   });
 });

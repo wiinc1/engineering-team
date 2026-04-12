@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit/http');
+const { signBrowserAuthCode } = require('../../lib/auth/jwt');
 
 function sign(payload, secret, header = { alg: 'HS256', typ: 'JWT' }) {
   const headerPart = Buffer.from(JSON.stringify(header)).toString('base64url');
@@ -21,10 +22,19 @@ async function withServer(run, options = {}) {
   const { port } = server.address();
 
   try {
-    await run({ baseUrl: `http://127.0.0.1:${port}`, secret });
+    await run({ baseUrl: `http://127.0.0.1:${port}`, secret, baseDir });
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
+}
+
+function browserAuthCode(secret, payload = {}, options = {}) {
+  return signBrowserAuthCode({
+    actorId: 'pm-1',
+    tenantId: 'tenant-sec',
+    roles: ['pm', 'reader'],
+    ...payload,
+  }, secret, options);
 }
 
 test('rejects tampered, expired, and issuer-mismatched bearer tokens', async () => {
@@ -146,4 +156,81 @@ test('reader scope keeps owner metadata visible while assignment remains forbidd
     });
     assert.equal(response.status, 403);
   });
+});
+
+test('browser auth bootstrap rejects missing and incomplete auth codes', async () => {
+  await withServer(async ({ baseUrl, secret, baseDir }) => {
+    let response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'missing_auth_code');
+
+    response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: 'actor=pm-1;roles=pm,reader',
+      }),
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_auth_code');
+
+    response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode('wrong-secret'),
+      }),
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_auth_code');
+
+    response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret, {}, { issuer: 'unexpected-issuer' }),
+      }),
+    });
+    assert.equal(response.status, 200);
+
+    const log = fs.readFileSync(path.join(baseDir, 'observability', 'workflow-audit.log'), 'utf8');
+    assert.match(log, /"path":"\/auth\/session"/);
+    assert.match(log, /"error_code":"invalid_auth_code"/);
+    assert.match(log, /"request_id":"/);
+  });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret, {}, { issuer: 'unexpected-issuer' }),
+      }),
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_auth_code');
+  }, { browserAuthCodeIssuer: 'expected-issuer' });
+});
+
+test('browser bootstrap tokens stay usable when the API enforces issuer and audience verification', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret),
+      }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+
+    const followUp = await fetch(`${baseUrl}/tasks`, {
+      headers: { authorization: `Bearer ${payload.data.accessToken}` },
+    });
+    assert.equal(followUp.status, 200);
+  }, { jwtIssuer: 'expected-issuer', jwtAudience: 'expected-audience' });
 });

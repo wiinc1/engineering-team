@@ -25,10 +25,33 @@ function mergeValue(base: any, override: any): any {
   return override;
 }
 
+function makeToken(claims: Record<string, unknown>) {
+  return `header.${btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}.signature`;
+}
+
+const TRUSTED_AUTH_CODE = 'signed-browser-auth-code';
+
+function makeFutureExpiry(hoursAhead = 24) {
+  return new Date(Date.now() + hoursAhead * 60 * 60 * 1000).toISOString();
+}
+
+function makeFutureExp(hoursAhead = 24) {
+  return Math.floor(Date.parse(makeFutureExpiry(hoursAhead)) / 1000);
+}
+
+function makePastExpiry(hoursAgo = 24) {
+  return new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+}
+
+function makePastExp(hoursAgo = 24) {
+  return Math.floor(Date.parse(makePastExpiry(hoursAgo)) / 1000);
+}
+
 function installTaskFetchMock({
   forbidden = false,
   reassignedOwner = 'qa',
   aiAgentsStatus = 200,
+  authSessionStatus = 200,
   tasksOverride,
   detailOverride,
   summaryOverride,
@@ -47,6 +70,44 @@ function installTaskFetchMock({
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+
+    if (url.endsWith('/auth/session') && init?.method === 'POST') {
+      const body = JSON.parse(String(init.body || '{}'));
+      if (authSessionStatus !== 200) {
+        return createJsonResponse({
+          error: {
+            code: 'invalid_auth_code',
+            message: 'The sign-in code was rejected.',
+          },
+        }, authSessionStatus);
+      }
+      if (body.authCode !== TRUSTED_AUTH_CODE) {
+        return createJsonResponse({
+          error: {
+            code: 'invalid_auth_code',
+            message: 'The sign-in code was rejected.',
+          },
+        }, 401);
+      }
+
+      return createJsonResponse({
+        success: true,
+        data: {
+          accessToken: makeToken({
+            sub: 'pm-1',
+            tenant_id: 'tenant-a',
+            roles: ['pm', 'reader'],
+            exp: makeFutureExp(),
+          }),
+          expiresAt: makeFutureExpiry(),
+          claims: {
+            tenant_id: 'tenant-a',
+            actor_id: 'pm-1',
+            roles: ['pm', 'reader'],
+          },
+        },
+      });
+    }
 
     if (forbidden) {
       return createJsonResponse(
@@ -273,7 +334,16 @@ function installTaskFetchMock({
 describe('Task browser runtime coverage', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/tasks/TSK-42');
-    clearBrowserSessionConfig();
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'reader-1',
+        tenant_id: 'tenant-a',
+        roles: ['reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
   });
 
   afterEach(() => {
@@ -288,6 +358,148 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     expect(screen.getByLabelText('Task summary')).toBeInTheDocument();
     expect(screen.getByText('Assignment controls are available to PM/admin bearer tokens.')).toBeInTheDocument();
+  });
+
+  it('redirects protected routes to sign-in when no browser session exists', async () => {
+    clearBrowserSessionConfig();
+    installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(window.location.pathname).toBe('/sign-in');
+    expect(screen.queryByText('Wire task detail')).not.toBeInTheDocument();
+  });
+
+  it('exchanges an internal sign-in code for a session and lands on the default app shell', async () => {
+    clearBrowserSessionConfig();
+    const fetchMock = installTaskFetchMock();
+    window.history.pushState({}, '', '/sign-in');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/session'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ authCode: TRUSTED_AUTH_CODE }),
+      }),
+    );
+    expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
+
+  it('restores board view query state after sign-in', async () => {
+    clearBrowserSessionConfig();
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks?view=board');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(window.location.pathname).toBe('/sign-in');
+    expect(window.location.search).toContain('next=%2Ftasks%3Fview%3Dboard');
+
+    fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    await screen.findByText('6 cards shown.');
+    expect(window.location.pathname).toBe('/tasks');
+    expect(window.location.search).toBe('?view=board');
+    expect(screen.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('TODO column')).toBeInTheDocument();
+  });
+
+  it('restores PM overview bucket query state after session recovery sign-in', async () => {
+    clearBrowserSessionConfig();
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makePastExp(),
+      }),
+      expiresAt: makePastExpiry(),
+    });
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/overview/pm?bucket=needs-routing-attention');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(window.location.pathname).toBe('/sign-in');
+    expect(window.location.search).toContain('next=%2Foverview%2Fpm%3Fbucket%3Dneeds-routing-attention');
+
+    fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await screen.findByRole('heading', { name: 'PM Overview' });
+    await screen.findByText('2 tasks shown in Needs routing attention.');
+    expect(window.location.pathname).toBe('/overview/pm');
+    expect(window.location.search).toBe('?bucket=needs-routing-attention');
+    expect(screen.getByLabelText('Bucket filter')).toHaveValue('needs-routing-attention');
+  });
+
+  it('restores task detail query state after sign-in', async () => {
+    clearBrowserSessionConfig();
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks/TSK-42?tab=telemetry');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(window.location.pathname).toBe('/sign-in');
+    expect(window.location.search).toContain('next=%2Ftasks%2FTSK-42%3Ftab%3Dtelemetry');
+
+    fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(window.location.pathname).toBe('/tasks/TSK-42');
+    expect(window.location.search).toBe('?tab=telemetry');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'task-activity-tab-telemetry');
+    expect(await screen.findByText('Freshness', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('restores inbox pathname and search exactly after sign-in', async () => {
+    clearBrowserSessionConfig();
+    installTaskFetchMock();
+    window.history.pushState({}, '', '/inbox/qa?source=alert');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(window.location.pathname).toBe('/sign-in');
+    expect(window.location.search).toContain('next=%2Finbox%2Fqa%3Fsource%3Dalert');
+
+    fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await screen.findByRole('heading', { name: 'QA Inbox' });
+    expect(window.location.pathname).toBe('/inbox/qa');
+    expect(window.location.search).toBe('?source=alert');
+    expect(await screen.findByText('Review test plan')).toBeInTheDocument();
+  });
+
+  it('redirects an expired session back to sign-in with a recovery message', async () => {
+    clearBrowserSessionConfig();
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makePastExp(),
+      }),
+      expiresAt: makePastExpiry(),
+    });
+    installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(screen.getByText('Your session expired. Sign in again to continue.')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/sign-in');
   });
 
   it('renders linked PR, child task, and spec detail from the dedicated detail model', async () => {
