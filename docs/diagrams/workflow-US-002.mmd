@@ -1,0 +1,21 @@
+flowchart TD
+  A[User opens browser app] --> B{Session present and valid?}
+  B -- No --> C[/sign-in/]
+  C --> D[Internal auth bootstrap form]
+  D --> E[POST /auth/session]
+  E --> F[JWT session stored in sessionStorage]
+  F --> G[/tasks default landing route]
+  B -- Yes --> G
+  G --> H[Shared shell navigation]
+  H --> I[/tasks list]
+  H --> J[/tasks?view=board]
+  H --> K[/overview/pm]
+  H --> L[/inbox/:role]
+  H --> M[/tasks/:taskId]
+  I --> N{401 or invalid token?}
+  J --> N
+  K --> N
+  L --> N
+  M --> N
+  N -- Yes --> O[Clear session and redirect to /sign-in with recovery message]
+  N -- No --> P[Continue authenticated workflow]
