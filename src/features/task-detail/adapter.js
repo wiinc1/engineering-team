@@ -167,14 +167,21 @@ async function parseJsonResponse(response) {
   return payload;
 }
 
-function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders } = {}) {
+function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders, onAuthFailure } = {}) {
   const request = async (path, init = {}) => {
     const response = await fetchImpl(`${baseUrl}${path}`, {
       method: init.method || 'GET',
       headers: { ...(typeof getHeaders === 'function' ? await getHeaders() : undefined), ...(init.headers || {}) },
       body: init.body,
     });
-    return parseJsonResponse(response);
+    try {
+      return await parseJsonResponse(response);
+    } catch (error) {
+      if ((error?.status === 401 || error?.code === 'invalid_token' || error?.code === 'missing_auth_context') && typeof onAuthFailure === 'function') {
+        onAuthFailure(error);
+      }
+      throw error;
+    }
   };
 
   return {
