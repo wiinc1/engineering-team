@@ -57,6 +57,30 @@ test('task detail client prefers dedicated detail view model endpoint when avail
   assert.equal(model.shell.historyItems[0].title, 'Stage changed');
 });
 
+test('task detail client surfaces auth failures through the shared auth callback', async () => {
+  let authFailure = null;
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    onAuthFailure: (error) => {
+      authFailure = error;
+    },
+    fetchImpl: async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        error: {
+          code: 'invalid_token',
+          message: 'jwt expired',
+        },
+      }),
+    }),
+  });
+
+  await assert.rejects(() => client.fetchTaskList(), /jwt expired/);
+  assert.equal(authFailure.status, 401);
+  assert.equal(authFailure.code, 'invalid_token');
+});
+
 
 test('dedicated detail payload avoids extra linked-resource fetches and caps request count at one', async () => {
   let requestCount = 0;
