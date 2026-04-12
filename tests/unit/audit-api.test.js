@@ -823,6 +823,346 @@ test('validates engineer metadata formats, stage restrictions, and feature flag 
   }, { engineerSubmissionEnabled: false });
 });
 
+test('enforces task locking, allows expiry/release recovery, and exempts architect read-only check-ins', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-lock', roles: ['engineer', 'contributor'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-user', tenant_id: 'tenant-lock', roles: ['pm'] }),
+    };
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-lock', roles: ['architect', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-LOCK-1', payload: { title: 'Lock semantics', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/lock`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ reason: 'Engineer editing task state', action: 'stage_transition', ttlSeconds: 600 }),
+    });
+    assert.equal(response.status, 200);
+    const firstLock = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/lock`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ reason: 'Extending edit session', action: 'stage_transition', ttlSeconds: 900 }),
+    });
+    assert.equal(response.status, 200);
+    const renewedLock = await response.json();
+    assert.notEqual(renewedLock.data.lock.expiresAt, firstLock.data.lock.expiresAt);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 409);
+    const lockConflict = await response.json();
+    assert.equal(lockConflict.error.code, 'task_locked');
+    assert.equal(lockConflict.error.details.lock.owner_id, 'engineer-user');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        eventType: 'task.comment_workflow_recorded',
+        actorType: 'agent',
+        idempotencyKey: 'checkin:TSK-LOCK-1',
+        payload: { comment_type: 'architect_check_in', body: 'Read-only architecture check-in while the task is locked.' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'move:TSK-LOCK-1:TODO',
+        payload: { from_stage: 'BACKLOG', to_stage: 'TODO' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-lock', roles: ['reader'] }),
+    });
+    let detail = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(detail.meta.lock, null);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/lock`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ reason: 'Wrap-up after transition', action: 'final_cleanup', ttlSeconds: 300 }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/lock`, {
+      method: 'DELETE',
+      headers: engineerHeaders,
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-LOCK-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-lock', roles: ['reader'] }),
+    });
+    detail = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(detail.meta.lock, null);
+    assert.match(detail.activity.auditLog.find((entry) => entry.type === 'task.lock_conflict').summary, /Task lock conflict/);
+    assert.match(detail.activity.auditLog.find((entry) => entry.type === 'task.lock_released').summary, /Task lock released/);
+  });
+});
+
+test('records structured workflow threads with type, blocking state, resolution, and workflow-event linkage', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-thread', roles: ['architect', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-THREAD-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-THREAD-1', payload: { title: 'Structured comments', initial_stage: 'ARCHITECT_REVIEW' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-THREAD-1/workflow-threads`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        commentType: 'escalation',
+        title: 'Need PM approval on degraded rollout path',
+        body: 'Escalate the missing rollout decision before implementation proceeds.',
+        blocking: true,
+        linkedEventId: 'evt-rollout-1',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/TSK-THREAD-1/workflow-threads/${created.threadId}/replies`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ body: 'Added PM follow-up context and deployment constraints.' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-THREAD-1/workflow-threads/${created.threadId}/resolve`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({ resolution: 'PM approved the rollout guardrail.' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-THREAD-1/workflow-threads`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-thread', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const threads = await response.json();
+    assert.equal(threads.summary.total, 1);
+    assert.equal(threads.summary.resolvedCount, 1);
+    assert.equal(threads.items[0].commentType, 'escalation');
+    assert.equal(threads.items[0].linkedEventId, 'evt-rollout-1');
+    assert.equal(threads.items[0].blocking, true);
+    assert.equal(threads.items[0].messages.length, 3);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-THREAD-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-thread', roles: ['reader'] }),
+    });
+    const detail = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(detail.activity.workflowThreads.items[0].commentType, 'escalation');
+    assert.match(detail.activity.auditLog[0].summary, /resolved/);
+  });
+});
+
+test('records structured QA results, routes fail/pass outcomes, preserves re-test linkage, and exposes escalation packages plus fix history', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-qa', roles: ['architect', 'contributor'] }),
+    };
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-qa', roles: ['engineer', 'contributor'] }),
+    };
+    const qaHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'qa-user', tenant_id: 'tenant-qa', roles: ['qa', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-QA-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-QA-1',
+        payload: {
+          title: 'QA workflow package',
+          initial_stage: 'ARCHITECT_REVIEW',
+          business_context: 'Ship workflow handoff safely.',
+          acceptance_criteria: ['QA artifacts are structured'],
+          definition_of_done: ['QA fail routes to implementation', 'QA pass routes to SRE'],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-QA-1:TECHNICAL_SPEC', payload: { from_stage: 'ARCHITECT_REVIEW', to_stage: 'TECHNICAL_SPEC' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/architect-handoff`, {
+      method: 'PUT',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        readyForEngineering: true,
+        engineerTier: 'Sr',
+        tierRationale: 'Standard implementation with QA loop.',
+        technicalSpec: {
+          summary: 'Implement structured QA artifact routing.',
+          scope: 'No cross-tenant leakage.',
+          design: 'Persist QA result artifacts and route by outcome.',
+          rolloutPlan: 'Feature-flag the QA path.',
+        },
+        monitoringSpec: {
+          service: 'workflow-audit-api',
+          dashboardUrls: ['https://dash.example/qa'],
+          alertPolicies: ['QA handoff failures'],
+          runbook: 'docs/runbooks/audit-foundation.md',
+          successMetrics: ['QA route coverage 100%'],
+        },
+      }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-QA-1:IMPLEMENTATION', payload: { from_stage: 'TECHNICAL_SPEC', to_stage: 'IMPLEMENTATION' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'abc1234def5678', prUrl: 'https://github.com/wiinc1/engineering-team/pull/101' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-QA-1:QA_TESTING', payload: { from_stage: 'IMPLEMENTATION', to_stage: 'QA_TESTING' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/qa-results`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        outcome: 'fail',
+        summary: 'Regression in the audit history view.',
+        scenarios: ['history tab render'],
+        findings: ['timeline does not show latest event'],
+        reproductionSteps: ['open task detail', 'switch to history'],
+        stackTraces: ['TypeError: timeline is undefined'],
+        envLogs: ['browser:chromium', 'api:local'],
+        retestScope: ['history tab render', 'timeline pagination'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const failedQa = await response.json();
+    assert.equal(failedQa.data.routedToStage, 'IMPLEMENTATION');
+    assert.equal(failedQa.data.escalationPackage.routing.required_engineer_tier, 'Sr');
+    assert.equal(failedQa.data.escalationPackage.previous_fix_history.length, 1);
+    assert.equal(failedQa.data.escalationPackage.notification_preview.recipient_role, 'engineer');
+    assert.equal(failedQa.data.escalationPackage.notification_preview.highlights[0], 'Regression in the audit history view.');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-qa', roles: ['reader'] }),
+    });
+    let state = await response.json();
+    assert.equal(state.current_stage, 'IMPLEMENTATION');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'fedcba987654321', prUrl: 'https://github.com/wiinc1/engineering-team/pull/102' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-QA-1:QA_TESTING:retest', payload: { from_stage: 'IMPLEMENTATION', to_stage: 'QA_TESTING' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/qa-results`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        outcome: 'pass',
+        summary: 'Scoped re-test passed after the second implementation submission.',
+        scenarios: ['history tab render', 'timeline pagination'],
+        findings: [],
+        reproductionSteps: [],
+        stackTraces: [],
+        envLogs: [],
+        retestScope: ['history tab render', 'timeline pagination'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const passedQa = await response.json();
+    assert.equal(passedQa.data.runKind, 'retest');
+    assert.equal(passedQa.data.routedToStage, 'SRE_MONITORING');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-qa', roles: ['reader'] }),
+    });
+    const detail = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(detail.context.qaResults.summary.total, 2);
+    assert.equal(detail.context.qaResults.latest.runKind, 'retest');
+    assert.equal(detail.context.qaResults.latest.priorRunId, failedQa.data.runId);
+    assert.equal(detail.context.implementationHistory.length, 2);
+    assert.equal(detail.context.qaResults.items[1].escalationPackage.pm_requirements.business_context, 'Ship workflow handoff safely.');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-qa', roles: ['reader'] }),
+    });
+    state = await response.json();
+    assert.equal(state.current_stage, 'SRE_MONITORING');
+  });
+});
+
 test('supports AI-agent registry reads and assignment writes on the audit API path', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const createHeaders = {

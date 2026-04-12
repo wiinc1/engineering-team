@@ -306,6 +306,63 @@ function installTaskFetchMock({
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/lock') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          lock: {
+            ownerId: 'pm-1',
+            acquiredAt: '2026-04-01T15:01:50.000Z',
+            expiresAt: '2026-04-01T15:16:50.000Z',
+            reason: 'Manual task detail editing session',
+            action: 'task_detail_edit',
+          },
+          updatedAt: '2026-04-01T15:01:50.000Z',
+        },
+      });
+    }
+
+    if (url.endsWith('/tasks/TSK-42/lock') && init?.method === 'DELETE') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          released: true,
+          updatedAt: '2026-04-01T15:02:10.000Z',
+        },
+      });
+    }
+
+    if (url.endsWith('/tasks/TSK-42/workflow-threads') && init?.method === 'POST') {
+      return createJsonResponse({
+        threadId: 'wt-new',
+        eventId: 'evt-wt-new',
+        occurredAt: '2026-04-01T15:02:00.000Z',
+      }, 201);
+    }
+
+    if (/\/tasks\/TSK-42\/workflow-threads\/[^/]+\/(replies|resolve|reopen)$/.test(url) && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        event: {
+          event_id: 'evt-wt-update',
+          occurred_at: '2026-04-01T15:03:00.000Z',
+        },
+      }, 202);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/qa-results') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          runId: 'qa-new',
+          outcome: 'fail',
+          runKind: 'initial',
+          routedToStage: 'IMPLEMENTATION',
+          updatedAt: '2026-04-01T15:04:00.000Z',
+        },
+      }, 201);
+    }
+
     if (url.endsWith('/tasks/TSK-42/review-questions') && init?.method === 'POST') {
       return createJsonResponse({
         questionId: 'rq-new',
@@ -997,6 +1054,186 @@ describe('Task browser runtime coverage', () => {
     expect(axeResults.violations).toEqual([]);
   });
 
+  it('shows lock retry and refresh affordances when another actor holds the task lock', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      detailOverride: {
+        meta: {
+          lock: {
+            ownerId: 'architect-1',
+            acquiredAt: '2026-04-01T15:00:00.000Z',
+            expiresAt: '2026-04-01T15:15:00.000Z',
+            reason: 'Architect review handoff',
+            action: 'stage_transition',
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const lockSection = screen.getByRole('region', { name: 'Task lock status' });
+    expect(within(lockSection).getByText('architect-1')).toBeInTheDocument();
+    expect(within(lockSection).getByRole('button', { name: 'Retry acquire after refresh' })).toBeInTheDocument();
+    expect(within(lockSection).getByRole('button', { name: 'Refresh task state' })).toBeInTheDocument();
+  });
+
+  it('renders workflow notification previews and collapsible thread history for structured workflow threads', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'architect-1',
+        tenant_id: 'tenant-a',
+        roles: ['architect', 'contributor'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      detailOverride: {
+        activity: {
+          workflowThreads: {
+            summary: {
+              total: 1,
+              unresolvedCount: 1,
+              unresolvedBlockingCount: 1,
+              resolvedCount: 0,
+            },
+            items: [
+              {
+                id: 'wt-1',
+                commentType: 'escalation',
+                blocking: true,
+                state: 'open',
+                title: 'Need rollout approval before QA',
+                body: 'Escalate the rollout guardrail decision so testing does not proceed blindly.',
+                linkedEventId: 'evt-rollout-1',
+                createdAt: '2026-04-01T14:30:00.000Z',
+                createdBy: 'architect-1',
+                lastUpdatedAt: '2026-04-01T14:45:00.000Z',
+                notificationTargets: ['pm', 'engineer', 'sre'],
+                messages: [
+                  { id: 'wt-msg-1', actorId: 'architect-1', occurredAt: '2026-04-01T14:30:00.000Z', body: 'Initial escalation.' },
+                  { id: 'wt-msg-2', actorId: 'pm-1', occurredAt: '2026-04-01T14:35:00.000Z', body: 'Need more delivery context.' },
+                  { id: 'wt-msg-3', actorId: 'engineer-1', occurredAt: '2026-04-01T14:45:00.000Z', body: 'Added rollout fallback notes.' },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const discussionSection = screen.getByRole('heading', { name: 'Discussion' }).closest('section');
+    expect(discussionSection).not.toBeNull();
+    expect(within(discussionSection as HTMLElement).getByText('Targets: Architect')).toBeInTheDocument();
+    expect(within(discussionSection as HTMLElement).getByText('Notification targets: PM · Engineer · SRE')).toBeInTheDocument();
+    expect(within(discussionSection as HTMLElement).getByRole('button', { name: 'Show 1 older thread updates' })).toBeInTheDocument();
+    fireEvent.click(within(discussionSection as HTMLElement).getByRole('button', { name: 'Show 1 older thread updates' }));
+    expect(within(discussionSection as HTMLElement).getByRole('button', { name: 'Collapse thread history' })).toBeInTheDocument();
+    expect(within(discussionSection as HTMLElement).getByText('Initial escalation.')).toBeInTheDocument();
+  });
+
+  it('shows QA route previews, explicit missing-context warnings, and escalation notification previews', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'qa-user',
+        tenant_id: 'tenant-a',
+        roles: ['qa', 'contributor'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      detailOverride: {
+        task: { stage: 'QA_TESTING' },
+        context: {
+          implementationHistory: [
+            {
+              eventId: 'impl-2',
+              version: 2,
+              submittedAt: '2026-04-01T15:00:00.000Z',
+              submittedBy: 'engineer-2',
+              primaryReference: { type: 'pr_url', label: 'https://github.com/wiinc1/engineering-team/pull/102', value: 'https://github.com/wiinc1/engineering-team/pull/102' },
+            },
+          ],
+          qaResults: {
+            summary: { total: 1, passedCount: 0, failedCount: 1, retestCount: 0 },
+            latest: {
+              runId: 'qa-1',
+              outcome: 'fail',
+              runKind: 'initial',
+              summary: 'History tab render failed.',
+              implementationVersion: 1,
+              implementationReference: { type: 'pr_url', label: 'https://github.com/wiinc1/engineering-team/pull/101', value: 'https://github.com/wiinc1/engineering-team/pull/101' },
+              submittedBy: 'qa-user',
+            },
+            items: [
+              {
+                runId: 'qa-1',
+                outcome: 'fail',
+                runKind: 'initial',
+                summary: 'History tab render failed.',
+                implementationVersion: 1,
+                implementationReference: { type: 'pr_url', label: 'https://github.com/wiinc1/engineering-team/pull/101', value: 'https://github.com/wiinc1/engineering-team/pull/101' },
+                submittedBy: 'qa-user',
+                submittedAt: '2026-04-01T14:40:00.000Z',
+                reTestScope: ['history tab render', 'timeline pagination'],
+                escalationPackage: {
+                  reproduction_steps: ['open task detail', 'switch to history'],
+                  failing_scenarios: ['history tab render'],
+                  findings: ['timeline does not show the latest event'],
+                  stack_traces: ['TypeError: timeline is undefined'],
+                  env_logs: ['browser:chromium', 'api:local'],
+                  previous_fix_history: [],
+                  routing: {
+                    recipient_role: 'engineer',
+                    recipient_agent_id: 'engineer-2',
+                    required_engineer_tier: 'Sr',
+                    escalation_chain: ['qa', 'engineer', 'pm'],
+                  },
+                  notification_preview: {
+                    headline: 'QA failure for TSK-42',
+                    recipient_role: 'engineer',
+                    recipient_agent_id: 'engineer-2',
+                    required_engineer_tier: 'Sr',
+                    highlights: ['History tab render failed.', 'open task detail', 'history tab render'],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const qaSection = screen.getByRole('heading', { name: 'QA' }).closest('section');
+    expect(qaSection).not.toBeNull();
+    expect(within(qaSection as HTMLElement).getByText('A failing result routes this task back to the implementation fix loop with a packaged escalation.')).toBeInTheDocument();
+    expect(within(qaSection as HTMLElement).getByText('Next stage: implementation fix loop')).toBeInTheDocument();
+    expect(within(qaSection as HTMLElement).getByText('Scoped re-test for run qa-1 stays with qa-user and should cover history tab render, timeline pagination.')).toBeInTheDocument();
+    expect(within(qaSection as HTMLElement).getByText('Missing failure context: scenarios, findings, reproduction steps, stack traces, environment logs.')).toBeInTheDocument();
+    expect(within(qaSection as HTMLElement).getByRole('button', { name: 'Submit QA result' })).toBeDisabled();
+    expect(within(qaSection as HTMLElement).getByText('QA failure for TSK-42')).toBeInTheDocument();
+    expect(within(qaSection as HTMLElement).getByText('Route: engineer-2 · Required tier: Sr')).toBeInTheDocument();
+    fireEvent.click(within(qaSection as HTMLElement).getByRole('button', { name: 'Show logs and traces' }));
+    expect(within(qaSection as HTMLElement).getByText('qa -> engineer -> pm')).toBeInTheDocument();
+  });
+
   it('renders task list owner metadata with explicit unassigned and fallback labels', async () => {
     installTaskFetchMock();
     window.history.pushState({}, '', '/tasks');
@@ -1082,7 +1319,7 @@ describe('Task browser runtime coverage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
     await screen.findByText('Assigned to qa.');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Task list' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Task list' })[0]);
     await screen.findByRole('heading', { name: 'Task list' });
     expect(screen.getAllByText('QA Engineer · QA').length).toBeGreaterThan(0);
   });
@@ -1153,11 +1390,11 @@ describe('Task browser runtime coverage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
     await screen.findByRole('heading', { name: 'Wire task detail' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Engineer inbox' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Engineer inbox' })[0]);
     await screen.findByRole('heading', { name: 'Engineer Inbox' });
     await screen.findByText('0 tasks routed to Engineer.');
 
-    fireEvent.click(screen.getByRole('button', { name: 'QA inbox' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'QA inbox' })[0]);
     await screen.findByRole('heading', { name: 'QA Inbox' });
     expect(screen.getByText('2 tasks routed to QA.')).toBeInTheDocument();
     expect(screen.getByText('Wire task detail')).toBeInTheDocument();
