@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import axe from 'axe-core';
 import { App } from './App';
 import { clearBrowserSessionConfig, writeBrowserSessionConfig } from './session';
@@ -52,6 +52,7 @@ function installTaskFetchMock({
   reassignedOwner = 'qa',
   aiAgentsStatus = 200,
   authSessionStatus = 200,
+  detailStatus = 200,
   tasksOverride,
   detailOverride,
   summaryOverride,
@@ -159,7 +160,15 @@ function installTaskFetchMock({
       });
     }
 
-    if (url.endsWith('/tasks/TSK-42/detail')) {
+    if (url.includes('/tasks/TSK-42/detail')) {
+      if (detailStatus !== 200) {
+        return createJsonResponse({
+          error: {
+            code: detailStatus === 404 ? 'task_not_found' : 'projection_unavailable',
+            message: detailStatus === 404 ? 'not found' : 'projection unavailable',
+          },
+        }, detailStatus);
+      }
       const detailPayload = mergeValue(
         {
           task: { id: 'TSK-42', title: 'Wire task detail', priority: 'P1', stage: 'IMPLEMENT', status: 'active' },
@@ -187,6 +196,7 @@ function installTaskFetchMock({
               { id: 'evt-1', type: 'task.created', summary: 'Task created', actor: { id: 'pm-1', label: 'PM 1' }, occurredAt: '2026-04-01T14:55:00.000Z' },
               { id: 'evt-2', type: 'task.assigned', summary: 'Owner assigned', actor: { id: currentOwner, label: 'Engineer 1' }, occurredAt: '2026-04-01T14:58:00.000Z' },
             ],
+            auditLogPageInfo: { limit: 25, next_cursor: null, has_more: false },
           },
           telemetry: { availability: 'available', lastUpdatedAt: '2026-04-01T15:00:00.000Z', summary: {}, emptyStateReason: null, access: { restricted: false, omission_applied: false, omitted_fields: [] } },
           meta: {
@@ -723,8 +733,8 @@ describe('Task browser runtime coverage', () => {
     fireEvent.change(screen.getByLabelText(/Commit SHA/), { target: { value: 'bad sha' } });
     fireEvent.change(screen.getByLabelText(/GitHub PR URL/), { target: { value: 'https://example.com/not-github' } });
 
-    expect(screen.getByText('Commit SHA must be 7-40 hexadecimal characters.')).toBeInTheDocument();
-    expect(screen.getByText('GitHub PR URL must look like `https://github.com/<owner>/<repo>/pull/<number>`.')).toBeInTheDocument();
+    expect(await screen.findByText(/Commit SHA must be 7-40 hexadecimal characters\./)).toBeInTheDocument();
+    expect(await screen.findByText(/GitHub PR URL must look like/)).toBeInTheDocument();
   });
 
 
@@ -1012,6 +1022,74 @@ describe('Task browser runtime coverage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'History' }));
     expect(await screen.findByLabelText('History filters')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Filter event type')).toBeInTheDocument();
+    expect(screen.getByLabelText('Date from')).toBeInTheDocument();
+    expect(screen.getByLabelText('Date to')).toBeInTheDocument();
+  });
+
+  it('preserves explicit task-detail date filters in the URL and on the rendered form', async () => {
+    window.history.pushState({}, '', '/tasks/TSK-42?tab=history&historyEventType=task.assigned&dateFrom=2026-04-01&dateTo=2026-04-02');
+    const fetchMock = installTaskFetchMock();
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByLabelText('Event type')).toHaveValue('task.assigned');
+    expect(screen.getByLabelText('Date from')).toHaveValue('2026-04-01');
+    expect(screen.getByLabelText('Date to')).toHaveValue('2026-04-02');
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/tasks/TSK-42/detail?eventType=task.assigned&dateFrom=2026-04-01&dateTo=2026-04-02'))).toBe(true);
+  });
+
+  it('loads more history entries without replacing the first page', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        activity: {
+          auditLog: [
+            { id: 'evt-2', type: 'task.assigned', summary: 'Owner assigned', actor: { id: 'engineer', label: 'Engineer 1' }, occurredAt: '2026-04-01T14:58:00.000Z' },
+          ],
+          auditLogPageInfo: { limit: 1, next_cursor: '2', has_more: true },
+        },
+      },
+      historyOverride: ({ currentOwner }: { currentOwner: string }) => ({
+        items: [
+          {
+            item_id: 'evt-1',
+            event_type: 'task.created',
+            event_type_label: 'Task created',
+            occurred_at: '2026-04-01T14:55:00.000Z',
+            actor: { actor_id: 'pm-1', display_name: 'PM 1' },
+            display: { summary: 'Task created' },
+            sequence_number: 1,
+            source: 'audit-api',
+          },
+        ],
+        page_info: { next_cursor: null, has_more: false, limit: 1 },
+      }),
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    const timeline = screen.getByLabelText('Task history timeline');
+    expect(within(timeline).getByText('Owner assigned')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    expect(await within(timeline).findByRole('heading', { name: 'Task created' })).toBeInTheDocument();
+    expect(within(timeline).getByText('Owner assigned')).toBeInTheDocument();
+    expect(within(timeline).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+  });
+
+  it('renders a restricted telemetry state when the app falls back to summary/history/observability endpoints', async () => {
+    installTaskFetchMock({
+      detailStatus: 404,
+      telemetryOverride: {
+        event_count: 0,
+        access: { restricted: true, omission_applied: true, omitted_fields: ['trace_ids', 'metrics'] },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Telemetry' }));
+    expect(await screen.findByText('Restricted')).toBeInTheDocument();
+    expect(screen.getByText(/Restricted server-side fields omitted: trace_ids, metrics/)).toBeInTheDocument();
   });
 
   it('uses roving tab semantics for task-detail activity tabs', async () => {
@@ -1317,7 +1395,9 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save owner' }));
-    await screen.findByText('Assigned to qa.');
+    await waitFor(() => {
+      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Assigned to qa.'))).toBe(true);
+    });
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Task list' })[0]);
     await screen.findByRole('heading', { name: 'Task list' });

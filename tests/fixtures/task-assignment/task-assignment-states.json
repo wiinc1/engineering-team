@@ -1,0 +1,19 @@
+{
+  "tenant_id": "tenant-assignment",
+  "tasks": [
+    {
+      "task_id": "TSK-ASSIGN-1",
+      "title": "Assignment smoke task",
+      "initial_stage": "BACKLOG",
+      "priority": "P1",
+      "assigned_owner": "qa"
+    },
+    {
+      "task_id": "TSK-ASSIGN-2",
+      "title": "Unassigned assignment task",
+      "initial_stage": "TODO",
+      "priority": "P2",
+      "assigned_owner": null
+    }
+  ]
+}

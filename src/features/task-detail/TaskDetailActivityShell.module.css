@@ -106,6 +106,33 @@
   background: var(--task-detail-input-bg, #ffffff);
 }
 
+.loadMoreRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.loadMoreButton {
+  appearance: none;
+  border: 1px solid var(--task-detail-border, #cbd5e1);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: var(--task-detail-panel-bg, #ffffff);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.loadMoreButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+.loadMoreButton:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
 .notice {
   border: 1px solid var(--task-detail-notice-border, #cbd5e1);
   border-radius: 12px;

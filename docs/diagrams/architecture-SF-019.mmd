@@ -1,0 +1,28 @@
+flowchart LR
+  UI[Task detail route /tasks/:taskId] --> URL[URL state parser]
+  URL --> CLIENT[Task detail API client]
+  CLIENT --> DETAIL[/GET /tasks/:id/detail/]
+  CLIENT --> SUMMARY[/GET /tasks/:id/]
+  CLIENT --> HISTORY[/GET /tasks/:id/history/]
+  CLIENT --> TELEMETRY[/GET /tasks/:id/observability-summary/]
+
+  DETAIL --> HTTP[Audit HTTP layer]
+  SUMMARY --> HTTP
+  HISTORY --> HTTP
+  TELEMETRY --> HTTP
+
+  HTTP --> STATE[(audit_task_current_state)]
+  HTTP --> HISTORY_PROJ[(audit_task_history)]
+  HTTP --> REL[(audit_task_relationships)]
+  HTTP --> OBS[(structured observability summary)]
+
+  HTTP --> VM[Detail view-model composer]
+  STATE --> VM
+  HISTORY_PROJ --> VM
+  REL --> VM
+  OBS --> VM
+
+  VM --> DETAIL
+  HISTORY --> UI
+  TELEMETRY --> UI
+  DETAIL --> UI

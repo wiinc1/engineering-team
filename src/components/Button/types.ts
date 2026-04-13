@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export interface ButtonProps {
   /** Visual style variant */
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
@@ -10,7 +12,7 @@ export interface ButtonProps {
   /** Click handler */
   onClick?: () => void;
   /** Button content */
-  children: React.ReactNode;
+  children: ReactNode;
   /** Additional CSS class */
   className?: string;
   /** HTML button type */

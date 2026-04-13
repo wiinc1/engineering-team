@@ -1,0 +1,70 @@
+erDiagram
+  AI_AGENTS ||--o{ TASKS : owns
+  TASKS ||--o{ TASK_MUTATIONS : records
+  TASKS ||--|| TASK_SYNC_CHECKPOINTS : tracks
+  TASKS ||..|| AUDIT_EVENTS : emits
+
+  AI_AGENTS {
+    string tenant_id PK
+    string agent_id PK
+    string display_name
+    string role
+    string execution_kind
+    boolean active
+    boolean assignable
+    string environment_scope
+    json metadata
+  }
+
+  TASKS {
+    string tenant_id PK
+    string task_id PK
+    string title
+    string description
+    string status
+    string priority
+    string owner_agent_id FK
+    int version
+    string source_system
+    string migration_state
+    datetime created_at
+    datetime updated_at
+    datetime closed_at
+    string last_audit_event_id
+    int last_audit_sequence_number
+    json metadata
+  }
+
+  TASK_MUTATIONS {
+    int mutation_id PK
+    string tenant_id
+    string task_id
+    int task_version
+    string mutation_type
+    string actor_id
+    string actor_type
+    string request_id
+    string idempotency_key
+    json payload
+    datetime created_at
+  }
+
+  TASK_SYNC_CHECKPOINTS {
+    string tenant_id PK
+    string task_id PK
+    int canonical_version
+    string last_projected_audit_event_id
+    int last_projected_sequence_number
+    string sync_status
+    datetime last_synced_at
+    string last_error
+  }
+
+  AUDIT_EVENTS {
+    string event_id PK
+    string tenant_id
+    string task_id
+    string event_type
+    int sequence_number
+    json payload
+  }

@@ -230,7 +230,7 @@ Prometheus-style metrics exported include:
 - Manual host-run Postgres integration: `DATABASE_URL=postgres://audit:audit@127.0.0.1:5432/engineering_team npm run test:integration:postgres`
 
 ## UI-linked validation note
-This repository does not yet ship the browser-rendered task history / telemetry UI referenced in the issue's UX section. Because of that, `tests/visual/` and `tests/accessibility/` are documented placeholders rather than executable suites today. They should become blocking executable coverage once a real UI surface lands.
+This repository now ships the browser-rendered task detail history / telemetry UI on `/tasks/:taskId`. Executable coverage exists today in the mounted app tests and Playwright browser suite. `tests/visual/` still documents the current visual-regression gap: browser evidence exists, but dedicated screenshot baseline assertions have not been added yet.
 
 ## Schema naming note
 The implementation uses `audit_task_*` for PostgreSQL read models and `task-*-projection.json` for the file backend. That naming split is now documented rather than silently divergent; no schema expansion from Issue #24 was pulled into this pass.

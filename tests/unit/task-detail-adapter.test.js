@@ -5,24 +5,24 @@ const {
   buildHistoryQuery,
   createTaskDetailApiClient,
   deriveTelemetryFreshness,
+  deriveTelemetryState,
   parseJsonResponse,
   toTaskDetailScreenModel,
 } = require('../../src/features/task-detail/adapter');
 
 test('buildHistoryQuery only emits canonical history contract params', () => {
   const query = buildHistoryQuery(
-    { eventType: 'task.created', actorId: 'pm-1', range: 'today' },
+    { eventType: 'task.created', actorId: 'pm-1', dateFrom: '2026-04-01', dateTo: '2026-04-02' },
     { limit: 25, cursor: 3 },
-    { from: '2026-04-01T00:00:00.000Z', to: '2026-04-02T00:00:00.000Z' },
+    { dateFrom: '2026-04-01', dateTo: '2026-04-02' },
   );
 
   assert.equal(query.get('eventType'), 'task.created');
   assert.equal(query.get('actorId'), 'pm-1');
   assert.equal(query.get('limit'), '25');
   assert.equal(query.get('cursor'), '3');
-  assert.equal(query.get('from'), '2026-04-01T00:00:00.000Z');
-  assert.equal(query.get('to'), '2026-04-02T00:00:00.000Z');
-  assert.equal(query.has('historyRange'), false);
+  assert.equal(query.get('dateFrom'), '2026-04-01');
+  assert.equal(query.get('dateTo'), '2026-04-02');
 });
 
 test('task detail client prefers dedicated detail view model endpoint when available', async () => {
@@ -51,7 +51,7 @@ test('task detail client prefers dedicated detail view model endpoint when avail
 
   const model = await client.fetchTaskDetailScreenData('TSK-1', { filters: { eventType: 'task.stage_changed' } });
 
-  assert.deepEqual(calls, ['http://audit.local/tasks/TSK-1/detail']);
+  assert.deepEqual(calls, ['http://audit.local/tasks/TSK-1/detail?eventType=task.stage_changed']);
   assert.equal(model.summary.title, 'Wire task detail');
   assert.equal(model.detail.task.id, 'TSK-1');
   assert.equal(model.shell.historyItems[0].title, 'Stage changed');
@@ -133,7 +133,7 @@ test('task detail client falls back to legacy endpoints when dedicated detail en
     baseUrl: 'http://audit.local',
     fetchImpl: async (url) => {
       calls.push(url);
-      if (url.endsWith('/detail')) {
+      if (url.includes('/detail')) {
         return { ok: false, status: 404, json: async () => ({ error: { message: 'not found' } }) };
       }
       if (url.endsWith('/observability-summary')) {
@@ -149,7 +149,7 @@ test('task detail client falls back to legacy endpoints when dedicated detail en
   const model = await client.fetchTaskDetailScreenData('TSK-1', { filters: { eventType: 'task.stage_changed' } });
 
   assert.deepEqual(calls, [
-    'http://audit.local/tasks/TSK-1/detail',
+    'http://audit.local/tasks/TSK-1/detail?eventType=task.stage_changed',
     'http://audit.local/tasks/TSK-1',
     'http://audit.local/tasks/TSK-1/history?eventType=task.stage_changed',
     'http://audit.local/tasks/TSK-1/observability-summary',
@@ -201,7 +201,7 @@ test('detail endpoint non-404 failures do not fan out into legacy fallback reque
     baseUrl: 'http://audit.local',
     fetchImpl: async (url) => {
       calls.push(url);
-      if (url.endsWith('/detail')) {
+      if (url.includes('/detail')) {
         return { ok: false, status: 503, json: async () => ({ error: { message: 'projection unavailable' } }) };
       }
       throw new Error(`unexpected fallback call: ${url}`);
@@ -309,9 +309,19 @@ test('screen model preserves restricted telemetry as server-enforced access meta
   });
 
   assert.equal(model.shell.historyState.kind, 'empty');
-  assert.equal(model.shell.telemetryState.kind, 'ready');
+  assert.equal(model.shell.telemetryState.kind, 'restricted');
   assert.equal(model.shell.telemetryAccess.restricted, true);
   assert.match(model.shell.telemetryCards[0].hint, /Restricted server-side fields omitted/);
+});
+
+test('deriveTelemetryState returns restricted for summary-only telemetry access', () => {
+  const state = deriveTelemetryState({
+    event_count: 0,
+    access: { restricted: true, omission_applied: true, omitted_fields: ['trace_ids'] },
+  });
+
+  assert.equal(state.kind, 'restricted');
+  assert.match(state.detail, /trace_ids/);
 });
 
 test('detail screen degrades telemetry state from freshness metadata even when availability stays available', () => {

@@ -1,0 +1,361 @@
+openapi: 3.0.3
+info:
+  title: Canonical Task Platform API
+  version: 0.2.0
+  description: |
+    Implemented additive versioned API contract for the canonical task persistence and AI agent ownership architecture.
+    This is additive to the current audit-backed `/tasks/...` routes and is the live runtime contract for the Issue #30 rollout path.
+servers:
+  - url: /api/v1
+paths:
+  /ai-agents:
+    get:
+      summary: List canonical AI agents that can own tasks
+      operationId: listAiAgents
+      tags: [AI Agents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Canonical AI agent registry
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AiAgent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /tasks:
+    get:
+      summary: List canonical task records
+      operationId: listTasks
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ownerAgentId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create a canonical task
+      operationId: createTask
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /tasks/{taskId}:
+    get:
+      summary: Fetch a canonical task by id
+      operationId: getTask
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update mutable task fields using optimistic concurrency
+      operationId: updateTask
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tasks/{taskId}/owner:
+    patch:
+      summary: Assign, reassign, or clear task ownership
+      operationId: updateTaskOwner
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskOwnerRequest'
+      responses:
+        '200':
+          description: Task owner updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    AiAgent:
+      type: object
+      required: [agentId, displayName, active, assignable]
+      properties:
+        agentId:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          nullable: true
+        executionKind:
+          type: string
+        active:
+          type: boolean
+        assignable:
+          type: boolean
+        environmentScope:
+          type: string
+    TaskOwner:
+      type: object
+      nullable: true
+      required: [agentId, displayName, active, assignable]
+      properties:
+        agentId:
+          type: string
+        displayName:
+          type: string
+        role:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        assignable:
+          type: boolean
+    Task:
+      type: object
+      required: [taskId, title, status, version, owner, createdAt, updatedAt]
+      properties:
+        taskId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        owner:
+          $ref: '#/components/schemas/TaskOwner'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+    CreateTaskRequest:
+      type: object
+      required: [title, status]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        ownerAgentId:
+          type: string
+          nullable: true
+        idempotencyKey:
+          type: string
+    UpdateTaskRequest:
+      type: object
+      required: [version]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        idempotencyKey:
+          type: string
+    UpdateTaskOwnerRequest:
+      type: object
+      required: [version]
+      properties:
+        ownerAgentId:
+          type: string
+          nullable: true
+          description: Use `null` to clear assignment.
+        version:
+          type: integer
+        idempotencyKey:
+          type: string
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            requestId:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Caller lacks permission for this mutation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Task version conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

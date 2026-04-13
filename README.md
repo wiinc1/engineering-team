@@ -100,6 +100,13 @@ Point the browser app at the API:
 - or use the dev proxy: set `VITE_TASK_API_PROXY_TARGET=http://127.0.0.1:3000`
 - operators can override the API origin at runtime from the session panel without rebuilding
 
+### Vercel deployment
+- This repo can now run on a single Vercel project with the SPA plus serverless API routes.
+- The Vercel API adapter lives under `api/` and wraps `lib/audit/http.js`.
+- To avoid route collisions between SPA paths like `/tasks/...` and API paths like `/tasks/...`, set `VITE_TASK_API_BASE_URL=/backend` in Vercel.
+- `vercel.json` rewrites `/backend/*` to the Vercel API functions and falls back non-API browser routes to `index.html`.
+- Required backend env vars in Vercel: `DATABASE_URL`, `AUTH_JWT_SECRET`, and any optional issuer/audience or browser-auth-code settings your environment enforces.
+
 Build/package the thin browser app:
 - `npm run build:browser`
 - `npm run serve:browser` → serves the built SPA with `/tasks/:taskId` fallback on port `4173`
@@ -133,8 +140,27 @@ Current default browser matrix:
 - Structured logs for attempts, success, fallback, and attribution mismatches are written to `observability/workflow-audit.log`.
 - Rollout is controlled by `FF_SPECIALIST_DELEGATION` and documented in `docs/runbooks/specialist-delegation.md`.
 
+### Issue #30 architecture package
+- Canonical task persistence and AI agent ownership redesign artifacts now live in:
+- `docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership.md`
+- `db/migrations/006_canonical_task_persistence.sql`
+- `docs/api/task-platform-openapi.yml`
+- `docs/reports/ISSUE_30_TASK_PLATFORM_REDESIGN.md`
+- This package is additive only. The current audit-backed assignment/runtime behavior remains the active implementation until follow-up execution tasks are completed.
+
+### Canonical task-platform API (initial executable slice)
+- The audit server now also exposes an additive versioned task-platform surface at `/api/v1`.
+- Current routes:
+- `GET /api/v1/ai-agents`
+- `GET /api/v1/tasks`
+- `POST /api/v1/tasks`
+- `GET /api/v1/tasks/{taskId}`
+- `PATCH /api/v1/tasks/{taskId}`
+- `PATCH /api/v1/tasks/{taskId}/owner`
+- This slice introduces optimistic concurrency at the canonical task layer and currently uses a file-backed local service while coexisting with the audit/event runtime.
+
 ### Remaining verification gap
 - This is still lightweight internal-use coverage, not full cross-browser visual regression.
 - No Lighthouse/Core Web Vitals run is wired yet; performance evidence is now browser-timing based, but still local/mock-backed rather than a deployed environment measurement.
 - WebKit coverage remains opt-in rather than part of the default local matrix.
-- The task-detail browser runtime is still intentionally thin: no broader app shell, login flow, or external identity provider integration has been added beyond the minimum needed to render `/tasks/:taskId`.
+- The browser app now includes a shared authenticated shell, sign-in flow, task list/board/PM overview/inbox navigation, and task detail routing. Production identity-provider integration is still pending; the current auth flow is an internal trusted auth-code exchange.

@@ -88,8 +88,12 @@ function HistoryFilters({
         <input className={styles.filterInput} type="text" placeholder="Filter actor" {...bindField('actorId')} />
       </label>
       <label className={styles.filterField}>
-        <span className={styles.filterLabel}>Range</span>
-        <input className={styles.filterInput} type="text" placeholder="Filter date range" {...bindField('range')} />
+        <span className={styles.filterLabel}>Date from</span>
+        <input className={styles.filterInput} type="date" {...bindField('dateFrom')} />
+      </label>
+      <label className={styles.filterField}>
+        <span className={styles.filterLabel}>Date to</span>
+        <input className={styles.filterInput} type="date" {...bindField('dateTo')} />
       </label>
     </section>
   );
@@ -104,6 +108,10 @@ export function TaskDetailActivityShell({
   telemetryCards = [],
   filters,
   onFiltersChange,
+  historyPageInfo,
+  onLoadMoreHistory,
+  isLoadingMoreHistory = false,
+  historyLoadMoreError,
 }: TaskDetailActivityShellProps) {
   const activeState = selectedTab === 'history' ? historyState : telemetryState;
   const tabOrder: TaskDetailTab[] = ['history', 'telemetry'];
@@ -197,6 +205,16 @@ export function TaskDetailActivityShell({
         {renderState(activeState)}
 
         {selectedTab === 'history' && historyState.kind === 'ready' ? <TaskHistoryTimeline items={historyItems} /> : null}
+        {selectedTab === 'history' && historyState.kind === 'ready' && historyLoadMoreError ? (
+          <Notice title="Could not load more history" body={historyLoadMoreError} tone="danger" />
+        ) : null}
+        {selectedTab === 'history' && historyState.kind === 'ready' && historyPageInfo?.has_more ? (
+          <div className={styles.loadMoreRow}>
+            <button type="button" className={styles.loadMoreButton} onClick={onLoadMoreHistory} disabled={isLoadingMoreHistory}>
+              {isLoadingMoreHistory ? 'Loading…' : 'Load more'}
+            </button>
+          </div>
+        ) : null}
         {selectedTab === 'telemetry' && telemetryState.kind === 'ready' ? <TelemetrySummary cards={telemetryCards} /> : null}
       </div>
     </section>

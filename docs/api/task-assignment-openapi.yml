@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Task Assignment API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     API contract for assigning an AI agent owner to a task.
     The runtime accepts both `/tasks/...` and `/api/tasks/...` paths; `/tasks/...` is the canonical route shape used elsewhere in this repo.
@@ -28,9 +28,8 @@ paths:
               type: object
               properties:
                 agentId:
-                  type:
-                    - string
-                    - 'null'
+                  type: string
+                  nullable: true
                   description: Unique identifier of the active AI agent to assign. Use `null` or an empty string to clear assignment.
                   example: qa
                 actorType:
@@ -84,14 +83,59 @@ paths:
                       eventId:
                         type: string
         '400':
-          description: Invalid or inactive agent id
+          description: Invalid request or inactive agent id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
         '401':
           description: Missing or invalid bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
         '403':
           description: Caller lacks `assignment:write`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
         '404':
           description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '503':
+          description: Assignment feature flag disabled or kill switch enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
 components:
+  schemas:
+    StandardErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id, requestId]
+          properties:
+            code:
+              type: string
+            error_id:
+              type: string
+              nullable: true
+            message:
+              type: string
+            request_id:
+              type: string
+            requestId:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
   securitySchemes:
     BearerAuth:
       type: http

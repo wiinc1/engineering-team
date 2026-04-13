@@ -48,6 +48,37 @@ function deriveTelemetryFreshness(summary = {}) {
   };
 }
 
+function deriveTelemetryState(summary = {}) {
+  const freshness = deriveTelemetryFreshness(summary);
+
+  if (summary.access?.restricted) {
+    return {
+      kind: 'restricted',
+      message: 'Telemetry is restricted for this session.',
+      detail: summary.access?.omission_applied
+        ? `Restricted server-side fields omitted: ${(summary.access.omitted_fields || []).join(', ') || 'none'}`
+        : undefined,
+    };
+  }
+
+  if (summary.degraded || freshness.isWarning) {
+    return {
+      kind: 'degraded',
+      message: 'Telemetry freshness is degraded.',
+      detail: summary.last_updated_at || summary.freshness?.last_updated_at || undefined,
+    };
+  }
+
+  if (!summary.event_count) {
+    return {
+      kind: 'empty',
+      message: 'No telemetry signals are linked to this task yet.',
+    };
+  }
+
+  return { kind: 'ready' };
+}
+
 function toTelemetryCards(summary) {
   const restrictedHint = summary.access?.omission_applied
     ? `Restricted server-side fields omitted: ${(summary.access.omitted_fields || []).join(', ') || 'none'}`
@@ -115,7 +146,7 @@ function toTaskDetailScreenModel({ summary, history, telemetry, historyFilters, 
           correlation: { approved_correlation_ids: [], approved_links: [] },
           access: detail.telemetry?.access || { restricted: false },
         }),
-        historyPageInfo: null,
+        historyPageInfo: detail.activity?.auditLogPageInfo || null,
         telemetryAccess: detail.telemetry?.access || null,
       },
     };
@@ -145,7 +176,7 @@ function toTaskDetailScreenModel({ summary, history, telemetry, historyFilters, 
       selectedTab: 'history',
       filters: historyFilters || {},
       historyState: history.items?.length ? { kind: 'ready' } : { kind: 'empty', message: 'No workflow history has been recorded yet.' },
-      telemetryState: { kind: 'ready' },
+      telemetryState: deriveTelemetryState(telemetry),
       historyItems: (history.items || []).map(toHistoryTimelineItem),
       telemetryCards: toTelemetryCards(telemetry),
       historyPageInfo: history.page_info,
@@ -292,8 +323,12 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
       return request(`/tasks/${encodeURIComponent(taskId)}/events`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventType: 'task.stage_changed', payload: { to_stage: toStage, ...payload } }) });
     },
     async fetchTaskDetailScreenData(taskId, options = {}) {
+      const detailQuery = buildHistoryQuery(options.filters, options.pagination, {
+        dateFrom: options.filters?.dateFrom,
+        dateTo: options.filters?.dateTo,
+      }).toString();
       try {
-        const detail = await request(`/tasks/${encodeURIComponent(taskId)}/detail`);
+        const detail = await request(`/tasks/${encodeURIComponent(taskId)}/detail${detailQuery ? `?${detailQuery}` : ''}`);
         return toTaskDetailScreenModel({ summary: { task_id: detail.task?.id, title: detail.task?.title, priority: detail.task?.priority, current_stage: detail.task?.stage }, history: { items: detail.activity?.auditLog || [], page_info: null }, telemetry: null, historyFilters: options.filters, detail });
       } catch (error) {
         if (error?.status && error.status !== 404) throw error;
@@ -301,7 +336,7 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
 
       const [summary, history, telemetry] = await Promise.all([
         request(`/tasks/${encodeURIComponent(taskId)}`),
-        this.fetchTaskHistory(taskId, options),
+        this.fetchTaskHistory(taskId, { ...options, range: { dateFrom: options.filters?.dateFrom, dateTo: options.filters?.dateTo } }),
         request(`/tasks/${encodeURIComponent(taskId)}/observability-summary`),
       ]);
       return toTaskDetailScreenModel({ summary, history, telemetry, historyFilters: options.filters });
@@ -317,5 +352,6 @@ module.exports = {
   toTaskDetailScreenModel,
   deriveTelemetryFreshness,
   toTelemetryCards,
+  deriveTelemetryState,
   toneForHistoryEvent,
 };

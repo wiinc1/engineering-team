@@ -1,0 +1,15 @@
+flowchart TD
+  A[User opens /tasks/:taskId] --> B[Route parses tab and history filters]
+  B --> C[Task detail client requests /tasks/:id/detail]
+  C --> D{Detail projection available?}
+  D -->|Yes| E[Render summary, activity timeline, telemetry state from detail payload]
+  D -->|No 404| F[Fallback to /tasks/:id + /history + /observability-summary]
+  E --> G[User adjusts event type or date filters]
+  F --> G
+  G --> H[URL state persists tab, eventType, actorId, dateFrom, dateTo]
+  H --> I[Reload history slice from canonical history query params]
+  I --> J{historyPageInfo.has_more}
+  J -->|Yes| K[Load more appends next cursor page]
+  J -->|No| L[History list remains complete]
+  E --> M[Telemetry state resolves to ready, empty, degraded, or restricted]
+  F --> M

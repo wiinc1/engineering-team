@@ -18,7 +18,8 @@ export function readTaskDetailUrlState(search: string): TaskDetailUrlState {
   const filters: HistoryFilterState = {
     eventType: params.get('historyEventType') || undefined,
     actorId: params.get('historyActor') || undefined,
-    range: params.get('historyRange') || undefined,
+    dateFrom: params.get('dateFrom') || undefined,
+    dateTo: params.get('dateTo') || undefined,
   };
 
   return { tab, filters };
@@ -48,9 +49,8 @@ export function writeTaskDetailUrlState(state: Partial<TaskDetailUrlState>, curr
     params.set('historyActor', next.filters.actorId);
   }
 
-  if (next.filters.range) {
-    params.set('historyRange', next.filters.range);
-  }
+  if (next.filters.dateFrom) params.set('dateFrom', next.filters.dateFrom);
+  if (next.filters.dateTo) params.set('dateTo', next.filters.dateTo);
 
   const output = params.toString();
   return output ? `?${output}` : '';

@@ -8,6 +8,8 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Compatibility alias also accepted by the API server: `PATCH /api/tasks/{taskId}/assignment`
 - Agent roster endpoint for the UI: `GET /ai-agents` (also accepts `/api/ai-agents`)
 - Task-list read surface used by the thin browser runtime: `GET /tasks`
+- Operator health endpoint: `GET /health/task-assignment`
+- Internal smoke endpoint: `GET /api/internal/smoke-test/task-assignment`
 
 ## Owner visibility contract
 - Any authenticated caller with `state:read` can see additive owner metadata on `GET /tasks/{taskId}` and `GET /tasks` via `current_owner` and `owner`.
@@ -29,6 +31,11 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 1. Disable `ff_assign-ai-agent-to-task`.
 2. If needed, disable `ff_assign-ai-agent-to-task_killswitch` globally.
 3. Confirm assignment controls are hidden and no traffic hits the assignment endpoint.
+
+## Feature flags
+- Runtime flag env var: `FF_ASSIGN_AI_AGENT_TO_TASK`
+- Emergency kill switch env var: `FF_ASSIGN_AI_AGENT_TO_TASK_KILLSWITCH`
+- Reference: `/docs/feature-flags.md`
 
 ## Common errors + resolutions
 - **401 Authentication error** → verify session/auth provider and PM login state.
