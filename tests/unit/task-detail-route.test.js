@@ -16,13 +16,14 @@ test('matchTaskDetailRoute accepts canonical /tasks/:taskId path', () => {
 
 test('readTaskDetailRouteState preserves tab and history filters from URL', () => {
   assert.deepEqual(
-    readTaskDetailRouteState('?tab=telemetry&historyEventType=task.created&historyActor=pm-1&historyRange=today'),
+    readTaskDetailRouteState('?tab=telemetry&historyEventType=task.created&historyActor=pm-1&dateFrom=2026-04-01&dateTo=2026-04-02'),
     {
       tab: 'telemetry',
       filters: {
         eventType: 'task.created',
         actorId: 'pm-1',
-        range: 'today',
+        dateFrom: '2026-04-01',
+        dateTo: '2026-04-02',
       },
     },
   );
@@ -32,7 +33,8 @@ test('readTaskDetailRouteState preserves tab and history filters from URL', () =
     filters: {
       eventType: undefined,
       actorId: undefined,
-      range: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
     },
   });
 });
@@ -70,7 +72,8 @@ test('task detail page module loads screen data through the adapter client', asy
         filters: {
           eventType: 'task.created',
           actorId: 'pm-1',
-          range: undefined,
+          dateFrom: undefined,
+          dateTo: undefined,
         },
       },
     },

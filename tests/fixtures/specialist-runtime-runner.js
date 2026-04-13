@@ -11,6 +11,16 @@ process.stdin.on('end', () => {
     process.exit(2);
     return;
   }
+  if (process.env.FIXTURE_RUNTIME_MODE === 'invalid-json') {
+    process.stdout.write('not-json');
+    return;
+  }
+  if (process.env.FIXTURE_RUNTIME_MODE === 'missing-evidence') {
+    process.stdout.write(JSON.stringify({
+      output: 'runtime responded without ownership evidence',
+    }));
+    return;
+  }
   const agentId = process.env.FIXTURE_RUNTIME_AGENT_ID || payload.specialist;
   const sessionId = process.env.FIXTURE_RUNTIME_SESSION_ID || `runtime-session-${payload.delegationId}`;
   process.stdout.write(JSON.stringify({

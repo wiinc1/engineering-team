@@ -1,14 +1,15 @@
 import React from 'react';
 import styles from './Button.module.css';
 import type { ButtonProps } from './types';
+export type { ButtonProps } from './types';
 
 /**
  * A reusable, accessible button component with multiple variants and states.
- * 
+ *
  * @example
  * // Primary button
  * <Button variant="primary" onClick={handleClick}>Click me</Button>
- * 
+ *
  * @example
  * // Loading state
  * <Button variant="primary" loading>Saving...</Button>

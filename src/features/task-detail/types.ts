@@ -3,7 +3,14 @@ export type TaskDetailTab = 'history' | 'telemetry';
 export type HistoryFilterState = {
   eventType?: string;
   actorId?: string;
-  range?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type HistoryPageInfo = {
+  limit?: number;
+  next_cursor?: string | null;
+  has_more?: boolean;
 };
 
 export type HistoryViewState =
@@ -57,4 +64,8 @@ export interface TaskDetailActivityShellProps {
   telemetryCards?: TelemetrySummaryCard[];
   filters?: HistoryFilterState;
   onFiltersChange?: (filters: HistoryFilterState) => void;
+  historyPageInfo?: HistoryPageInfo | null;
+  onLoadMoreHistory?: () => void;
+  isLoadingMoreHistory?: boolean;
+  historyLoadMoreError?: string;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { createTaskDetailApiClient } from '../features/task-detail/adapter.browser';
+import { createTaskDetailApiClient, toHistoryTimelineItem } from '../features/task-detail/adapter.browser';
 import { createTaskDetailPageModule } from '../features/task-detail/route.browser';
 import { writeTaskDetailUrlState } from '../features/task-detail/urlState';
 import { TaskDetailActivityShell } from '../features/task-detail/TaskDetailActivityShell';
@@ -540,6 +540,7 @@ export function App() {
   const [agentOptionsState, setAgentOptionsState] = React.useState({ kind: 'loading', message: 'Loading canonical role roster.' });
   const [assignmentDraft, setAssignmentDraft] = React.useState('');
   const [assignmentStatus, setAssignmentStatus] = React.useState({ kind: 'idle', message: '' });
+  const [historyLoadMoreState, setHistoryLoadMoreState] = React.useState({ kind: 'idle', message: '' });
   const [newReviewQuestionDraft, setNewReviewQuestionDraft] = React.useState('');
   const [newReviewQuestionBlocking, setNewReviewQuestionBlocking] = React.useState(true);
   const [reviewQuestionDrafts, setReviewQuestionDrafts] = React.useState({});
@@ -560,6 +561,7 @@ export function App() {
   const tokenClaims = React.useMemo(() => readSessionClaims(sessionConfig), [sessionConfig]);
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const isAuthenticated = isAuthenticatedSession(sessionConfig);
+  const lastDetailTaskIdRef = React.useRef(null);
 
   const clearSessionForSignIn = React.useCallback((message, reason = 'expired') => {
     const preserved = writeBrowserSessionConfig({
@@ -623,24 +625,33 @@ export function App() {
 
   React.useEffect(() => {
     if (model.kind === 'detail') {
+      const currentTaskId = model.route?.taskId || null;
+      const routeChanged = lastDetailTaskIdRef.current !== currentTaskId;
+      lastDetailTaskIdRef.current = currentTaskId;
+
       setAssignmentDraft(model.summary?.currentOwner || '');
-      setAssignmentStatus({ kind: 'idle', message: '' });
       setNewReviewQuestionDraft('');
       setNewReviewQuestionBlocking(true);
       setReviewQuestionDrafts({});
-      setReviewQuestionStatus({ kind: 'idle', message: '', questionId: null, action: null });
       setArchitectHandoffDraft(normalizeArchitectHandoffDraft(model.detail?.context?.architectHandoff));
-      setArchitectHandoffStatus({ kind: 'idle', message: '' });
       setEngineerSubmissionDraft(normalizeEngineerSubmissionDraft(model.detail?.context?.engineerSubmission));
-      setEngineerSubmissionStatus({ kind: 'idle', message: '' });
-      setTaskLockStatus({ kind: 'idle', message: '' });
       setWorkflowThreadDraft(normalizeWorkflowThreadDraft());
       setWorkflowThreadDrafts({});
-      setWorkflowThreadStatus({ kind: 'idle', message: '', threadId: null, action: null });
       setExpandedWorkflowThreads({});
       setExpandedQaPackages({});
       setQaResultDraft(normalizeQaResultDraft(model.detail?.context?.qaResults?.latest));
-      setQaResultStatus({ kind: 'idle', message: '' });
+      setHistoryLoadMoreState({ kind: 'idle', message: '' });
+
+      // Keep action success/error feedback visible across same-task refreshes.
+      if (routeChanged) {
+        setAssignmentStatus({ kind: 'idle', message: '' });
+        setReviewQuestionStatus({ kind: 'idle', message: '', questionId: null, action: null });
+        setArchitectHandoffStatus({ kind: 'idle', message: '' });
+        setEngineerSubmissionStatus({ kind: 'idle', message: '' });
+        setTaskLockStatus({ kind: 'idle', message: '' });
+        setWorkflowThreadStatus({ kind: 'idle', message: '', threadId: null, action: null });
+        setQaResultStatus({ kind: 'idle', message: '' });
+      }
     }
   }, [model]);
 
@@ -836,6 +847,45 @@ export function App() {
     const nextModel = await pageModule.load({ pathname, search });
     setModel({ ...nextModel, kind: 'detail' });
   }, [model.kind, pageModule, pathname, search, taskClient]);
+
+  const loadMoreHistory = React.useCallback(async () => {
+    if (model.kind !== 'detail' || !routeTaskId) return;
+    const pageInfo = model.shell.historyPageInfo;
+    const nextCursor = pageInfo?.next_cursor;
+    if (!pageInfo?.has_more || !nextCursor) return;
+
+    setHistoryLoadMoreState({ kind: 'loading', message: '' });
+
+    try {
+      const payload = await taskClient.fetchTaskHistory(routeTaskId, {
+        filters: model.shell.filters,
+        pagination: {
+          limit: Number.isFinite(pageInfo.limit) ? pageInfo.limit : 25,
+          cursor: nextCursor,
+        },
+        range: {
+          dateFrom: model.shell.filters?.dateFrom,
+          dateTo: model.shell.filters?.dateTo,
+        },
+      });
+
+      setModel((current) => {
+        if (current.kind !== 'detail') return current;
+        const nextItems = (payload.items || []).map(toHistoryTimelineItem);
+        return {
+          ...current,
+          shell: {
+            ...current.shell,
+            historyItems: [...current.shell.historyItems, ...nextItems],
+            historyPageInfo: payload.page_info || { next_cursor: null, has_more: false },
+          },
+        };
+      });
+      setHistoryLoadMoreState({ kind: 'success', message: '' });
+    } catch (error) {
+      setHistoryLoadMoreState({ kind: 'error', message: error?.message || 'Loading more history failed.' });
+    }
+  }, [model, routeTaskId, taskClient]);
 
   const updateReviewQuestionDraft = React.useCallback((questionId, value) => {
     setReviewQuestionDrafts((current) => ({ ...current, [questionId]: value }));
@@ -2506,6 +2556,10 @@ export function App() {
                 telemetryCards={model.shell.telemetryCards}
                 filters={model.shell.filters}
                 onFiltersChange={setFilters}
+                historyPageInfo={model.shell.historyPageInfo}
+                onLoadMoreHistory={loadMoreHistory}
+                isLoadingMoreHistory={historyLoadMoreState.kind === 'loading'}
+                historyLoadMoreError={historyLoadMoreState.kind === 'error' ? historyLoadMoreState.message : ''}
               />
             </section>
           </section>

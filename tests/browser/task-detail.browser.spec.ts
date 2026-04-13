@@ -40,6 +40,7 @@ const taskDetailPayload = {
       { id: 'evt-1', type: 'task.created', summary: 'Task created', actor: { id: 'pm-1', label: 'PM 1' }, occurredAt: '2026-04-01T14:55:00.000Z' },
       { id: 'evt-2', type: 'task.assigned', summary: 'Owner assigned', actor: { id: 'engineer', label: 'Engineer 1' }, occurredAt: '2026-04-01T14:58:00.000Z' },
     ],
+    auditLogPageInfo: { limit: 25, next_cursor: null, has_more: false },
   },
   telemetry: { availability: 'available', lastUpdatedAt: '2026-04-01T15:00:00.000Z', summary: {}, emptyStateReason: null, access: { restricted: false, omission_applied: false, omitted_fields: [] } },
   meta: {
@@ -85,7 +86,7 @@ async function installApiMocks(page) {
     } });
   });
 
-  await page.route('**/api/tasks/TSK-42/detail', async (route) => {
+  await page.route('**/api/tasks/TSK-42/detail**', async (route) => {
     await route.fulfill({ json: taskDetailPayload });
   });
 

@@ -7,7 +7,9 @@ Current coverage:
 - axe-core smoke scan on the mounted `/tasks` task-list route, including owner filter and results status messaging
 - axe-core smoke scan on the mounted `/inbox/qa` role inbox route, including the read-only inbox region and routed-task status messaging
 - semantic assertions for the main landmark, task summary region, task-list table, tablist/tabs, tabpanel linkage, history filters, and task-id form label
+- semantic assertions for task-detail history date filters and the paginated `Load more` control
 - restricted-state coverage for authorization failure rendering
+- restricted telemetry-state coverage on the summary/history/observability fallback path
 - explicit assertions that owner state is never color-only (`Unassigned` / fallback copy remains text-visible)
 
 Notes:

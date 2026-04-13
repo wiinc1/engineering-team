@@ -1287,6 +1287,125 @@ test('returns standardized error payload when feature flag kill switch is off', 
   }, { auditFoundationEnabled: false });
 });
 
+test('gates assignment and agent roster behind the task assignment feature flag and kill switch', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/ai-agents`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 503);
+    let body = await response.json();
+    assert.equal(body.error.code, 'feature_disabled');
+    assert.equal(body.error.details.feature, 'ff_assign_ai_agent_to_task');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ASSIGN-FLAG/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 503);
+    body = await response.json();
+    assert.equal(body.error.details.feature, 'ff_assign_ai_agent_to_task');
+  }, { taskAssignmentEnabled: false });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    const createHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+    };
+    await fetch(`${baseUrl}/tasks/TSK-ASSIGN-KILL/events`, {
+      method: 'POST',
+      headers: createHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ASSIGN-KILL', payload: { title: 'Killed task', initial_stage: 'BACKLOG' } }),
+    });
+
+    const response = await fetch(`${baseUrl}/tasks/TSK-ASSIGN-KILL/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.error.details.feature, 'ff_assign_ai_agent_to_task_killswitch');
+  }, { taskAssignmentKillSwitchEnabled: true });
+});
+
+test('exposes task assignment health and smoke-test endpoints for operators', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/health/task-assignment`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['admin'] }),
+    });
+    assert.equal(response.status, 200);
+    let body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.feature.enabled, true);
+    assert.equal(body.feature.killed, false);
+    assert.ok(body.dependencies.agent_registry_active_count > 0);
+
+    response = await fetch(`${baseUrl}/api/internal/smoke-test/task-assignment`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['admin'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.checks.length, 3);
+  });
+});
+
+test('emits assignment-specific metrics and standardized error identifiers', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const createHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-ASSIGN-METRICS/events`, {
+      method: 'POST',
+      headers: createHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ASSIGN-METRICS', payload: { title: 'Metric task', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ASSIGN-METRICS/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ASSIGN-METRICS/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'not-real' }),
+    });
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.equal(body.error.code, 'invalid_agent');
+    assert.equal(body.error.error_id, 'ERR_TASK_ASSIGNMENT_INVALID_AGENT');
+    assert.ok(body.error.requestId);
+
+    response = await fetch(`${baseUrl}/metrics`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['admin'] }),
+    });
+    const metrics = await response.text();
+    assert.match(metrics, /feature_task_assignment_requests_total 2/);
+    assert.match(metrics, /feature_task_assignment_errors_total 1/);
+    assert.match(metrics, /feature_task_assignment_business_metric 1/);
+    assert.match(metrics, /feature_task_assignment_duration_ms_last \d+/);
+  });
+});
+
 test('returns standardized error payload when task detail page feature flag is off', async () => {
   const prior = process.env.FF_TASK_DETAIL_PAGE;
   process.env.FF_TASK_DETAIL_PAGE = '0';

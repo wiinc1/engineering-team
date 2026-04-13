@@ -4,6 +4,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {
+  FALLBACK_REASONS,
+  buildDelegationFallbackMessage,
+  classifyDelegationFailure,
   classifySpecialistRequest,
   createDelegationMetrics,
   createSpecialistCoordinator,
@@ -57,7 +60,7 @@ test('falls back explicitly when delegation fails and records failure metrics', 
     metrics,
     delegateWork: async () => {
       const error = new Error('specialist offline');
-      error.code = 'SPECIALIST_UNAVAILABLE';
+      error.code = 'SPECIALIST_RUNTIME_EXEC_FAILED';
       throw error;
     },
   });
@@ -65,10 +68,12 @@ test('falls back explicitly when delegation fails and records failure metrics', 
   const result = await coordinator.handleRequest('Need architecture review for this design', { coordinatorAgent: 'main' });
 
   assert.equal(result.mode, 'fallback');
-  assert.match(result.message, /specialist `architect` could not be reached/i);
+  assert.equal(result.metadata.fallbackReason, FALLBACK_REASONS.RUNTIME_EXEC_FAILED);
+  assert.match(result.message, /failed during execution/i);
   assert.equal(result.attribution.handledBy, 'main');
   assert.equal(metrics.snapshot().fallbackToCoordinatorCount, 1);
   assert.equal(metrics.snapshot().delegationFailureByAgent.architect, 1);
+  assert.equal(metrics.snapshot().delegationFailureByReason.runtime_exec_failed, 1);
 });
 
 test('records attribution mismatches and falls back truthfully', async () => {
@@ -87,8 +92,25 @@ test('records attribution mismatches and falls back truthfully', async () => {
   const result = await coordinator.handleRequest('Please implement this feature', { coordinatorAgent: 'main' });
 
   assert.equal(result.mode, 'fallback');
+  assert.equal(result.metadata.fallbackReason, FALLBACK_REASONS.ATTRIBUTION_MISMATCH);
+  assert.match(result.message, /could not be verified/i);
   assert.equal(metrics.snapshot().attributionMismatchCount, 1);
   assert.equal(result.attribution.handledBy, 'main');
+});
+
+test('classifyDelegationFailure maps runtime errors to stable fallback reasons', () => {
+  assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_RUNTIME_NOT_CONFIGURED' }), FALLBACK_REASONS.NOT_CONFIGURED);
+  assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_RUNTIME_EXEC_FAILED' }), FALLBACK_REASONS.RUNTIME_EXEC_FAILED);
+  assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_RUNTIME_INVALID_JSON' }), FALLBACK_REASONS.INVALID_JSON);
+  assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_RUNTIME_MISSING_EVIDENCE' }), FALLBACK_REASONS.MISSING_EVIDENCE);
+  assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_ATTRIBUTION_MISMATCH' }), FALLBACK_REASONS.ATTRIBUTION_MISMATCH);
+});
+
+test('buildDelegationFallbackMessage returns safe user-facing copy per failure class', () => {
+  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.NOT_CONFIGURED }), /not configured or not available/i);
+  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.RUNTIME_EXEC_FAILED }), /failed during execution/i);
+  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.INVALID_JSON }), /could not be verified/i);
+  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.UNSUPPORTED_TASK_TYPE }), /does not map to a supported runtime specialist/i);
 });
 
 test('supports feature flag disablement for rollout control', () => {

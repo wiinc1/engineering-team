@@ -45,6 +45,7 @@ test('taskMove falls back truthfully when runtime delegation is not configured',
   });
 
   assert.match(reply, /Runtime delegation not confirmed/);
+  assert.match(reply, /not configured or not available/i);
   assert.doesNotMatch(reply, /owns this run/);
 });
 
@@ -57,4 +58,20 @@ test('taskMove does not claim runtime ownership for unsupported task types', asy
 
   assert.match(reply, /Runtime delegation not confirmed/);
   assert.match(reply, /does not map to a supported runtime specialist/);
+});
+
+test('taskMove reports unverifiable runtime output without leaking raw runtime details', async () => {
+  writeTask('dev');
+  const reply = await taskMove('TSK-998 IN_PROGRESS', { id: 'msg-4', author: { username: 'dora' } }, {
+    delegationRunnerCommand: `node ${runtimeRunnerPath}`,
+    baseDir: repoRoot,
+    runnerEnv: {
+      FIXTURE_RUNTIME_MODE: 'missing-evidence',
+    },
+  });
+
+  assert.match(reply, /Runtime delegation not confirmed/);
+  assert.match(reply, /could not be verified/i);
+  assert.doesNotMatch(reply, /agentId/i);
+  assert.doesNotMatch(reply, /sessionId/i);
 });

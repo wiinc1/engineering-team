@@ -1,0 +1,69 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`task assignment visual baseline > matches the assignment panel snapshot in the ready state 1`] = `
+<section
+  aria-label="Task assignment"
+  class="assignment-panel"
+>
+  <div
+    class="assignment-panel__header"
+  >
+    <div>
+      <p
+        class="eyebrow"
+      >
+        Assignment
+      </p>
+      <h2>
+        Assign AI agent owner
+      </h2>
+      <p
+        class="lede"
+      >
+        Writes to the task assignment endpoint and refreshes the projected owner after success.
+      </p>
+    </div>
+  </div>
+  <form
+    class="assignment-form"
+  >
+    <label>
+      Owner
+      <select>
+        <option
+          value=""
+        >
+          Unassigned
+        </option>
+        <option
+          value="architect"
+        >
+          Architect
+           · Architect
+        </option>
+        <option
+          value="qa"
+        >
+          QA Engineer
+           · QA
+        </option>
+        <option
+          value="engineer"
+        >
+          Engineer
+           · Engineering
+        </option>
+      </select>
+    </label>
+    <div
+      class="assignment-form__actions"
+    >
+      <button
+        type="submit"
+      >
+        Save owner
+      </button>
+    </div>
+  </form>
+</section>
+`;

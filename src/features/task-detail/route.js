@@ -14,7 +14,8 @@ function readTaskDetailRouteState(search = '') {
     filters: {
       eventType: params.get('historyEventType') || undefined,
       actorId: params.get('historyActor') || undefined,
-      range: params.get('historyRange') || undefined,
+      dateFrom: params.get('dateFrom') || undefined,
+      dateTo: params.get('dateTo') || undefined,
     },
   };
 }
