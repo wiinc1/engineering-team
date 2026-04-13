@@ -14,6 +14,13 @@ function sign(payload, secret, header = { alg: 'HS256', typ: 'JWT' }) {
   return `${headerPart}.${bodyPart}.${signature}`;
 }
 
+function signRs256(payload, privateKey, header = { alg: 'RS256', typ: 'JWT', kid: 'kid-1' }) {
+  const headerPart = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const bodyPart = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.sign('RSA-SHA256', Buffer.from(`${headerPart}.${bodyPart}`), privateKey).toString('base64url');
+  return `${headerPart}.${bodyPart}.${signature}`;
+}
+
 async function withServer(run, options = {}) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-security-'));
   const secret = 'security-secret';
@@ -233,4 +240,56 @@ test('browser bootstrap tokens stay usable when the API enforces issuer and audi
     });
     assert.equal(followUp.status, 200);
   }, { jwtIssuer: 'expected-issuer', jwtAudience: 'expected-audience' });
+});
+
+test('accepts production-style JWKS tokens with explicit claim mapping', async () => {
+  const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  await withServer(async ({ baseUrl }) => {
+    const token = signRs256({
+      actor: 'pm-prod',
+      tenant: 'tenant-prod',
+      groups: ['pm', 'reader'],
+      iss: 'https://idp.example.test/',
+      aud: 'engineering-team-api',
+      exp: Math.floor(Date.now() / 1000) + 60,
+    }, privateKey);
+
+    const response = await fetch(`${baseUrl}/tasks`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.items, []);
+  }, {
+    jwtJwks: { keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'kid-1', use: 'sig', alg: 'RS256' }] },
+    jwtIssuer: 'https://idp.example.test/',
+    jwtAudience: 'engineering-team-api',
+    actorClaim: 'actor',
+    tenantClaim: 'tenant',
+    rolesClaim: 'groups',
+  });
+});
+
+test('keeps browser bootstrap compatibility tokens usable during JWKS rollout when a signing secret is still configured', async () => {
+  const { publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret),
+      }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+
+    const followUp = await fetch(`${baseUrl}/tasks`, {
+      headers: { authorization: `Bearer ${payload.data.accessToken}` },
+    });
+    assert.equal(followUp.status, 200);
+  }, {
+    jwtJwks: { keys: [{ ...publicKey.export({ format: 'jwk' }), kid: 'kid-1', use: 'sig', alg: 'RS256' }] },
+    jwtIssuer: 'expected-issuer',
+    jwtAudience: 'expected-audience',
+  });
 });
