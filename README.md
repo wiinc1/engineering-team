@@ -104,6 +104,7 @@ Point the browser app at the API:
 - This repo can now run on a single Vercel project with the SPA plus serverless API routes.
 - The Vercel API adapter lives under `api/` and wraps `lib/audit/http.js`.
 - Vercel also includes an explicit `api/v1/[...route].js` entry so `/api/v1/*` versioned task-platform routes resolve consistently in production.
+- Vercel additionally exposes explicit `api/v1/tasks.js`, `api/v1/tasks/[...route].js`, and `api/v1/ai-agents.js` handlers so the versioned task-platform routes do not depend on nested catch-all matching quirks.
 - To avoid route collisions between SPA paths like `/tasks/...` and API paths like `/tasks/...`, set `VITE_TASK_API_BASE_URL=/backend` in Vercel.
 - `vercel.json` rewrites `/backend/*` to the Vercel API functions and falls back non-API browser routes to `index.html`.
 - Required backend env vars in Vercel: `DATABASE_URL`, `AUTH_JWT_SECRET`, and any optional issuer/audience or browser-auth-code settings your environment enforces.
