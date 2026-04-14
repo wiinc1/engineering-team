@@ -1,6 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const includeWebkit = process.env.PLAYWRIGHT_INCLUDE_WEBKIT === '1';
+const normalizedEnv = { ...process.env };
+
+if (normalizedEnv.NO_COLOR) {
+  delete normalizedEnv.NO_COLOR;
+  delete process.env.NO_COLOR;
+}
+
+// Keep the parent Playwright process and its child workers on the same env.
+Object.assign(process.env, normalizedEnv);
 
 export default defineConfig({
   testDir: './tests/browser',
@@ -13,7 +22,8 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4174',
+    command: 'env -u FORCE_COLOR npm run dev -- --host 127.0.0.1 --port 4174',
+    env: normalizedEnv,
     url: 'http://127.0.0.1:4174',
     reuseExistingServer: true,
     timeout: 30_000,

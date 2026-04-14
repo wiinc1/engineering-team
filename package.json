@@ -30,7 +30,7 @@
     "test:ui:vitest": "vitest run src/app/*.test.tsx tests/unit/board-owner-card-rendering.test.js tests/unit/role-inbox-routing.test.js tests/unit/pm-overview-routing.test.js tests/integration/board-owner-filtering.integration.test.js tests/accessibility/task-assignment.a11y.spec.ts tests/visual/task-assignment.visual.spec.ts tests/performance/lighthouse-task-detail.spec.ts",
     "test:ui:coverage": "vitest run --coverage src/app/*.test.tsx tests/unit/board-owner-card-rendering.test.js tests/unit/role-inbox-routing.test.js tests/unit/pm-overview-routing.test.js tests/integration/board-owner-filtering.integration.test.js",
     "test:ui": "npm run test:ui:vitest && npm run test:integration:role-inbox && npm run test:integration:pm-overview",
-    "test:browser": "playwright test",
+    "test:browser": "node scripts/run-playwright.js",
     "test:integration:docker": "bash scripts/run-postgres-integration-docker.sh",
     "audit:rebuild": "node scripts/rebuild-audit-projections.js",
     "audit:project": "node scripts/process-audit-projection-queue.js",
