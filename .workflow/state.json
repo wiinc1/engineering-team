@@ -1,0 +1,44 @@
+{
+  "storyId": "SF-010",
+  "issueNumber": 15,
+  "branch": "feature/SF-010-reassignment-ghosting-workflow",
+  "status": {
+    "phase0": "completed",
+    "design": "completed",
+    "implementation": "completed",
+    "testing": "completed",
+    "security": "completed",
+    "customerReview": "completed",
+    "closeout": "blocked"
+  },
+  "artifacts": {
+    "implementation": {
+      "files": [
+        "lib/audit/http.js",
+        "lib/audit/core.js",
+        "lib/audit/event-types.js",
+        "lib/audit/feature-flags.js",
+        "lib/audit/store.js",
+        "lib/audit/postgres.js",
+        "src/app/task-owner.mjs",
+        "src/features/task-detail/adapter.js",
+        "src/features/task-detail/adapter.browser.js",
+        "src/app/App.jsx",
+        "tests/unit/audit-api.test.js",
+        "tests/unit/task-detail-adapter.test.js",
+        "tests/unit/role-inbox-routing.test.js"
+      ]
+    },
+    "design": "docs/design/SF-010-design.md",
+    "verification": "docs/reports/SF-010-verification.md",
+    "testReport": "docs/reports/test_report_SF-010.md",
+    "securityAudit": "docs/reports/security_audit_SF-010.md",
+    "customerReview": "docs/reports/customer_review_SF-010.md",
+    "closeoutReview": "docs/reports/SF-010-review.md",
+    "fullSuiteReport": "docs/test-reports/test-suite-report-SF-010.md"
+  },
+  "notes": [
+    "Requested workflow scripts were absent from the repository and were executed manually where possible.",
+    "Status-column movement, scripted closeout validation, preview DB reset, finish-task automation, and deployment verification scripts are not present in this checkout."
+  ]
+}

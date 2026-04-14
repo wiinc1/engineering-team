@@ -1265,6 +1265,183 @@ test('enforces task locking, allows expiry/release recovery, and exempts archite
   });
 });
 
+test('supports Jr above-skill escalation before implementation starts and lets architects re-tier the task', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-retier', roles: ['engineer', 'contributor'] }),
+    };
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-retier', roles: ['architect', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-RETIER-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-RETIER-1',
+        payload: {
+          title: 'Re-tier candidate',
+          initial_stage: 'TECHNICAL_SPEC',
+          business_context: 'Cross-service change.',
+          acceptance_criteria: ['Tiering is explicit.'],
+          definition_of_done: ['Architect updates the tier.'],
+          priority: 'P1',
+          task_type: 'feature',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RETIER-1/skill-escalation`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ reason: 'This touches multiple services and rollout sequencing.' }),
+    });
+    assert.equal(response.status, 202);
+    const escalation = await response.json();
+    assert.equal(escalation.data.currentEngineerTier, 'Jr');
+    assert.equal(escalation.data.requestedTier, 'Sr');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RETIER-1/retier`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        engineerTier: 'Sr',
+        tierRationale: 'Needs a senior engineer because the change spans service boundaries.',
+        reason: 'accepted_above_skill_escalation',
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-RETIER-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-retier', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.skillEscalation.currentEngineerTier, 'Jr');
+    assert.equal(detail.context.retiering.engineerTier, 'Sr');
+    assert.match(detail.context.retiering.tierRationale, /senior engineer/i);
+  });
+});
+
+test('reassigns inactive work after two missed check-ins, re-tiers it, and creates a ghosting review task with transferred context', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-ghost', roles: ['engineer', 'contributor'] }),
+    };
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-user', tenant_id: 'tenant-ghost', roles: ['architect', 'contributor'] }),
+    };
+    const staleCheckInAt = new Date(Date.now() - (31 * 60 * 1000)).toISOString();
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-GHOST-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-GHOST-1',
+        payload: {
+          title: 'Inactive implementation',
+          initial_stage: 'TECHNICAL_SPEC',
+          business_context: 'Critical delivery task.',
+          acceptance_criteria: ['Reassignment is auditable.'],
+          definition_of_done: ['Transfer summary is preserved.'],
+          priority: 'P1',
+          task_type: 'feature',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-GHOST-1/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-user', tenant_id: 'tenant-ghost', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'engineer' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-GHOST-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        eventType: 'task.architect_handoff_recorded',
+        actorType: 'user',
+        idempotencyKey: 'handoff:TSK-GHOST-1',
+        payload: {
+          ready_for_engineering: true,
+          version: 1,
+          engineer_tier: 'Jr',
+          tier_rationale: 'Initial sizing assumed Jr ownership.',
+          technical_spec: { summary: 'Implement the workflow', scope: 'Single task', design: 'API only', rolloutPlan: 'Direct deploy' },
+          monitoring_spec: { service: 'audit-api', dashboardUrls: [], alertPolicies: [], runbook: 'docs/runbooks/audit-foundation.md', successMetrics: [] },
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-GHOST-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.check_in_recorded',
+        actorType: 'user',
+        idempotencyKey: 'checkin:TSK-GHOST-1',
+        occurredAt: staleCheckInAt,
+        payload: {
+          summary: 'Started tracing the inactive branch.',
+          evidence: ['draft notes'],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-GHOST-1/reassignment`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        mode: 'inactivity',
+        reason: 'Two check-in windows were missed without new delivery signals.',
+      }),
+    });
+    assert.equal(response.status, 202);
+    const reassignment = await response.json();
+    assert.equal(reassignment.data.previousEngineerTier, 'Jr');
+    assert.equal(reassignment.data.engineerTier, 'Sr');
+    assert.equal(reassignment.data.missedCheckIns, 2);
+    assert.match(reassignment.data.ghostingReview.reviewTaskId, /^GHOST-/);
+    assert.equal(reassignment.data.transferSummary.prior_assignee, 'engineer');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-GHOST-1/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-ghost', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.activityMonitoring.thresholdReached, true);
+    assert.equal(detail.context.reassignment.mode, 'inactivity');
+    assert.equal(detail.context.reassignment.engineerTier, 'Sr');
+    assert.equal(detail.context.ghostingReview.reviewTaskId, reassignment.data.ghostingReview.reviewTaskId);
+    assert.equal(detail.context.transferredContext.prior_assignee, 'engineer');
+    assert.match(detail.context.transferredContext.reason, /missed/i);
+
+    response = await fetch(`${baseUrl}/tasks/${reassignment.data.ghostingReview.reviewTaskId}`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-ghost', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const reviewTask = await response.json();
+    assert.match(reviewTask.title, /Inactivity review/);
+  });
+});
+
 test('records structured workflow threads with type, blocking state, resolution, and workflow-event linkage', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const contributorHeaders = {
