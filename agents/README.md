@@ -77,3 +77,10 @@
 | `qa` | Quality Assurance | No |
 | `research` | Research / Spike | No |
 | `design` | Design / Architecture | No |
+
+## Standards Enforcement
+
+- All agents must use `docs/standards/software-development-standards.md` as the canonical standards baseline.
+- Every task file must include `## Standards Alignment` and `## Required Evidence`.
+- Gap statements must use: `Gap observed: X. Documented rationale: Y (source Z).`
+- PRs and implementation notes should point back to `docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md`.

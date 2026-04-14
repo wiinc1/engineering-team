@@ -65,3 +65,16 @@ The architecture and runtime implementation are present. The remaining steps are
 - run `npm run task-platform:backfill` against the target environment
 - switch read surfaces from projection-first to canonical-first when rollout policy allows
 - observe drift and retire compatibility-only sync paths after the cutover window
+
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, deployment and release, testing and quality assurance, observability and monitoring
+- Evidence in this report: additive schema, versioned API contracts, automated verification commands, and phased rollout notes
+- Gap observed: target-environment migration execution and drift observation are still pending outside this repo report. Documented rationale: small, reversible rollout steps reduce operational risk and observability should support confidence during cutover (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: `node --test tests/unit/task-platform-api.test.js tests/unit/task-platform-backfill.test.js`, `node --test tests/e2e/task-assignment.test.js tests/integration/task-assignment-integration.test.js`, `npm test`, `npm run lint`, `npm run typecheck`, `git diff --check`
+- Tests added or updated: task-platform unit, integration, end-to-end, and full-suite regression coverage
+- Rollout or rollback notes: additive canonical platform with compatibility sync and backfill path before cutover
+- Docs updated: task-platform report, linked runbook, API contract, schema diagram, and ADR

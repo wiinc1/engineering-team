@@ -1,5 +1,16 @@
 # engineering-team
 
+## Standards Governance
+
+This repo now includes a standards enforcement baseline for task planning and change review:
+- canonical standards reference: `docs/standards/software-development-standards.md`
+- reusable review template: `docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md`
+- PR gate: `.github/PULL_REQUEST_TEMPLATE.md`
+- CI presence check: `npm run standards:check`
+- branch protection policy: `.github/BRANCH_PROTECTION.md`
+
+Every task file under `tasks/` is expected to carry `## Standards Alignment` and `## Required Evidence` so the repo has a durable record of which standards applied, what evidence was produced, and which gaps remain.
+
 ## Audit foundation slice
 
 This repo now includes a materially more production-shaped `SF-017` slice:

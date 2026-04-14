@@ -43,6 +43,8 @@ function browserAuthCode(secret, payload = {}, options = {}) {
   }, secret, options);
 }
 
+// Governance note: audit-facing route changes should keep contract coverage updated in the same change set.
+
 test('openapi contract documents the live audit routes and auth model', () => {
   const spec = fs.readFileSync(path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'), 'utf8');
   const ownerReadSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-owner-surfaces-openapi.yml'), 'utf8');

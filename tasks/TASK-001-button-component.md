@@ -76,6 +76,12 @@ interface ButtonProps {
 - Component must be accessible (keyboard nav, ARIA labels where needed)
 - No hardcoded colors — use CSS variables or theme tokens
 
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, coding and code quality, testing and quality assurance
+- Evidence expected for this change: ADR, reusable component contract, accessibility validation, and automated test coverage
+- Gap observed: the task is still in progress and does not yet include committed automated evidence for the required quality gates. Documented rationale: change must be verifiable quickly and readability plus modularity are non-negotiable (source https://sre.google/books/).
+
 ## Git Workflow
 
 ```
@@ -85,3 +91,10 @@ Step 3: Jr. Engineer adds tests on branch jr/button-component-tests
 Step 4: Principal reviews all PRs
 Step 5: Human approves final merge
 ```
+
+## Required Evidence
+
+- Commands run: component tests, lint, and typecheck once implementation exists
+- Tests added or updated: unit, visual, and accessibility coverage for the button component
+- Rollout or rollback notes: additive UI-library component with no production migration
+- Docs updated: ADR and component usage documentation

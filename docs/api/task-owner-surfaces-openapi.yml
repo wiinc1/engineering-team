@@ -6,6 +6,7 @@ info:
     Additive read-contract documentation for the owner visibility surfaces delivered by TSK-003.
     This spec is intentionally narrow: it documents the existing task detail and task list read surfaces
     that now expose projected owner metadata to authenticated readers.
+    Governance note: owner-surface changes should update this spec in the same pull request.
 servers:
   - url: https://engineering-team.example.com
 components:

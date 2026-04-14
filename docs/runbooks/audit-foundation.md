@@ -69,6 +69,10 @@ Every response also includes `x-request-id`. Error logs in `observability/workfl
 
 Successful read/write access is now logged with `action=audit_access` so tenant-scoped history/state/metrics reads are auditable.
 
+Audit HTTP maintenance note:
+- When `lib/audit/http.js` changes, update the nearest API or runbook artifact in the same PR.
+- Current nearest artifacts for HTTP-surface changes are this runbook plus the matching `docs/api/*.yml` contract for the affected route family.
+
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
 - File-backed projections are keyed by `tenant_id::task_id`, not bare `task_id`, so same task ids in different tenants do not overwrite each other.

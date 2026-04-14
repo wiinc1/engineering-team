@@ -7,11 +7,35 @@ on:
   pull_request:
 
 jobs:
+  pull-request-metadata:
+    name: Pull request metadata
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify pull request body
+        run: npm run pr:check
+
+      - name: Verify change completeness
+        run: npm run change:check
+
+      - name: Lint ownership map
+        run: npm run ownership:lint
+
   repo-validation:
     name: Repo validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -20,6 +44,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify standards governance artifacts
+        run: |
+          npm run standards:check
+          npm run ownership:lint
 
       - name: Run unit, contract, integration, e2e, property, performance, security, and chaos suites
         run: |
@@ -31,6 +60,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:

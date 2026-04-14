@@ -70,6 +70,8 @@ function installBoardFetchMock() {
   vi.stubGlobal('fetch', fetchMock);
 }
 
+// Governance note: owner-surface changes should keep at least one integration or end-to-end path updated in the same change set.
+
 describe('board owner filtering integration', () => {
   beforeEach(() => {
     clearBrowserSessionConfig();

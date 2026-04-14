@@ -1,0 +1,454 @@
+{
+  "classification": {
+    "runtime_roots": [
+      "lib",
+      "src",
+      "api",
+      "db/migrations",
+      "scripts"
+    ],
+    "test_patterns": [
+      "^tests/",
+      "\\.test\\.[^.]+$",
+      "\\.spec\\.[^.]+$"
+    ],
+    "doc_patterns": [
+      "^tasks/.+\\.md$",
+      "^docs/(adr|reports|api|runbooks|design|diagrams|user-stories)/.+",
+      "^README\\.md$",
+      "^agents/README\\.md$"
+    ],
+    "non_runtime_patterns": [
+      "^\\.github/",
+      "^docs/",
+      "^tasks/",
+      "^README\\.md$",
+      "^agents/README\\.md$",
+      "\\.stories\\.[^.]+$",
+      "^scripts/run-playwright\\.js$",
+      "^scripts/verify-(standards|pr-body|change-completeness|governance-drift|lint-change-ownership-map)\\.js$"
+    ]
+  },
+  "domains": [
+    {
+      "name": "audit-api",
+      "runtime_patterns": [
+        "^lib/audit/http\\.js$",
+        "^api/",
+        "^lib/auth/jwt\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/audit-api\\.test\\.js$",
+            "^tests/unit/audit-jwt-auth\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "contract",
+          "patterns": [
+            "^tests/contract/audit-openapi\\.contract\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "security",
+          "patterns": [
+            "^tests/security/audit-api\\.security\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/audit-foundation-openapi\\.yml$",
+            "^docs/api/authenticated-browser-app-openapi\\.yml$",
+            "^docs/api/task-assignment-openapi\\.yml$",
+            "^docs/api/task-detail-history-telemetry-openapi\\.yml$",
+            "^docs/api/task-owner-surfaces-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook",
+          "patterns": [
+            "^docs/runbooks/audit-foundation\\.md$",
+            "^docs/runbooks/production-identity-provider\\.md$",
+            "^docs/runbooks/task-assignment\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "audit-foundation",
+      "runtime_patterns": [
+        "^lib/audit/(?!http\\.js$).+",
+        "^lib/http/standard\\.js$",
+        "^lib/monitoring/pushgateway\\.js$",
+        "^db/migrations/00[1-5]_.*\\.sql$",
+        "^db/migrations/007_.*\\.sql$",
+        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker)\\..+$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/audit-.*\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "integration",
+          "patterns": [
+            "^tests/integration/audit-postgres-e2e\\.test\\.js$",
+            "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "security-or-performance",
+          "patterns": [
+            "^tests/security/audit-api\\.security\\.test\\.js$",
+            "^tests/performance/audit-foundation\\.performance\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/audit-foundation-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook",
+          "patterns": [
+            "^docs/runbooks/audit-foundation\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "browser-shell",
+      "runtime_patterns": [
+        "^src/app/App\\.jsx$",
+        "^src/app/main\\.jsx$",
+        "^src/app/styles\\.css$",
+        "^src/app/session(\\.browser)?\\.js$",
+        "^scripts/serve-browser-dist\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit-ui",
+          "patterns": [
+            "^src/app/App\\.test\\.tsx$",
+            "^src/app/AuthAppShell\\.test\\.tsx$",
+            "^tests/unit/task-browser-session\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "browser",
+          "patterns": [
+            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "design",
+          "patterns": [
+            "^docs/design/US-002-design\\.md$"
+          ]
+        },
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/authenticated-browser-app-openapi\\.yml$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task-detail-ui",
+      "runtime_patterns": [
+        "^src/features/task-detail/",
+        "^src/app/App\\.jsx$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit-ui",
+          "patterns": [
+            "^src/app/App\\.test\\.tsx$",
+            "^tests/unit/task-detail-.+\\.test\\.js$",
+            "^tests/unit/task-detail-route\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "browser",
+          "patterns": [
+            "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook-or-report",
+          "patterns": [
+            "^docs/runbooks/audit-foundation\\.md$",
+            "^docs/reports/ISSUE_7_COMPLETION_AUDIT\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "owner-surfaces",
+      "runtime_patterns": [
+        "^src/app/task-owner\\.mjs$",
+        "^src/app/work-lifecycle\\.mjs$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/role-inbox-routing\\.test\\.js$",
+            "^tests/unit/pm-overview-routing\\.test\\.js$",
+            "^tests/unit/board-owner-card-rendering\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "integration-or-e2e",
+          "patterns": [
+            "^tests/e2e/role-inbox-routing\\.e2e\\.test\\.js$",
+            "^tests/e2e/pm-overview-routing\\.e2e\\.test\\.js$",
+            "^tests/integration/board-owner-filtering\\.integration\\.test\\.js$",
+            "^tests/integration/pm-overview-filtering\\.integration\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/task-owner-surfaces-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook-or-report",
+          "patterns": [
+            "^docs/runbooks/workflow-delivery-loop\\.md$",
+            "^docs/reports/STATUS_2026-04-13_ISSUE_AUDIT\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task-assignment",
+      "runtime_patterns": [
+        "^src/app/App\\.jsx$",
+        "^lib/audit/http\\.js$",
+        "^scripts/check-task-assignment-smoke\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit-or-integration",
+          "patterns": [
+            "^tests/unit/task-assignment\\.test\\.js$",
+            "^tests/unit/audit-api\\.test\\.js$",
+            "^tests/integration/task-assignment-integration\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "e2e-or-browser",
+          "patterns": [
+            "^tests/e2e/task-assignment(\\.spec)?\\.ts$",
+            "^tests/e2e/task-assignment\\.test\\.js$",
+            "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
+          ]
+        },
+        {
+          "name": "security-or-accessibility-or-visual",
+          "patterns": [
+            "^tests/security/task-assignment-security\\.test\\.js$",
+            "^tests/accessibility/task-assignment\\.a11y\\.spec\\.ts$",
+            "^tests/visual/task-assignment\\.visual\\.spec\\.ts$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/task-assignment-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook",
+          "patterns": [
+            "^docs/runbooks/task-assignment\\.md$",
+            "^docs/runbooks/task-assignment-emergency\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task-platform",
+      "runtime_patterns": [
+        "^lib/task-platform/",
+        "^db/migrations/006_canonical_task_persistence\\.sql$",
+        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout)\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/task-platform-api\\.test\\.js$",
+            "^tests/unit/task-platform-backfill\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "integration",
+          "patterns": [
+            "^tests/integration/task-assignment-integration\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/task-platform-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook-or-adr",
+          "patterns": [
+            "^docs/runbooks/task-platform-rollout\\.md$",
+            "^docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "specialist-delegation",
+      "runtime_patterns": [
+        "^lib/software-factory/.*delegation.*\\.js$",
+        "^lib/software-factory/task-dispatch\\.js$",
+        "^scripts/validate-specialist-runtime\\.js$",
+        "^scripts/command-router\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/specialist-delegation\\.test\\.js$",
+            "^tests/unit/command-router-delegation\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "contract-or-e2e",
+          "patterns": [
+            "^tests/contract/specialist-delegation\\.contract\\.test\\.js$",
+            "^tests/e2e/specialist-delegation\\.e2e\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "security-or-performance",
+          "patterns": [
+            "^tests/security/specialist-delegation\\.security\\.test\\.js$",
+            "^tests/performance/specialist-delegation\\.performance\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "runbook",
+          "patterns": [
+            "^docs/runbooks/specialist-delegation\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task-creation",
+      "runtime_patterns": [
+        "^src/features/task-creation/",
+        "^src/global\\.d\\.ts$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/task-creation-form\\.test\\.tsx$",
+            "^tests/unit/task-creation-adapter\\.test\\.js$",
+            "^tests/unit/task-id-generator\\.test\\.js$",
+            "^tests/unit/task-schema\\.test\\.js$",
+            "^tests/unit/features/task-creation/.+\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "story",
+          "patterns": [
+            "^docs/user-stories/US-001-kanban-board-ui\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "button-component",
+      "runtime_patterns": [
+        "^src/components/Button/",
+        "^src/components/Button/Button\\.module\\.css$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^src/components/Button/Button\\.test\\.tsx$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "adr-or-task",
+          "patterns": [
+            "^docs/adr/ADD-2026-03-30-button-component\\.md$",
+            "^tasks/TASK-001-button-component\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "repo-governance",
+      "runtime_patterns": [
+        "^scripts/lint-repo\\.js$",
+        "^scripts/governance-lib\\.js$",
+        "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
+        "^scripts/verify-(standards|pr-body|change-completeness)\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "governance-unit",
+          "patterns": [
+            "^tests/unit/governance/.+\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "standards",
+          "patterns": [
+            "^docs/standards/software-development-standards\\.md$",
+            "^docs/standards/change-governance-maintenance\\.md$",
+            "^docs/standards/ai-implementation-playbook\\.md$"
+          ]
+        }
+      ]
+    }
+  ]
+}

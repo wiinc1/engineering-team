@@ -48,6 +48,8 @@ function githubSignature(secret, body) {
   return `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
 }
 
+// Governance note: audit-facing route changes should keep security coverage updated in the same change set.
+
 test('rejects tampered, expired, and issuer-mismatched bearer tokens', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const expired = sign({ sub: 'sec', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) - 10 }, secret);

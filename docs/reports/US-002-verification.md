@@ -17,3 +17,16 @@
 
 ## Full Suite Report
 - Auth-shell coverage is part of the normal repo validation flow rather than a separate generated test-report artifact.
+
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance, observability and monitoring, team and process
+- Evidence in this report: end-to-end, regression, and security verification summary for the auth-shell flow
+- Gap observed: this verification summary does not include deployed-environment telemetry or post-release SLO evidence. Documented rationale: automated verification catches defects early, while user-impact reliability needs direct measurement in operation (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: verification commands listed in the report sections
+- Tests added or updated: browser, unit, UI, and security coverage referenced in the report
+- Rollout or rollback notes: verification-only artifact with no runtime rollout
+- Docs updated: US-002 verification report

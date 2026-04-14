@@ -30,6 +30,12 @@ Expand browser verification beyond the current lightweight Chromium-only checks 
 - [x] Smoke/synthetic checks passed
 - [x] No regressions in downstream services
 
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance, observability and monitoring, deployment and release
+- Evidence expected for this change: broader browser automation, responsive verification, and documented remaining risk
+- Gap observed: WebKit remains opt-in and full visual regression is not the default path. Documented rationale: defects are cheapest to catch early and resilience should be demonstrated through automated verification under realistic conditions (source https://netflixtechblog.com/tagged/chaos-engineering).
+
 ## 🔄 Status History
 
 | Date | From | To | Actor | Note |
@@ -48,3 +54,10 @@ Expand browser verification beyond the current lightweight Chromium-only checks 
 ## 💬 Notes
 
 README previously called out three relevant gaps: Chromium-only execution, no cross-browser visual regression, and no Lighthouse/Core Web Vitals run. This pass closed the Chromium-only gap by adding Firefox to the default Playwright matrix, kept WebKit as an opt-in path, and left full visual-regression and Lighthouse work as explicit follow-up space. SRE verification for this repo-local slice is based on the absence of failures in the full automated suite and the lack of runtime errors in local browser execution; there is no production telemetry stream tied to this change set.
+
+## Required Evidence
+
+- Commands run: full project automated suite plus browser matrix execution
+- Tests added or updated: Playwright browser coverage and responsive verification paths
+- Rollout or rollback notes: additive test-only change with no runtime rollout
+- Docs updated: README browser validation matrix and remaining gap notes
