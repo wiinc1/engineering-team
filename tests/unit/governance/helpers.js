@@ -19,7 +19,12 @@ function writeFile(root, relativePath, content) {
 function runScript(scriptName, cwd, env = {}) {
   return spawnSync('node', [path.join(SCRIPTS_DIR, scriptName)], {
     cwd,
-    env: { ...process.env, ...env },
+    env: {
+      ...process.env,
+      GITHUB_EVENT_NAME: '',
+      GITHUB_EVENT_PATH: '',
+      ...env,
+    },
     encoding: 'utf8',
   });
 }
@@ -27,7 +32,12 @@ function runScript(scriptName, cwd, env = {}) {
 function runScriptWithArgs(scriptName, args, cwd, env = {}) {
   return spawnSync('node', [path.join(SCRIPTS_DIR, scriptName), ...args], {
     cwd,
-    env: { ...process.env, ...env },
+    env: {
+      ...process.env,
+      GITHUB_EVENT_NAME: '',
+      GITHUB_EVENT_PATH: '',
+      ...env,
+    },
     encoding: 'utf8',
   });
 }
