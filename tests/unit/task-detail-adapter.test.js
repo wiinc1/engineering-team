@@ -255,6 +255,30 @@ test('task detail client submits engineer metadata to the dedicated endpoint', a
   assert.equal(calls[0].init.method, 'PUT');
 });
 
+test('task detail client submits reassignment workflow actions to dedicated endpoints', async () => {
+  const calls = [];
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, json: async () => ({ success: true }) };
+    },
+  });
+
+  await client.requestSkillEscalation('TSK-90', { reason: 'Needs higher-tier support.' });
+  await client.recordEngineerCheckIn('TSK-90', { summary: 'Progress update', evidence: ['note-1'] });
+  await client.retierTask('TSK-90', { engineerTier: 'Sr', tierRationale: 'Cross-service change.' });
+  await client.reassignTask('TSK-90', { mode: 'inactivity', reason: 'Missed two check-ins.' });
+
+  assert.deepEqual(calls.map((entry) => entry.url), [
+    'http://audit.local/tasks/TSK-90/skill-escalation',
+    'http://audit.local/tasks/TSK-90/check-ins',
+    'http://audit.local/tasks/TSK-90/retier',
+    'http://audit.local/tasks/TSK-90/reassignment',
+  ]);
+  assert.ok(calls.every((entry) => entry.init.method === 'POST'));
+});
+
 test('deriveTelemetryFreshness promotes fresh and stale signals from freshness metadata', () => {
   assert.deepEqual(
     deriveTelemetryFreshness({ freshness: { status: 'fresh', last_updated_at: '2026-04-01T12:00:00.000Z' } }),

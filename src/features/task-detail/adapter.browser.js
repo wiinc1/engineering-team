@@ -263,6 +263,34 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
         body: JSON.stringify(payload),
       });
     },
+    requestSkillEscalation(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/skill-escalation`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    recordEngineerCheckIn(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/check-ins`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    retierTask(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/retier`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    reassignTask(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/reassignment`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
     fetchTaskLock(taskId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/lock`);
     },

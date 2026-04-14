@@ -28,6 +28,10 @@ const PM_BUCKET_LABELS = {
 
 const PM_OVERVIEW_ROLE_BUCKETS = new Set(['architect', 'engineer', 'qa', 'sre']);
 
+function isGovernanceReviewTask(item) {
+  return String(item?.task_type || '').trim().toLowerCase() === 'governance_review';
+}
+
 export function mapAgentOptions(items = []) {
   return items.map((agent) => ({
     id: agent.id,
@@ -75,6 +79,15 @@ export function resolveOwnerPresentation(item, agentLookup) {
 }
 
 export function resolveRoleInboxMembership(item, agentLookup) {
+  if (isGovernanceReviewTask(item)) {
+    return {
+      inboxRole: null,
+      reason: 'governance-review',
+      routingLabel: 'Operational governance work is intentionally excluded from the delivery inbox surfaces.',
+      isFallback: false,
+    };
+  }
+
   const waitingState = String(item?.waiting_state || '').trim().toLowerCase();
   const nextRequiredAction = String(item?.next_required_action || '').trim().toLowerCase();
 
@@ -83,6 +96,15 @@ export function resolveRoleInboxMembership(item, agentLookup) {
       inboxRole: 'pm',
       reason: 'waiting-pm',
       routingLabel: 'Routed to PM because the task is explicitly waiting on PM action.',
+      isFallback: false,
+    };
+  }
+
+  if (waitingState.includes('architect') || nextRequiredAction.includes('architect')) {
+    return {
+      inboxRole: 'architect',
+      reason: 'waiting-architect',
+      routingLabel: 'Routed to Architect because the task is explicitly waiting on architectural review or a tiering decision.',
       isFallback: false,
     };
   }
@@ -197,7 +219,7 @@ export function resolvePmOverviewBucket(item, agentLookup) {
 export function buildPmOverviewSections(items, agentLookup) {
   const grouped = new Map(PM_OVERVIEW_BUCKET_ORDER.map((bucket) => [bucket, []]));
 
-  items.forEach((item) => {
+  items.filter((item) => !isGovernanceReviewTask(item)).forEach((item) => {
     const bucket = resolvePmOverviewBucket(item, agentLookup);
     grouped.get(bucket.key).push({
       ...item,
@@ -221,7 +243,7 @@ export function summarizePmOverviewResults(sections, activeBucket) {
 
 export function filterTasksForRoleInbox(items, roleKey, agentLookup) {
   const normalizedRole = normalizeRoleKey(roleKey);
-  return items.filter((item) => resolveRoleInboxMembership(item, agentLookup).inboxRole === normalizedRole);
+  return items.filter((item) => !isGovernanceReviewTask(item) && resolveRoleInboxMembership(item, agentLookup).inboxRole === normalizedRole);
 }
 
 export function summarizeRoleInboxResults(count, roleKey) {
@@ -235,6 +257,7 @@ export function filterTaskList(items, filtersOrOwner) {
     : { owner: '', priority: '', status: '', searchTerm: '', ...(filtersOrOwner || {}) };
 
   return items.filter((item) => {
+    if (isGovernanceReviewTask(item)) return false;
     if (filters.owner) {
       if (filters.owner === UNASSIGNED_FILTER_VALUE && item.current_owner) return false;
       if (filters.owner !== UNASSIGNED_FILTER_VALUE && item.current_owner !== filters.owner) return false;
@@ -264,10 +287,11 @@ export function compareStageName(a, b) {
 
 export function buildBoardColumns(allItems, visibleItems, agentLookup) {
   const visibleById = new Set(visibleItems.map((item) => item.task_id));
-  const stages = buildBoardStageOrder(allItems.length ? allItems : visibleItems);
+  const deliveryItems = (allItems.length ? allItems : visibleItems).filter((item) => !isGovernanceReviewTask(item));
+  const stages = buildBoardStageOrder(deliveryItems.length ? deliveryItems : visibleItems);
   return stages.map((stage) => ({
     stage,
-    items: allItems
+    items: deliveryItems
       .filter((item) => (item.current_stage || 'Unspecified') === stage && visibleById.has(item.task_id))
       .map((item) => ({ ...item, ownerPresentation: resolveOwnerPresentation(item, agentLookup) })),
   }));

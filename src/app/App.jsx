@@ -368,6 +368,36 @@ function normalizeEngineerSubmissionDraft(submission = {}) {
   };
 }
 
+function normalizeSkillEscalationDraft(escalation = {}) {
+  return {
+    reason: escalation.reason || '',
+  };
+}
+
+function normalizeCheckInDraft(activity = {}) {
+  return {
+    summary: activity.lastActivity?.summary || '',
+    evidence: Array.isArray(activity.lastActivity?.evidence) ? activity.lastActivity.evidence.join('\n') : '',
+  };
+}
+
+function normalizeRetierDraft(context = {}) {
+  return {
+    engineerTier: context.retiering?.engineerTier || context.architectHandoff?.engineerTier || 'Sr',
+    tierRationale: context.retiering?.tierRationale || '',
+    reason: context.retiering?.reason || '',
+  };
+}
+
+function normalizeReassignmentDraft(context = {}) {
+  return {
+    mode: context.reassignment?.mode || 'inactivity',
+    reason: context.reassignment?.reason || '',
+    assignee: context.reassignment?.assignee || '',
+    engineerTier: context.reassignment?.engineerTier || context.retiering?.engineerTier || context.architectHandoff?.engineerTier || '',
+  };
+}
+
 function validateEngineerSubmissionDraft(draft = {}) {
   const commitSha = String(draft.commitSha || '').trim();
   const prUrl = String(draft.prUrl || '').trim();
@@ -490,6 +520,14 @@ function canManageEngineerSubmission(tokenClaims) {
   return hasAnyRole(tokenClaims, ['engineer', 'admin']);
 }
 
+function canRequestSkillEscalation(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['engineer', 'admin']);
+}
+
+function canManageReassignmentGhosting(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['architect', 'admin']);
+}
+
 function canAnswerReviewQuestion(tokenClaims) {
   return hasAnyRole(tokenClaims, ['pm', 'admin']);
 }
@@ -500,6 +538,12 @@ function canResolveReviewQuestion(tokenClaims) {
 
 function canReopenReviewQuestion(tokenClaims) {
   return hasAnyRole(tokenClaims, ['architect', 'pm', 'admin']);
+}
+
+function getEffectiveEngineerTierFromDetail(detail) {
+  return detail?.context?.retiering?.engineerTier
+    || detail?.context?.architectHandoff?.engineerTier
+    || null;
 }
 
 function formatReviewQuestionActionLabel(eventType) {
@@ -568,6 +612,14 @@ export function App() {
   const [architectHandoffStatus, setArchitectHandoffStatus] = React.useState({ kind: 'idle', message: '' });
   const [engineerSubmissionDraft, setEngineerSubmissionDraft] = React.useState(() => normalizeEngineerSubmissionDraft());
   const [engineerSubmissionStatus, setEngineerSubmissionStatus] = React.useState({ kind: 'idle', message: '' });
+  const [skillEscalationDraft, setSkillEscalationDraft] = React.useState(() => normalizeSkillEscalationDraft());
+  const [skillEscalationStatus, setSkillEscalationStatus] = React.useState({ kind: 'idle', message: '' });
+  const [checkInDraft, setCheckInDraft] = React.useState(() => normalizeCheckInDraft());
+  const [checkInStatus, setCheckInStatus] = React.useState({ kind: 'idle', message: '' });
+  const [retierDraft, setRetierDraft] = React.useState(() => normalizeRetierDraft());
+  const [retierStatus, setRetierStatus] = React.useState({ kind: 'idle', message: '' });
+  const [reassignmentDraft, setReassignmentDraft] = React.useState(() => normalizeReassignmentDraft());
+  const [reassignmentStatus, setReassignmentStatus] = React.useState({ kind: 'idle', message: '' });
   const [taskLockStatus, setTaskLockStatus] = React.useState({ kind: 'idle', message: '' });
   const [workflowThreadDraft, setWorkflowThreadDraft] = React.useState(() => normalizeWorkflowThreadDraft());
   const [workflowThreadDrafts, setWorkflowThreadDrafts] = React.useState({});
@@ -657,6 +709,10 @@ export function App() {
       setReviewQuestionDrafts({});
       setArchitectHandoffDraft(normalizeArchitectHandoffDraft(model.detail?.context?.architectHandoff));
       setEngineerSubmissionDraft(normalizeEngineerSubmissionDraft(model.detail?.context?.engineerSubmission));
+      setSkillEscalationDraft(normalizeSkillEscalationDraft(model.detail?.context?.skillEscalation));
+      setCheckInDraft(normalizeCheckInDraft(model.detail?.context?.activityMonitoring));
+      setRetierDraft(normalizeRetierDraft(model.detail?.context));
+      setReassignmentDraft(normalizeReassignmentDraft(model.detail?.context));
       setWorkflowThreadDraft(normalizeWorkflowThreadDraft());
       setWorkflowThreadDrafts({});
       setExpandedWorkflowThreads({});
@@ -671,6 +727,10 @@ export function App() {
         setReviewQuestionStatus({ kind: 'idle', message: '', questionId: null, action: null });
         setArchitectHandoffStatus({ kind: 'idle', message: '' });
         setEngineerSubmissionStatus({ kind: 'idle', message: '' });
+        setSkillEscalationStatus({ kind: 'idle', message: '' });
+        setCheckInStatus({ kind: 'idle', message: '' });
+        setRetierStatus({ kind: 'idle', message: '' });
+        setReassignmentStatus({ kind: 'idle', message: '' });
         setTaskLockStatus({ kind: 'idle', message: '' });
         setWorkflowThreadStatus({ kind: 'idle', message: '', threadId: null, action: null });
         setQaResultStatus({ kind: 'idle', message: '' });
@@ -830,6 +890,8 @@ export function App() {
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
   const architectHandoffEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageArchitectHandoff(tokenClaims);
   const engineerSubmissionEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageEngineerSubmission(tokenClaims);
+  const skillEscalationEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canRequestSkillEscalation(tokenClaims);
+  const reassignmentGhostingEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageReassignmentGhosting(tokenClaims);
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
@@ -841,6 +903,10 @@ export function App() {
   const canReopenQuestions = architectReviewEnabled && canReopenReviewQuestion(tokenClaims);
   const engineerSubmissionValidation = validateEngineerSubmissionDraft(engineerSubmissionDraft);
   const engineerSubmissionAllowedForStage = model.kind === 'detail' && isImplementationStage(model.detail?.task?.stage || model.summary.currentStage);
+  const effectiveEngineerTier = model.kind === 'detail' ? getEffectiveEngineerTierFromDetail(model.detail) : null;
+  const skillEscalationAllowed = skillEscalationEnabled && effectiveEngineerTier === 'Jr' && !engineerSubmissionAllowedForStage && !model.detail?.context?.engineerSubmission;
+  const activityMonitoring = model.kind === 'detail' ? (model.detail?.context?.activityMonitoring || null) : null;
+  const transferredContext = model.kind === 'detail' ? (model.detail?.context?.transferredContext || null) : null;
   const canManageTaskLock = model.kind === 'detail' && Boolean(model.route?.taskId) && (canManageAssignment(tokenClaims) || canManageEngineerSubmission(tokenClaims) || canManageArchitectHandoff(tokenClaims) || hasAnyRole(tokenClaims, ['qa', 'contributor', 'admin']));
   const activeTaskLock = model.kind === 'detail' ? (model.detail?.meta?.lock || null) : null;
   const workflowThreads = model.kind === 'detail' ? (model.detail?.activity?.workflowThreads?.items || []) : [];
@@ -1933,6 +1999,60 @@ export function App() {
               <p>{model.detail?.context?.technicalSpec || 'Technical spec is missing.'}</p>
               <h3>Monitoring spec</h3>
               <p>{model.detail?.context?.monitoringSpec || 'Monitoring spec is missing.'}</p>
+              <h3>Responsible escalation</h3>
+              {skillEscalationEnabled ? (
+                <form
+                  className="architect-handoff-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const reason = skillEscalationDraft.reason.trim();
+                    if (!skillEscalationAllowed) {
+                      setSkillEscalationStatus({ kind: 'error', message: 'Responsible escalation is only available for Jr-tier work before implementation starts.' });
+                      return;
+                    }
+                    if (!reason) {
+                      setSkillEscalationStatus({ kind: 'error', message: 'Explain why this task needs higher-tier support.' });
+                      return;
+                    }
+                    try {
+                      setSkillEscalationStatus({ kind: 'loading', message: 'Requesting higher-tier support…' });
+                      await taskClient.requestSkillEscalation(routeTaskId, { reason });
+                      await reloadTask();
+                      setSkillEscalationStatus({ kind: 'success', message: 'Responsible escalation recorded and surfaced for architect review.' });
+                    } catch (error) {
+                      setSkillEscalationStatus({ kind: 'error', message: error.message || 'Responsible escalation failed.' });
+                    }
+                  }}
+                >
+                  <label>
+                    Why does this need higher-tier support?
+                    <textarea
+                      value={skillEscalationDraft.reason}
+                      onChange={(event) => setSkillEscalationDraft({ reason: event.target.value })}
+                      placeholder="Describe the scope, risk, or architectural complexity driving the escalation."
+                    />
+                  </label>
+                  {!skillEscalationAllowed ? (
+                    <p className="assignment-status" role="status">
+                      Responsible escalation is available only for Jr-tier work before implementation starts.
+                    </p>
+                  ) : null}
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={skillEscalationStatus.kind === 'loading' || !skillEscalationAllowed}>
+                      {skillEscalationStatus.kind === 'loading' ? 'Submitting…' : 'Request higher-tier support'}
+                    </button>
+                  </div>
+                  {skillEscalationStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${skillEscalationStatus.kind}`} role={skillEscalationStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {skillEscalationStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : (
+                <p className="assignment-status" role="status">
+                  Responsible escalation controls are available to engineer/admin bearer tokens.
+                </p>
+              )}
               <h3>Engineering handoff</h3>
               {architectHandoffEnabled ? (
                 <form
@@ -2121,6 +2241,289 @@ export function App() {
                   </ul>
                 </>
               ) : null}
+              <h3>Engineer activity monitoring</h3>
+              {activityMonitoring ? (
+                <div className="architect-handoff-summary">
+                  <div className="summary-grid review-question-summary-grid">
+                    <article>
+                      <span>Required check-in interval</span>
+                      <strong>{activityMonitoring.requiredCheckInIntervalMinutes || 15} min</strong>
+                    </article>
+                    <article>
+                      <span>Missed check-ins</span>
+                      <strong>{activityMonitoring.missedCheckIns ?? 0}</strong>
+                    </article>
+                    <article>
+                      <span>Threshold</span>
+                      <strong>{activityMonitoring.threshold || 2}</strong>
+                    </article>
+                    <article>
+                      <span>Inactivity review</span>
+                      <strong>{activityMonitoring.thresholdReached ? 'Threshold reached' : 'Within window'}</strong>
+                    </article>
+                  </div>
+                  {activityMonitoring.lastActivity ? (
+                    <p className="task-list-meta">
+                      Latest qualifying engineer activity: {activityMonitoring.lastActivity.summary || activityMonitoring.lastActivity.type} · {activityMonitoring.lastActivity.occurredAt || 'No timestamp'}
+                    </p>
+                  ) : (
+                    <p className="task-list-meta">No qualifying engineer activity signal has been recorded yet.</p>
+                  )}
+                </div>
+              ) : null}
+              {engineerSubmissionEnabled ? (
+                <form
+                  className="architect-handoff-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const summary = checkInDraft.summary.trim();
+                    if (!engineerSubmissionAllowedForStage) {
+                      setCheckInStatus({ kind: 'error', message: 'Check-ins can only be recorded while the task is in implementation.' });
+                      return;
+                    }
+                    if (!summary) {
+                      setCheckInStatus({ kind: 'error', message: 'A concrete progress summary is required.' });
+                      return;
+                    }
+                    try {
+                      setCheckInStatus({ kind: 'loading', message: 'Recording check-in…' });
+                      await taskClient.recordEngineerCheckIn(routeTaskId, {
+                        summary,
+                        evidence: splitTextareaLines(checkInDraft.evidence),
+                      });
+                      await reloadTask();
+                      setCheckInStatus({ kind: 'success', message: 'Check-in recorded.' });
+                    } catch (error) {
+                      setCheckInStatus({ kind: 'error', message: error.message || 'Check-in failed.' });
+                    }
+                  }}
+                >
+                  <label>
+                    Progress summary
+                    <textarea
+                      value={checkInDraft.summary}
+                      onChange={(event) => setCheckInDraft((current) => ({ ...current, summary: event.target.value }))}
+                      placeholder="Describe concrete progress since the last qualifying engineer signal."
+                    />
+                  </label>
+                  <label>
+                    Evidence
+                    <textarea
+                      value={checkInDraft.evidence}
+                      onChange={(event) => setCheckInDraft((current) => ({ ...current, evidence: event.target.value }))}
+                      placeholder="Optional references, one per line."
+                    />
+                  </label>
+                  {!engineerSubmissionAllowedForStage ? (
+                    <p className="assignment-status" role="status">
+                      Check-ins can only be recorded while the task is in implementation.
+                    </p>
+                  ) : null}
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={checkInStatus.kind === 'loading' || !engineerSubmissionAllowedForStage}>
+                      {checkInStatus.kind === 'loading' ? 'Submitting…' : 'Record engineer check-in'}
+                    </button>
+                  </div>
+                  {checkInStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${checkInStatus.kind}`} role={checkInStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {checkInStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
+              {model.detail?.context?.transferredContext ? (
+                <>
+                  <h3>Transferred context</h3>
+                  <div className="architect-handoff-summary">
+                    <div className="summary-grid review-question-summary-grid">
+                      <article>
+                        <span>Previous owner</span>
+                        <strong>{model.detail.context.transferredContext.prior_assignee || 'Unknown'}</strong>
+                      </article>
+                      <article>
+                        <span>New owner</span>
+                        <strong>{model.detail.context.transferredContext.new_assignee || 'Unassigned'}</strong>
+                      </article>
+                      <article>
+                        <span>Tier change</span>
+                        <strong>{model.detail.context.transferredContext.previous_engineer_tier || '—'}{' -> '}{model.detail.context.transferredContext.new_engineer_tier || '—'}</strong>
+                      </article>
+                      <article>
+                        <span>Transfer mode</span>
+                        <strong>{model.detail.context.transferredContext.mode || 'manual'}</strong>
+                      </article>
+                    </div>
+                    <p>{model.detail.context.transferredContext.reason || 'No transfer rationale recorded.'}</p>
+                    {model.detail.context.transferredContext.latest_activity ? (
+                      <p className="task-list-meta">
+                        Latest qualifying engineer activity: {model.detail.context.transferredContext.latest_activity.summary || model.detail.context.transferredContext.latest_activity.type} · {model.detail.context.transferredContext.latest_activity.occurredAt || 'No timestamp'}
+                      </p>
+                    ) : null}
+                    {model.detail.context.transferredContext.latest_implementation_reference ? (
+                      <p className="implementation-reference implementation-reference--mono">{typeof model.detail.context.transferredContext.latest_implementation_reference === 'string'
+                        ? model.detail.context.transferredContext.latest_implementation_reference
+                        : model.detail.context.transferredContext.latest_implementation_reference.label || 'Implementation reference attached'}</p>
+                    ) : null}
+                    {model.detail.context.transferredContext.unresolved_threads?.length ? (
+                      <>
+                        <h3>Open workflow context</h3>
+                        <ul className="detail-bullets">
+                          {model.detail.context.transferredContext.unresolved_threads.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                    {model.detail.context.transferredContext.blockers?.length ? (
+                      <>
+                        <h3>Current blockers</h3>
+                        <ul className="detail-bullets">
+                          {model.detail.context.transferredContext.blockers.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+              <h3>Architect tiering and reassignment</h3>
+              {reassignmentGhostingEnabled ? (
+                <>
+                  <form
+                    className="architect-handoff-form"
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      const engineerTier = retierDraft.engineerTier.trim();
+                      const tierRationale = retierDraft.tierRationale.trim();
+                      if (!engineerTier || !tierRationale) {
+                        setRetierStatus({ kind: 'error', message: 'Engineer tier and tier rationale are required.' });
+                        return;
+                      }
+                      try {
+                        setRetierStatus({ kind: 'loading', message: 'Updating engineer tier…' });
+                        await taskClient.retierTask(routeTaskId, {
+                          engineerTier,
+                          tierRationale,
+                          reason: retierDraft.reason.trim(),
+                        });
+                        await reloadTask();
+                        setRetierStatus({ kind: 'success', message: 'Engineer tier updated.' });
+                      } catch (error) {
+                        setRetierStatus({ kind: 'error', message: error.message || 'Re-tier failed.' });
+                      }
+                    }}
+                  >
+                    <div className="summary-grid architect-handoff-grid">
+                      <label>
+                        Target engineer tier
+                        <select
+                          value={retierDraft.engineerTier}
+                          onChange={(event) => setRetierDraft((current) => ({ ...current, engineerTier: event.target.value }))}
+                        >
+                          <option value="Principal">Principal</option>
+                          <option value="Sr">Sr</option>
+                          <option value="Jr">Jr</option>
+                        </select>
+                      </label>
+                      <label className="architect-handoff-grid__full">
+                        Re-tier rationale
+                        <textarea
+                          value={retierDraft.tierRationale}
+                          onChange={(event) => setRetierDraft((current) => ({ ...current, tierRationale: event.target.value }))}
+                          placeholder="Explain why this level of engineering ownership is required now."
+                        />
+                      </label>
+                    </div>
+                    <div className="assignment-form__actions">
+                      <button type="submit" disabled={retierStatus.kind === 'loading'}>
+                        {retierStatus.kind === 'loading' ? 'Submitting…' : 'Update engineer tier'}
+                      </button>
+                    </div>
+                    {retierStatus.kind !== 'idle' ? (
+                      <p className={`assignment-status assignment-status--${retierStatus.kind}`} role={retierStatus.kind === 'error' ? 'alert' : 'status'}>
+                        {retierStatus.message}
+                      </p>
+                    ) : null}
+                  </form>
+                  <form
+                    className="architect-handoff-form"
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      const reason = reassignmentDraft.reason.trim();
+                      if (!reason) {
+                        setReassignmentStatus({ kind: 'error', message: 'A reassignment reason is required.' });
+                        return;
+                      }
+                      try {
+                        setReassignmentStatus({ kind: 'loading', message: 'Reassigning task…' });
+                        await taskClient.reassignTask(routeTaskId, {
+                          mode: reassignmentDraft.mode,
+                          reason,
+                          assignee: reassignmentDraft.assignee.trim() || undefined,
+                          engineerTier: reassignmentDraft.engineerTier.trim() || undefined,
+                        });
+                        await reloadTask();
+                        setReassignmentStatus({ kind: 'success', message: reassignmentDraft.mode === 'inactivity' ? 'Task reassigned and inactivity review created.' : 'Task reassigned.' });
+                      } catch (error) {
+                        setReassignmentStatus({ kind: 'error', message: error.message || 'Reassignment failed.' });
+                      }
+                    }}
+                  >
+                    <div className="summary-grid architect-handoff-grid">
+                      <label>
+                        Reassignment mode
+                        <select
+                          value={reassignmentDraft.mode}
+                          onChange={(event) => setReassignmentDraft((current) => ({ ...current, mode: event.target.value }))}
+                        >
+                          <option value="inactivity">Inactivity review</option>
+                          <option value="above_skill">Responsible escalation</option>
+                          <option value="manual">Manual</option>
+                        </select>
+                      </label>
+                      <label>
+                        New assignee
+                        <input
+                          value={reassignmentDraft.assignee}
+                          onChange={(event) => setReassignmentDraft((current) => ({ ...current, assignee: event.target.value }))}
+                          placeholder="engineer"
+                        />
+                      </label>
+                      <label>
+                        Target engineer tier
+                        <input
+                          value={reassignmentDraft.engineerTier}
+                          onChange={(event) => setReassignmentDraft((current) => ({ ...current, engineerTier: event.target.value }))}
+                          placeholder="Sr"
+                        />
+                      </label>
+                      <label className="architect-handoff-grid__full">
+                        Reassignment reason
+                        <textarea
+                          value={reassignmentDraft.reason}
+                          onChange={(event) => setReassignmentDraft((current) => ({ ...current, reason: event.target.value }))}
+                          placeholder="Explain why ownership is moving and what the new assignee should know."
+                        />
+                      </label>
+                    </div>
+                    <div className="assignment-form__actions">
+                      <button type="submit" disabled={reassignmentStatus.kind === 'loading'}>
+                        {reassignmentStatus.kind === 'loading' ? 'Submitting…' : 'Reassign task'}
+                      </button>
+                    </div>
+                    {reassignmentStatus.kind !== 'idle' ? (
+                      <p className={`assignment-status assignment-status--${reassignmentStatus.kind}`} role={reassignmentStatus.kind === 'error' ? 'alert' : 'status'}>
+                        {reassignmentStatus.message}
+                      </p>
+                    ) : null}
+                  </form>
+                </>
+              ) : (
+                <p className="assignment-status" role="status">
+                  Re-tiering and reassignment controls are available to architect/admin bearer tokens.
+                </p>
+              )}
               {engineerSubmissionEnabled ? (
                 <form
                   className="architect-handoff-form"
