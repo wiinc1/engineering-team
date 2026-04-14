@@ -15,11 +15,18 @@ function createValidStandardsFixture(root, overrides = {}) {
 - Every ADR under \`docs/adr/\` must include \`## Standards Alignment\` and \`## Required Evidence\`.
 - Every report under \`docs/reports/\` must include \`## Standards Alignment\` and \`## Required Evidence\`.
 - Diff-based adjacency rules are maintained in \`config/change-ownership-map.json\`; maintainer guidance lives in \`docs/standards/change-governance-maintenance.md\`.
+- Branch-protection and required-status guidance lives in \`.github/BRANCH_PROTECTION.md\`.
 
 ## Required Gap Statement Format
 Gap observed: X. Documented rationale: Y (source Z).
 `);
   writeFile(root, 'docs/standards/change-governance-maintenance.md', '# maintenance\n');
+  writeFile(root, '.github/BRANCH_PROTECTION.md', `## Required Status Checks
+- \`Pull request metadata\`
+- \`Repo validation\`
+- \`Browser validation\`
+- .github/workflows/validation.yml
+`);
   writeFile(root, 'config/change-ownership-map.json', JSON.stringify({
     classification: {
       runtime_roots: ['src'],
