@@ -29,6 +29,10 @@ function browserAuthCode(secret, payload = {}, options = {}) {
   }, secret, options);
 }
 
+function githubSignature(secret, body) {
+  return `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
+}
+
 async function withServer(run, options = {}) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-api-'));
   const secret = 'test-secret';
@@ -142,6 +146,333 @@ test('rejects malformed browser auth bootstrap requests', async () => {
     assert.equal(response.status, 401);
     assert.equal((await response.json()).error.code, 'invalid_auth_code');
   });
+});
+
+test('syncs GitHub pull request webhook state into task detail relationships', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const createRes = await fetch(`${baseUrl}/tasks/TSK-500/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'engineering-team', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-500',
+        payload: { title: 'GitHub-linked task', initial_stage: 'PM_CLOSE_REVIEW' },
+      }),
+    });
+    assert.equal(createRes.status, 202);
+
+    const webhookBody = JSON.stringify({
+      action: 'opened',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_kwDOAA',
+        number: 42,
+        title: 'feat: finish TSK-500 close path',
+        body: 'Implements TSK-500',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/42',
+        state: 'open',
+        draft: false,
+        updated_at: '2026-04-13T23:00:00.000Z',
+        head: { ref: 'feature/TSK-500-close-path' },
+      },
+    });
+
+    const webhookRes = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-1',
+        'x-hub-signature-256': githubSignature('gh-webhook-secret', webhookBody),
+      },
+      body: webhookBody,
+    });
+    assert.equal(webhookRes.status, 202);
+
+    const detailRes = await fetch(`${baseUrl}/tasks/TSK-500/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'engineering-team', roles: ['reader'] }),
+    });
+    assert.equal(detailRes.status, 200);
+    const detail = await detailRes.json();
+    assert.equal(detail.summary.prStatus.label, '1 open PR linked');
+    assert.equal(detail.summary.githubSync.state, 'ok');
+    assert.equal(detail.relations.linkedPrs[0].number, 42);
+    assert.equal(detail.relations.linkedPrs[0].repository, 'wiinc1/engineering-team');
+  }, { githubWebhookSecret: 'gh-webhook-secret' });
+});
+
+test('blocks task close while linked pull requests are still open and allows close after merge sync', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'engineering-team', roles: ['contributor'] }),
+    };
+    let response = await fetch(`${baseUrl}/tasks/TSK-501/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-501',
+        payload: { title: 'Close gate task', initial_stage: 'PM_CLOSE_REVIEW' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const openWebhookBody = JSON.stringify({
+      action: 'opened',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_kwDOAB',
+        number: 43,
+        title: 'feat: close TSK-501',
+        body: 'Closes TSK-501',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/43',
+        state: 'open',
+        draft: false,
+        updated_at: '2026-04-13T23:00:00.000Z',
+        head: { ref: 'feature/TSK-501-close' },
+      },
+    });
+
+    response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-2',
+        'x-hub-signature-256': githubSignature('gh-webhook-secret', openWebhookBody),
+      },
+      body: openWebhookBody,
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-501/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.closed',
+        actorType: 'agent',
+        idempotencyKey: 'close:TSK-501:blocked',
+        payload: {},
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(await response.json()), /Close is blocked/i);
+
+    const mergedWebhookBody = JSON.stringify({
+      action: 'closed',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_kwDOAB',
+        number: 43,
+        title: 'feat: close TSK-501',
+        body: 'Closes TSK-501',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/43',
+        state: 'closed',
+        merged: true,
+        merged_at: '2026-04-13T23:10:00.000Z',
+        updated_at: '2026-04-13T23:10:00.000Z',
+        draft: false,
+        head: { ref: 'feature/TSK-501-close' },
+      },
+    });
+
+    response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-3',
+        'x-hub-signature-256': githubSignature('gh-webhook-secret', mergedWebhookBody),
+      },
+      body: mergedWebhookBody,
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-501/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.closed',
+        actorType: 'agent',
+        idempotencyKey: 'close:TSK-501:merged',
+        payload: {},
+      }),
+    });
+    assert.equal(response.status, 202);
+  }, { githubWebhookSecret: 'gh-webhook-secret' });
+});
+
+test('gates GitHub webhook sync behind the feature flag', async () => {
+  await withServer(async ({ baseUrl }) => {
+    const webhookBody = JSON.stringify({
+      action: 'opened',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_kwDOAC',
+        number: 44,
+        title: 'feat: TSK-502',
+        body: 'Implements TSK-502',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/44',
+        state: 'open',
+        updated_at: '2026-04-13T23:00:00.000Z',
+      },
+    });
+
+    const response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-4',
+        'x-hub-signature-256': githubSignature('gh-webhook-secret', webhookBody),
+      },
+      body: webhookBody,
+    });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.code, 'feature_disabled');
+  }, { githubWebhookSecret: 'gh-webhook-secret', ffGitHubSync: 'false' });
+});
+
+test('routes GitHub webhook updates to the task tenant instead of the default tenant', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-503/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-b', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-503',
+        payload: { title: 'Tenant-routed task', initial_stage: 'PM_CLOSE_REVIEW' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const webhookBody = JSON.stringify({
+      action: 'opened',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_kwDOAD',
+        number: 45,
+        title: 'feat: TSK-503',
+        body: 'Implements TSK-503',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/45',
+        state: 'open',
+        updated_at: '2026-04-13T23:00:00.000Z',
+      },
+    });
+
+    response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-5',
+        'x-hub-signature-256': githubSignature('gh-webhook-secret', webhookBody),
+      },
+      body: webhookBody,
+    });
+    assert.equal(response.status, 202);
+    const webhookResult = await response.json();
+    assert.deepEqual(webhookResult.matchedTasks, [{ taskId: 'TSK-503', tenantId: 'tenant-b' }]);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-503/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-b', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.relations.linkedPrs[0].number, 45);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-503/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'engineering-team', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 404);
+  }, { githubWebhookSecret: 'gh-webhook-secret', defaultTenantId: 'engineering-team' });
+});
+
+test('matches merge webhooks to existing linked PR state even when the payload no longer references the task id', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-504/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'engineering-team', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-504',
+        payload: {
+          title: 'Existing PR link',
+          initial_stage: 'PM_CLOSE_REVIEW',
+          linked_prs: [{
+            id: 'PR_kwDOAE',
+            number: 46,
+            title: 'feat: finish close flow',
+            url: 'https://github.com/wiinc1/engineering-team/pull/46',
+            repository: 'wiinc1/engineering-team',
+            state: 'open',
+            merged: false,
+            updated_at: '2026-04-13T23:00:00.000Z',
+          }],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const mergedWebhookBody = JSON.stringify({
+      action: 'closed',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_kwDOAE',
+        number: 46,
+        title: 'feat: finish close flow',
+        body: 'Final merge without task id in body',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/46',
+        state: 'closed',
+        merged: true,
+        merged_at: '2026-04-13T23:10:00.000Z',
+        updated_at: '2026-04-13T23:10:00.000Z',
+      },
+    });
+
+    response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-6',
+        'x-hub-signature-256': githubSignature('gh-webhook-secret', mergedWebhookBody),
+      },
+      body: mergedWebhookBody,
+    });
+    assert.equal(response.status, 202);
+    const webhookResult = await response.json();
+    assert.deepEqual(webhookResult.matchedTasks, [{ taskId: 'TSK-504', tenantId: 'engineering-team' }]);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-504/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'engineering-team', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.summary.prStatus.state, 'done');
+    assert.equal(detail.summary.githubSync.state, 'ok');
+    assert.equal(detail.relations.linkedPrs[0].merged, true);
+  }, { githubWebhookSecret: 'gh-webhook-secret' });
 });
 
 test('browser bootstrap session tokens include configured issuer and audience claims', async () => {

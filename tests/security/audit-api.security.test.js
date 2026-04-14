@@ -44,6 +44,10 @@ function browserAuthCode(secret, payload = {}, options = {}) {
   }, secret, options);
 }
 
+function githubSignature(secret, body) {
+  return `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
+}
+
 test('rejects tampered, expired, and issuer-mismatched bearer tokens', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const expired = sign({ sub: 'sec', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) - 10 }, secret);
@@ -268,6 +272,50 @@ test('accepts production-style JWKS tokens with explicit claim mapping', async (
     tenantClaim: 'tenant',
     rolesClaim: 'groups',
   });
+});
+
+test('rejects GitHub webhook deliveries with missing or invalid signatures', async () => {
+  await withServer(async ({ baseUrl }) => {
+    const body = JSON.stringify({
+      action: 'opened',
+      repository: { full_name: 'wiinc1/engineering-team' },
+      sender: { login: 'octocat' },
+      pull_request: {
+        node_id: 'PR_sig',
+        number: 55,
+        title: 'feat: TSK-SEC-9',
+        body: 'Implements TSK-SEC-9',
+        html_url: 'https://github.com/wiinc1/engineering-team/pull/55',
+        state: 'open',
+        updated_at: '2026-04-13T23:00:00.000Z',
+      },
+    });
+
+    let response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-sec-1',
+      },
+      body,
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_github_signature');
+
+    response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-github-event': 'pull_request',
+        'x-github-delivery': 'delivery-sec-2',
+        'x-hub-signature-256': githubSignature('wrong-secret', body),
+      },
+      body,
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'invalid_github_signature');
+  }, { githubWebhookSecret: 'gh-webhook-secret' });
 });
 
 test('keeps browser bootstrap compatibility tokens usable during JWKS rollout when a signing secret is still configured', async () => {

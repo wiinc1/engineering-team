@@ -49,6 +49,8 @@ function getServer() {
     browserAuthCodeSecret: process.env.AUTH_BROWSER_AUTH_CODE_SECRET,
     browserAuthCodeIssuer: process.env.AUTH_BROWSER_AUTH_CODE_ISSUER,
     browserAuthCodeAudience: process.env.AUTH_BROWSER_AUTH_CODE_AUDIENCE,
+    githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
+    ffGitHubSync: process.env.FF_GITHUB_SYNC,
     logger: createVercelLogger(),
   });
 
