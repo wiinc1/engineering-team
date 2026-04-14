@@ -49,6 +49,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
   const spec = fs.readFileSync(path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'), 'utf8');
   const ownerReadSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-owner-surfaces-openapi.yml'), 'utf8');
   const browserAuthSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/authenticated-browser-app-openapi.yml'), 'utf8');
+  const assignmentSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-assignment-openapi.yml'), 'utf8');
 
   for (const snippet of [
     '/tasks:',
@@ -79,6 +80,9 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}:',
     'List task summaries with read-only owner metadata',
     'Assignment mutation stays on `PATCH /tasks/{id}/assignment`.',
+    'engineer-jr',
+    'engineer-sr',
+    'governance_review',
   ]) {
     assert.match(ownerReadSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -90,8 +94,16 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'accessToken',
     'expiresAt',
     'Signed browser bootstrap artifact from the trusted internal auth source.',
+    '/overview/governance',
   ]) {
     assert.match(browserAuthSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const snippet of [
+    'Only the currently assigned owner may perform this action.',
+    'engineer-sr',
+  ]) {
+    assert.match(assignmentSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 

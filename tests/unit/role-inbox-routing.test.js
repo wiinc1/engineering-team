@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fixture from '../fixtures/role-inbox/role-inbox-states.json' with { type: 'json' };
 import {
+  buildGovernanceReviewItems,
   buildRoleInboxItems,
   getRoleInboxLabel,
   mapAgentOptions,
@@ -26,6 +27,7 @@ describe('role inbox routing', () => {
   it('routes assigned and explicitly waiting tasks into the correct canonical inbox', () => {
     const architectTask = { current_owner: 'architect', owner: { actor_id: 'architect' } };
     const engineerTask = { current_owner: 'engineer', owner: { actor_id: 'engineer' } };
+    const seniorEngineerTask = { current_owner: 'engineer-sr', owner: { actor_id: 'engineer-sr' } };
     const pmTask = { current_owner: null, owner: null, waiting_state: 'awaiting_pm_decision' };
     const architectWaitTask = { current_owner: 'engineer', owner: { actor_id: 'engineer' }, waiting_state: 'awaiting_architect_decision' };
     const humanTask = { current_owner: null, owner: null, next_required_action: 'Human approval required' };
@@ -35,6 +37,7 @@ describe('role inbox routing', () => {
 
     expect(resolveRoleInboxMembership(architectTask, agentLookup)).toMatchObject({ inboxRole: 'architect', reason: 'matched' });
     expect(resolveRoleInboxMembership(engineerTask, agentLookup)).toMatchObject({ inboxRole: 'engineer', reason: 'matched' });
+    expect(resolveRoleInboxMembership(seniorEngineerTask, agentLookup)).toMatchObject({ inboxRole: 'engineer', reason: 'matched-pattern' });
     expect(resolveRoleInboxMembership(pmTask, agentLookup)).toMatchObject({ inboxRole: 'pm', reason: 'waiting-pm' });
     expect(resolveRoleInboxMembership(architectWaitTask, agentLookup)).toMatchObject({ inboxRole: 'architect', reason: 'waiting-architect' });
     expect(resolveRoleInboxMembership(humanTask, agentLookup)).toMatchObject({ inboxRole: 'human', reason: 'waiting-human' });
@@ -91,5 +94,19 @@ describe('role inbox routing', () => {
 
     const architectItems = buildRoleInboxItems(items, 'architect', agentLookup);
     expect(architectItems.map((item) => item.task_id)).toEqual(['TSK-1']);
+  });
+
+  it('builds a dedicated governance review list and preserves synthetic engineer owner labels', () => {
+    const items = [
+      { task_id: 'GHOST-1', title: 'Inactivity review for TSK-42', current_owner: 'architect', current_stage: 'BACKLOG', priority: 'P1', task_type: 'governance_review', freshness: { last_updated_at: '2026-04-01T00:00:01.000Z' }, owner: { actor_id: 'architect' } },
+      { task_id: 'TSK-2', title: 'Delivery work', current_owner: 'engineer-sr', current_stage: 'IMPLEMENT', priority: 'P1', freshness: { last_updated_at: '2026-04-01T00:00:02.000Z' }, owner: { actor_id: 'engineer-sr' } },
+    ];
+
+    const governanceItems = buildGovernanceReviewItems(items, agentLookup);
+    expect(governanceItems.map((item) => item.task_id)).toEqual(['GHOST-1']);
+
+    const engineerItems = buildRoleInboxItems(items, 'engineer', agentLookup);
+    expect(engineerItems).toHaveLength(1);
+    expect(engineerItems[0].ownerPresentation.label).toBe('Senior Engineer');
   });
 });

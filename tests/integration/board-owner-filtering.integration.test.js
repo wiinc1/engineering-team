@@ -14,7 +14,8 @@ function createJsonResponse(payload, status = 200) {
 }
 
 function buildTaskItems(currentOwnerByTask) {
-  return fixture.tasks.map((task) => ({
+  return [
+    ...fixture.tasks.map((task) => ({
     task_id: task.task_id,
     tenant_id: fixture.tenant_id,
     title: task.title,
@@ -25,7 +26,21 @@ function buildTaskItems(currentOwnerByTask) {
     blocked: false,
     closed: false,
     freshness: { status: 'fresh', last_updated_at: '2026-04-02T12:00:00.000Z' },
-  }));
+    })),
+    {
+      task_id: 'GHOST-BOARD-1',
+      tenant_id: fixture.tenant_id,
+      title: 'Governance review task',
+      priority: 'P1',
+      current_stage: 'BACKLOG',
+      current_owner: 'architect',
+      owner: { actor_id: 'architect', display_name: 'architect' },
+      task_type: 'governance_review',
+      blocked: false,
+      closed: false,
+      freshness: { status: 'fresh', last_updated_at: '2026-04-02T12:00:01.000Z' },
+    },
+  ];
 }
 
 function installBoardFetchMock() {
@@ -94,6 +109,7 @@ describe('board owner filtering integration', () => {
     await screen.findByText('5 cards shown.');
     expect(screen.getByText('Owner hidden')).toBeInTheDocument();
     expect(screen.getByText('Unknown owner')).toBeInTheDocument();
+    expect(screen.queryByText('Governance review task')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
     await screen.findByText('1 unassigned cards shown.');

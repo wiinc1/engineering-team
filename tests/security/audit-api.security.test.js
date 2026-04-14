@@ -171,6 +171,38 @@ test('reader scope keeps owner metadata visible while assignment remains forbidd
   });
 });
 
+test('rejects engineer-only delivery mutations when the task has been reassigned away from engineering', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const engineerAuth = { authorization: `Bearer ${sign({ sub: 'engineer-user', tenant_id: 'tenant-sec', roles: ['engineer'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-OWNER/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-SEC-OWNER', payload: { title: 'Owner-restricted task', initial_stage: 'IMPLEMENTATION' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-OWNER/assignment`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-OWNER/check-ins`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...engineerAuth },
+      body: JSON.stringify({ summary: 'Wrong owner tried to check in.' }),
+    });
+    assert.equal(response.status, 403);
+    const body = await response.json();
+    assert.equal(body.error.code, 'forbidden');
+    assert.match(body.error.message, /currently assigned owner/i);
+  });
+});
+
 test('browser auth bootstrap rejects missing and incomplete auth codes', async () => {
   await withServer(async ({ baseUrl, secret, baseDir }) => {
     let response = await fetch(`${baseUrl}/auth/session`, {

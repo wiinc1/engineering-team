@@ -5,6 +5,10 @@ info:
   description: |
     Browser-facing internal auth bootstrap endpoint for the authenticated app shell.
     Governance note: browser-shell session and route changes should update this spec in the same pull request.
+    Protected browser-shell routes in the current client include `/tasks`, `/tasks?view=board`,
+    `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
+    The `/overview/governance` route is a dedicated operational surface for governance review tasks and
+    is intentionally separate from standard delivery queues.
 paths:
   /auth/session:
     post:

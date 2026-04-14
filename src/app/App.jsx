@@ -18,6 +18,7 @@ import {
 } from './session.browser';
 import {
   buildBoardColumns,
+  buildGovernanceReviewItems,
   buildPmOverviewSections,
   buildRoleInboxItems,
   filterTaskList,
@@ -72,6 +73,7 @@ function isProtectedRoute(pathname = '') {
     || matchCreateTaskRoute(normalizedPath)
     || Boolean(matchRoleInboxRoute(normalizedPath))
     || Boolean(matchPmOverviewRoute(normalizedPath))
+    || Boolean(matchGovernanceOverviewRoute(normalizedPath))
     || Boolean(readRouteTask(normalizedPath));
 }
 
@@ -157,6 +159,11 @@ function matchPmOverviewRoute(pathname = '') {
   return normalizedPath === '/overview/pm' ? { scope: 'pm' } : null;
 }
 
+function matchGovernanceOverviewRoute(pathname = '') {
+  const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
+  return normalizedPath === '/overview/governance' ? { scope: 'governance' } : null;
+}
+
 function readTaskListRouteState(search = '') {
   const params = new URLSearchParams(search);
   const owner = params.get('owner') || '';
@@ -229,16 +236,18 @@ function buildLoadingModel(pathname, search) {
 function buildListLoadingModel(pathname, search) {
   const roleInbox = matchRoleInboxRoute(pathname);
   const pmOverview = matchPmOverviewRoute(pathname);
+  const governanceOverview = matchGovernanceOverviewRoute(pathname);
   return {
     kind: 'list',
-    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : '/tasks', taskId: null },
+    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null },
     list: {
       filters: readTaskListRouteState(search),
       items: [],
-      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : pmOverview ? 'Loading PM overview.' : 'Loading task list.' },
+      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : pmOverview ? 'Loading PM overview.' : governanceOverview ? 'Loading governance reviews.' : 'Loading task list.' },
       resultSummary: '',
       inboxRole: roleInbox?.role || null,
       isPmOverview: Boolean(pmOverview),
+      isGovernanceOverview: Boolean(governanceOverview),
     },
   };
 }
@@ -596,7 +605,7 @@ export function App() {
   const [signInStatus, setSignInStatus] = React.useState({ kind: 'idle', message: '' });
   const [authNotice, setAuthNotice] = React.useState('');
   const [model, setModel] = React.useState(() => {
-    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname)) return buildListLoadingModel(pathname, search);
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname) || matchGovernanceOverviewRoute(pathname)) return buildListLoadingModel(pathname, search);
     return matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname);
   });
   const [agentOptions, setAgentOptions] = React.useState([]);
@@ -748,7 +757,7 @@ export function App() {
       };
     }
 
-    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname)) {
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname) || matchGovernanceOverviewRoute(pathname)) {
       setModel(buildListLoadingModel(pathname, search));
       taskClient.fetchTaskList()
         .then((payload) => {
@@ -756,9 +765,10 @@ export function App() {
           const filters = readTaskListRouteState(search);
           const roleInbox = matchRoleInboxRoute(pathname);
           const pmOverview = matchPmOverviewRoute(pathname);
+          const governanceOverview = matchGovernanceOverviewRoute(pathname);
           setModel({
             kind: 'list',
-            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : '/tasks', taskId: null },
+            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null },
             list: {
               filters,
               items: payload.items || [],
@@ -766,21 +776,26 @@ export function App() {
               resultSummary: '',
               inboxRole: roleInbox?.role || null,
               isPmOverview: Boolean(pmOverview),
+              isGovernanceOverview: Boolean(governanceOverview),
             },
           });
         })
         .catch((error) => {
           if (!cancelled) {
+            const roleInbox = matchRoleInboxRoute(pathname);
+            const pmOverview = matchPmOverviewRoute(pathname);
+            const governanceOverview = matchGovernanceOverviewRoute(pathname);
             setModel({
               kind: 'list',
-              route: { pathname: matchRoleInboxRoute(pathname) ? pathname : '/tasks', taskId: null },
+              route: { pathname: roleInbox ? pathname : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null },
               list: {
                 filters: readTaskListRouteState(search),
                 items: [],
                 state: { kind: 'error', message: error.message || 'Task list load failed.' },
                 resultSummary: '',
-                inboxRole: matchRoleInboxRoute(pathname)?.role || null,
-                isPmOverview: Boolean(matchPmOverviewRoute(pathname)),
+                inboxRole: roleInbox?.role || null,
+                isPmOverview: Boolean(pmOverview),
+                isGovernanceOverview: Boolean(governanceOverview),
               },
             });
           }
@@ -895,6 +910,7 @@ export function App() {
   const routeTaskId = model.kind === 'detail' ? (model.route?.taskId || 'TSK-42') : 'TSK-42';
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
+  const isGovernanceOverview = model.kind === 'list' ? Boolean(model.list.isGovernanceOverview) : false;
   const detailPermissions = model.kind === 'detail' ? (model.detail?.meta?.permissions || {}) : {};
   const architectReviewEnabled = model.kind === 'detail' && Boolean(model.detail?.reviewQuestions);
   const canAskQuestions = architectReviewEnabled && canAskReviewQuestion(tokenClaims) && model.detail?.task?.stage === 'ARCHITECT_REVIEW';
@@ -945,7 +961,8 @@ export function App() {
       const payload = await taskClient.fetchTaskList();
       const roleInbox = matchRoleInboxRoute(pathname);
       const pmOverview = matchPmOverviewRoute(pathname);
-      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null, isPmOverview: Boolean(pmOverview) } });
+      const governanceOverview = matchGovernanceOverviewRoute(pathname);
+      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null, isPmOverview: Boolean(pmOverview), isGovernanceOverview: Boolean(governanceOverview) } });
       return;
     }
     setModel(buildLoadingModel(pathname, search));
@@ -1214,6 +1231,7 @@ export function App() {
   const hasActiveListFilters = Boolean(listFilters.owner || listFilters.priority || listFilters.status || listFilters.searchTerm);
   const roleInboxItems = model.kind === 'list' && activeInboxRole ? buildRoleInboxItems(model.list.items, activeInboxRole, agentLookup) : [];
   const pmSections = model.kind === 'list' && isPmOverview ? buildPmOverviewSections(model.list.items, agentLookup) : [];
+  const governanceItems = model.kind === 'list' && isGovernanceOverview ? buildGovernanceReviewItems(model.list.items, agentLookup) : [];
   const activePmBucket = isPmOverview && PM_OVERVIEW_BUCKET_ORDER.includes(listFilters.bucket) ? listFilters.bucket : '';
   const selectedPmSection = activePmBucket ? pmSections.find((section) => section.key === activePmBucket) || null : null;
   const visiblePmSections = isPmOverview
@@ -1238,6 +1256,8 @@ export function App() {
   const resultSummary = model.kind === 'list'
     ? isPmOverview
       ? summarizePmOverviewResults(visiblePmSections, activePmBucket)
+      : isGovernanceOverview
+        ? `${governanceItems.length} governance review${governanceItems.length === 1 ? '' : 's'} shown.`
       : activeInboxRole
         ? roleInboxState.kind === 'ready'
           ? summarizeRoleInboxResults(roleInboxItems.length, activeInboxRole)
@@ -1301,9 +1321,10 @@ export function App() {
     <main className="app-shell">
       <nav className="app-nav" aria-label="Primary navigation">
         <div className="app-nav__links">
-          <button type="button" className={model.kind === 'list' && !isPmOverview && !activeInboxRole && listFilters.view !== 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks')}>Task list</button>
-          <button type="button" className={model.kind === 'list' && !isPmOverview && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
+          <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view !== 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks')}>Task list</button>
+          <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
           <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
+          <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
           {ROLE_INBOXES.map((role) => (
             <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
               {getRoleInboxLabel(role)} inbox
@@ -1318,11 +1339,13 @@ export function App() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Authenticated browser shell for US-002</p>
-          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
+          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : isGovernanceOverview ? 'Governance Reviews' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
           <p className="lede">
             {model.kind === 'list'
               ? isPmOverview
                 ? 'Read-only grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping.'
+                : isGovernanceOverview
+                  ? 'Dedicated operational surface for inactivity and governance review tasks that should stay out of delivery queues.'
                 : activeInboxRole
                   ? `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${getRoleInboxLabel(activeInboxRole)} role.`
                   : 'Overview list wired to the projected owner read model with single-select owner filtering.'
@@ -1350,6 +1373,7 @@ export function App() {
               <button type="submit">Open</button>
               <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
               <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
+              <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
               {ROLE_INBOXES.map((role) => (
                 <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
                   {getRoleInboxLabel(role)} inbox
@@ -1387,7 +1411,7 @@ export function App() {
       </header>
 
       {model.kind === 'list' ? (
-        <section className="task-list-panel" aria-label={isPmOverview ? 'PM overview view' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
+        <section className="task-list-panel" aria-label={isPmOverview ? 'PM overview view' : isGovernanceOverview ? 'Governance reviews view' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
           <div className="task-list-toolbar">
             {isPmOverview ? (
               <div className="role-inbox-toolbar">
@@ -1407,6 +1431,18 @@ export function App() {
                     </select>
                   </label>
                   <button type="button" className="button-secondary" onClick={() => navigate('/overview/pm', writeTaskListUrlState({ bucket: '' }, search))} disabled={!activePmBucket}>Clear filter</button>
+                  <button type="button" onClick={() => void reloadTask()}>Refresh</button>
+                </div>
+              </div>
+            ) : isGovernanceOverview ? (
+              <div className="role-inbox-toolbar">
+                <div>
+                  <p className="eyebrow">Operational governance</p>
+                  <h2>Governance review queue</h2>
+                  <p className="role-inbox-toolbar__cue">Inactivity review and governance follow-up tasks live here so they remain visible without mixing into normal delivery views.</p>
+                </div>
+                <div className="task-list-toolbar__actions">
+                  <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Open full task list</button>
                   <button type="button" onClick={() => void reloadTask()}>Refresh</button>
                 </div>
               </div>
@@ -1494,8 +1530,8 @@ export function App() {
 
           <p className="task-list-results" role="status" aria-live="polite">{resultSummary}</p>
 
-          {(isPmOverview && listState.kind === 'loading') || (!activeInboxRole && !isPmOverview && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : isPmOverview ? 'Loading PM overview.' : 'Loading task list.'}</p> : null}
-          {((!activeInboxRole && !isPmOverview && listState.kind === 'error') || (isPmOverview && listState.kind === 'error')) ? <p role="alert">{listState.message}</p> : null}
+          {(isPmOverview && listState.kind === 'loading') || (isGovernanceOverview && listState.kind === 'loading') || (!activeInboxRole && !isPmOverview && !isGovernanceOverview && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : isPmOverview ? 'Loading PM overview.' : isGovernanceOverview ? 'Loading governance reviews.' : 'Loading task list.'}</p> : null}
+          {((!activeInboxRole && !isPmOverview && !isGovernanceOverview && listState.kind === 'error') || (isPmOverview && listState.kind === 'error') || (isGovernanceOverview && listState.kind === 'error')) ? <p role="alert">{listState.message}</p> : null}
           {isPmOverview && agentOptionsState.kind === 'error' && listState.kind === 'ready' ? (
             <div className="empty-state" role="alert">
               <h2>Some routing metadata is unavailable</h2>
@@ -1598,7 +1634,40 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && visibleListItems.length && listFilters.view === 'list' ? (
+          {isGovernanceOverview && listState.kind === 'ready' && governanceItems.length ? (
+            <div className="task-list-table-wrap">
+              <table className="task-list-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Task</th>
+                    <th scope="col">Stage</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Owner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {governanceItems.map((item) => (
+                    <tr key={item.task_id}>
+                      <td>
+                        <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                          <strong>{item.title || item.task_id}</strong>
+                        </a>
+                        <div className="task-list-meta">{item.task_id}</div>
+                      </td>
+                      <td>{item.current_stage || '—'}</td>
+                      <td>{item.priority || '—'}</td>
+                      <td>
+                        <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
+                        <div className="task-list-meta">Governance-only owner metadata</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && visibleListItems.length && listFilters.view === 'list' ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -1637,7 +1706,7 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && visibleListItems.length && listFilters.view === 'board' ? (
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && visibleListItems.length && listFilters.view === 'board' ? (
             <div className="task-board" aria-label="Task board">
               {lifecycleStatus.kind !== 'idle' ? (
                 <p className={`assignment-status assignment-status--${lifecycleStatus.kind}`} role={lifecycleStatus.kind === 'error' ? 'alert' : 'status'}>
@@ -1738,7 +1807,14 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !visibleListItems.length ? (
+          {isGovernanceOverview && listState.kind === 'ready' && !governanceItems.length ? (
+            <div className="empty-state" role="status">
+              <h2>No governance reviews available</h2>
+              <p>No governance review tasks are currently open.</p>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && !visibleListItems.length ? (
             <div className="empty-state" role="status">
               <h2>No matching tasks</h2>
               <p>{hasActiveListFilters ? 'No tasks match the active task filters.' : 'No tasks are available yet.'}</p>
@@ -2384,6 +2460,21 @@ export function App() {
                         </ul>
                       </>
                     ) : null}
+                  </div>
+                </>
+              ) : null}
+              {model.detail?.context?.ghostingReview?.reviewTaskId ? (
+                <>
+                  <h3>Linked inactivity review</h3>
+                  <div className="architect-handoff-summary">
+                    <p>
+                      <a href={`/tasks/${encodeURIComponent(model.detail.context.ghostingReview.reviewTaskId)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(model.detail.context.ghostingReview.reviewTaskId)}`); }}>
+                        {model.detail.context.ghostingReview.title || model.detail.context.ghostingReview.reviewTaskId}
+                      </a>
+                    </p>
+                    <p className="task-list-meta">
+                      Governance review task created at {model.detail.context.ghostingReview.createdAt || 'unknown time'} to track the inactivity-based reassignment outcome.
+                    </p>
                   </div>
                 </>
               ) : null}

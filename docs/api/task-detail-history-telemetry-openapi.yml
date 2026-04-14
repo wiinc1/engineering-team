@@ -284,6 +284,22 @@ components:
               items: { type: string }
             technicalSpec: { type: [string, 'null'] }
             monitoringSpec: { type: [string, 'null'] }
+            architectHandoff:
+              type: [object, 'null']
+              additionalProperties: true
+              description: Latest architect handoff metadata, including engineer tier decisions when available.
+            activityMonitoring:
+              type: [object, 'null']
+              additionalProperties: true
+              description: Delivery-loop activity monitoring summary, including missed engineer check-in state.
+            reassignment:
+              type: [object, 'null']
+              additionalProperties: true
+              description: Latest reassignment summary, including any tier-specific assignee id selected during responsible escalation or inactivity reassignment.
+            ghostingReview:
+              type: [object, 'null']
+              additionalProperties: true
+              description: Linked governance review task created for inactivity or other governance follow-up.
         relations:
           type: object
           required: [linkedPrs, childTasks]

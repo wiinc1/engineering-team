@@ -72,6 +72,8 @@ Successful read/write access is now logged with `action=audit_access` so tenant-
 Audit HTTP maintenance note:
 - When `lib/audit/http.js` changes, update the nearest API or runbook artifact in the same PR.
 - Current nearest artifacts for HTTP-surface changes are this runbook plus the matching `docs/api/*.yml` contract for the affected route family.
+- Engineer-only delivery-loop mutations now validate the task's current canonical assignee before accepting writes.
+- Tier-based reassignment may emit explicit assignee ids such as `engineer-sr` in workflow payloads and task-detail context so downstream consumers can tell when ownership changed materially.
 
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
