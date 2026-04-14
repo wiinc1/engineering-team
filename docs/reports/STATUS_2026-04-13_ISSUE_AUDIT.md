@@ -115,3 +115,16 @@ Issue #23 remains relevant as an umbrella tracker, but its child issue state had
 - implemented foundations already closed or closeable
 - implemented follow-on work that had remained open by mistake
 - remaining active roadmap centered on production integrations and final governance flows
+
+## Standards Alignment
+
+- Applicable standards areas: team and process, observability and monitoring
+- Evidence in this report: repository-state reconciliation, issue status mapping, and explicit limits of the audit
+- Gap observed: this report audits repo state and GitHub issue alignment, not runtime service health. Documented rationale: documentation-as-code and measurable operational signals serve different purposes and should remain explicit (source https://dora.dev/).
+
+## Required Evidence
+
+- Commands run: `git rev-list --left-right --count main...origin/main`, `npm run lint`, `npm run typecheck`, `npm run test:unit`
+- Tests added or updated: none in this audit-only artifact
+- Rollout or rollback notes: status audit with no runtime rollout
+- Docs updated: dated issue audit report

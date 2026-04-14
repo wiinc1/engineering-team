@@ -47,3 +47,11 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 ## Dashboards + alert links
 - Dashboard: `/monitoring/dashboards/task-assignment.json`
 - Alerts: `/monitoring/alerts/task-assignment.yml`
+
+## Change Ownership Notes
+- Changes to the assignment mutation path in `lib/audit/http.js` or the assignment controls in `src/app/App.jsx` should update this runbook or the matching assignment API contract in the same PR.
+- Nearest verification artifacts for that surface are:
+- `tests/unit/task-assignment.test.js`
+- `tests/unit/audit-api.test.js`
+- `tests/integration/task-assignment-integration.test.js`
+- `tests/e2e/task-assignment.spec.ts`

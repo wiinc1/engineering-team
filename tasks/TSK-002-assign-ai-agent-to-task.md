@@ -1,9 +1,9 @@
 # TSK-002 — Assign AI Agent to a Task
 
 **Created:** 2026-04-01 10:51 CDT
-**Updated:** 2026-04-12 16:58 CDT
+**Updated:** 2026-04-14 15:34 CDT
 **ID:** TSK-002
-**Status:** VERIFY
+**Status:** DONE
 
 ## 0. Reassessment
 
@@ -23,6 +23,12 @@ Remaining unchecked items below are environment or human-process blockers, not m
 
 **Chosen Tier:** Standard  
 **Standards Verified:** User story generated from `docs/templates/USER_STORY_TEMPLATE.md`
+
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, coding and code quality, testing and quality assurance, observability and monitoring, deployment and release
+- Evidence expected for this change: API contracts, feature flag rollout, automated tests across the declared matrix, audit logging, and metrics
+- Gap observed: full production telemetry-backed rollout evidence is not present in this repo-local task artifact. Documented rationale: observability should measure user experience directly and alerts should map to user pain (source https://sre.google/books/).
 
 ## 1. User Story
 
@@ -164,6 +170,13 @@ regression/
 - Fixtures committed under `tests/fixtures/task-assignment/`
 - Factory functions for task, agent, and PM user creation
 - Seed script for tasks and agent roster in integration environment
+
+## Required Evidence
+
+- Commands run: `npm test`, `npm run test:browser`, targeted integration and contract checks
+- Tests added or updated: unit, contract, integration, e2e, visual, accessibility, performance, and security suites for assignment
+- Rollout or rollback notes: feature-flagged rollout with kill switch and standardized disabled response
+- Docs updated: runbooks, OpenAPI, diagrams, monitoring artifacts, README notes
 
 ## 5. Data Model & Schema
 
@@ -639,8 +652,9 @@ Allow a Product Manager to assign or reassign a task to a valid AI agent so owne
 | Date | From | To | Actor | Note |
 |------|------|----|----|------|
 | 2026-04-01 | — | BACKLOG | main | Created from PM request using user story template |
-| 2026-04-12 | BACKLOG | REOPENED | codex | Reopened after DoD audit found missing required artifacts and runtime controls |
-| 2026-04-12 | REOPENED | VERIFY | codex | Implemented assignment controls, tests, monitoring artifacts, and canonical task-platform compatibility work; deployment-only gates remain blocked outside the repo |
+| 2026-04-12 | BACKLOG | REOPEN | codex | Reopened after DoD audit found missing required artifacts and runtime controls |
+| 2026-04-12 | REOPEN | VERIFY | codex | Implemented assignment controls, tests, monitoring artifacts, and canonical task-platform compatibility work; deployment-only gates remain blocked outside the repo |
+| 2026-04-14 | VERIFY | DONE | main | Local tracker synced with closed GitHub issue #29 after repo-to-issue audit confirmed shipped implementation and coverage |
 
 ## 📎 Findings (if reopened)
 
@@ -649,3 +663,5 @@ Allow a Product Manager to assign or reassign a task to a valid AI agent so owne
 ## 💬 Notes
 
 This story assumes a bounded roster of valid AI agents exists in configuration or persistence and can be queried by the task assignment UX/API.
+
+2026-04-14 sync note: the local task tracker had drifted behind the remote issue tracker. GitHub issue #29 is closed, and the repo contains the shipped assignment implementation plus supporting tests/docs called out in `docs/reports/STATUS_2026-04-13_ISSUE_AUDIT.md`.

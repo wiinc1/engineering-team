@@ -5,6 +5,7 @@ info:
   description: |
     API contract for assigning an AI agent owner to a task.
     The runtime accepts both `/tasks/...` and `/api/tasks/...` paths; `/tasks/...` is the canonical route shape used elsewhere in this repo.
+    Governance note: assignment runtime changes should update this spec in the same pull request.
 paths:
   /tasks/{taskId}/assignment:
     patch:

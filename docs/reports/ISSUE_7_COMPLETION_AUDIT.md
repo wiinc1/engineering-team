@@ -133,3 +133,16 @@ Not required to satisfy issue #7, but worth later tightening:
 - document backing query-count budget numerically for each storage backend
 - add a first-class OpenAPI example payload for `/tasks/{id}/detail`
 - add explicit stale-window config if the project wants a runtime-tunable threshold later
+
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance, observability and monitoring, team and process
+- Evidence in this report: explicit contract rules, permissions behavior, freshness semantics, and validation evidence
+- Gap observed: deployed-environment latency evidence and production alert wiring remain future work. Documented rationale: user-facing reliability requires direct measurement, and actionable alerting should correspond to user pain (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: validation commands are captured in the report's validation evidence section
+- Tests added or updated: route contract and browser validation coverage referenced in the audit
+- Rollout or rollback notes: audit-only review with no direct runtime change
+- Docs updated: issue completion audit report

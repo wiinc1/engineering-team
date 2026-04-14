@@ -126,3 +126,16 @@ Colors and sizing via CSS variables for consistency:
 - The spinner/loading animation should use CSS `@keyframes`, not SVG animation
 - Focus ring must be visible for accessibility (`:focus-visible`)
 - Consider adding `aria-disabled` when disabled, not just `disabled` attribute
+
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, coding and code quality, testing and quality assurance
+- Evidence in this decision: explicit component API, modular file structure, accessibility constraints, and predictable styling approach
+- Gap observed: this ADR predates the repo standards template and does not yet include the final implementation evidence for the button component. Documented rationale: readability and modularity are non-negotiable and changes should be verifiable quickly (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: architecture review and document authoring only at ADR stage
+- Tests added or updated: none at ADR creation time
+- Rollout or rollback notes: design-only decision with no runtime rollout
+- Docs updated: ADR for reusable button component system

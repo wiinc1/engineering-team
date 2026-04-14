@@ -32,6 +32,12 @@ Build the initial software factory framework: kanban board, task template, agent
 - [ ] Smoke/synthetic checks passed
 - [ ] No regressions in downstream services
 
+## Standards Alignment
+
+- Applicable standards areas: coding and code quality, team and process, testing and quality assurance
+- Evidence expected for this change: versioned task templates, agent profiles, and workflow artifacts committed in-repo
+- Gap observed: GitHub sync and complete agent profile coverage remain incomplete. Documented rationale: documentation-as-code and end-to-end ownership should be versioned and reviewed with the code they describe (source https://aws.amazon.com/executive-insights/content/amazon-two-pizza-team/).
+
 ## 🔄 Status History
 
 | Date | From | To | Actor | Note |
@@ -48,3 +54,10 @@ Build the initial software factory framework: kanban board, task template, agent
 ## 💬 Notes
 
 Initial framework bootstrap. GitHub repo is empty — this task seeds the entire structure.
+
+## Required Evidence
+
+- Commands run: repository bootstrap commands and file creation
+- Tests added or updated: none yet for bootstrap artifacts
+- Rollout or rollback notes: additive documentation-only bootstrap
+- Docs updated: task file, templates, agent profiles

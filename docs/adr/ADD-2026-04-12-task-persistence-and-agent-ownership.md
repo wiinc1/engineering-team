@@ -172,3 +172,16 @@ Remaining rollout work is operational rather than architectural:
 - [docs/api/task-platform-openapi.yml](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/api/task-platform-openapi.yml)
 - [docs/diagrams/schema-ISSUE-30.mmd](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/diagrams/schema-ISSUE-30.mmd)
 - [docs/reports/ISSUE_30_TASK_PLATFORM_REDESIGN.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/reports/ISSUE_30_TASK_PLATFORM_REDESIGN.md)
+
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, deployment and release, observability and monitoring, team and process
+- Evidence in this decision: canonical contracts, additive migration design, optimistic concurrency, and explicit rollout phases
+- Gap observed: the ADR records the target architecture and in-repo implementation status, but production cutover evidence is still operational follow-up. Documented rationale: modifications must be verifiable, reversible, and low-risk, and progressive rollout reduces deployment risk (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: schema and service implementation validation are captured in the linked redesign report
+- Tests added or updated: canonical task platform unit, integration, and end-to-end coverage linked from the report
+- Rollout or rollback notes: additive parallel-run migration with compatibility routes retained during rollout
+- Docs updated: ADR, linked API contract, schema diagram, and redesign report

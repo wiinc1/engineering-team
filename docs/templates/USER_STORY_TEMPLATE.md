@@ -9,7 +9,9 @@ Template Tier (Choose one — mandatory)
  Standard → Typical new endpoint, page, or service
  Complex → Cross-team, new major workflow, architectural impact
  Epic → Multi-sprint initiative
- Standards Verified → I have reviewed docs/AI_IMPLEMENTATION_CHECKLIST.md and docs/STANDARDS_ADHERENCE_REPORT.md before starting.
+Standards Verified → I have reviewed docs/AI_IMPLEMENTATION_CHECKLIST.md and docs/STANDARDS_ADHERENCE_REPORT.md before starting.
+(Repo gate) Standards baseline reviewed → `docs/standards/software-development-standards.md`
+(Repo gate) Compliance checklist updated → `docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md`
 (Required sections are marked with ✅ per tier in each section header)
 
 1. User Story ✅ All tiers
@@ -25,6 +27,10 @@ Use Given-When-Then format. Every single scenario MUST become an automated E2E t
 Must Have
 Given … When … Then …
 Nice to Have (optional)
+2a. Standards Alignment ✅ All tiers
+- Applicable standards areas:
+- Evidence expected for this change:
+- Known gaps stated using: `Gap observed: X. Documented rationale: Y (source Z).`
 3. Workflow & User Journey ✅ Standard | Complex | Epic
 **User Journey (step-by-step)**
 1. …
@@ -65,6 +71,11 @@ chaos/                          ← For Complex/Epic tiers
 
 regression/                     
 └── Tag new scenarios with @regression
+Required Evidence ✅ All tiers
+- Commands that must pass:
+- Tests that must be added or updated:
+- Observability or rollout evidence required:
+- Docs or runbooks to update:
 Additional Test Requirements by Tier
 ✅ Simple:
 

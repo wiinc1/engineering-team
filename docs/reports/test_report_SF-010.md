@@ -37,3 +37,16 @@
 - PM overview filtering
 - task owner list and board filtering
 - browser rendering and responsive interaction
+
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance
+- Evidence in this report: UI, unit, end-to-end, and regression testing summary for the feature slice
+- Gap observed: this report summarizes test outcomes but does not include production performance or reliability telemetry. Documented rationale: automated testing catches defects early, while operational quality still requires direct measurement in service (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: `vitest run src/app/*.test.tsx tests/unit/board-owner-card-rendering.test.js tests/unit/role-inbox-routing.test.js tests/unit/pm-overview-routing.test.js tests/integration/board-owner-filtering.integration.test.js tests/accessibility/task-assignment.a11y.spec.ts tests/visual/task-assignment.visual.spec.ts tests/performance/lighthouse-task-detail.spec.ts`, `npm run test:browser`, `npm run test:unit`, `node --test tests/e2e/*.test.js`, `npm test`
+- Tests added or updated: UI, unit, end-to-end, and regression coverage referenced in the report
+- Rollout or rollback notes: test-report artifact with no rollout action
+- Docs updated: SF-010 test report

@@ -62,3 +62,13 @@
 - `docs/api/authenticated-browser-app-openapi.yml`
 - `docs/diagrams/workflow-US-002.mmd`
 - `docs/diagrams/architecture-US-002.mmd`
+
+## Change Ownership Notes
+## Evidence
+- Changes under `src/app/App.jsx`, `src/app/session.js`, and `src/app/session.browser.js` should carry adjacent browser-shell evidence in the same PR.
+- The nearest evidence artifacts for those surfaces are:
+- `src/app/App.test.tsx`
+- `src/app/AuthAppShell.test.tsx`
+- `tests/browser/auth-shell.browser.spec.ts`
+- `docs/api/authenticated-browser-app-openapi.yml`
+- this design document

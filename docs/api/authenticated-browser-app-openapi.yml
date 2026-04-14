@@ -2,7 +2,9 @@ openapi: 3.1.0
 info:
   title: Authenticated Browser App Session API
   version: 0.1.0
-  description: Browser-facing internal auth bootstrap endpoint for the authenticated app shell.
+  description: |
+    Browser-facing internal auth bootstrap endpoint for the authenticated app shell.
+    Governance note: browser-shell session and route changes should update this spec in the same pull request.
 paths:
   /auth/session:
     post:

@@ -19,3 +19,16 @@
 ### Evidence
 - Existing list/detail/board/PM overview/authz behaviors were preserved in the modified browser shell and supporting adapters.
 - Auth shell coverage now runs as part of `vitest run src/app/*.test.tsx` and the Playwright browser suite.
+
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance
+- Evidence in this report: UI, unit, end-to-end, and regression testing summary for the auth-shell slice
+- Gap observed: the report captures repo-local verification and not deployed-environment telemetry or rollout evidence. Documented rationale: automated testing catches defects early, but operational quality requires additional direct measurement after deployment (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: test commands summarized across the report sections
+- Tests added or updated: UI, unit, end-to-end, and regression coverage referenced in the report
+- Rollout or rollback notes: test-report artifact with no rollout action
+- Docs updated: US-002 test report

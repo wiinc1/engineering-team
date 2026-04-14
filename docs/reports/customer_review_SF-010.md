@@ -13,3 +13,16 @@
 - `Inactivity review` replaces visible ghosting-review copy
 - Residual note:
 - this report records internal acceptance against the issue because no human customer sign-off artifact was provided through the repo tooling
+
+## Standards Alignment
+
+- Applicable standards areas: team and process
+- Evidence in this report: versioned customer-review record linked to the feature slice
+- Gap observed: this document records stakeholder feedback only and is not a substitute for automated verification evidence. Documented rationale: documentation-as-code supports traceability, while correctness and reliability still require dedicated test evidence (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: review artifact only
+- Tests added or updated: none in this customer review document
+- Rollout or rollback notes: review-only artifact with no rollout action
+- Docs updated: customer review report for SF-010
