@@ -98,7 +98,7 @@ describe('board owner filtering integration', () => {
     expect(within(screen.getByLabelText('TODO column')).getByText('Board unassigned task')).toBeInTheDocument();
     expect(within(screen.getByLabelText('IMPLEMENT column')).getByText('No matching tasks in this column.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear filter' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all filters' }));
     await screen.findByText('5 cards shown.');
 
     fireEvent.click(screen.getByText('Board reassigned task'));

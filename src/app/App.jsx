@@ -32,6 +32,13 @@ import {
   summarizeRoleInboxResults,
   UNASSIGNED_FILTER_VALUE,
 } from './task-owner.mjs';
+import {
+  buildBoardStageOrder,
+  canTransitionLifecycleTask,
+  isLifecycleStage,
+  isTaskAssignedToCurrentActor,
+  matchesTaskSearch,
+} from './work-lifecycle.mjs';
 
 const envApiBaseUrl = (import.meta.env.VITE_TASK_API_BASE_URL || '').trim();
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{7,40}$/i;
@@ -155,20 +162,32 @@ function readTaskListRouteState(search = '') {
   const owner = params.get('owner') || '';
   const view = params.get('view') === 'board' ? 'board' : 'list';
   const bucket = params.get('bucket') || '';
-  return { owner, view, bucket };
+  const priority = params.get('priority') || '';
+  const status = params.get('status') || '';
+  const searchTerm = params.get('search') || '';
+  return { owner, view, bucket, priority, status, searchTerm };
 }
 
-function writeTaskListUrlState({ owner, view, bucket }, search = '') {
+function writeTaskListUrlState({ owner, view, bucket, priority, status, searchTerm }, search = '') {
   const params = new URLSearchParams(search);
   const nextOwner = owner ?? params.get('owner') ?? '';
   const nextView = view ?? (params.get('view') === 'board' ? 'board' : 'list');
   const nextBucket = bucket ?? params.get('bucket') ?? '';
+  const nextPriority = priority ?? params.get('priority') ?? '';
+  const nextStatus = status ?? params.get('status') ?? '';
+  const nextSearch = searchTerm ?? params.get('search') ?? '';
   if (nextOwner) params.set('owner', nextOwner);
   else params.delete('owner');
   if (nextView === 'board') params.set('view', 'board');
   else params.delete('view');
   if (nextBucket) params.set('bucket', nextBucket);
   else params.delete('bucket');
+  if (nextPriority) params.set('priority', nextPriority);
+  else params.delete('priority');
+  if (nextStatus) params.set('status', nextStatus);
+  else params.delete('status');
+  if (nextSearch) params.set('search', nextSearch);
+  else params.delete('search');
   const next = params.toString();
   return next ? `?${next}` : '';
 }
@@ -557,6 +576,9 @@ export function App() {
   const [expandedQaPackages, setExpandedQaPackages] = React.useState({});
   const [qaResultDraft, setQaResultDraft] = React.useState(() => normalizeQaResultDraft());
   const [qaResultStatus, setQaResultStatus] = React.useState({ kind: 'idle', message: '' });
+  const [lifecycleStatus, setLifecycleStatus] = React.useState({ kind: 'idle', message: '', taskId: null });
+  const [sreFindingDraft, setSreFindingDraft] = React.useState('');
+  const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
   const signInState = React.useMemo(() => readSignInState(search), [search]);
   const tokenClaims = React.useMemo(() => readSessionClaims(sessionConfig), [sessionConfig]);
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -640,6 +662,7 @@ export function App() {
       setExpandedWorkflowThreads({});
       setExpandedQaPackages({});
       setQaResultDraft(normalizeQaResultDraft(model.detail?.context?.qaResults?.latest));
+      setSreFindingDraft('');
       setHistoryLoadMoreState({ kind: 'idle', message: '' });
 
       // Keep action success/error feedback visible across same-task refreshes.
@@ -651,6 +674,7 @@ export function App() {
         setTaskLockStatus({ kind: 'idle', message: '' });
         setWorkflowThreadStatus({ kind: 'idle', message: '', threadId: null, action: null });
         setQaResultStatus({ kind: 'idle', message: '' });
+        setLifecycleStatus({ kind: 'idle', message: '', taskId: null });
       }
     }
   }, [model]);
@@ -797,6 +821,12 @@ export function App() {
     navigate('/tasks', writeTaskListUrlState({ view }, search));
   }, [navigate, search]);
 
+  const setTaskListFilters = React.useCallback((updates) => {
+    navigate('/tasks', writeTaskListUrlState(updates, search));
+  }, [navigate, search]);
+
+  const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
+
   const assignmentEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageAssignment(tokenClaims);
   const architectHandoffEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageArchitectHandoff(tokenClaims);
   const engineerSubmissionEnabled = model.kind === 'detail' && Boolean(model.route?.taskId) && canManageEngineerSubmission(tokenClaims);
@@ -833,6 +863,15 @@ export function App() {
   const qaRoutePreview = qaResultDraft.outcome === 'pass'
     ? 'SRE monitoring'
     : 'implementation fix loop';
+  const detailLifecycleItem = model.kind === 'detail'
+    ? {
+        task_id: model.route?.taskId || model.detail?.task?.id || model.summary.taskId,
+        current_stage: model.detail?.task?.stage || model.summary.currentStage,
+        current_owner: model.detail?.summary?.owner?.id || model.summary.currentOwner || null,
+        owner: model.detail?.summary?.owner ? { actor_id: model.detail.summary.owner.id, display_name: model.detail.summary.owner.label } : null,
+      }
+    : null;
+  const detailAssignedToActor = detailLifecycleItem ? isTaskAssignedToCurrentActor(detailLifecycleItem, tokenClaims, agentLookup) : false;
 
   const reloadTask = React.useCallback(async () => {
     if (model.kind === 'list') {
@@ -847,6 +886,61 @@ export function App() {
     const nextModel = await pageModule.load({ pathname, search });
     setModel({ ...nextModel, kind: 'detail' });
   }, [model.kind, pageModule, pathname, search, taskClient]);
+
+  const runLifecycleTransition = React.useCallback(async ({ item, toStage, note = '', source = 'board' }) => {
+    if (!item?.task_id) return;
+
+    const permission = canTransitionLifecycleTask(item, toStage, tokenClaims, agentLookup);
+    if (!permission.allowed) {
+      setLifecycleStatus({ kind: 'error', message: permission.reason, taskId: item.task_id });
+      return;
+    }
+
+    const trimmedNote = String(note || '').trim();
+    if (String(toStage || '').toUpperCase() === 'REOPEN' && !trimmedNote) {
+      setLifecycleStatus({ kind: 'error', message: 'A finding note is required before reopening a task.', taskId: item.task_id });
+      return;
+    }
+
+    setLifecycleStatus({
+      kind: 'loading',
+      message: `Moving ${item.task_id} to ${toStage}…`,
+      taskId: item.task_id,
+    });
+
+    try {
+      await taskClient.changeTaskStage(item.task_id, toStage, {
+        from_stage: item.current_stage,
+        ...(trimmedNote ? { note: trimmedNote, rationale: trimmedNote } : {}),
+        source,
+      });
+      await reloadTask();
+      setLifecycleStatus({
+        kind: 'success',
+        message: `${item.task_id} moved to ${toStage}.`,
+        taskId: item.task_id,
+      });
+      if (String(toStage || '').toUpperCase() === 'REOPEN') setSreFindingDraft('');
+    } catch (error) {
+      setLifecycleStatus({
+        kind: 'error',
+        message: error?.message || `Task transition to ${toStage} failed.`,
+        taskId: item.task_id,
+      });
+    }
+  }, [agentLookup, reloadTask, taskClient, tokenClaims]);
+
+  const handleBoardDrop = React.useCallback(async (item, toStage) => {
+    setDragState({ taskId: null, overStage: '' });
+    if (!item || !isLifecycleStage(toStage) || !isLifecycleStage(item.current_stage) || item.current_stage === toStage) return;
+
+    let note = '';
+    if (toStage === 'REOPEN') {
+      note = window.prompt(`Add a finding note for ${item.task_id}`, '') || '';
+    }
+
+    await runLifecycleTransition({ item, toStage, note, source: 'board-dnd' });
+  }, [runLifecycleTransition]);
 
   const loadMoreHistory = React.useCallback(async () => {
     if (model.kind !== 'detail' || !routeTaskId) return;
@@ -1027,9 +1121,31 @@ export function App() {
     navigate('/tasks');
   }, [navigate]);
 
-  const agentLookup = React.useMemo(() => new Map(mapAgentOptions(agentOptions).map((agent) => [agent.id, agent])), [agentOptions]);
-  const listFilters = model.kind === 'list' ? model.list.filters : { owner: '', view: 'list', bucket: '' };
-  const visibleListItems = model.kind === 'list' ? filterTaskList(model.list.items, listFilters.owner) : [];
+  const listFilters = model.kind === 'list' ? model.list.filters : {
+    owner: '',
+    view: 'list',
+    bucket: '',
+    priority: '',
+    status: '',
+    searchTerm: '',
+  };
+  const visibleListItems = model.kind === 'list'
+    ? filterTaskList(model.list.items, {
+        owner: listFilters.owner,
+        priority: listFilters.priority,
+        status: listFilters.status,
+        searchTerm: listFilters.searchTerm,
+      })
+    : [];
+  const listPriorityOptions = React.useMemo(() => (
+    model.kind === 'list'
+      ? Array.from(new Set(model.list.items.map((item) => String(item.priority || '').trim()).filter(Boolean))).sort()
+      : []
+  ), [model]);
+  const listStatusOptions = React.useMemo(() => (
+    model.kind === 'list' ? buildBoardStageOrder(model.list.items) : []
+  ), [model]);
+  const hasActiveListFilters = Boolean(listFilters.owner || listFilters.priority || listFilters.status || listFilters.searchTerm);
   const roleInboxItems = model.kind === 'list' && activeInboxRole ? buildRoleInboxItems(model.list.items, activeInboxRole, agentLookup) : [];
   const pmSections = model.kind === 'list' && isPmOverview ? buildPmOverviewSections(model.list.items, agentLookup) : [];
   const activePmBucket = isPmOverview && PM_OVERVIEW_BUCKET_ORDER.includes(listFilters.bucket) ? listFilters.bucket : '';
@@ -1256,12 +1372,54 @@ export function App() {
                     ))}
                   </select>
                 </label>
+                <label>
+                  Priority filter
+                  <select
+                    aria-label="Priority filter"
+                    value={listFilters.priority}
+                    onChange={(event) => setTaskListFilters({ priority: event.target.value })}
+                  >
+                    <option value="">All priorities</option>
+                    {listPriorityOptions.map((priority) => (
+                      <option key={priority} value={priority}>{priority}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Status filter
+                  <select
+                    aria-label="Status filter"
+                    value={listFilters.status}
+                    onChange={(event) => setTaskListFilters({ status: event.target.value })}
+                  >
+                    <option value="">All statuses</option>
+                    {listStatusOptions.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Search tasks
+                  <input
+                    aria-label="Search tasks"
+                    value={listFilters.searchTerm}
+                    onChange={(event) => setTaskListFilters({ searchTerm: event.target.value })}
+                    placeholder="Task ID or title"
+                  />
+                </label>
                 <div className="task-list-toolbar__actions">
                   <div className="view-toggle" role="tablist" aria-label="Task overview mode">
                     <button type="button" role="tab" aria-selected={listFilters.view === 'list'} className={listFilters.view === 'list' ? '' : 'button-secondary'} onClick={() => setListView('list')}>List</button>
                     <button type="button" role="tab" aria-selected={listFilters.view === 'board'} className={listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => setListView('board')}>Board</button>
                   </div>
-                  <button type="button" className="button-secondary" onClick={() => setListOwnerFilter('')} disabled={!listFilters.owner}>Clear filter</button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setTaskListFilters({ owner: '', priority: '', status: '', searchTerm: '' })}
+                    disabled={!hasActiveListFilters}
+                  >
+                    Clear all filters
+                  </button>
                   <button type="button" onClick={() => void reloadTask()}>Refresh</button>
                 </div>
               </>
@@ -1388,13 +1546,16 @@ export function App() {
                 <tbody>
                   {visibleListItems.map((item) => {
                     const owner = resolveOwnerPresentation(item, agentLookup);
+                    const isMatch = matchesTaskSearch(item, listFilters.searchTerm);
+                    const assignedToActor = isTaskAssignedToCurrentActor(item, tokenClaims, agentLookup);
                     return (
-                      <tr key={item.task_id}>
+                      <tr key={item.task_id} className={isMatch ? 'task-list-row--match' : ''}>
                         <td>
                           <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
                             <strong>{item.title || item.task_id}</strong>
                           </a>
                           <div className="task-list-meta">{item.task_id}</div>
+                          {assignedToActor ? <div className="task-list-meta"><span className="routing-badge">Assigned to me</span></div> : null}
                         </td>
                         <td>{item.current_stage || '—'}</td>
                         <td>{item.priority || '—'}</td>
@@ -1412,21 +1573,63 @@ export function App() {
 
           {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && visibleListItems.length && listFilters.view === 'board' ? (
             <div className="task-board" aria-label="Task board">
+              {lifecycleStatus.kind !== 'idle' ? (
+                <p className={`assignment-status assignment-status--${lifecycleStatus.kind}`} role={lifecycleStatus.kind === 'error' ? 'alert' : 'status'}>
+                  {lifecycleStatus.message}
+                </p>
+              ) : null}
               <div className="task-board__scroll">
                 <div className="task-board__columns">
                   {boardColumns.map((column) => (
-                    <section key={column.stage} className="task-board__column" aria-label={`${column.stage} column`}>
+                    <section
+                      key={column.stage}
+                      className={`task-board__column${dragState.overStage === column.stage ? ' task-board__column--drop-target' : ''}`}
+                      aria-label={`${column.stage} column`}
+                      onDragOver={(event) => {
+                        if (!isLifecycleStage(column.stage)) return;
+                        event.preventDefault();
+                        if (dragState.overStage !== column.stage) {
+                          setDragState((current) => ({ ...current, overStage: column.stage }));
+                        }
+                      }}
+                      onDragLeave={() => {
+                        if (dragState.overStage === column.stage) {
+                          setDragState((current) => ({ ...current, overStage: '' }));
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const taskId = event.dataTransfer.getData('text/task-id');
+                        const item = visibleListItems.find((entry) => entry.task_id === taskId);
+                        void handleBoardDrop(item, column.stage);
+                      }}
+                    >
                       <div className="task-board__column-header">
                         <h2>{column.stage}</h2>
                         <span>{column.items.length}</span>
                       </div>
                       <div className="task-board__column-body">
-                        {column.items.length ? column.items.map((item) => (
-                          <article key={item.task_id} className="task-board__card">
+                        {column.items.length ? column.items.map((item) => {
+                          const isMatch = matchesTaskSearch(item, listFilters.searchTerm);
+                          const assignedToActor = isTaskAssignedToCurrentActor(item, tokenClaims, agentLookup);
+                          return (
+                          <article
+                            key={item.task_id}
+                            className={`task-board__card${isMatch ? ' task-board__card--match' : ''}${dragState.taskId === item.task_id ? ' task-board__card--dragging' : ''}`}
+                            draggable={isLifecycleStage(item.current_stage)}
+                            onDragStart={(event) => {
+                              event.dataTransfer.setData('text/task-id', item.task_id);
+                              event.dataTransfer.effectAllowed = 'move';
+                              setDragState({ taskId: item.task_id, overStage: '' });
+                            }}
+                            onDragEnd={() => setDragState({ taskId: null, overStage: '' })}
+                          >
                             <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
                               <strong>{item.title || item.task_id}</strong>
                             </a>
                             <div className="task-list-meta">{item.task_id}</div>
+                            {column.stage === 'VERIFY' ? <div className="task-list-meta"><span className="routing-badge">SRE review pending</span></div> : null}
+                            {assignedToActor ? <div className="task-list-meta"><span className="routing-badge">Assigned to me</span></div> : null}
                             <div className="task-board__card-meta">
                               <span className="task-board__label">Priority</span>
                               <span>{item.priority || '—'}</span>
@@ -1441,9 +1644,10 @@ export function App() {
                                 {item.ownerPresentation.label}
                               </span>
                             </div>
-                            <div className="task-list-meta">Read-only owner metadata</div>
+                            <div className="task-list-meta">{isLifecycleStage(item.current_stage) ? 'Drag to another lifecycle column to move this task.' : 'Read-only owner metadata'}</div>
                           </article>
-                        )) : <p className="task-board__empty">No matching tasks in this column.</p>}
+                        );
+                        }) : <p className="task-board__empty">No matching tasks in this column.</p>}
                       </div>
                     </section>
                   ))}
@@ -1471,8 +1675,8 @@ export function App() {
           {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !visibleListItems.length ? (
             <div className="empty-state" role="status">
               <h2>No matching tasks</h2>
-              <p>{listFilters.owner ? 'No tasks match the active owner filter.' : 'No tasks are available yet.'}</p>
-              {listFilters.owner ? <button type="button" onClick={() => setListOwnerFilter('')}>Clear filter</button> : null}
+              <p>{hasActiveListFilters ? 'No tasks match the active task filters.' : 'No tasks are available yet.'}</p>
+              {hasActiveListFilters ? <button type="button" onClick={() => setTaskListFilters({ owner: '', priority: '', status: '', searchTerm: '' })}>Clear all filters</button> : null}
             </div>
           ) : null}
         </section>
@@ -1538,6 +1742,7 @@ export function App() {
                 <span>{formatStatusLabel(model.detail?.task?.status)}</span>
               </div>
               <div className="priority-pill">{model.summary.priority || 'No priority'}</div>
+              {detailAssignedToActor ? <div className="routing-badge">Assigned to me</div> : null}
             </div>
             <div className="summary-grid summary-grid--hero">
               <article>
@@ -1572,6 +1777,63 @@ export function App() {
               </article>
             </div>
           </section>
+
+          {detailLifecycleItem && isLifecycleStage(detailLifecycleItem.current_stage) ? (
+            <section className="detail-card detail-card--full" aria-label="Lifecycle controls">
+              <h2>Lifecycle controls</h2>
+              <p>Valid transitions follow the US-004 lifecycle state machine. Invalid moves are blocked before the stage event is sent.</p>
+              {detailLifecycleItem.current_stage === 'VERIFY' ? (
+                <>
+                  <label>
+                    SRE finding note
+                    <textarea
+                      value={sreFindingDraft}
+                      onChange={(event) => setSreFindingDraft(event.target.value)}
+                      placeholder="Required when reopening from VERIFY."
+                    />
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button
+                      type="button"
+                      onClick={() => void runLifecycleTransition({ item: detailLifecycleItem, toStage: 'DONE', source: 'detail-sre-approve' })}
+                      disabled={lifecycleStatus.kind === 'loading'}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={() => void runLifecycleTransition({ item: detailLifecycleItem, toStage: 'REOPEN', note: sreFindingDraft, source: 'detail-sre-reopen' })}
+                      disabled={lifecycleStatus.kind === 'loading'}
+                    >
+                      Find Issues
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="assignment-form__actions">
+                  {(detailLifecycleItem.current_stage === 'BACKLOG' || detailLifecycleItem.current_stage === 'TODO' || detailLifecycleItem.current_stage === 'IN_PROGRESS' || detailLifecycleItem.current_stage === 'REOPEN') ? (
+                    ['BACKLOG', 'TODO', 'IN_PROGRESS', 'VERIFY'].filter((stage) => stage !== detailLifecycleItem.current_stage).map((stage) => (
+                      <button
+                        key={stage}
+                        type="button"
+                        className="button-secondary"
+                        onClick={() => void runLifecycleTransition({ item: detailLifecycleItem, toStage: stage, source: 'detail-lifecycle' })}
+                        disabled={lifecycleStatus.kind === 'loading' || !canTransitionLifecycleTask(detailLifecycleItem, stage, tokenClaims, agentLookup).allowed}
+                      >
+                        Move to {stage}
+                      </button>
+                    ))
+                  ) : null}
+                </div>
+              )}
+              {lifecycleStatus.kind !== 'idle' ? (
+                <p className={`assignment-status assignment-status--${lifecycleStatus.kind}`} role={lifecycleStatus.kind === 'error' ? 'alert' : 'status'}>
+                  {lifecycleStatus.message}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           {activeTaskLock ? (
             <section className="detail-card detail-card--full" aria-label="Task lock status">
