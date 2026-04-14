@@ -32,6 +32,31 @@ function isGovernanceReviewTask(item) {
   return String(item?.task_type || '').trim().toLowerCase() === 'governance_review';
 }
 
+function canonicalRoleFromOwnerId(ownerId) {
+  const normalized = String(ownerId || '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'engineer' || normalized.startsWith('engineer-')) return 'engineer';
+  if (normalized === 'architect' || normalized.startsWith('architect-')) return 'architect';
+  if (normalized === 'qa' || normalized.startsWith('qa-')) return 'qa';
+  if (normalized === 'sre' || normalized.startsWith('sre-')) return 'sre';
+  if (normalized === 'pm' || normalized.startsWith('pm-')) return 'pm';
+  return null;
+}
+
+function syntheticOwnerLabel(ownerId) {
+  const normalized = String(ownerId || '').trim().toLowerCase();
+  switch (normalized) {
+    case 'engineer-jr':
+      return 'Junior Engineer';
+    case 'engineer-sr':
+      return 'Senior Engineer';
+    case 'engineer-principal':
+      return 'Principal Engineer';
+    default:
+      return null;
+  }
+}
+
 export function mapAgentOptions(items = []) {
   return items.map((agent) => ({
     id: agent.id,
@@ -44,6 +69,11 @@ export function normalizeRoleKey(role) {
   if (typeof role !== 'string') return null;
   const normalized = role.trim().toLowerCase();
   if (!normalized) return null;
+  if (normalized.startsWith('engineer-')) return 'engineer';
+  if (normalized.startsWith('architect-')) return 'architect';
+  if (normalized.startsWith('qa-')) return 'qa';
+  if (normalized.startsWith('sre-')) return 'sre';
+  if (normalized.startsWith('pm-')) return 'pm';
   if (normalized === 'architecture') return 'architect';
   if (normalized === 'engineering') return 'engineer';
   if (normalized === 'quality assurance') return 'qa';
@@ -69,6 +99,11 @@ export function resolveOwnerPresentation(item, agentLookup) {
   const agent = agentLookup.get(item.current_owner);
   if (agent) {
     return { label: agent.label, detail: `Owner: ${agent.label}`, tone: 'assigned', filterValue: item.current_owner };
+  }
+
+  const syntheticLabel = syntheticOwnerLabel(item.current_owner);
+  if (syntheticLabel) {
+    return { label: syntheticLabel, detail: `Owner: ${syntheticLabel}`, tone: 'assigned', filterValue: item.current_owner };
   }
 
   if (isOwnerExplicitlyHidden(item.owner)) {
@@ -137,6 +172,16 @@ export function resolveRoleInboxMembership(item, agentLookup) {
     };
   }
 
+  const canonicalRole = canonicalRoleFromOwnerId(item.current_owner);
+  if (canonicalRole) {
+    return {
+      inboxRole: canonicalRole,
+      reason: 'matched-pattern',
+      routingLabel: `Routed to ${getRoleInboxLabel(canonicalRole)} because the assigned owner follows the canonical ${canonicalRole} ownership pattern.`,
+      isFallback: false,
+    };
+  }
+
   if (isOwnerExplicitlyHidden(item.owner)) {
     return {
       inboxRole: null,
@@ -173,6 +218,7 @@ export function resolvePmOverviewBucket(item, agentLookup) {
   }
 
   const agent = agentLookup.get(ownerId);
+  const canonicalOwnerRole = canonicalRoleFromOwnerId(ownerId);
 
   if (agent?.role && PM_OVERVIEW_ROLE_BUCKETS.has(agent.role)) {
     return {
@@ -180,6 +226,16 @@ export function resolvePmOverviewBucket(item, agentLookup) {
       label: getPmOverviewBucketLabel(agent.role),
       routingCue: `${getRoleInboxLabel(agent.role)} route`,
       routingReason: `Routed to ${getRoleInboxLabel(agent.role)} because the assigned owner maps to that canonical role.`,
+      ownerPresentation,
+    };
+  }
+
+  if (canonicalOwnerRole && PM_OVERVIEW_ROLE_BUCKETS.has(canonicalOwnerRole)) {
+    return {
+      key: canonicalOwnerRole,
+      label: getPmOverviewBucketLabel(canonicalOwnerRole),
+      routingCue: `${getRoleInboxLabel(canonicalOwnerRole)} route`,
+      routingReason: `Routed to ${getRoleInboxLabel(canonicalOwnerRole)} because the assigned owner follows the canonical ${canonicalOwnerRole} ownership pattern.`,
       ownerPresentation,
     };
   }
@@ -294,6 +350,13 @@ export function buildBoardColumns(allItems, visibleItems, agentLookup) {
     items: deliveryItems
       .filter((item) => (item.current_stage || 'Unspecified') === stage && visibleById.has(item.task_id))
       .map((item) => ({ ...item, ownerPresentation: resolveOwnerPresentation(item, agentLookup) })),
+  }));
+}
+
+export function buildGovernanceReviewItems(items, agentLookup) {
+  return sortInboxItems(items.filter((item) => isGovernanceReviewTask(item))).map((item) => ({
+    ...item,
+    ownerPresentation: resolveOwnerPresentation(item, agentLookup),
   }));
 }
 

@@ -1006,6 +1006,13 @@ test('records engineer implementation metadata, exposes the primary reference in
     });
     assert.equal(response.status, 202);
 
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.assigned', actorType: 'agent', idempotencyKey: 'assign:TSK-ENG-1:engineer', payload: { assignee: 'engineer' } }),
+    });
+    assert.equal(response.status, 202);
+
     response = await fetch(`${baseUrl}/tasks/TSK-ENG-1/architect-handoff`, {
       method: 'PUT',
       headers: architectHeaders,
@@ -1096,6 +1103,13 @@ test('validates engineer metadata formats, stage restrictions, and feature flag 
       method: 'POST',
       headers: engineerHeaders,
       body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ENG-2', payload: { title: 'Engineer metadata validation', initial_stage: 'BACKLOG' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-ENG-2/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ eventType: 'task.assigned', actorType: 'agent', idempotencyKey: 'assign:TSK-ENG-2:engineer', payload: { assignee: 'engineer' } }),
     });
     assert.equal(response.status, 202);
 
@@ -1296,6 +1310,18 @@ test('supports Jr above-skill escalation before implementation starts and lets a
     });
     assert.equal(response.status, 202);
 
+    response = await fetch(`${baseUrl}/tasks/TSK-RETIER-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.assigned',
+        actorType: 'agent',
+        idempotencyKey: 'assign:TSK-RETIER-1:engineer',
+        payload: { assignee: 'engineer' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
     response = await fetch(`${baseUrl}/tasks/TSK-RETIER-1/skill-escalation`, {
       method: 'POST',
       headers: engineerHeaders,
@@ -1417,6 +1443,7 @@ test('reassigns inactive work after two missed check-ins, re-tiers it, and creat
     const reassignment = await response.json();
     assert.equal(reassignment.data.previousEngineerTier, 'Jr');
     assert.equal(reassignment.data.engineerTier, 'Sr');
+    assert.equal(reassignment.data.assignee, 'engineer-sr');
     assert.equal(reassignment.data.missedCheckIns, 2);
     assert.match(reassignment.data.ghostingReview.reviewTaskId, /^GHOST-/);
     assert.equal(reassignment.data.transferSummary.prior_assignee, 'engineer');
@@ -1429,6 +1456,7 @@ test('reassigns inactive work after two missed check-ins, re-tiers it, and creat
     assert.equal(detail.context.activityMonitoring.thresholdReached, true);
     assert.equal(detail.context.reassignment.mode, 'inactivity');
     assert.equal(detail.context.reassignment.engineerTier, 'Sr');
+    assert.equal(detail.context.reassignment.assignee, 'engineer-sr');
     assert.equal(detail.context.ghostingReview.reviewTaskId, reassignment.data.ghostingReview.reviewTaskId);
     assert.equal(detail.context.transferredContext.prior_assignee, 'engineer');
     assert.match(detail.context.transferredContext.reason, /missed/i);
@@ -1439,6 +1467,58 @@ test('reassigns inactive work after two missed check-ins, re-tiers it, and creat
     assert.equal(response.status, 200);
     const reviewTask = await response.json();
     assert.match(reviewTask.title, /Inactivity review/);
+  });
+});
+
+test('restricts engineer-only reassignment signals to the currently assigned engineer role', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-user', tenant_id: 'tenant-owner', roles: ['engineer', 'contributor'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-user', tenant_id: 'tenant-owner', roles: ['pm'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-OWNER-1/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-OWNER-1',
+        payload: {
+          title: 'Ownership constrained task',
+          initial_stage: 'IMPLEMENTATION',
+          task_type: 'feature',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-OWNER-1/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'qa' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-OWNER-1/check-ins`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ summary: 'Tried to post an update from the wrong owner role.' }),
+    });
+    assert.equal(response.status, 403);
+    assert.match((await response.json()).error.message, /currently assigned owner/i);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-OWNER-1/skill-escalation`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({ reason: 'Tried to escalate from the wrong owner role.' }),
+    });
+    assert.equal(response.status, 403);
+    assert.match((await response.json()).error.message, /currently assigned owner/i);
   });
 });
 
@@ -1574,6 +1654,13 @@ test('records structured QA results, routes fail/pass outcomes, preserves re-tes
       method: 'POST',
       headers: architectHeaders,
       body: JSON.stringify({ eventType: 'task.stage_changed', actorType: 'agent', idempotencyKey: 'move:TSK-QA-1:IMPLEMENTATION', payload: { from_stage: 'TECHNICAL_SPEC', to_stage: 'IMPLEMENTATION' } }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-QA-1/events`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({ eventType: 'task.assigned', actorType: 'agent', idempotencyKey: 'assign:TSK-QA-1:engineer', payload: { assignee: 'engineer' } }),
     });
     assert.equal(response.status, 202);
 

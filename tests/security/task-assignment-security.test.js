@@ -79,5 +79,6 @@ test('security: unauthorized and malformed assignment requests never mutate stat
     });
     const summary = await response.json();
     assert.equal(summary.current_owner, null);
+    assert.equal(summary.owner, null);
   });
 });

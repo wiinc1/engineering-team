@@ -55,6 +55,8 @@
 - add a first-class `/sign-in` route and internal sign-in form
 - add shared authenticated navigation plus explicit sign-out
 - keep existing route modules and detail/list adapters intact
+- extend the authenticated shell with a dedicated `/overview/governance` route so governance review tasks stay out of standard delivery views
+- preserve canonical owner-role grouping even when projected assignee ids use tier-specific variants such as `engineer-jr`, `engineer-sr`, or `engineer-principal`
 - Centralized auth recovery:
 - add `onAuthFailure` handling in the task-detail API client for `401` and invalid-token cases
 - redirect to sign-in with a recoverable message when session-authenticated requests fail
@@ -72,3 +74,7 @@
 - `tests/browser/auth-shell.browser.spec.ts`
 - `docs/api/authenticated-browser-app-openapi.yml`
 - this design document
+- Browser-shell route additions in this slice:
+- `/overview/governance` is a protected route in the authenticated shell
+- governance review tasks are shown only on that dedicated route and are intentionally excluded from the default task list, board, and PM overview delivery surfaces
+- tier-specific engineer owners still collapse into the canonical `engineer` route family for inbox and overview grouping while preserving human-readable labels in the UI

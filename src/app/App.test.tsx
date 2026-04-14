@@ -337,6 +337,69 @@ function installTaskFetchMock({
       });
     }
 
+    if (url.endsWith('/tasks/TSK-42/skill-escalation') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          currentEngineerTier: 'Jr',
+          requestedTier: 'Sr',
+          updatedAt: '2026-04-01T15:01:46.000Z',
+          eventId: 'evt-skill-escalation',
+          workflowThreadId: 'wf-escalation',
+        },
+      }, 202);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/check-ins') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          occurredAt: '2026-04-01T15:01:47.000Z',
+          intervalMinutes: 15,
+          eventId: 'evt-checkin',
+        },
+      }, 202);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/retier') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          previousEngineerTier: 'Jr',
+          engineerTier: 'Sr',
+          updatedAt: '2026-04-01T15:01:48.000Z',
+          eventId: 'evt-retier',
+        },
+      }, 202);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/reassignment') && init?.method === 'POST') {
+      currentOwner = 'engineer-sr';
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          previousAssignee: 'engineer',
+          assignee: 'engineer-sr',
+          previousEngineerTier: 'Jr',
+          engineerTier: 'Sr',
+          mode: 'inactivity',
+          missedCheckIns: 2,
+          transferSummary: {
+            prior_assignee: 'engineer',
+            new_assignee: 'engineer-sr',
+          },
+          ghostingReview: {
+            reviewTaskId: 'GHOST-1',
+            title: 'Inactivity review for TSK-42',
+          },
+        },
+      }, 202);
+    }
+
     if (url.endsWith('/tasks/TSK-42/lock') && init?.method === 'POST') {
       return createJsonResponse({
         success: true,
@@ -1536,6 +1599,156 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Wire task detail')).toBeInTheDocument();
   });
 
+  it('submits responsible escalation from task detail for Jr-tier work before implementation starts', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'engineer-1',
+        tenant_id: 'tenant-a',
+        roles: ['engineer'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        task: { stage: 'TODO' },
+        context: {
+          architectHandoff: { engineerTier: 'Jr' },
+        },
+      },
+      summaryOverride: { current_stage: 'TODO' },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('Why does this need higher-tier support?'), { target: { value: 'Cross-service delivery risk requires senior support.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Request higher-tier support' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Responsible escalation recorded'))).toBe(true);
+    });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/skill-escalation'))).toBe(true);
+  });
+
+  it('submits engineer check-ins from task detail during implementation', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'engineer-1',
+        tenant_id: 'tenant-a',
+        roles: ['engineer'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        context: {
+          activityMonitoring: {
+            requiredCheckInIntervalMinutes: 15,
+            missedCheckIns: 0,
+            threshold: 2,
+            thresholdReached: false,
+            lastActivity: null,
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('Progress summary'), { target: { value: 'Implemented the next audit projection step.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record engineer check-in' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Check-in recorded.'))).toBe(true);
+    });
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/check-ins'))).toBe(true);
+  });
+
+  it('submits architect re-tier and reassignment controls from task detail', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'architect-1',
+        tenant_id: 'tenant-a',
+        roles: ['architect'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        context: {
+          architectHandoff: { engineerTier: 'Jr' },
+          activityMonitoring: {
+            requiredCheckInIntervalMinutes: 15,
+            missedCheckIns: 2,
+            threshold: 2,
+            thresholdReached: true,
+            lastActivity: {
+              summary: 'Last check-in before inactivity',
+              occurredAt: '2026-04-01T14:00:00.000Z',
+            },
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    fireEvent.change(screen.getByLabelText('Re-tier rationale'), { target: { value: 'Cross-service complexity now requires senior ownership.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update engineer tier' }));
+    await waitFor(() => {
+      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Engineer tier updated.'))).toBe(true);
+    });
+
+    fireEvent.change(screen.getByLabelText('Reassignment reason'), { target: { value: 'Two check-in windows were missed.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Reassign task' }));
+    await waitFor(() => {
+      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Task reassigned and inactivity review created.'))).toBe(true);
+    });
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/retier'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/reassignment'))).toBe(true);
+  });
+
+  it('renders a dedicated governance reviews surface and keeps governance tasks out of the delivery list', async () => {
+    installTaskFetchMock({
+      tasksOverride: [
+        { task_id: 'TSK-42', tenant_id: 'tenant-a', title: 'Wire task detail', priority: 'P1', current_stage: 'IMPLEMENT', current_owner: 'engineer', owner: { actor_id: 'engineer', display_name: 'engineer' }, blocked: false, closed: false, waiting_state: null, next_required_action: null, queue_entered_at: '2026-04-01T15:00:00.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' } },
+        { task_id: 'GHOST-1', tenant_id: 'tenant-a', title: 'Inactivity review for TSK-42', priority: 'P1', current_stage: 'BACKLOG', current_owner: 'architect', owner: { actor_id: 'architect', display_name: 'architect' }, blocked: false, closed: false, waiting_state: null, next_required_action: null, task_type: 'governance_review', queue_entered_at: '2026-04-01T15:00:01.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:01.000Z' } },
+      ],
+    });
+    window.history.pushState({}, '', '/overview/governance');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Governance Reviews' });
+    await screen.findByText('1 governance review shown.');
+    expect(screen.getByText('Inactivity review for TSK-42')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).queryByText('Wire task detail')).not.toBeInTheDocument();
+  });
+
+  it('shows the linked inactivity review on the parent task detail', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        context: {
+          ghostingReview: {
+            reviewTaskId: 'GHOST-1',
+            title: 'Inactivity review for TSK-42',
+            createdAt: '2026-04-01T15:10:00.000Z',
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('link', { name: 'Inactivity review for TSK-42' })).toBeInTheDocument();
+    expect(screen.getByText(/Governance review task created at 2026-04-01T15:10:00.000Z/i)).toBeInTheDocument();
+  });
+
   it('passes an axe smoke scan for the task list route', async () => {
     installTaskFetchMock();
     window.history.pushState({}, '', '/tasks');
@@ -1598,7 +1811,7 @@ describe('Task browser runtime coverage', () => {
 
     await screen.findByRole('heading', { name: 'PM Overview' });
     expect(await screen.findByRole('heading', { name: 'Some routing metadata is unavailable' })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('6 tasks shown across 2 buckets.');
+    expect(screen.getByRole('status')).toHaveTextContent('6 tasks shown across 5 buckets.');
     expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
 
     cleanup();

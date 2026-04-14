@@ -97,6 +97,12 @@ The primary implementation reference is:
 - PR URL when provided
 - otherwise commit SHA
 
+### Current-assignee enforcement
+
+- Engineer-only delivery-loop actions are accepted only when the caller still matches the task's current canonical assignee.
+- If a task has already been reassigned to another owner role, later engineer check-ins, engineer submission, or above-skill escalation attempts fail with `403 forbidden`.
+- Tier-based reassignment may set a more explicit projected assignee id such as `engineer-sr` or `engineer-principal` while still collapsing into the canonical engineer routing family for overview surfaces.
+
 ### Local git vs GitHub
 
 QA progression does not depend on GitHub availability. A valid local commit SHA is sufficient.
@@ -161,3 +167,8 @@ Failing QA runs generate a packaged engineer-facing artifact containing:
 - notification preview before the full package details
 - logs and traces collapsed by default behind an expand affordance
 - previous fix history always available from the same package view
+
+## Governance review tasks
+
+- Inactivity reassignment can create a dedicated governance review task typed as `governance_review`.
+- Governance review tasks are operational follow-up artifacts, not standard delivery work, and should be shown on a dedicated governance review surface rather than in normal delivery queues.

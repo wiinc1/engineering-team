@@ -55,9 +55,13 @@ const taskDetailPayload = {
   },
 };
 
-async function installApiMocks(page) {
-  await page.addInitScript(() => {
-    const claims = {
+async function installApiMocks(page, options: {
+  sessionClaims?: Record<string, unknown>,
+  taskItems?: typeof taskListItems,
+  detailPayload?: typeof taskDetailPayload,
+} = {}) {
+  await page.addInitScript((providedClaims) => {
+    const claims = providedClaims || {
       sub: 'pm-1',
       tenant_id: 'tenant-a',
       roles: ['pm', 'reader'],
@@ -72,11 +76,11 @@ async function installApiMocks(page) {
         expiresAt: new Date(Date.now() + (60 * 60 * 1000)).toISOString(),
       }),
     );
-  });
+  }, options.sessionClaims);
 
   await page.route('**/api/tasks', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({ json: { items: taskListItems } });
+    await route.fulfill({ json: { items: options.taskItems || taskListItems } });
   });
 
   await page.route('**/api/tasks/TSK-42', async (route) => {
@@ -87,7 +91,7 @@ async function installApiMocks(page) {
   });
 
   await page.route('**/api/tasks/TSK-42/detail**', async (route) => {
-    await route.fulfill({ json: taskDetailPayload });
+    await route.fulfill({ json: options.detailPayload || taskDetailPayload });
   });
 
   await page.route('**/api/tasks/TSK-42/history**', async (route) => {
@@ -107,6 +111,10 @@ async function installApiMocks(page) {
       { id: 'qa', display_name: 'QA Engineer', role: 'QA', active: true },
       { id: 'engineer', display_name: 'Engineer', role: 'Engineering', active: true },
     ] } });
+  });
+
+  await page.route('**/api/tasks/TSK-42/skill-escalation', async (route) => {
+    await route.fulfill({ json: { success: true, data: { taskId: 'TSK-42', currentEngineerTier: 'Jr', requestedTier: 'Sr' } }, status: 202 });
   });
 }
 
@@ -276,5 +284,49 @@ test.describe('task detail browser verification', () => {
     expect(desktopShot.byteLength).toBeGreaterThan(10_000);
     expect(tabletShot.byteLength).toBeGreaterThan(10_000);
     expect(mobileShot.byteLength).toBeGreaterThan(10_000);
+  });
+
+  test('shows governance reviews on the dedicated governance overview route', async ({ page }) => {
+    await installApiMocks(page, {
+      taskItems: [
+        ...taskListItems,
+        { task_id: 'GHOST-1', tenant_id: 'tenant-a', title: 'Inactivity review for TSK-42', priority: 'P1', current_stage: 'BACKLOG', current_owner: 'architect', owner: { actor_id: 'architect', display_name: 'Architect' }, blocked: false, closed: false, waiting_state: null, next_required_action: null, task_type: 'governance_review', queue_entered_at: '2026-04-01T15:00:06.000Z', freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:06.000Z' } },
+      ],
+    });
+
+    await openRoute(page, '/overview/governance', 'Governance Reviews');
+    await expect(page.getByRole('region', { name: 'Governance reviews view' })).toBeVisible();
+    await expect(page.getByText('Inactivity review for TSK-42')).toBeVisible();
+    await expect(page.getByText('1 governance review shown.')).toBeVisible();
+  });
+
+  test('submits responsible escalation from task detail in the browser flow', async ({ page }) => {
+    await installApiMocks(page, {
+      sessionClaims: {
+        sub: 'engineer-1',
+        tenant_id: 'tenant-a',
+        roles: ['engineer'],
+        exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      },
+      detailPayload: {
+        ...taskDetailPayload,
+        task: { ...taskDetailPayload.task, stage: 'TODO', status: 'ready' },
+        context: {
+          ...taskDetailPayload.context,
+          architectHandoff: {
+            engineerTier: 'Jr',
+            version: 2,
+            readyForEngineering: true,
+            submittedBy: 'Architect 1',
+            tierRationale: 'Initial sizing kept this in junior scope.',
+          },
+        },
+      },
+    });
+
+    await openRoute(page, '/tasks/TSK-42');
+    await page.getByLabel('Why does this need higher-tier support?').fill('The implementation now crosses service boundaries and needs senior ownership.');
+    await page.getByRole('button', { name: 'Request higher-tier support' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Responsible escalation recorded and surfaced for architect review.' })).toBeVisible();
   });
 });

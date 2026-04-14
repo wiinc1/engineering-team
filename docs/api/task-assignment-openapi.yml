@@ -6,6 +6,8 @@ info:
     API contract for assigning an AI agent owner to a task.
     The runtime accepts both `/tasks/...` and `/api/tasks/...` paths; `/tasks/...` is the canonical route shape used elsewhere in this repo.
     Governance note: assignment runtime changes should update this spec in the same pull request.
+    Delivery-loop mutations that are reserved for the currently assigned engineer role now reject callers
+    that no longer match the task's canonical assignee.
 paths:
   /tasks/{taskId}/assignment:
     patch:
@@ -101,6 +103,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardErrorResponse'
+              examples:
+                wrongAssignedRole:
+                  value:
+                    error:
+                      code: forbidden
+                      message: Only the currently assigned owner may perform this action.
+                      request_id: req-example
+                      requestId: req-example
+                      details:
+                        assignee: engineer-sr
+                        allowed_roles:
+                          - engineer
         '404':
           description: Task not found
           content:
