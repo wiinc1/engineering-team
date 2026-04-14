@@ -1,3 +1,5 @@
+import { buildBoardStageOrder, matchesTaskSearch } from './work-lifecycle.mjs';
+
 export const UNASSIGNED_FILTER_VALUE = '__unassigned__';
 export const STAGE_ORDER = ['BACKLOG', 'TODO', 'IMPLEMENT', 'IN_PROGRESS', 'REVIEW', 'VERIFY', 'DONE', 'REOPEN'];
 export const ROLE_INBOXES = ['pm', 'architect', 'engineer', 'qa', 'sre', 'human'];
@@ -227,10 +229,21 @@ export function summarizeRoleInboxResults(count, roleKey) {
   return `${count} task${count === 1 ? '' : 's'} routed to ${label}.`;
 }
 
-export function filterTaskList(items, ownerFilter) {
-  if (!ownerFilter) return items;
-  if (ownerFilter === UNASSIGNED_FILTER_VALUE) return items.filter((item) => !item.current_owner);
-  return items.filter((item) => item.current_owner === ownerFilter);
+export function filterTaskList(items, filtersOrOwner) {
+  const filters = typeof filtersOrOwner === 'string'
+    ? { owner: filtersOrOwner }
+    : { owner: '', priority: '', status: '', searchTerm: '', ...(filtersOrOwner || {}) };
+
+  return items.filter((item) => {
+    if (filters.owner) {
+      if (filters.owner === UNASSIGNED_FILTER_VALUE && item.current_owner) return false;
+      if (filters.owner !== UNASSIGNED_FILTER_VALUE && item.current_owner !== filters.owner) return false;
+    }
+    if (filters.priority && String(item.priority || '') !== filters.priority) return false;
+    if (filters.status && String(item.current_stage || '') !== filters.status) return false;
+    if (filters.searchTerm && !matchesTaskSearch(item, filters.searchTerm)) return false;
+    return true;
+  });
 }
 
 export function summarizeListResults(count, ownerFilter, agentLookup, view = 'list') {
@@ -251,7 +264,7 @@ export function compareStageName(a, b) {
 
 export function buildBoardColumns(allItems, visibleItems, agentLookup) {
   const visibleById = new Set(visibleItems.map((item) => item.task_id));
-  const stages = Array.from(new Set(allItems.map((item) => item.current_stage || 'Unspecified'))).sort(compareStageName);
+  const stages = buildBoardStageOrder(allItems.length ? allItems : visibleItems);
   return stages.map((stage) => ({
     stage,
     items: allItems

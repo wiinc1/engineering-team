@@ -160,6 +160,27 @@ function installTaskFetchMock({
       });
     }
 
+    if (/\/tasks\/[^/]+\/events$/.test(url) && init?.method === 'POST') {
+      const taskId = url.match(/\/tasks\/([^/]+)\/events$/)?.[1];
+      const body = JSON.parse(String(init.body || '{}'));
+      if (body?.eventType === 'task.stage_changed' && taskId) {
+        const index = taskItems.findIndex((item) => item.task_id === taskId);
+        if (index >= 0) {
+          taskItems[index] = {
+            ...taskItems[index],
+            current_stage: body.payload?.to_stage || taskItems[index].current_stage,
+          };
+        }
+      }
+      return createJsonResponse({
+        success: true,
+        event: {
+          event_id: `evt-${taskId || 'task'}-stage`,
+          occurred_at: '2026-04-01T15:01:00.000Z',
+        },
+      }, 202);
+    }
+
     if (url.includes('/tasks/TSK-42/detail')) {
       if (detailStatus !== 200) {
         return createJsonResponse({
@@ -1342,7 +1363,7 @@ describe('Task browser runtime coverage', () => {
     expect(screen.queryByText('Wire task detail')).not.toBeInTheDocument();
     expect(screen.queryByText('Stale owner reference')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filter' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear all filters' })[0]);
     await screen.findByText('6 tasks shown.');
     expect(screen.getByText('Wire task detail')).toBeInTheDocument();
     expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
@@ -1384,6 +1405,41 @@ describe('Task browser runtime coverage', () => {
     expect(ownerBadge.className).toContain('owner-badge--board');
   });
 
+  it('moves a lifecycle card between valid board columns and rejects invalid drops', async () => {
+    const fetchMock = installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks?view=board');
+    render(<App />);
+
+    await screen.findByText('6 cards shown.');
+
+    const taskCard = screen.getByText('Design routing architecture').closest('article') as HTMLElement;
+    const dataTransfer = {
+      store: new Map<string, string>(),
+      setData(type: string, value: string) {
+        this.store.set(type, value);
+      },
+      getData(type: string) {
+        return this.store.get(type) || '';
+      },
+      effectAllowed: 'move',
+    };
+
+    fireEvent.dragStart(taskCard, { dataTransfer });
+    fireEvent.dragOver(screen.getByLabelText('TODO column'), { dataTransfer });
+    fireEvent.drop(screen.getByLabelText('TODO column'), { dataTransfer });
+
+    await screen.findByText('TSK-47 moved to TODO.');
+    expect(within(screen.getByLabelText('TODO column')).getByText('Design routing architecture')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-47/events'))).toBe(true);
+
+    const movedCard = screen.getByText('Design routing architecture').closest('article') as HTMLElement;
+    fireEvent.dragStart(movedCard, { dataTransfer });
+    fireEvent.dragOver(screen.getByLabelText('VERIFY column'), { dataTransfer });
+    fireEvent.drop(screen.getByLabelText('VERIFY column'), { dataTransfer });
+
+    await screen.findByText('Invalid transition: TODO → VERIFY is not allowed');
+  });
+
   it('shows updated owner after reassignment and refresh from projected state', async () => {
     writeBrowserSessionConfig({
       apiBaseUrl: '',
@@ -1412,7 +1468,7 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Task list' });
     await screen.findByText('0 tasks shown for nonexistent-owner.');
     expect(screen.getByRole('heading', { name: 'No matching tasks' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Clear filter' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Clear all filters' }).length).toBeGreaterThan(0);
   });
 
   it('renders a read-only QA inbox with deterministic ordering and queue reasons', async () => {

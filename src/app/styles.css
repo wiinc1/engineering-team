@@ -925,6 +925,11 @@ button {
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
 }
 
+.task-board__column--drop-target {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
 .task-board__column-header {
   display: flex;
   align-items: center;
@@ -949,6 +954,15 @@ button {
   border-radius: 14px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
+}
+
+.task-board__card--match,
+.task-list-row--match td {
+  background: #eff6ff;
+}
+
+.task-board__card--dragging {
+  opacity: 0.68;
 }
 
 .task-board__card a {
@@ -1008,6 +1022,14 @@ button {
   margin-top: 4px;
   font-size: 0.85rem;
   color: #64748b;
+}
+
+.task-list-toolbar input,
+.task-list-toolbar select {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
 }
 
 .owner-badge {
