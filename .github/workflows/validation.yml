@@ -1,0 +1,47 @@
+name: Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  repo-validation:
+    name: Repo validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit, contract, integration, e2e, property, performance, security, and chaos suites
+        run: |
+          npm run test:unit
+          node --test tests/contract/*.test.js tests/integration/role-inbox-filtering.integration.test.js tests/integration/pm-overview-filtering.integration.test.js tests/integration/task-list-owner-filters.integration.test.js tests/integration/task-assignment-integration.test.js tests/e2e/*.test.js tests/property/*.test.js tests/performance/*.test.js tests/security/*.test.js chaos/*.test.js
+
+  browser-validation:
+    name: Browser validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Run Playwright browser suite
+        run: npm run test:browser
