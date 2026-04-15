@@ -2,6 +2,11 @@ openapi: 3.1.0
 info:
   title: Audit Foundation API
   version: 0.1.0
+  description: |
+    Canonical audit and workflow HTTP contract.
+    The task-list projection now also carries additive queue/WIP metadata and optional SRE monitoring preview data.
+    SRE monitoring runtime accepts both `ff_sre_monitoring` and `ff-sre-monitoring` as equivalent feature-flag names.
+    Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
 components:
   securitySchemes:
     BearerAuth:
@@ -41,11 +46,18 @@ components:
           $ref: '#/components/schemas/OwnerSummary'
         blocked: { type: boolean }
         closed: { type: boolean }
+        queue_entered_at: { type: [string, 'null'], format: date-time }
+        wip_owner: { type: [string, 'null'] }
+        wip_started_at: { type: [string, 'null'], format: date-time }
         freshness:
           type: object
           properties:
             status: { type: string }
             last_updated_at: { type: [string, 'null'], format: date-time }
+        monitoring:
+          type: [object, 'null']
+          additionalProperties: true
+          description: Optional SRE monitoring preview used by the `/inbox/sre` dashboard rows.
     TaskListResponse:
       type: object
       required: [items]
@@ -257,6 +269,69 @@ paths:
       responses:
         '200':
           description: Relationship response
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/sre-monitoring/start:
+    post:
+      summary: Start the SRE monitoring window for a task already routed into `SRE_MONITORING`
+      description: |
+        Requires SRE or admin privileges and durable deployment confirmation inputs.
+        The runtime feature can be disabled by either `ff_sre_monitoring` or `ff-sre-monitoring`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deploymentEnvironment, deploymentUrl, deploymentVersion]
+              properties:
+                deploymentEnvironment: { type: string }
+                deploymentUrl: { type: string, format: uri }
+                deploymentVersion: { type: string }
+                evidence:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: Monitoring window started
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/sre-monitoring/approve:
+    post:
+      summary: Record early SRE approval for a stable monitoring window
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+                evidence:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: Approval recorded and task advanced to close review
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

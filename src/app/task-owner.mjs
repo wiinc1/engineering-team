@@ -153,6 +153,15 @@ export function resolveRoleInboxMembership(item, agentLookup) {
     };
   }
 
+  if (String(item?.current_stage || '').trim().toUpperCase() === 'SRE_MONITORING') {
+    return {
+      inboxRole: 'sre',
+      reason: 'stage-sre-monitoring',
+      routingLabel: 'Routed to SRE because the task is actively in the SRE monitoring stage.',
+      isFallback: false,
+    };
+  }
+
   if (!item?.current_owner) {
     return {
       inboxRole: null,
@@ -378,8 +387,23 @@ function compareStableTaskId(left, right) {
   return String(left?.task_id || '').localeCompare(String(right?.task_id || ''));
 }
 
-export function sortInboxItems(items = []) {
-  return [...items].sort((left, right) => comparePriority(left, right) || compareFreshnessTimestamp(left, right) || compareStableTaskId(left, right));
+function compareMonitoringDeadline(left, right) {
+  const leftMs = Number(left?.monitoring?.timeRemainingMs);
+  const rightMs = Number(right?.monitoring?.timeRemainingMs);
+  const safeLeft = Number.isFinite(leftMs) ? leftMs : Number.MAX_SAFE_INTEGER;
+  const safeRight = Number.isFinite(rightMs) ? rightMs : Number.MAX_SAFE_INTEGER;
+  if (safeLeft !== safeRight) return safeLeft - safeRight;
+  return 0;
+}
+
+export function sortInboxItems(items = [], roleKey = null) {
+  const normalizedRole = normalizeRoleKey(roleKey);
+  return [...items].sort((left, right) => {
+    if (normalizedRole === 'sre') {
+      return comparePriority(left, right) || compareMonitoringDeadline(left, right) || compareFreshnessTimestamp(left, right) || compareStableTaskId(left, right);
+    }
+    return comparePriority(left, right) || compareFreshnessTimestamp(left, right) || compareStableTaskId(left, right);
+  });
 }
 
 export function resolveQueueReason(item, roleKey) {
@@ -393,6 +417,13 @@ export function resolveQueueReason(item, roleKey) {
     return {
       label: actionNeeded,
       detail: `Action needed from ${getRoleInboxLabel(normalizedRole)}. Ordered by priority first, then queue age (${queueEnteredAt || 'unknown'}), then task ID for stable tie-breaking.`,
+    };
+  }
+
+  if (normalizedRole === 'sre' && item?.monitoring?.windowEndsAt) {
+    return {
+      label: item.monitoring.state === 'approved' ? 'Monitoring approved' : item.monitoring.state === 'escalated' ? 'Escalated to human review' : `Monitoring window: ${item.monitoring.timeRemainingLabel || 'unknown'}`,
+      detail: `Operational review is ordered by priority first, then remaining monitoring time (${item.monitoring.windowEndsAt}), then freshness, then task ID.`,
     };
   }
 
@@ -410,7 +441,7 @@ export function resolveQueueReason(item, roleKey) {
 }
 
 export function buildRoleInboxItems(items, roleKey, agentLookup) {
-  return sortInboxItems(filterTasksForRoleInbox(items, roleKey, agentLookup)).map((item) => ({
+  return sortInboxItems(filterTasksForRoleInbox(items, roleKey, agentLookup), roleKey).map((item) => ({
     ...item,
     ownerPresentation: resolveOwnerPresentation(item, agentLookup),
     routing: resolveRoleInboxMembership(item, agentLookup),

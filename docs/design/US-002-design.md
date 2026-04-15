@@ -78,3 +78,4 @@
 - `/overview/governance` is a protected route in the authenticated shell
 - governance review tasks are shown only on that dedicated route and are intentionally excluded from the default task list, board, and PM overview delivery surfaces
 - tier-specific engineer owners still collapse into the canonical `engineer` route family for inbox and overview grouping while preserving human-readable labels in the UI
+- `/inbox/sre` is a protected route in the authenticated shell and now renders a deployment-aware monitoring dashboard for tasks actively in the `SRE_MONITORING` stage

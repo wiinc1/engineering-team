@@ -279,6 +279,33 @@ test('task detail client submits reassignment workflow actions to dedicated endp
   assert.ok(calls.every((entry) => entry.init.method === 'POST'));
 });
 
+test('task detail client submits SRE monitoring workflow actions to dedicated endpoints', async () => {
+  const calls = [];
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, json: async () => ({ success: true }) };
+    },
+  });
+
+  await client.startSreMonitoring('TSK-91', {
+    deploymentEnvironment: 'production',
+    deploymentUrl: 'https://deploy.example/releases/42',
+    deploymentVersion: '2026.04.14-1',
+  });
+  await client.approveSreMonitoring('TSK-91', {
+    reason: 'Telemetry stayed stable across the first hour.',
+    evidence: ['metrics steady', 'error budget unchanged'],
+  });
+
+  assert.deepEqual(calls.map((entry) => entry.url), [
+    'http://audit.local/tasks/TSK-91/sre-monitoring/start',
+    'http://audit.local/tasks/TSK-91/sre-monitoring/approve',
+  ]);
+  assert.ok(calls.every((entry) => entry.init.method === 'POST'));
+});
+
 test('deriveTelemetryFreshness promotes fresh and stale signals from freshness metadata', () => {
   assert.deepEqual(
     deriveTelemetryFreshness({ freshness: { status: 'fresh', last_updated_at: '2026-04-01T12:00:00.000Z' } }),

@@ -448,6 +448,22 @@ function normalizeQaResultDraft(result = {}) {
   };
 }
 
+function normalizeSreMonitoringStartDraft(monitoring = {}) {
+  return {
+    deploymentEnvironment: monitoring.deployment?.environment || 'production',
+    deploymentUrl: monitoring.deployment?.url || '',
+    deploymentVersion: monitoring.deployment?.version || '',
+    evidence: Array.isArray(monitoring.deployment?.evidence) ? monitoring.deployment.evidence.join('\n') : '',
+  };
+}
+
+function normalizeSreApprovalDraft(monitoring = {}) {
+  return {
+    reason: monitoring.approval?.reason || '',
+    evidence: Array.isArray(monitoring.approval?.evidence) ? monitoring.approval.evidence.join('\n') : '',
+  };
+}
+
 function splitTextareaLines(value) {
   return String(value || '')
     .split(/\n+/)
@@ -535,6 +551,10 @@ function canRequestSkillEscalation(tokenClaims) {
 
 function canManageReassignmentGhosting(tokenClaims) {
   return hasAnyRole(tokenClaims, ['architect', 'admin']);
+}
+
+function canManageSreMonitoring(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['sre', 'admin']);
 }
 
 function canAnswerReviewQuestion(tokenClaims) {
@@ -637,6 +657,10 @@ export function App() {
   const [expandedQaPackages, setExpandedQaPackages] = React.useState({});
   const [qaResultDraft, setQaResultDraft] = React.useState(() => normalizeQaResultDraft());
   const [qaResultStatus, setQaResultStatus] = React.useState({ kind: 'idle', message: '' });
+  const [sreMonitoringStartDraft, setSreMonitoringStartDraft] = React.useState(() => normalizeSreMonitoringStartDraft());
+  const [sreMonitoringStartStatus, setSreMonitoringStartStatus] = React.useState({ kind: 'idle', message: '' });
+  const [sreApprovalDraft, setSreApprovalDraft] = React.useState(() => normalizeSreApprovalDraft());
+  const [sreApprovalStatus, setSreApprovalStatus] = React.useState({ kind: 'idle', message: '' });
   const [lifecycleStatus, setLifecycleStatus] = React.useState({ kind: 'idle', message: '', taskId: null });
   const [sreFindingDraft, setSreFindingDraft] = React.useState('');
   const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
@@ -727,6 +751,8 @@ export function App() {
       setExpandedWorkflowThreads({});
       setExpandedQaPackages({});
       setQaResultDraft(normalizeQaResultDraft(model.detail?.context?.qaResults?.latest));
+      setSreMonitoringStartDraft(normalizeSreMonitoringStartDraft(model.detail?.context?.sreMonitoring));
+      setSreApprovalDraft(normalizeSreApprovalDraft(model.detail?.context?.sreMonitoring));
       setSreFindingDraft('');
       setHistoryLoadMoreState({ kind: 'idle', message: '' });
 
@@ -743,6 +769,8 @@ export function App() {
         setTaskLockStatus({ kind: 'idle', message: '' });
         setWorkflowThreadStatus({ kind: 'idle', message: '', threadId: null, action: null });
         setQaResultStatus({ kind: 'idle', message: '' });
+        setSreMonitoringStartStatus({ kind: 'idle', message: '' });
+        setSreApprovalStatus({ kind: 'idle', message: '' });
         setLifecycleStatus({ kind: 'idle', message: '', taskId: null });
       }
     }
@@ -930,6 +958,8 @@ export function App() {
   const canManageWorkflowThreads = model.kind === 'detail' && hasAnyRole(tokenClaims, ['architect', 'engineer', 'qa', 'pm', 'contributor', 'admin']);
   const qaStageEnabled = model.kind === 'detail' && model.detail?.task?.stage === 'QA_TESTING';
   const canSubmitQaResult = qaStageEnabled && hasAnyRole(tokenClaims, ['qa', 'admin', 'contributor']);
+  const sreMonitoring = model.kind === 'detail' ? (model.detail?.context?.sreMonitoring || null) : null;
+  const sreMonitoringEnabled = model.kind === 'detail' && model.detail?.task?.stage === 'SRE_MONITORING' && canManageSreMonitoring(tokenClaims);
   const workflowThreadNotificationTargets = defaultWorkflowNotificationTargets(workflowThreadDraft.commentType, workflowThreadDraft.blocking);
   const latestQaResult = model.kind === 'detail' ? (model.detail?.context?.qaResults?.latest || null) : null;
   const latestFailedQa = model.kind === 'detail' ? (model.detail?.context?.qaResults?.items || []).find((item) => item.outcome === 'fail') || null : null;
@@ -1173,6 +1203,40 @@ export function App() {
     }
   }, [qaResultDraft, reloadTask, routeTaskId, taskClient]);
 
+  const submitSreMonitoringStart = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setSreMonitoringStartStatus({ kind: 'loading', message: 'Starting monitoring window…' });
+    try {
+      await taskClient.startSreMonitoring(routeTaskId, {
+        deploymentEnvironment: sreMonitoringStartDraft.deploymentEnvironment,
+        deploymentUrl: sreMonitoringStartDraft.deploymentUrl,
+        deploymentVersion: sreMonitoringStartDraft.deploymentVersion,
+        evidence: splitTextareaLines(sreMonitoringStartDraft.evidence),
+      });
+      await reloadTask();
+      setSreMonitoringStartStatus({ kind: 'success', message: 'SRE monitoring window started.' });
+    } catch (error) {
+      setSreMonitoringStartStatus({ kind: 'error', message: error?.message || 'SRE monitoring could not be started.' });
+    }
+  }, [reloadTask, routeTaskId, sreMonitoringStartDraft, taskClient]);
+
+  const submitSreApproval = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setSreApprovalStatus({ kind: 'loading', message: 'Recording early approval…' });
+    try {
+      await taskClient.approveSreMonitoring(routeTaskId, {
+        reason: sreApprovalDraft.reason,
+        evidence: splitTextareaLines(sreApprovalDraft.evidence),
+      });
+      await reloadTask();
+      setSreApprovalStatus({ kind: 'success', message: 'SRE early approval recorded.' });
+    } catch (error) {
+      setSreApprovalStatus({ kind: 'error', message: error?.message || 'SRE approval failed.' });
+    }
+  }, [reloadTask, routeTaskId, sreApprovalDraft, taskClient]);
+
   const handleSignIn = React.useCallback(async (event) => {
     event.preventDefault();
     const apiBaseUrl = String(signInDraft.apiBaseUrl || '').trim().replace(/\/+$/, '');
@@ -1341,15 +1405,17 @@ export function App() {
           <p className="eyebrow">Authenticated browser shell for US-002</p>
           <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : isGovernanceOverview ? 'Governance Reviews' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
           <p className="lede">
-            {model.kind === 'list'
-              ? isPmOverview
-                ? 'Read-only grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping.'
-                : isGovernanceOverview
-                  ? 'Dedicated operational surface for inactivity and governance review tasks that should stay out of delivery queues.'
-                : activeInboxRole
-                  ? `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${getRoleInboxLabel(activeInboxRole)} role.`
-                  : 'Overview list wired to the projected owner read model with single-select owner filtering.'
-              : 'Route-mounted task detail screen using the existing adapter and page module contract.'}
+	            {model.kind === 'list'
+	              ? isPmOverview
+	                ? 'Read-only grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping.'
+	                : isGovernanceOverview
+	                  ? 'Dedicated operational surface for inactivity and governance review tasks that should stay out of delivery queues.'
+	                : activeInboxRole
+	                  ? activeInboxRole === 'sre'
+	                    ? 'Read-only monitoring inbox showing tasks routed here because they are in the SRE monitoring stage or explicitly assigned to SRE-owned work.'
+	                    : `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${getRoleInboxLabel(activeInboxRole)} role.`
+	                  : 'Overview list wired to the projected owner read model with single-select owner filtering.'
+	              : 'Route-mounted task detail screen using the existing adapter and page module contract.'}
           </p>
         </div>
 
@@ -1446,13 +1512,17 @@ export function App() {
                   <button type="button" onClick={() => void reloadTask()}>Refresh</button>
                 </div>
               </div>
-            ) : activeInboxRole ? (
-              <div className="role-inbox-toolbar">
-                <div>
-                  <p className="eyebrow">Role inbox</p>
-                  <h2>{getRoleInboxLabel(activeInboxRole)} inbox routing</h2>
-                  <p className="role-inbox-toolbar__cue">Tasks appear here only when their current assigned owner resolves to the {getRoleInboxLabel(activeInboxRole)} canonical role. Unassigned tasks appear in no role inbox.</p>
-                </div>
+	            ) : activeInboxRole ? (
+	              <div className="role-inbox-toolbar">
+	                <div>
+	                  <p className="eyebrow">Role inbox</p>
+	                  <h2>{getRoleInboxLabel(activeInboxRole)} inbox routing</h2>
+	                  <p className="role-inbox-toolbar__cue">
+	                    {activeInboxRole === 'sre'
+	                      ? 'Tasks appear here when they are actively in the SRE monitoring stage or when routing metadata explicitly points to SRE ownership.'
+	                      : `Tasks appear here only when their current assigned owner resolves to the ${getRoleInboxLabel(activeInboxRole)} canonical role. Unassigned tasks appear in no role inbox.`}
+	                  </p>
+	                </div>
                 <div className="task-list-toolbar__actions">
                   <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Open full task list</button>
                   <button type="button" onClick={() => void reloadTask()}>Refresh</button>
@@ -1591,7 +1661,69 @@ export function App() {
             </div>
           ) : null}
 
-          {roleInboxState.kind === 'ready' && activeInboxRole && roleInboxItems.length ? (
+          {roleInboxState.kind === 'ready' && activeInboxRole === 'sre' && roleInboxItems.length ? (
+            <div className="task-list-table-wrap">
+              <table className="task-list-table" aria-label="SRE monitoring dashboard">
+                <thead>
+                  <tr>
+                    <th scope="col">Task</th>
+                    <th scope="col">Risk</th>
+                    <th scope="col">Time remaining</th>
+                    <th scope="col">Deployment</th>
+                    <th scope="col">PR / Commit</th>
+                    <th scope="col">Telemetry</th>
+                    <th scope="col">Drilldowns</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roleInboxItems.map((item) => (
+                    <tr key={item.task_id}>
+                      <td>
+                        <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                          <strong>{item.title || item.task_id}</strong>
+                        </a>
+                        <div className="task-list-meta">{item.task_id} · {item.current_stage || '—'}</div>
+                      </td>
+                      <td>
+                        <span className="routing-badge">{String(item.monitoring?.riskLevel || 'unknown').toUpperCase()}</span>
+                        <div className="task-list-meta">{item.queueReason.label}</div>
+                      </td>
+                      <td>
+                        <strong>{item.monitoring?.timeRemainingLabel || 'Not started'}</strong>
+                        <div className="task-list-meta">{item.monitoring?.windowEndsAt || 'No deadline yet'}</div>
+                      </td>
+                      <td>
+                        <div>{item.monitoring?.deployment?.environment || 'No deploy recorded'}</div>
+                        <div className="task-list-meta">
+                          {item.monitoring?.deployment?.version || 'No version'}
+                          {item.monitoring?.deployment?.url ? ` · ${item.monitoring.deployment.url}` : ''}
+                        </div>
+                      </td>
+                      <td>
+                        <div>{item.monitoring?.linkedPrs?.[0]?.number ? `PR #${item.monitoring.linkedPrs[0].number}` : 'No merged PR'}</div>
+                        <div className="task-list-meta">{item.monitoring?.commitSha || 'No commit snapshot'}</div>
+                      </td>
+                      <td>
+                        <div>Freshness: {item.monitoring?.telemetry?.freshness || 'unknown'}</div>
+                        <div className="task-list-meta">Events: {item.monitoring?.telemetry?.eventCount ?? 0}</div>
+                      </td>
+                      <td>
+                        <div className="task-list-meta">
+                          {item.monitoring?.telemetry?.drilldowns?.metrics ? <a href={item.monitoring.telemetry.drilldowns.metrics} target="_blank" rel="noreferrer">Metrics</a> : 'Metrics unavailable'}
+                          {' · '}
+                          {item.monitoring?.telemetry?.drilldowns?.logs ? <a href={item.monitoring.telemetry.drilldowns.logs} target="_blank" rel="noreferrer">Logs</a> : 'Logs unavailable'}
+                          {' · '}
+                          {item.monitoring?.telemetry?.drilldowns?.traces ? <a href={item.monitoring.telemetry.drilldowns.traces} target="_blank" rel="noreferrer">Traces</a> : 'Traces unavailable'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {roleInboxState.kind === 'ready' && activeInboxRole && activeInboxRole !== 'sre' && roleInboxItems.length ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -3296,6 +3428,126 @@ export function App() {
                   ))}
                 </ul>
               ) : null}
+            </section>
+
+            <section className="detail-card">
+              <h2>SRE Monitoring</h2>
+              {sreMonitoring ? (
+                <>
+                  <div className="summary-grid review-question-summary-grid">
+                    <article>
+                      <span>State</span>
+                      <strong>{sreMonitoring.state}</strong>
+                    </article>
+                    <article>
+                      <span>Risk</span>
+                      <strong>{sreMonitoring.riskLevel || 'unknown'}</strong>
+                    </article>
+                    <article>
+                      <span>Time remaining</span>
+                      <strong>{sreMonitoring.timeRemainingLabel || 'Not started'}</strong>
+                    </article>
+                    <article>
+                      <span>Telemetry freshness</span>
+                      <strong>{sreMonitoring.telemetry?.freshness || 'unknown'}</strong>
+                    </article>
+                  </div>
+
+                  <div className="review-question-note">
+                    <span>Deployment snapshot</span>
+                    <p>{sreMonitoring.deployment?.environment ? `${sreMonitoring.deployment.environment} · ${sreMonitoring.deployment.version || 'version unknown'}` : 'Monitoring has not started yet.'}</p>
+                    <p className="task-list-meta">
+                      PR: {sreMonitoring.linkedPrs?.[0]?.number ? `#${sreMonitoring.linkedPrs[0].number}` : 'None'}
+                      {` · Commit: ${sreMonitoring.commitSha || 'None'}`}
+                      {sreMonitoring.windowEndsAt ? ` · Window ends: ${sreMonitoring.windowEndsAt}` : ''}
+                    </p>
+                    <p className="task-list-meta">
+                      {sreMonitoring.telemetry?.drilldowns?.metrics ? <a href={sreMonitoring.telemetry.drilldowns.metrics} target="_blank" rel="noreferrer">Metrics</a> : 'Metrics unavailable'}
+                      {' · '}
+                      {sreMonitoring.telemetry?.drilldowns?.logs ? <a href={sreMonitoring.telemetry.drilldowns.logs} target="_blank" rel="noreferrer">Logs</a> : 'Logs unavailable'}
+                      {' · '}
+                      {sreMonitoring.telemetry?.drilldowns?.traces ? <a href={sreMonitoring.telemetry.drilldowns.traces} target="_blank" rel="noreferrer">Traces</a> : 'Traces unavailable'}
+                    </p>
+                  </div>
+
+                  {sreMonitoring.approval ? (
+                    <div className="review-question-note">
+                      <span>Recorded approval</span>
+                      <p>{sreMonitoring.approval.reason}</p>
+                      <p className="task-list-meta">{sreMonitoring.approval.approvedBy || 'Unknown approver'} · {sreMonitoring.approval.approvedAt || 'No timestamp'}</p>
+                      {renderList(sreMonitoring.approval.evidence, 'No evidence notes captured.')}
+                    </div>
+                  ) : null}
+
+                  {sreMonitoring.escalation ? (
+                    <div className="review-question-note">
+                      <span>Expiry escalation</span>
+                      <p>Human stakeholder escalation was created because the monitoring window expired without approval.</p>
+                      <p className="task-list-meta">{sreMonitoring.escalation.escalatedAt || 'No timestamp'}</p>
+                    </div>
+                  ) : null}
+
+                  {sreMonitoringEnabled && sreMonitoring.canStart ? (
+                    <form className="architect-handoff-form" onSubmit={submitSreMonitoringStart}>
+                      <div className="summary-grid architect-handoff-grid">
+                        <label>
+                          Deployment environment
+                          <input value={sreMonitoringStartDraft.deploymentEnvironment} onChange={(event) => setSreMonitoringStartDraft((current) => ({ ...current, deploymentEnvironment: event.target.value }))} />
+                        </label>
+                        <label>
+                          Deployment URL
+                          <input value={sreMonitoringStartDraft.deploymentUrl} onChange={(event) => setSreMonitoringStartDraft((current) => ({ ...current, deploymentUrl: event.target.value }))} placeholder="https://deploy.example/releases/123" />
+                        </label>
+                        <label>
+                          Deployment version
+                          <input value={sreMonitoringStartDraft.deploymentVersion} onChange={(event) => setSreMonitoringStartDraft((current) => ({ ...current, deploymentVersion: event.target.value }))} placeholder="2026.04.14-1" />
+                        </label>
+                        <label className="architect-handoff-grid__full">
+                          Deployment evidence
+                          <textarea value={sreMonitoringStartDraft.evidence} onChange={(event) => setSreMonitoringStartDraft((current) => ({ ...current, evidence: event.target.value }))} placeholder="One confirmation per line" />
+                        </label>
+                      </div>
+                      <div className="assignment-form__actions">
+                        <button type="submit" disabled={sreMonitoringStartStatus.kind === 'loading'}>
+                          {sreMonitoringStartStatus.kind === 'loading' ? 'Starting…' : 'Start monitoring window'}
+                        </button>
+                      </div>
+                      {sreMonitoringStartStatus.kind !== 'idle' ? (
+                        <p className={`assignment-status assignment-status--${sreMonitoringStartStatus.kind}`} role={sreMonitoringStartStatus.kind === 'error' ? 'alert' : 'status'}>
+                          {sreMonitoringStartStatus.message}
+                        </p>
+                      ) : null}
+                    </form>
+                  ) : null}
+
+                  {sreMonitoringEnabled && sreMonitoring.canApprove ? (
+                    <form className="architect-handoff-form" onSubmit={submitSreApproval}>
+                      <div className="summary-grid architect-handoff-grid">
+                        <label className="architect-handoff-grid__full">
+                          Approval reason
+                          <textarea value={sreApprovalDraft.reason} onChange={(event) => setSreApprovalDraft((current) => ({ ...current, reason: event.target.value }))} placeholder="Explain why the rollout is stable enough to leave SRE monitoring early." />
+                        </label>
+                        <label className="architect-handoff-grid__full">
+                          Evidence notes
+                          <textarea value={sreApprovalDraft.evidence} onChange={(event) => setSreApprovalDraft((current) => ({ ...current, evidence: event.target.value }))} placeholder="One evidence note per line" />
+                        </label>
+                      </div>
+                      <div className="assignment-form__actions">
+                        <button type="submit" disabled={sreApprovalStatus.kind === 'loading'}>
+                          {sreApprovalStatus.kind === 'loading' ? 'Approving…' : 'Approve early'}
+                        </button>
+                      </div>
+                      {sreApprovalStatus.kind !== 'idle' ? (
+                        <p className={`assignment-status assignment-status--${sreApprovalStatus.kind}`} role={sreApprovalStatus.kind === 'error' ? 'alert' : 'status'}>
+                          {sreApprovalStatus.message}
+                        </p>
+                      ) : null}
+                    </form>
+                  ) : null}
+                </>
+              ) : (
+                <p>No SRE monitoring context yet.</p>
+              )}
             </section>
 
             <section className="detail-card">

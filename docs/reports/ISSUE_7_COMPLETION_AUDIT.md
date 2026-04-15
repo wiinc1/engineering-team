@@ -134,6 +134,11 @@ Not required to satisfy issue #7, but worth later tightening:
 - add a first-class OpenAPI example payload for `/tasks/{id}/detail`
 - add explicit stale-window config if the project wants a runtime-tunable threshold later
 
+## Later task-detail additions now covered by the same contract discipline
+- Subsequent workflow slices may extend the detail `context` object with additive sections when the server remains the authoritative derivation layer.
+- Current additive example: `context.sreMonitoring`, which carries deployment evidence, countdown state, telemetry drilldowns, approval evidence, and expiry escalation status for tasks in the SRE monitoring flow.
+- These additions do not change the underlying task-detail rule that the client should consume the server-prepared `/tasks/{id}/detail` payload rather than reconstructing workflow state from multiple endpoints.
+
 ## Standards Alignment
 
 - Applicable standards areas: testing and quality assurance, observability and monitoring, team and process

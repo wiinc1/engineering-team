@@ -300,6 +300,30 @@ components:
               type: [object, 'null']
               additionalProperties: true
               description: Linked governance review task created for inactivity or other governance follow-up.
+            sreMonitoring:
+              type: [object, 'null']
+              description: SRE monitoring workflow summary, including deployment evidence, countdown state, telemetry drilldowns, approval snapshot, and expiry escalation details when present.
+              properties:
+                state: { type: string }
+                windowStartedAt: { type: [string, 'null'], format: date-time }
+                windowEndsAt: { type: [string, 'null'], format: date-time }
+                timeRemainingLabel: { type: [string, 'null'] }
+                riskLevel: { type: [string, 'null'] }
+                deployment:
+                  type: [object, 'null']
+                  properties:
+                    environment: { type: [string, 'null'] }
+                    url: { type: [string, 'null'], format: uri }
+                    version: { type: [string, 'null'] }
+                telemetry:
+                  type: [object, 'null']
+                  additionalProperties: true
+                approval:
+                  type: [object, 'null']
+                  additionalProperties: true
+                escalation:
+                  type: [object, 'null']
+                  additionalProperties: true
         relations:
           type: object
           required: [linkedPrs, childTasks]
