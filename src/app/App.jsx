@@ -308,6 +308,14 @@ function formatBlockedStateLabel(blockedState, fallbackStatus) {
   return 'Active';
 }
 
+function formatFreezeScopeLabels(freezeScope = []) {
+  return freezeScope.map((item) => {
+    if (item === 'stage_transitions') return 'Stage changes paused';
+    if (item === 'closure') return 'Closure paused';
+    return String(item || '').trim();
+  }).filter(Boolean);
+}
+
 function renderBlockerMeta(blocker = {}) {
   const entries = [
     blocker.source ? `Source: ${blocker.source}` : null,
@@ -464,6 +472,34 @@ function normalizeSreApprovalDraft(monitoring = {}) {
   };
 }
 
+function normalizeMonitoringAnomalyChildDraft(detail = {}) {
+  const monitoring = detail?.context?.sreMonitoring || {};
+  const telemetrySummary = detail?.telemetry?.summary || {};
+  const anomalyContext = detail?.context?.anomalyChildTask || {};
+  const prefill = anomalyContext.prefill || {};
+  const firstSignal = Object.entries(telemetrySummary).find(([, value]) => value != null && value !== '');
+  const defaultMetric = firstSignal ? `${firstSignal[0]}: ${String(firstSignal[1])}` : '';
+  const logsLink = monitoring.telemetry?.drilldowns?.logs || '';
+  const metricsLink = monitoring.telemetry?.drilldowns?.metrics || '';
+  const tracesLink = monitoring.telemetry?.drilldowns?.traces || '';
+  return {
+    title: anomalyContext.summary
+      ? `Investigate ${anomalyContext.service || 'production'} anomaly for ${detail?.task?.id || 'task'}`
+      : `Investigate ${monitoring.architectMonitoringSpec?.service || 'production'} anomaly for ${detail?.task?.id || 'task'}`,
+    service: anomalyContext.service || prefill.service || monitoring.architectMonitoringSpec?.service || '',
+    anomalySummary: anomalyContext.summary || prefill.anomalySummary || (detail?.summary?.nextAction?.label ? `Follow up on ${detail.summary.nextAction.label.toLowerCase()}.` : ''),
+    metrics: anomalyContext.metrics?.length ? anomalyContext.metrics.join('\n') : Array.isArray(prefill.metrics) && prefill.metrics.length ? prefill.metrics.join('\n') : defaultMetric,
+    logs: anomalyContext.logs?.length ? anomalyContext.logs.join('\n') : Array.isArray(prefill.logs) && prefill.logs.length ? prefill.logs.join('\n') : logsLink,
+    errorSamples: anomalyContext.errorSamples?.length ? anomalyContext.errorSamples.join('\n') : Array.isArray(prefill.errorSamples) && prefill.errorSamples.length ? prefill.errorSamples.join('\n') : [metricsLink, tracesLink].filter(Boolean).join('\n'),
+  };
+}
+
+function normalizePmBusinessContextDraft(detail = {}) {
+  return {
+    businessContext: detail?.context?.businessContext || '',
+  };
+}
+
 function splitTextareaLines(value) {
   return String(value || '')
     .split(/\n+/)
@@ -555,6 +591,10 @@ function canManageReassignmentGhosting(tokenClaims) {
 
 function canManageSreMonitoring(tokenClaims) {
   return hasAnyRole(tokenClaims, ['sre', 'admin']);
+}
+
+function canCompletePmBusinessContext(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'admin']);
 }
 
 function canAnswerReviewQuestion(tokenClaims) {
@@ -661,6 +701,10 @@ export function App() {
   const [sreMonitoringStartStatus, setSreMonitoringStartStatus] = React.useState({ kind: 'idle', message: '' });
   const [sreApprovalDraft, setSreApprovalDraft] = React.useState(() => normalizeSreApprovalDraft());
   const [sreApprovalStatus, setSreApprovalStatus] = React.useState({ kind: 'idle', message: '' });
+  const [monitoringAnomalyChildDraft, setMonitoringAnomalyChildDraft] = React.useState(() => normalizeMonitoringAnomalyChildDraft());
+  const [monitoringAnomalyChildStatus, setMonitoringAnomalyChildStatus] = React.useState({ kind: 'idle', message: '' });
+  const [pmBusinessContextDraft, setPmBusinessContextDraft] = React.useState(() => normalizePmBusinessContextDraft());
+  const [pmBusinessContextStatus, setPmBusinessContextStatus] = React.useState({ kind: 'idle', message: '' });
   const [lifecycleStatus, setLifecycleStatus] = React.useState({ kind: 'idle', message: '', taskId: null });
   const [sreFindingDraft, setSreFindingDraft] = React.useState('');
   const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
@@ -753,6 +797,8 @@ export function App() {
       setQaResultDraft(normalizeQaResultDraft(model.detail?.context?.qaResults?.latest));
       setSreMonitoringStartDraft(normalizeSreMonitoringStartDraft(model.detail?.context?.sreMonitoring));
       setSreApprovalDraft(normalizeSreApprovalDraft(model.detail?.context?.sreMonitoring));
+      setMonitoringAnomalyChildDraft(normalizeMonitoringAnomalyChildDraft(model.detail));
+      setPmBusinessContextDraft(normalizePmBusinessContextDraft(model.detail));
       setSreFindingDraft('');
       setHistoryLoadMoreState({ kind: 'idle', message: '' });
 
@@ -771,6 +817,8 @@ export function App() {
         setQaResultStatus({ kind: 'idle', message: '' });
         setSreMonitoringStartStatus({ kind: 'idle', message: '' });
         setSreApprovalStatus({ kind: 'idle', message: '' });
+        setMonitoringAnomalyChildStatus({ kind: 'idle', message: '' });
+        setPmBusinessContextStatus({ kind: 'idle', message: '' });
         setLifecycleStatus({ kind: 'idle', message: '', taskId: null });
       }
     }
@@ -960,6 +1008,13 @@ export function App() {
   const canSubmitQaResult = qaStageEnabled && hasAnyRole(tokenClaims, ['qa', 'admin', 'contributor']);
   const sreMonitoring = model.kind === 'detail' ? (model.detail?.context?.sreMonitoring || null) : null;
   const sreMonitoringEnabled = model.kind === 'detail' && model.detail?.task?.stage === 'SRE_MONITORING' && canManageSreMonitoring(tokenClaims);
+  const canCreateMonitoringAnomalyChildTask = sreMonitoringEnabled;
+  const pmBusinessContextRequired = model.kind === 'detail'
+    && model.detail?.task?.stage === 'BACKLOG'
+    && model.detail?.context?.pmBusinessContextReview?.finalized === false
+    && Boolean(model.detail?.context?.anomalyChildTask)
+    && Boolean(model.detail?.relations?.parentTask);
+  const canSubmitPmBusinessContext = model.kind === 'detail' && canCompletePmBusinessContext(tokenClaims) && model.detail?.task?.stage === 'BACKLOG' && pmBusinessContextRequired;
   const workflowThreadNotificationTargets = defaultWorkflowNotificationTargets(workflowThreadDraft.commentType, workflowThreadDraft.blocking);
   const latestQaResult = model.kind === 'detail' ? (model.detail?.context?.qaResults?.latest || null) : null;
   const latestFailedQa = model.kind === 'detail' ? (model.detail?.context?.qaResults?.items || []).find((item) => item.outcome === 'fail') || null : null;
@@ -1236,6 +1291,44 @@ export function App() {
       setSreApprovalStatus({ kind: 'error', message: error?.message || 'SRE approval failed.' });
     }
   }, [reloadTask, routeTaskId, sreApprovalDraft, taskClient]);
+
+  const submitMonitoringAnomalyChildTask = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setMonitoringAnomalyChildStatus({ kind: 'loading', message: 'Creating anomaly child task…' });
+    try {
+      const result = await taskClient.createMonitoringAnomalyChildTask(routeTaskId, {
+        title: monitoringAnomalyChildDraft.title,
+        service: monitoringAnomalyChildDraft.service,
+        anomalySummary: monitoringAnomalyChildDraft.anomalySummary,
+        metrics: splitTextareaLines(monitoringAnomalyChildDraft.metrics),
+        logs: splitTextareaLines(monitoringAnomalyChildDraft.logs),
+        errorSamples: splitTextareaLines(monitoringAnomalyChildDraft.errorSamples),
+      });
+      await reloadTask();
+      setMonitoringAnomalyChildStatus({
+        kind: 'success',
+        message: `Anomaly child task ${result?.data?.childTaskId || 'created'} linked to the parent and routed back to PM context review.`,
+      });
+    } catch (error) {
+      setMonitoringAnomalyChildStatus({ kind: 'error', message: error?.message || 'Monitoring anomaly child task creation failed.' });
+    }
+  }, [monitoringAnomalyChildDraft, reloadTask, routeTaskId, taskClient]);
+
+  const submitPmBusinessContext = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setPmBusinessContextStatus({ kind: 'loading', message: 'Finalizing PM business context…' });
+    try {
+      await taskClient.completePmBusinessContext(routeTaskId, {
+        businessContext: pmBusinessContextDraft.businessContext,
+      });
+      await reloadTask();
+      setPmBusinessContextStatus({ kind: 'success', message: 'PM business context review completed. Architect work can now begin.' });
+    } catch (error) {
+      setPmBusinessContextStatus({ kind: 'error', message: error?.message || 'PM business context review failed.' });
+    }
+  }, [pmBusinessContextDraft.businessContext, reloadTask, routeTaskId, taskClient]);
 
   const handleSignIn = React.useCallback(async (event) => {
     event.preventDefault();
@@ -2052,6 +2145,79 @@ export function App() {
             </div>
           </section>
 
+          {(model.detail?.relations?.parentTask || model.detail?.relations?.childTasks?.length || model.detail?.context?.anomalyChildTask || model.detail?.blockers?.some((blocker) => blocker.childTaskId)) ? (
+            <section className="detail-card detail-card--full" aria-label="Anomaly lineage and blocking">
+              <h2>Anomaly lineage</h2>
+              {model.detail?.relations?.parentTask ? (
+                <div className="review-question-note">
+                  <span>Created from parent monitoring anomaly</span>
+                  <p><strong>{model.detail.relations.parentTask.title}</strong></p>
+                  <p className="task-list-meta">
+                    {model.detail.relations.parentTask.id} · {model.detail.relations.parentTask.stage || 'No stage'} · {formatStatusLabel(model.detail.relations.parentTask.status)}
+                    {model.detail.relations.parentTask.blocked ? ' · parent currently blocked' : ''}
+                  </p>
+                  {model.detail.context?.pmBusinessContextReview?.finalized ? (
+                    <p className="task-list-meta">PM finalized business context at {model.detail.context.pmBusinessContextReview.completedAt || 'unknown time'} by {model.detail.context.pmBusinessContextReview.completedBy || 'unknown actor'}.</p>
+                  ) : (
+                    <p className="task-list-meta">PM review is still required before architect detail work can begin.</p>
+                  )}
+                </div>
+              ) : null}
+              {model.detail?.blockers?.filter((blocker) => blocker.childTaskId).map((blocker) => (
+                <div className="review-question-note" key={blocker.id}>
+                  <span>Blocked by anomaly child task</span>
+                  <p><strong>{blocker.childTask?.title || blocker.label}</strong></p>
+                  {blocker.childTask ? (
+                    <p className="task-list-meta">
+                      {blocker.childTask.id} · {blocker.childTask.stage || 'No stage'} · {formatStatusLabel(blocker.childTask.status)} · {blocker.childTask.owner?.label || 'Unassigned'}
+                      {blocker.childTask.waitingState ? ` · ${blocker.childTask.waitingState}` : ''}
+                    </p>
+                  ) : null}
+                  {blocker.reason ? <p>{blocker.reason}</p> : null}
+                  {blocker.nextRequiredAction ? <p className="task-list-meta">{blocker.nextRequiredAction}</p> : null}
+                  {formatFreezeScopeLabels(blocker.freezeScope).length ? (
+                    <p className="task-list-meta">
+                      {formatFreezeScopeLabels(blocker.freezeScope).join(' · ')} · {blocker.viewable ? 'Viewable' : 'Not viewable'} · {blocker.commentable ? 'Commentable' : 'Comments paused'}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+              {model.detail?.relations?.childTasks?.length ? (
+                <div className="review-question-note">
+                  <span>Linked anomaly child tasks</span>
+                  <ul className="detail-bullets">
+                    {model.detail.relations.childTasks.map((childTask) => (
+                      <li key={childTask.id}>
+                        <strong>{childTask.title}</strong>
+                        <span>{childTask.id} · {childTask.stage || 'No stage'} · {formatStatusLabel(childTask.status)} · {childTask.owner?.label || 'Unassigned'}{childTask.waitingState ? ` · ${childTask.waitingState}` : ''}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {model.detail?.context?.anomalyChildTask ? (
+                <div className="review-question-note">
+                  <span>Machine-generated anomaly context</span>
+                  <p>{model.detail.context.anomalyChildTask.summary || 'No anomaly summary captured.'}</p>
+                  <p className="task-list-meta">
+                    {model.detail.context.anomalyChildTask.service || 'Unknown service'} · Source parent: {model.detail.context.anomalyChildTask.sourceTaskId || 'Unavailable'} · {model.detail.context.anomalyChildTask.finalizedByPm ? 'Finalized by PM' : 'Machine-generated defaults pending PM review'}
+                  </p>
+                  {model.detail.context.anomalyChildTask.finalizedByPm ? (
+                    <p className="task-list-meta">
+                      Finalized at {model.detail.context.anomalyChildTask.finalizedAt || 'unknown time'} by {model.detail.context.anomalyChildTask.finalizedBy || 'unknown actor'}.
+                    </p>
+                  ) : null}
+                  <h3>Metrics</h3>
+                  {renderList(model.detail.context.anomalyChildTask.metrics, 'No metrics captured.')}
+                  <h3>Logs</h3>
+                  {renderList(model.detail.context.anomalyChildTask.logs, 'No logs captured.')}
+                  <h3>Error samples</h3>
+                  {renderList(model.detail.context.anomalyChildTask.errorSamples, 'No error samples captured.')}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           {detailLifecycleItem && isLifecycleStage(detailLifecycleItem.current_stage) ? (
             <section className="detail-card detail-card--full" aria-label="Lifecycle controls">
               <h2>Lifecycle controls</h2>
@@ -2170,6 +2336,32 @@ export function App() {
             <section className="detail-card">
               <h2>Overview</h2>
               <p>{model.detail?.context?.businessContext || model.summary.businessContext || 'Business context is missing.'}</p>
+              {pmBusinessContextRequired ? (
+                <form className="architect-handoff-form" onSubmit={submitPmBusinessContext}>
+                  <div className="review-question-note">
+                    <span>PM business-context re-entry</span>
+                    <p>Finalize the machine-generated business context before architect detail work can begin.</p>
+                  </div>
+                  <label>
+                    Finalized business context
+                    <textarea
+                      value={pmBusinessContextDraft.businessContext}
+                      onChange={(event) => setPmBusinessContextDraft({ businessContext: event.target.value })}
+                      placeholder="Refine the business impact, customer risk, and delivery expectations for this anomaly child task."
+                    />
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={pmBusinessContextStatus.kind === 'loading' || !canSubmitPmBusinessContext}>
+                      {pmBusinessContextStatus.kind === 'loading' ? 'Finalizing…' : 'Complete PM context review'}
+                    </button>
+                  </div>
+                  {pmBusinessContextStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${pmBusinessContextStatus.kind}`} role={pmBusinessContextStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {pmBusinessContextStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
               <h3>Acceptance criteria</h3>
               {renderList(model.detail?.context?.acceptanceCriteria || model.summary.acceptanceCriteria, 'Acceptance criteria are missing.')}
               <h3>Definition of Done</h3>
@@ -2852,6 +3044,17 @@ export function App() {
                   ))}
                 </ul>
               ) : <p>No linked PRs yet.</p>}
+              {model.detail?.relations?.parentTask ? (
+                <>
+                  <h3>Linked parent task</h3>
+                  <ul className="detail-bullets">
+                    <li key={model.detail.relations.parentTask.id}>
+                      <strong>{model.detail.relations.parentTask.title}</strong>
+                      <span>{model.detail.relations.parentTask.stage || 'No stage'} · {formatStatusLabel(model.detail.relations.parentTask.status)} · {model.detail.relations.parentTask.owner?.label || 'Unassigned'}</span>
+                    </li>
+                  </ul>
+                </>
+              ) : null}
               {detailPermissions.canViewChildTasks === false ? (
                 <p>Child task relationships are hidden for this session.</p>
               ) : model.detail?.relations?.childTasks?.length ? (
@@ -2864,6 +3067,13 @@ export function App() {
                   ))}
                 </ul>
               ) : <p>No child tasks linked yet.</p>}
+              {model.detail?.context?.anomalyChildTask ? (
+                <div className="review-question-note">
+                  <span>Machine-generated anomaly context</span>
+                  <p>{model.detail.context.anomalyChildTask.summary || 'No anomaly summary captured.'}</p>
+                  <p className="task-list-meta">{model.detail.context.anomalyChildTask.service || 'Unknown service'} · Source parent: {model.detail.context.anomalyChildTask.sourceTaskId || 'Unavailable'}</p>
+                </div>
+              ) : null}
             </section>
 
             <section className="detail-card detail-card--full">
@@ -3487,6 +3697,52 @@ export function App() {
                     </div>
                   ) : null}
 
+                  {canCreateMonitoringAnomalyChildTask ? (
+                    <form className="architect-handoff-form" onSubmit={submitMonitoringAnomalyChildTask}>
+                      <div className="review-question-note">
+                        <span>Create child task from anomaly</span>
+                        <p>These fields are prefilled from monitoring context and remain editable before the child task is created.</p>
+                        <p className="task-list-meta">This defaults the child to P0, links it to the parent, blocks the parent, and routes the child back to PM business-context review.</p>
+                      </div>
+                      <div className="summary-grid architect-handoff-grid">
+                        <label>
+                          Child task title
+                          <input value={monitoringAnomalyChildDraft.title} onChange={(event) => setMonitoringAnomalyChildDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Investigate checkout-api anomaly for TSK-123" />
+                        </label>
+                        <label>
+                          Affected service
+                          <input value={monitoringAnomalyChildDraft.service} onChange={(event) => setMonitoringAnomalyChildDraft((current) => ({ ...current, service: event.target.value }))} placeholder="checkout-api" />
+                        </label>
+                        <label className="architect-handoff-grid__full">
+                          Anomaly summary
+                          <textarea value={monitoringAnomalyChildDraft.anomalySummary} onChange={(event) => setMonitoringAnomalyChildDraft((current) => ({ ...current, anomalySummary: event.target.value }))} placeholder="Describe the production anomaly that should become tracked work." />
+                        </label>
+                        <label>
+                          Metrics
+                          <textarea value={monitoringAnomalyChildDraft.metrics} onChange={(event) => setMonitoringAnomalyChildDraft((current) => ({ ...current, metrics: event.target.value }))} placeholder="One metric signal per line" />
+                        </label>
+                        <label>
+                          Logs
+                          <textarea value={monitoringAnomalyChildDraft.logs} onChange={(event) => setMonitoringAnomalyChildDraft((current) => ({ ...current, logs: event.target.value }))} placeholder="One log sample or drilldown per line" />
+                        </label>
+                        <label>
+                          Error samples
+                          <textarea value={monitoringAnomalyChildDraft.errorSamples} onChange={(event) => setMonitoringAnomalyChildDraft((current) => ({ ...current, errorSamples: event.target.value }))} placeholder="One error sample or trace per line" />
+                        </label>
+                      </div>
+                      <div className="assignment-form__actions">
+                        <button type="submit" disabled={monitoringAnomalyChildStatus.kind === 'loading'}>
+                          {monitoringAnomalyChildStatus.kind === 'loading' ? 'Creating…' : 'Create anomaly child task'}
+                        </button>
+                      </div>
+                      {monitoringAnomalyChildStatus.kind !== 'idle' ? (
+                        <p className={`assignment-status assignment-status--${monitoringAnomalyChildStatus.kind}`} role={monitoringAnomalyChildStatus.kind === 'error' ? 'alert' : 'status'}>
+                          {monitoringAnomalyChildStatus.message}
+                        </p>
+                      ) : null}
+                    </form>
+                  ) : null}
+
                   {sreMonitoringEnabled && sreMonitoring.canStart ? (
                     <form className="architect-handoff-form" onSubmit={submitSreMonitoringStart}>
                       <div className="summary-grid architect-handoff-grid">
@@ -3543,6 +3799,13 @@ export function App() {
                         </p>
                       ) : null}
                     </form>
+                  ) : null}
+                  {sreMonitoringEnabled && !sreMonitoring.canApprove && model.detail?.summary?.blockedState?.isBlocked ? (
+                    <div className="review-question-note">
+                      <span>Approval paused</span>
+                      <p>The parent task is blocked by linked anomaly investigation work.</p>
+                      <p className="task-list-meta">Comments and review remain available, but stage progression stays paused until the child task is resolved or unblocked.</p>
+                    </div>
                   ) : null}
                 </>
               ) : (

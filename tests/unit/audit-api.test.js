@@ -1990,6 +1990,185 @@ test('auto-escalates expired SRE monitoring windows into human stakeholder revie
   });
 });
 
+test('creates a linked P0 child task from an SRE monitoring anomaly and blocks the parent with PM re-entry context', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['contributor'] }),
+    };
+    const sreHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'sre-1', tenant_id: 'tenant-sre', roles: ['sre', 'reader'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-1', tenant_id: 'tenant-sre', roles: ['pm', 'reader'] }),
+    };
+    const readerHeaders = authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['reader'] });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SRE-ANOM-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SRE-ANOM-1',
+        payload: {
+          title: 'Watch checkout rollout',
+          initial_stage: 'SRE_MONITORING',
+          linked_prs: [{
+            id: 'pr-sre-anom-1',
+            number: 503,
+            title: 'feat: rollout checkout',
+            repository: 'wiinc1/engineering-team',
+            merged: true,
+            state: 'closed',
+            merged_at: '2026-04-14T12:00:00.000Z',
+          }],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-ANOM-1/sre-monitoring/anomaly-child-task`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        title: 'Investigate checkout-api anomaly for TSK-SRE-ANOM-1',
+        service: 'checkout-api',
+        anomalySummary: '5xx rate spiked after deployment.',
+        metrics: ['5xx_rate: 8%', 'latency_p95: 4.2s'],
+        logs: ['checkout-api pod restart loop', 'gateway timeout burst'],
+        errorSamples: ['TimeoutError at POST /checkout'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    assert.equal(created.data.parentTaskId, 'TSK-SRE-ANOM-1');
+    assert.equal(created.data.priority, 'P0');
+    assert.equal(created.data.waitingState, 'pm_business_context_required');
+    const childTaskId = created.data.childTaskId;
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-ANOM-1/detail`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const parentDetail = await response.json();
+    assert.equal(parentDetail.summary.blockedState.label, 'Blocked');
+    assert.equal(parentDetail.summary.blockedState.waitingOn, 'Child task investigation');
+    assert.equal(parentDetail.summary.childStatus.total, 1);
+    assert.equal(parentDetail.relations.childTasks[0].id, childTaskId);
+    assert.equal(parentDetail.blockers[0].freezeScope.join(','), 'stage_transitions,closure');
+    assert.equal(parentDetail.blockers[0].commentable, true);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-ANOM-1/sre-monitoring/approve`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        reason: 'Telemetry is stable.',
+        evidence: ['no new errors'],
+      }),
+    });
+    assert.equal(response.status, 409);
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/detail`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const childDetail = await response.json();
+    assert.equal(childDetail.task.priority, 'P0');
+    assert.equal(childDetail.summary.owner.label, 'pm');
+    assert.equal(childDetail.summary.nextAction.label, 'PM must review and complete the machine-generated business context before Architect details begin.');
+    assert.equal(childDetail.relations.parentTask.id, 'TSK-SRE-ANOM-1');
+    assert.equal(childDetail.context.anomalyChildTask.service, 'checkout-api');
+    assert.equal(childDetail.context.anomalyChildTask.summary, '5xx rate spiked after deployment.');
+    assert.equal(childDetail.context.pmBusinessContextReview.finalized, false);
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/state`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const childState = await response.json();
+    assert.equal(childState.priority, 'P0');
+    assert.equal(childState.assignee, 'pm');
+    assert.equal(childState.waiting_state, 'pm_business_context_required');
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `move:${childTaskId}:ARCHITECT_REVIEW:blocked`,
+        payload: { from_stage: 'BACKLOG', to_stage: 'ARCHITECT_REVIEW' },
+      }),
+    });
+    assert.equal(response.status, 400);
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/pm-business-context`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        businessContext: 'PM reviewed the anomaly, confirmed customer impact, and approved architect follow-up.',
+      }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `move:${childTaskId}:TODO`,
+        payload: { from_stage: 'BACKLOG', to_stage: 'TODO' },
+      }),
+    });
+    assert.equal(response.status, 202);
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `move:${childTaskId}:IN_PROGRESS`,
+        payload: { from_stage: 'TODO', to_stage: 'IN_PROGRESS' },
+      }),
+    });
+    assert.equal(response.status, 202);
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `move:${childTaskId}:VERIFY`,
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'VERIFY' },
+      }),
+    });
+    assert.equal(response.status, 202);
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `move:${childTaskId}:DONE`,
+        payload: { from_stage: 'VERIFY', to_stage: 'DONE' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-ANOM-1/detail`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const unblockedParentDetail = await response.json();
+    assert.equal(unblockedParentDetail.summary.blockedState.label, 'Active');
+    assert.equal(unblockedParentDetail.blockers.length, 0);
+  });
+});
+
 test('supports all documented SRE monitoring feature-flag aliases', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks/TSK-SRE-FLAG/sre-monitoring/start`, {

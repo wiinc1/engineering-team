@@ -75,6 +75,9 @@ Audit HTTP maintenance note:
 - Engineer-only delivery-loop mutations now validate the task's current canonical assignee before accepting writes.
 - Tier-based reassignment may emit explicit assignee ids such as `engineer-sr` in workflow payloads and task-detail context so downstream consumers can tell when ownership changed materially.
 - SRE monitoring expiry is now worker-driven: reads reflect the current state but no longer append escalation events when the window has expired.
+- SRE monitoring also exposes `POST /tasks/{id}/sre-monitoring/anomaly-child-task`, which creates a linked child task with machine-generated telemetry context, records the auto-`P0` rationale, and blocks the parent while leaving it readable/commentable.
+- The anomaly-child parent block is cleared automatically when the linked child reaches a resolved terminal state; generic `task.unblocked` event injection is not the supported path for this workflow.
+- PM anomaly follow-up now also exposes `POST /tasks/{id}/pm-business-context`, which records `task.pm_business_context_completed`, clears `pm_business_context_required`, and marks the anomaly context as finalized by PM for task detail consumers. Generic event injection is not a supported completion path for this workflow.
 
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
@@ -205,6 +208,15 @@ Immediate action:
 1. Confirm the projection worker is running or invoke bounded worker processing locally.
 2. Verify the task has `sre_monitoring_window_ends_at` set and no `sre_approved_at`.
 3. Re-run projection worker processing; successful processing should append an auditable `task.escalated` event with `reason=sre_monitoring_window_expired`.
+
+### Monitoring anomaly requires tracked child work
+Symptom: SRE identifies a production anomaly that should become first-class tracked work.
+Immediate action:
+1. Use `POST /tasks/{id}/sre-monitoring/anomaly-child-task` with service, anomaly summary, metrics, logs, and error samples.
+2. Confirm the parent task gains a `task.child_link_added` event and a blocking `task.blocked` event referencing the new child id.
+3. Confirm the child task is created as `P0`, linked back to the parent, and routed with `waiting_state=pm_business_context_required`.
+4. Use `POST /tasks/{childId}/pm-business-context` to finalize the machine-generated business context before architect work begins.
+5. Confirm the parent task is automatically unblocked when the linked child reaches its normal resolved terminal state.
 
 ## Observability hooks
 Structured log fields emitted in this slice:

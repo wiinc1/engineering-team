@@ -353,6 +353,103 @@ test('must-have: worker processing materializes expired SRE monitoring escalatio
   });
 });
 
+test('must-have: live monitoring anomalies can become linked child tasks with parent blocking and PM re-entry', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['contributor']),
+    };
+    const sreHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['sre', 'reader']),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['pm', 'reader']),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-E2E-ANOM-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-E2E-ANOM-1',
+        payload: { title: 'Live anomaly parent', initial_stage: 'SRE_MONITORING', priority: 'P1' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-ANOM-1/sre-monitoring/anomaly-child-task`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        title: 'Investigate checkout-api anomaly',
+        service: 'checkout-api',
+        anomalySummary: 'Checkout 5xx errors spiked in production.',
+        metrics: ['5xx_rate: 8%'],
+        logs: ['checkout-api pod restart loop'],
+        errorSamples: ['TimeoutError at /checkout'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    const childTaskId = created.data.childTaskId;
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-ANOM-1/relationships`, { headers: authHeaders(secret, ['reader']) });
+    assert.equal(response.status, 200);
+    const relationships = await response.json();
+    assert.deepEqual(relationships.child_task_ids, [childTaskId]);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-ANOM-1/state`, { headers: authHeaders(secret, ['reader']) });
+    assert.equal(response.status, 200);
+    const parentState = await response.json();
+    assert.equal(parentState.blocked, true);
+    assert.equal(parentState.waiting_state, 'child_task_investigation');
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/state`, { headers: authHeaders(secret, ['reader']) });
+    assert.equal(response.status, 200);
+    const childState = await response.json();
+    assert.equal(childState.priority, 'P0');
+    assert.equal(childState.assignee, 'pm');
+    assert.equal(childState.waiting_state, 'pm_business_context_required');
+
+    response = await fetch(`${baseUrl}/tasks/${childTaskId}/pm-business-context`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        businessContext: 'PM confirmed customer impact and approved architect follow-up.',
+      }),
+    });
+    assert.equal(response.status, 200);
+
+    for (const [fromStage, toStage] of [
+      ['BACKLOG', 'TODO'],
+      ['TODO', 'IN_PROGRESS'],
+      ['IN_PROGRESS', 'VERIFY'],
+      ['VERIFY', 'DONE'],
+    ]) {
+      response = await fetch(`${baseUrl}/tasks/${childTaskId}/events`, {
+        method: 'POST',
+        headers: contributorHeaders,
+        body: JSON.stringify({
+          eventType: 'task.stage_changed',
+          actorType: 'agent',
+          idempotencyKey: `e2e:${childTaskId}:${fromStage}:${toStage}`,
+          payload: { from_stage: fromStage, to_stage: toStage },
+        }),
+      });
+      assert.equal(response.status, 202);
+    }
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-ANOM-1/state`, { headers: authHeaders(secret, ['reader']) });
+    assert.equal(response.status, 200);
+    const unblockedParentState = await response.json();
+    assert.equal(unblockedParentState.blocked, false);
+    assert.equal(unblockedParentState.waiting_state, null);
+  });
+});
+
 test('must-have: feature flag kill switch disables write and read surfaces cleanly', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/healthz`);

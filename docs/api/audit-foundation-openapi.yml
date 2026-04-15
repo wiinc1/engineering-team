@@ -338,6 +338,81 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '503':
           $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/sre-monitoring/anomaly-child-task:
+    post:
+      summary: Create a linked P0 child task from a live monitoring anomaly
+      description: |
+        Requires SRE or admin privileges while the parent task is in `SRE_MONITORING`.
+        The runtime feature can be disabled by `ff_child_task_creation`.
+        Successful creation links the child back to the parent, records a P0 audit reason, and blocks the parent
+        while leaving it viewable/commentable for follow-up coordination.
+        The parent block is released automatically when the linked anomaly child reaches a resolved terminal state.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [service, anomalySummary, metrics, logs, errorSamples]
+              properties:
+                title: { type: string }
+                service: { type: string }
+                anomalySummary: { type: string }
+                metrics:
+                  type: array
+                  items: { type: string }
+                logs:
+                  type: array
+                  items: { type: string }
+                errorSamples:
+                  type: array
+                  items: { type: string }
+      responses:
+        '201':
+          description: Child task created and linked to the parent monitoring task
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/pm-business-context:
+    post:
+      summary: Finalize machine-generated PM business context for an anomaly child task
+      description: |
+        Requires PM or admin privileges while the anomaly child task remains in `BACKLOG`
+        with `waiting_state=pm_business_context_required`.
+        Successful completion records a dedicated `task.pm_business_context_completed` audit event,
+        clears the PM gate, and marks the anomaly context as finalized by PM.
+        Generic event injection is not a supported completion path for this workflow.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [businessContext]
+              properties:
+                businessContext: { type: string }
+      responses:
+        '200':
+          description: PM business context finalized and architect work unblocked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/observability-summary:
     get:
       summary: Return non-authoritative observability summary and approved_correlation_ids / correlation pointers

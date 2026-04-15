@@ -261,7 +261,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, type, label, source, owner, ageLabel, occurredAt]
+            required: [id, type, label, source, owner, ageLabel, occurredAt, reason, childTaskId, freezeScope, viewable, commentable, nextRequiredAction, childTask]
             properties:
               id: { type: string }
               type: { type: string }
@@ -271,9 +271,27 @@ components:
                 $ref: '#/components/schemas/TaskDetailActor'
               ageLabel: { type: string }
               occurredAt: { type: [string, 'null'], format: date-time }
+              reason: { type: [string, 'null'] }
+              childTaskId: { type: [string, 'null'] }
+              freezeScope:
+                type: array
+                items: { type: string }
+              viewable: { type: boolean }
+              commentable: { type: boolean }
+              nextRequiredAction: { type: [string, 'null'] }
+              childTask:
+                type: [object, 'null']
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  stage: { type: [string, 'null'] }
+                  status: { type: string, enum: [active, waiting, blocked, done] }
+                  owner:
+                    $ref: '#/components/schemas/TaskDetailActor'
+                  waitingState: { type: [string, 'null'] }
         context:
           type: object
-          required: [businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec]
+          required: [businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec, pmBusinessContextReview]
           properties:
             businessContext: { type: [string, 'null'] }
             acceptanceCriteria:
@@ -300,6 +318,47 @@ components:
               type: [object, 'null']
               additionalProperties: true
               description: Linked governance review task created for inactivity or other governance follow-up.
+            anomalyChildTask:
+              type: [object, 'null']
+              description: Machine-generated anomaly context used when a child task is created directly from SRE monitoring telemetry.
+              properties:
+                machineGenerated: { type: boolean }
+                sourceTaskId: { type: [string, 'null'] }
+                service: { type: [string, 'null'] }
+                summary: { type: [string, 'null'] }
+                metrics:
+                  type: array
+                  items: { type: string }
+                logs:
+                  type: array
+                  items: { type: string }
+                errorSamples:
+                  type: array
+                  items: { type: string }
+                prefill:
+                  type: [object, 'null']
+                  properties:
+                    service: { type: [string, 'null'] }
+                    anomalySummary: { type: [string, 'null'] }
+                    metrics:
+                      type: array
+                      items: { type: string }
+                    logs:
+                      type: array
+                      items: { type: string }
+                    errorSamples:
+                      type: array
+                      items: { type: string }
+                finalizedByPm: { type: boolean }
+                finalizedAt: { type: [string, 'null'], format: date-time }
+                finalizedBy: { type: [string, 'null'] }
+            pmBusinessContextReview:
+              type: object
+              required: [completedAt, completedBy, finalized]
+              properties:
+                completedAt: { type: [string, 'null'], format: date-time }
+                completedBy: { type: [string, 'null'] }
+                finalized: { type: boolean }
             sreMonitoring:
               type: [object, 'null']
               description: SRE monitoring workflow summary, including deployment evidence, countdown state, telemetry drilldowns, approval snapshot, and expiry escalation details when present.
@@ -326,18 +385,29 @@ components:
                   additionalProperties: true
         relations:
           type: object
-          required: [linkedPrs, childTasks]
+          required: [linkedPrs, childTasks, parentTask]
           properties:
             linkedPrs:
               type: array
               items:
                 type: object
                 additionalProperties: true
+            parentTask:
+              type: [object, 'null']
+              properties:
+                id: { type: string }
+                title: { type: string }
+                stage: { type: [string, 'null'] }
+                status: { type: string, enum: [active, waiting, blocked, done] }
+                owner:
+                  $ref: '#/components/schemas/TaskDetailActor'
+                blocked: { type: boolean }
+                waitingState: { type: [string, 'null'] }
             childTasks:
               type: array
               items:
                 type: object
-                required: [id, title, stage, status, owner, blocked]
+                required: [id, title, stage, status, owner, blocked, waitingState]
                 properties:
                   id: { type: string }
                   title: { type: string }
@@ -346,6 +416,7 @@ components:
                   owner:
                     $ref: '#/components/schemas/TaskDetailActor'
                   blocked: { type: boolean }
+                  waitingState: { type: [string, 'null'] }
         activity:
           type: object
           required: [comments, auditLog]

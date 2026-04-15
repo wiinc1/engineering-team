@@ -18,7 +18,7 @@ function seededRandom(seed) {
   };
 }
 
-const EVENT_TYPES = WORKFLOW_AUDIT_EVENT_TYPES.filter(type => !['task.unassigned', 'task.unblocked', 'task.child_link_removed', 'task.escalation_resolved', 'task.decision_revised', 'task.rollback_recorded', 'task.closed'].includes(type));
+const EVENT_TYPES = WORKFLOW_AUDIT_EVENT_TYPES.filter(type => !['task.unassigned', 'task.unblocked', 'task.child_link_removed', 'task.escalation_resolved', 'task.decision_revised', 'task.rollback_recorded', 'task.closed', 'task.pm_business_context_completed'].includes(type));
 
 function randomChoice(random, items) {
   return items[Math.floor(random() * items.length)];
