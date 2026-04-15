@@ -62,6 +62,8 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/observability-summary:',
     '/tasks/{id}/sre-monitoring/start:',
     '/tasks/{id}/sre-monitoring/approve:',
+    '/tasks/{id}/sre-monitoring/anomaly-child-task:',
+    '/tasks/{id}/pm-business-context:',
     '/metrics:',
     '/projections/process:',
     'BearerAuth:',
@@ -77,6 +79,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'processExpiredSreMonitoring',
     'approved_correlation_ids',
     'current_owner',
+    'task.pm_business_context_completed',
     'List projected task summaries with additive owner metadata',
   ]) {
     assert.match(spec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -121,6 +124,12 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'telemetry',
     'approval',
     'escalation',
+    'pmBusinessContextReview',
+    'finalizedByPm',
+    'freezeScope',
+    'commentable',
+    'childTaskId',
+    'waitingState',
   ]) {
     assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -205,6 +214,59 @@ test('documented endpoints satisfy the runtime contract', async () => {
     assert.equal(summary.event_count, 2);
     assert.equal(summary.access.restricted, true);
     assert.deepEqual(summary.correlation.approved_correlation_ids, ['child:TSK-CONTRACT-1', 'create:TSK-CONTRACT-1']);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-ANOM/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CONTRACT-ANOM',
+        payload: { title: 'Contract anomaly task', initial_stage: 'SRE_MONITORING', priority: 'P1' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-ANOM/sre-monitoring/anomaly-child-task`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['sre', 'reader'] }),
+      },
+      body: JSON.stringify({
+        title: 'Investigate contract anomaly',
+        service: 'checkout-api',
+        anomalySummary: '5xx rate spiked after deployment.',
+        metrics: ['5xx_rate: 8%'],
+        logs: ['checkout-api log sample'],
+        errorSamples: ['TimeoutError'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const anomalyChild = await response.json();
+    assert.equal(anomalyChild.data.parentTaskId, 'TSK-CONTRACT-ANOM');
+    assert.equal(anomalyChild.data.priority, 'P0');
+
+    response = await fetch(`${baseUrl}/tasks/${anomalyChild.data.childTaskId}/pm-business-context`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+      },
+      body: JSON.stringify({
+        businessContext: 'PM validated customer impact and cleared architect follow-up.',
+      }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${anomalyChild.data.childTaskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.pmBusinessContextReview.finalized, true);
+    assert.equal(detail.context.anomalyChildTask.finalizedByPm, true);
+    assert.equal(detail.relations.parentTask.id, 'TSK-CONTRACT-ANOM');
 
     response = await fetch(`${baseUrl}/metrics`, { headers: authHeaders(secret, { roles: ['admin'] }) });
     assert.equal(response.status, 200);

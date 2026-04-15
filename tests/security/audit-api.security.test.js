@@ -205,9 +205,22 @@ test('rejects engineer-only delivery mutations when the task has been reassigned
 
 test('rejects SRE monitoring mutations for callers without SRE or admin privileges', async () => {
   await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
     const readerAuth = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
 
-    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-SRE/sre-monitoring/start`, {
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-SRE/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SEC-SRE',
+        payload: { title: 'Restricted SRE task', initial_stage: 'SRE_MONITORING' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-SRE/sre-monitoring/start`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...readerAuth },
       body: JSON.stringify({
@@ -229,6 +242,82 @@ test('rejects SRE monitoring mutations for callers without SRE or admin privileg
     });
     assert.equal(response.status, 403);
     assert.equal((await response.json()).error.code, 'forbidden');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-SRE/sre-monitoring/anomaly-child-task`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...readerAuth },
+      body: JSON.stringify({
+        title: 'Investigate restricted anomaly',
+        service: 'checkout-api',
+        anomalySummary: 'Reader attempted anomaly creation.',
+        metrics: ['5xx_rate: 8%'],
+        logs: ['reader-request log sample'],
+        errorSamples: ['TimeoutError'],
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'forbidden');
+  });
+});
+
+test('rejects generic anomaly-workflow event bypasses for PM completion and parent unblocking', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm-1', tenant_id: 'tenant-sec', roles: ['pm', 'reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const sreAuth = { authorization: `Bearer ${sign({ sub: 'sre-1', tenant_id: 'tenant-sec', roles: ['sre', 'reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-ANOM/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SEC-ANOM',
+        payload: { title: 'Security anomaly parent', initial_stage: 'SRE_MONITORING' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-ANOM/sre-monitoring/anomaly-child-task`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...sreAuth },
+      body: JSON.stringify({
+        title: 'Investigate restricted anomaly',
+        service: 'checkout-api',
+        anomalySummary: 'Security test anomaly',
+        metrics: ['5xx_rate: 8%'],
+        logs: ['security log sample'],
+        errorSamples: ['TimeoutError'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const { data } = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${data.childTaskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.pm_business_context_completed',
+        actorType: 'user',
+        idempotencyKey: `forbidden-pm-complete:${data.childTaskId}`,
+        payload: { business_context: 'Contributor tried to bypass PM review.' },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /PM\/admin/i);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-ANOM/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.unblocked',
+        actorType: 'user',
+        idempotencyKey: 'forbidden-parent-unblock',
+        payload: { child_task_id: data.childTaskId, reason: 'Manual override' },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /resolution flow/i);
   });
 });
 

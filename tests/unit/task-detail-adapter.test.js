@@ -298,10 +298,23 @@ test('task detail client submits SRE monitoring workflow actions to dedicated en
     reason: 'Telemetry stayed stable across the first hour.',
     evidence: ['metrics steady', 'error budget unchanged'],
   });
+  await client.createMonitoringAnomalyChildTask('TSK-91', {
+    title: 'Investigate checkout-api anomaly for TSK-91',
+    service: 'checkout-api',
+    anomalySummary: 'Error rate spiked after deployment.',
+    metrics: ['5xx_rate: 8%'],
+    logs: ['checkout-api pod restart loop'],
+    errorSamples: ['TimeoutError at /checkout'],
+  });
+  await client.completePmBusinessContext('TSK-91', {
+    businessContext: 'PM reviewed the anomaly and confirmed customer impact.',
+  });
 
   assert.deepEqual(calls.map((entry) => entry.url), [
     'http://audit.local/tasks/TSK-91/sre-monitoring/start',
     'http://audit.local/tasks/TSK-91/sre-monitoring/approve',
+    'http://audit.local/tasks/TSK-91/sre-monitoring/anomaly-child-task',
+    'http://audit.local/tasks/TSK-91/pm-business-context',
   ]);
   assert.ok(calls.every((entry) => entry.init.method === 'POST'));
 });

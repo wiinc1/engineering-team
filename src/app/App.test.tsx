@@ -203,6 +203,30 @@ function installTaskFetchMock({
       }, 201);
     }
 
+    if (url.endsWith('/tasks/TSK-42/sre-monitoring/anomaly-child-task') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          parentTaskId: 'TSK-42',
+          childTaskId: 'TSK-CHILD-ANOM',
+          priority: 'P0',
+          waitingState: 'pm_business_context_required',
+        },
+      }, 201);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/pm-business-context') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          completedAt: '2026-04-01T19:00:00.000Z',
+          completedBy: 'pm-1',
+          nextAction: 'Architect can begin detailing the anomaly child task.',
+        },
+      }, 200);
+    }
+
     if (url.includes('/tasks/TSK-42/detail')) {
       if (detailStatus !== 200) {
         return createJsonResponse({
@@ -684,7 +708,7 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Server-rendered technical spec')).toBeInTheDocument();
     expect(screen.getByText('Server-rendered monitoring spec')).toBeInTheDocument();
     expect(screen.getByText('feat: task detail')).toBeInTheDocument();
-    expect(screen.getByText(/Triage queue drift/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Triage queue drift/).length).toBeGreaterThan(0);
   });
 
   it('renders structured architect handoff details when the backend supplies them', async () => {
@@ -1639,6 +1663,187 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('production')).toBeInTheDocument();
     expect(screen.getByText(/2026\.04\.14-1 · https:\/\/deploy\.example\/releases\/501/)).toBeInTheDocument();
     expect(screen.getByText(/actively in the SRE monitoring stage/i)).toBeInTheDocument();
+  });
+
+  it('creates an anomaly child task from the SRE monitoring panel', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'sre-1',
+        tenant_id: 'tenant-a',
+        roles: ['sre', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        task: { stage: 'SRE_MONITORING' },
+        context: {
+          sreMonitoring: {
+            state: 'active',
+            riskLevel: 'low',
+            timeRemainingLabel: '47h remaining',
+            deployment: { environment: 'production', version: '2026.04.15-1', url: 'https://deploy.example/releases/901' },
+            telemetry: {
+              freshness: 'fresh',
+              drilldowns: {
+                metrics: 'https://metrics.example/sre-901',
+                logs: 'https://logs.example/sre-901',
+                traces: 'https://traces.example/sre-901',
+              },
+            },
+            architectMonitoringSpec: { service: 'checkout-api' },
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('Create child task from anomaly')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Anomaly summary'), { target: { value: 'Checkout 5xx errors spiked after deployment.' } });
+    fireEvent.change(screen.getByLabelText('Metrics'), { target: { value: '5xx_rate: 8%' } });
+    fireEvent.change(screen.getByLabelText('Logs'), { target: { value: 'checkout-api pod restart loop' } });
+    fireEvent.change(screen.getByLabelText('Error samples'), { target: { value: 'TimeoutError at /checkout' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create anomaly child task' }));
+
+    await screen.findByText(/Anomaly child task TSK-CHILD-ANOM linked to the parent/i);
+    const childTaskRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/sre-monitoring/anomaly-child-task') && init?.method === 'POST');
+    expect(childTaskRequest).toBeTruthy();
+    expect(JSON.parse(String(childTaskRequest?.[1]?.body))).toMatchObject({
+      service: 'checkout-api',
+      anomalySummary: 'Checkout 5xx errors spiked after deployment.',
+      metrics: ['5xx_rate: 8%'],
+      logs: ['checkout-api pod restart loop'],
+      errorSamples: ['TimeoutError at /checkout'],
+    });
+  });
+
+  it('shows strong anomaly lineage UX and lets PM finalize business context on the child task', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        task: { id: 'TSK-42', stage: 'BACKLOG', status: 'waiting' },
+        summary: {
+          nextAction: {
+            label: 'PM must review and complete the machine-generated business context before Architect details begin.',
+            source: 'system',
+            overdue: false,
+            waitingOn: 'Pm Business Context Required',
+          },
+          blockedState: { isBlocked: false, label: 'Waiting', waitingOn: 'Pm Business Context Required' },
+        },
+        relations: {
+          parentTask: {
+            id: 'TSK-PARENT-9',
+            title: 'Watch checkout rollout',
+            stage: 'SRE_MONITORING',
+            status: 'blocked',
+            owner: { label: 'sre' },
+            blocked: true,
+            waitingState: 'child_task_investigation',
+          },
+          childTasks: [],
+        },
+        context: {
+          businessContext: '[Machine-generated anomaly context. PM should refine business impact before architect work starts.]',
+          pmBusinessContextReview: {
+            completedAt: null,
+            completedBy: null,
+            finalized: false,
+          },
+          anomalyChildTask: {
+            machineGenerated: true,
+            sourceTaskId: 'TSK-PARENT-9',
+            service: 'checkout-api',
+            summary: 'Checkout latency and 5xx errors spiked after deployment.',
+            metrics: ['5xx_rate: 8%'],
+            logs: ['Log drilldown: https://logs.example/sre-901'],
+            errorSamples: ['Trace drilldown: https://traces.example/sre-901'],
+            finalizedByPm: false,
+            finalizedAt: null,
+            finalizedBy: null,
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('heading', { name: 'Anomaly lineage' })).toBeInTheDocument();
+    expect(screen.getByText('Created from parent monitoring anomaly')).toBeInTheDocument();
+    expect(screen.getByText(/Machine-generated defaults pending PM review/i)).toBeInTheDocument();
+    expect(screen.getByText('PM business-context re-entry')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Finalized business context'), {
+      target: { value: 'Checkout revenue risk is elevated. PM validated customer impact and expects architect mitigation planning today.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Complete PM context review' }));
+
+    await screen.findByText(/PM business context review completed/i);
+    const pmContextRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/pm-business-context') && init?.method === 'POST');
+    expect(pmContextRequest).toBeTruthy();
+    expect(JSON.parse(String(pmContextRequest?.[1]?.body))).toMatchObject({
+      businessContext: 'Checkout revenue risk is elevated. PM validated customer impact and expects architect mitigation planning today.',
+    });
+  });
+
+  it('does not show PM business-context re-entry for non-anomaly backlog children', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      detailOverride: {
+        task: { id: 'TSK-42', stage: 'BACKLOG', status: 'waiting' },
+        relations: {
+          parentTask: {
+            id: 'TSK-PARENT-ALT',
+            title: 'Parent task without anomaly context',
+            stage: 'BACKLOG',
+            status: 'waiting',
+            owner: { label: 'pm' },
+            blocked: false,
+            waitingState: null,
+          },
+          childTasks: [],
+        },
+        context: {
+          businessContext: 'Regular parent-linked backlog work.',
+          anomalyChildTask: null,
+          pmBusinessContextReview: {
+            completedAt: null,
+            completedBy: null,
+            finalized: false,
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.queryByText('PM business-context re-entry')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Finalized business context')).not.toBeInTheDocument();
   });
 
   it('keeps role inbox counts hidden and shows a degraded state when canonical roster loading fails', async () => {
