@@ -18,6 +18,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Restricted telemetry behavior is separate: lower-privilege readers still get owner metadata, while `GET /tasks/{taskId}/observability-summary` omits privileged telemetry fields server-side.
 - Tier-specific projected assignee ids such as `engineer-jr`, `engineer-sr`, and `engineer-principal` are valid owner values and should still be treated as canonical engineer ownership for delivery routing.
 - The SRE monitoring inbox is a separate workflow surface: tasks may appear in `/inbox/sre` by workflow stage even when `current_owner` still points at an engineer.
+- If SRE creates a monitoring-anomaly child task from task detail, the new child is intentionally assigned to `pm`; that route is distinct from `PATCH /tasks/{taskId}/assignment`.
 
 ## Responsible escalation and current-owner enforcement
 - Delivery-loop actions reserved for engineers now validate the task's current canonical assignee before mutating state.
@@ -58,6 +59,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 
 ## Change Ownership Notes
 - Changes to the assignment mutation path in `lib/audit/http.js` or the assignment controls in `src/app/App.jsx` should update this runbook or the matching assignment API contract in the same PR.
+- SRE anomaly child-task creation should continue to bypass assignment mutation and remain on its dedicated monitoring workflow endpoint.
 - Nearest verification artifacts for that surface are:
 - `tests/unit/task-assignment.test.js`
 - `tests/unit/audit-api.test.js`

@@ -85,6 +85,7 @@ test.describe('authenticated browser app shell', () => {
     await page.goto('/tasks?view=board', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Sign in to the workflow app' })).toBeVisible();
     await expect(page).toHaveURL(/\/sign-in\?/);
+    await expect(page.getByLabel('Trusted auth code')).toBeEditable();
 
     await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
     await page.getByLabel('API base URL').fill('/api');

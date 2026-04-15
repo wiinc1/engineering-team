@@ -9,6 +9,7 @@ info:
     Delivery-loop mutations that are reserved for the currently assigned engineer role now reject callers
     that no longer match the task's canonical assignee.
     Shared browser surfaces such as `/inbox/sre` remain read-only unless a dedicated workflow endpoint is used.
+    SRE anomaly-to-child-task creation is a separate dedicated workflow endpoint and does not mutate assignment state directly.
 paths:
   /tasks/{taskId}/assignment:
     patch:

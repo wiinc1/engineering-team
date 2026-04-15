@@ -385,5 +385,6 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByText(/2026\.04\.15-1/)).toBeVisible();
     await expect(page.getByText('PR #901')).toBeVisible();
     await expect(page.getByText('abc1234def5678')).toBeVisible();
+    await expect(page.getByText('47h remaining')).toBeVisible();
   });
 });
