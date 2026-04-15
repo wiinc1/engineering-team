@@ -872,6 +872,35 @@ button {
   color: #475569;
 }
 
+.decision-inbox-list {
+  display: grid;
+  gap: 16px;
+}
+
+.decision-inbox-card {
+  display: grid;
+  gap: 16px;
+}
+
+.decision-inbox-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.decision-inbox-card__header h3 {
+  margin: 0;
+}
+
+.decision-inbox-card__meta {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .routing-badge {
   display: inline-flex;
   align-items: center;

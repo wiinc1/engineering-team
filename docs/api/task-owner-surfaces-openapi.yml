@@ -66,6 +66,9 @@ paths:
         for browser overview and inbox grouping.
         Tasks in `SRE_MONITORING` route to the SRE inbox by workflow stage before owner-based routing;
         explicit human waiting-state or approval escalation still takes precedence over SRE routing.
+        When governed close review is waiting on a human decision, the additive `close_governance`
+        preview on task-list items supplies the recommendation and escalation summaries used by the
+        authenticated Human Inbox decision cards.
       responses:
         '200':
           description: Task-list summaries

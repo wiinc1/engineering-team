@@ -133,4 +133,17 @@ test.describe('authenticated browser app shell', () => {
     await expect(page).toHaveURL(/\/inbox\/sre/);
     await expect(page.locator('.lede')).toContainText('Read-only monitoring inbox');
   });
+
+  test('restores a protected human inbox route after sign-in', async ({ page }) => {
+    await page.goto('/inbox/human', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to the workflow app' })).toBeVisible();
+
+    await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
+    await page.getByLabel('API base URL').fill('/api');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Human Stakeholder inbox routing', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/inbox\/human/);
+    await expect(page.locator('.role-inbox-toolbar__cue')).toContainText('Decision-ready items appear here only when governed close review or escalation handling is explicitly waiting on a human stakeholder decision.');
+  });
 });

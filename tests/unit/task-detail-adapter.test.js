@@ -319,6 +319,47 @@ test('task detail client submits SRE monitoring workflow actions to dedicated en
   assert.ok(calls.every((entry) => entry.init.method === 'POST'));
 });
 
+test('task detail client submits close-review workflow actions to dedicated endpoints', async () => {
+  const calls = [];
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, json: async () => ({ success: true }) };
+    },
+  });
+
+  await client.submitCloseCancellationRecommendation('TSK-92', {
+    summary: 'PM recommends cancellation because the release window closed.',
+    rationale: 'Business timing no longer supports release.',
+  });
+  await client.submitExceptionalDispute('TSK-92', {
+    summary: 'PM disputes whether cancellation is safer than reopening implementation.',
+    recommendation: 'Review the dispute and decide whether to cancel or reopen implementation.',
+    rationale: 'The tradeoff remains contested after close-review discussion.',
+    severity: 'high',
+  });
+  await client.submitHumanCloseDecision('TSK-92', {
+    outcome: 'request_more_context',
+    summary: 'Need the remediation timeline before deciding.',
+    rationale: 'Decision deferred pending more delivery context.',
+    confirmationRequired: true,
+  });
+  await client.submitCloseReviewBacktrack('TSK-92', {
+    reasonCode: 'criteria_gap',
+    rationale: 'The close gate failed and implementation must resume.',
+    agreementArtifact: 'pm+architect-close-review-2026-04-15',
+  });
+
+  assert.deepEqual(calls.map((entry) => entry.url), [
+    'http://audit.local/tasks/TSK-92/close-review/cancellation-recommendation',
+    'http://audit.local/tasks/TSK-92/close-review/exceptional-dispute',
+    'http://audit.local/tasks/TSK-92/close-review/human-decision',
+    'http://audit.local/tasks/TSK-92/close-review/backtrack',
+  ]);
+  assert.ok(calls.every((entry) => entry.init.method === 'POST'));
+});
+
 test('deriveTelemetryFreshness promotes fresh and stale signals from freshness metadata', () => {
   assert.deepEqual(
     deriveTelemetryFreshness({ freshness: { status: 'fresh', last_updated_at: '2026-04-01T12:00:00.000Z' } }),

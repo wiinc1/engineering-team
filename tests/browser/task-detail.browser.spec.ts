@@ -29,6 +29,41 @@ const taskDetailPayload = {
     definitionOfDone: ['Task detail page shipped with browser verification.'],
     technicalSpec: 'Server-rendered technical spec',
     monitoringSpec: 'Server-rendered monitoring spec',
+    closeGovernance: {
+      active: true,
+      readiness: {
+        state: 'blocked',
+        checklist: [
+          { id: 'acceptance-criteria', label: 'Acceptance criteria recorded', satisfied: true },
+          { id: 'child-tasks', label: 'Child tasks closed', satisfied: false },
+        ],
+      },
+      cancellation: {
+        recommendations: {
+          pm: {
+            summary: 'PM recommends cancellation because the release window closed.',
+            rationale: 'No remaining deployment window exists for this increment.',
+          },
+        },
+        awaitingHumanDecision: true,
+      },
+      escalation: {
+        source: 'exceptional_dispute',
+        summary: 'A human stakeholder must resolve the exceptional dispute before close review can finish.',
+        recommendation: 'Decide whether to cancel the release or reopen implementation.',
+        rationale: 'The architect and PM disagree on whether the remaining risk is acceptable.',
+        severity: 'critical',
+        occurredAt: '2026-04-01T15:01:00.000Z',
+      },
+      humanDecision: {
+        status: 'pending',
+        summary: 'Human stakeholder decision required before the task can close.',
+      },
+      backtrack: {
+        available: true,
+        latestReason: 'An unresolved child task is still blocking closure.',
+      },
+    },
   },
   relations: {
     linkedPrs: [{ id: 'pr-12', number: 12, title: 'feat: task detail', state: 'open', merged: false, draft: false, repository: 'wiinc1/engineering-team' }],
@@ -245,6 +280,17 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByRole('region', { name: 'Telemetry summary' })).toContainText('Freshness');
     await page.getByRole('tab', { name: 'History' }).click();
     await expect(page.getByLabel('Task history timeline')).toBeVisible();
+  });
+
+  test('renders governed close-review escalation content without collapsing the task detail layout', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openRoute(page, '/tasks/TSK-42');
+
+    await expect(page.getByRole('heading', { name: 'Close review governance' })).toBeVisible();
+    await expect(page.getByText('Cancellation recommendations')).toBeVisible();
+    await expect(page.getByText('Exceptional dispute escalation')).toBeVisible();
+    await expect(page.getByLabel('Recommendation for human')).toHaveValue('Decide whether to cancel the release or reopen implementation.');
+    await expect(page.getByLabel('Backtrack rationale')).toHaveValue('An unresolved child task is still blocking closure.');
   });
 
   test('supports keyboard-first navigation to blockers and activity tabs on mobile', async ({ page }) => {

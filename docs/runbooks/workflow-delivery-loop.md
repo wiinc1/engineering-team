@@ -195,3 +195,10 @@ Failing QA runs generate a packaged engineer-facing artifact containing:
 - Expired windows are materialized by worker processing rather than task reads.
 - The worker appends an auditable `task.escalated` event with `reason=sre_monitoring_window_expired`.
 - Resulting state should carry `waiting_state=awaiting_human_stakeholder_escalation` and a human-focused next action.
+- Human inbox cards should show the expiry summary plus an explicit recommendation so stakeholders can approve, reject, or request more context without opening operational SRE views.
+
+## Governed close-review dispute handling
+
+- PM close review may raise `POST /tasks/{id}/close-review/exceptional-dispute` when PM or Architect cannot align on cancellation vs. reopening implementation.
+- Exceptional disputes write an auditable `task.escalated` event with `reason=exceptional_dispute`, preserve the short recommendation summary shown in the human inbox, and set `waiting_state=awaiting_human_stakeholder_escalation`.
+- Human stakeholder decisions continue to use the governed close-review decision endpoint and should remain explicit: approve, reject, or request more context.

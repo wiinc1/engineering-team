@@ -208,6 +208,14 @@ Immediate action:
 1. Confirm the projection worker is running or invoke bounded worker processing locally.
 2. Verify the task has `sre_monitoring_window_ends_at` set and no `sre_approved_at`.
 3. Re-run projection worker processing; successful processing should append an auditable `task.escalated` event with `reason=sre_monitoring_window_expired`.
+4. Confirm the task now projects a human decision card with the expiry summary and recommendation in the authenticated browser inbox.
+
+### Exceptional dispute raised during PM close review
+Symptom: PM and Architect cannot align on cancellation vs. reopening implementation, and the final authority must move to a human stakeholder.
+Immediate action:
+1. Use `POST /tasks/{id}/close-review/exceptional-dispute` with a concise summary, recommendation, rationale, and severity.
+2. Confirm the task history contains `task.escalated` with `reason=exceptional_dispute`.
+3. Confirm the task projects `waiting_state=awaiting_human_stakeholder_escalation` and the human inbox renders the escalation card with approve/reject/request-more-context actions.
 
 ### Monitoring anomaly requires tracked child work
 Symptom: SRE identifies a production anomaly that should become first-class tracked work.

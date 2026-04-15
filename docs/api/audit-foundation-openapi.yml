@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     Canonical audit and workflow HTTP contract.
-    The task-list projection now also carries additive queue/WIP metadata and optional SRE monitoring preview data.
+    The task-list projection now also carries additive queue/WIP metadata, optional SRE monitoring preview data, and close-governance escalation previews used by the human decision inbox.
     SRE monitoring runtime accepts both `ff_sre_monitoring` and `ff-sre-monitoring` as equivalent feature-flag names.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
 components:
@@ -407,6 +407,38 @@ paths:
       responses:
         '200':
           description: PM business context finalized and architect work unblocked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/close-review/exceptional-dispute:
+    post:
+      summary: Escalate an exceptional close-review dispute for human stakeholder resolution
+      description: |
+        Requires PM, architect, or admin privileges while the task is in `PM_CLOSE_REVIEW`.
+        Successful escalation keeps the task in governed close review, records an escalation artifact,
+        and routes the task into the protected Human Inbox with `waiting_state=awaiting_human_stakeholder_escalation`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [summary, rationale]
+              properties:
+                summary: { type: string }
+                rationale: { type: string }
+                severity: { type: string, enum: [warning, critical] }
+      responses:
+        '201':
+          description: Exceptional dispute escalation recorded and routed for human review
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

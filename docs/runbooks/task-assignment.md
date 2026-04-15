@@ -19,6 +19,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Tier-specific projected assignee ids such as `engineer-jr`, `engineer-sr`, and `engineer-principal` are valid owner values and should still be treated as canonical engineer ownership for delivery routing.
 - The SRE monitoring inbox is a separate workflow surface: tasks may appear in `/inbox/sre` by workflow stage even when `current_owner` still points at an engineer.
 - If SRE creates a monitoring-anomaly child task from task detail, the new child is intentionally assigned to `pm`; that route is distinct from `PATCH /tasks/{taskId}/assignment`.
+- Governed close-review cancellation recommendations and exceptional-dispute escalations are also distinct workflow routes; they may affect routing into `/inbox/human` without mutating canonical assignment state.
 
 ## Responsible escalation and current-owner enforcement
 - Delivery-loop actions reserved for engineers now validate the task's current canonical assignee before mutating state.

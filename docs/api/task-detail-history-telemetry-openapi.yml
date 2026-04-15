@@ -383,6 +383,10 @@ components:
                 escalation:
                   type: [object, 'null']
                   additionalProperties: true
+            closeGovernance:
+              type: [object, 'null']
+              description: Governed close-review summary, including normalized readiness, cancellation recommendations, human decisions, and additive escalation cards for monitoring expiry or exceptional dispute handling.
+              additionalProperties: true
         relations:
           type: object
           required: [linkedPrs, childTasks, parentTask]

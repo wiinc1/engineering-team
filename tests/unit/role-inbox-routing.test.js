@@ -73,6 +73,38 @@ describe('role inbox routing', () => {
     expect(summarizeRoleInboxResults(2, 'qa')).toBe('2 tasks routed to QA.');
   });
 
+  it('builds human inbox rows from close-governance decision previews', () => {
+    const items = [
+      {
+        task_id: 'TSK-HUMAN-1',
+        title: 'Resolve governed close review',
+        current_stage: 'PM_CLOSE_REVIEW',
+        current_owner: null,
+        priority: 'P1',
+        waiting_state: 'awaiting_human_stakeholder_escalation',
+        next_required_action: 'Human stakeholder escalation required for exceptional dispute.',
+        freshness: { last_updated_at: '2026-04-01T00:00:01.000Z' },
+        close_governance: {
+          cancellation: { awaitingHumanDecision: true },
+          escalation: {
+            source: 'exceptional_dispute',
+            summary: 'A human stakeholder must resolve the exceptional dispute before close review can finish.',
+            recommendation: 'Decide whether to cancel the release or reopen implementation.',
+          },
+          humanDecision: {
+            required: true,
+            summary: 'Human stakeholder decision required before the task can close.',
+          },
+        },
+      },
+    ];
+
+    const humanItems = buildRoleInboxItems(items, 'human', agentLookup);
+    expect(humanItems).toHaveLength(1);
+    expect(humanItems[0].queueReason.label).toBe('Human stakeholder decision required before the task can close.');
+    expect(humanItems[0].queueReason.detail).toContain('Decision-ready close governance item.');
+  });
+
   it('sorts inbox rows by priority, then queue age, then stable task id', () => {
     const ordered = sortInboxItems([
       { task_id: 'TSK-3', priority: 'P1', freshness: { last_updated_at: '2026-04-01T00:00:03.000Z' } },

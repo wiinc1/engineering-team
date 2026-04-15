@@ -2169,6 +2169,412 @@ test('creates a linked P0 child task from an SRE monitoring anomaly and blocks t
   });
 });
 
+test('projects close-review readiness, cancellation recommendations, human decision state, and backtrack reasons', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-close', roles: ['contributor'] }),
+    };
+    const readerHeaders = authHeaders(secret, { tenant_id: 'tenant-close', roles: ['reader'] });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CLOSE-1',
+        payload: {
+          title: 'Governed close review task',
+          initial_stage: 'PM_CLOSE_REVIEW',
+          acceptance_criteria: ['Ship governed close review', 'Preserve cancellation recommendations'],
+          linked_prs: [{
+            id: 'pr-close-1',
+            number: 601,
+            title: 'feat: governed close review',
+            repository: 'wiinc1/engineering-team',
+            merged: true,
+            state: 'closed',
+            merged_at: '2026-04-15T12:00:00.000Z',
+          }],
+          waiting_state: 'awaiting_human_close_review',
+          next_required_action: 'Human close review is required before final closure.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CHILD-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CHILD-CLOSE-1',
+        payload: {
+          title: 'Open anomaly child',
+          initial_stage: 'BACKLOG',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.child_link_added',
+        actorType: 'agent',
+        idempotencyKey: 'child-link:TSK-CLOSE-1',
+        payload: {
+          child_task_id: 'TSK-CHILD-CLOSE-1',
+          relationship_type: 'monitoring_anomaly',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.sre_approval_recorded',
+        actorType: 'user',
+        idempotencyKey: 'sre-approval:TSK-CLOSE-1',
+        payload: {
+          reason: 'Production telemetry remained stable.',
+          evidence: ['latency within guardrail'],
+          waiting_state: 'awaiting_human_close_review',
+          next_required_action: 'Human close review is required before final closure.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.decision_recorded',
+        actorType: 'user',
+        idempotencyKey: 'decision:pm-cancel:TSK-CLOSE-1',
+        payload: {
+          decision_type: 'cancellation_recommendation',
+          actor_role: 'pm',
+          outcome: 'recommend_cancel',
+          summary: 'PM recommends cancellation because the close gate is no longer achievable this sprint.',
+          rationale: 'Customer timing changed and the open anomaly child task removes the business value of immediate release.',
+          artifact: { recommendation_id: 'pm-rec-1' },
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.decision_recorded',
+        actorType: 'user',
+        idempotencyKey: 'decision:architect-cancel:TSK-CLOSE-1',
+        payload: {
+          decision_type: 'cancellation_recommendation',
+          actor_role: 'architect',
+          outcome: 'recommend_cancel',
+          summary: 'Architect agrees cancellation is the safer path.',
+          rationale: 'Open anomaly remediation means the close gate is not technically satisfiable.',
+          artifact: { recommendation_id: 'arch-rec-1' },
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.escalated',
+        actorType: 'user',
+        idempotencyKey: 'escalation:exceptional-dispute:TSK-CLOSE-1',
+        payload: {
+          severity: 'critical',
+          reason: 'exceptional_dispute',
+          summary: 'PM and Architect dispute whether cancellation is safer than reopening implementation.',
+          rationale: 'The business case for cancellation changed, but the engineering cost to reopen remains acceptable.',
+          recommendation_summary: 'Human stakeholder should decide whether to cancel or reopen implementation.',
+          waiting_state: 'awaiting_human_stakeholder_escalation',
+          next_required_action: 'Human stakeholder escalation required for exceptional dispute.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.decision_recorded',
+        actorType: 'user',
+        idempotencyKey: 'decision:human-context:TSK-CLOSE-1',
+        payload: {
+          decision_type: 'human_close_decision',
+          actor_role: 'human',
+          outcome: 'request_more_context',
+          summary: 'Human stakeholder needs a clearer release-vs-cancel tradeoff.',
+          rationale: 'Provide the customer impact and the expected time to close the anomaly child task.',
+          confirmation_required: true,
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.decision_recorded',
+        actorType: 'user',
+        idempotencyKey: 'decision:backtrack:TSK-CLOSE-1',
+        payload: {
+          decision_type: 'close_backtrack',
+          actor_role: 'pm',
+          outcome: 'child_tasks_open',
+          summary: 'Backtrack to implementation if cancellation is rejected.',
+          rationale: 'The open anomaly child task means the close gate failed.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-1/detail`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.closeGovernance.enabled, true);
+    assert.equal(detail.context.closeGovernance.readiness.state, 'blocked');
+    assert.equal(detail.context.closeGovernance.readiness.normalizedSignals.acceptanceCriteriaRecorded, true);
+    assert.equal(detail.context.closeGovernance.readiness.normalizedSignals.monitoringResolved, true);
+    assert.equal(detail.context.closeGovernance.readiness.normalizedSignals.linkedPrsClosed, true);
+    assert.equal(detail.context.closeGovernance.readiness.normalizedSignals.childTasksClosed, false);
+    assert.equal(detail.context.closeGovernance.cancellation.proposed, true);
+    assert.equal(detail.context.closeGovernance.cancellation.recommendations.pm.artifact.recommendation_id, 'pm-rec-1');
+    assert.equal(detail.context.closeGovernance.cancellation.recommendations.architect.artifact.recommendation_id, 'arch-rec-1');
+    assert.equal(detail.context.closeGovernance.cancellation.awaitingHumanDecision, true);
+    assert.equal(detail.context.closeGovernance.cancellation.requestMoreContextCount, 1);
+    assert.equal(detail.context.closeGovernance.humanDecision.status, 'requested_more_context');
+    assert.equal(detail.context.closeGovernance.humanDecision.latestDecision.confirmationRequired, true);
+    assert.equal(detail.context.closeGovernance.escalation.source, 'exceptional_dispute');
+    assert.equal(detail.context.closeGovernance.escalation.recommendation, 'Human stakeholder should decide whether to cancel or reopen implementation.');
+    assert.equal(detail.context.closeGovernance.backtrack.available, true);
+    assert.equal(detail.context.closeGovernance.backtrack.latestReason, 'The open anomaly child task means the close gate failed.');
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const row = list.items.find((item) => item.task_id === 'TSK-CLOSE-1');
+    assert.equal(row.close_governance.enabled, true);
+    assert.equal(row.close_governance.readiness.state, 'blocked');
+    assert.equal(row.close_governance.humanDecision.status, 'requested_more_context');
+    assert.equal(row.close_governance.cancellation.awaitingHumanDecision, true);
+    assert.equal(row.close_governance.escalation.source, 'exceptional_dispute');
+  });
+});
+
+test('records governed close-review recommendations, human decisions, and backtracks to implementation', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-close', roles: ['contributor'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-1', tenant_id: 'tenant-close', roles: ['pm', 'reader'] }),
+    };
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-1', tenant_id: 'tenant-close', roles: ['architect'] }),
+    };
+    const humanHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'human-1', tenant_id: 'tenant-close', roles: ['stakeholder'] }),
+    };
+    const readerHeaders = authHeaders(secret, { tenant_id: 'tenant-close', roles: ['reader'] });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CLOSE-ROUTE-1',
+        payload: {
+          title: 'Close review route coverage',
+          initial_stage: 'PM_CLOSE_REVIEW',
+          acceptance_criteria: ['Keep close governance auditable'],
+          waiting_state: 'awaiting_human_close_review',
+          next_required_action: 'Human close review is required before final closure.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/close-review/cancellation-recommendation`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        summary: 'PM recommends cancellation because the release window closed.',
+        rationale: 'The business deadline passed while the task remained in close review.',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/close-review/cancellation-recommendation`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        summary: 'Architect agrees cancellation is the safer governed outcome.',
+        rationale: 'The close gate cannot complete without reopening implementation.',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/close-review/exceptional-dispute`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        summary: 'PM disputes whether cancellation is safer than reopening implementation.',
+        recommendation: 'Human stakeholder should decide whether to cancel or reopen implementation.',
+        rationale: 'The customer timing changed, but delivery can still finish if implementation resumes.',
+        severity: 'critical',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/close-review/human-decision`, {
+      method: 'POST',
+      headers: humanHeaders,
+      body: JSON.stringify({
+        outcome: 'request_more_context',
+        summary: 'Human stakeholder wants the remediation timeline before deciding.',
+        rationale: 'Need a clearer tradeoff between cancellation and reopening implementation.',
+        confirmationRequired: true,
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/detail`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    let detail = await response.json();
+    assert.equal(detail.context.closeGovernance.cancellation.awaitingHumanDecision, true);
+    assert.equal(detail.context.closeGovernance.humanDecision.status, 'requested_more_context');
+    assert.equal(detail.context.closeGovernance.escalation.source, 'exceptional_dispute');
+    assert.equal(detail.context.closeGovernance.escalation.severity, 'critical');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/close-review/backtrack`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The release evidence package is incomplete and needs implementation follow-up.',
+        agreementArtifact: 'pm+architect-close-review-2026-04-15',
+        summary: 'Close review backtracked after joint PM/Architect agreement.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const backtrackPayload = await response.json();
+    assert.equal(backtrackPayload.data.routedToStage, 'IMPLEMENTATION');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/state`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.current_stage, 'IMPLEMENTATION');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/detail`, {
+      headers: readerHeaders,
+    });
+    detail = await response.json();
+    assert.equal(detail.context.closeGovernance.backtrack.latestReason, 'The release evidence package is incomplete and needs implementation follow-up.');
+  });
+});
+
+test('records human decisions for monitoring-expiry escalation items routed through the human inbox', async () => {
+  await withServer(async ({ baseUrl, secret, store }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-close', roles: ['contributor'] }),
+    };
+    const humanHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'human-1', tenant_id: 'tenant-close', roles: ['stakeholder'] }),
+    };
+    const readerHeaders = authHeaders(secret, { tenant_id: 'tenant-close', roles: ['reader'] });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-EXPIRY-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CLOSE-EXPIRY-1',
+        payload: {
+          title: 'Monitoring expiry escalation',
+          initial_stage: 'SRE_MONITORING',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-EXPIRY-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.sre_monitoring_started',
+        actorType: 'user',
+        idempotencyKey: 'sre-start:TSK-CLOSE-EXPIRY-1',
+        payload: {
+          deployment_environment: 'production',
+          deployment_url: 'https://deploy.example.com',
+          deployment_version: '2026.04.15.1',
+          deployment_status: 'healthy',
+          evidence: ['deploy completed'],
+          window_ends_at: '2026-04-10T00:00:00.000Z',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const expiryProcessing = await store.processExpiredSreMonitoring();
+    assert.equal(expiryProcessing.processed, 1);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-EXPIRY-1/close-review/human-decision`, {
+      method: 'POST',
+      headers: humanHeaders,
+      body: JSON.stringify({
+        outcome: 'approve',
+        summary: 'Human stakeholder approves escalation handling after monitoring expiry.',
+        rationale: '',
+        confirmationRequired: false,
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-EXPIRY-1/detail`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.closeGovernance.escalation.source, 'monitoring_expiry');
+    assert.equal(detail.context.closeGovernance.humanDecision.status, 'approved');
+  });
+});
+
 test('supports all documented SRE monitoring feature-flag aliases', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks/TSK-SRE-FLAG/sre-monitoring/start`, {

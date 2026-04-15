@@ -227,6 +227,50 @@ function installTaskFetchMock({
       }, 200);
     }
 
+    if (url.endsWith('/tasks/TSK-42/close-review/cancellation-recommendation') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          actorRole: 'pm',
+          recordedAt: '2026-04-01T19:05:00.000Z',
+        },
+      }, 201);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/close-review/exceptional-dispute') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          actorRole: 'pm',
+          recordedAt: '2026-04-01T19:05:30.000Z',
+        },
+      }, 201);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/close-review/human-decision') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          outcome: 'request_more_context',
+          recordedAt: '2026-04-01T19:06:00.000Z',
+        },
+      }, 201);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/close-review/backtrack') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          routedToStage: 'IMPLEMENTATION',
+          recordedAt: '2026-04-01T19:07:00.000Z',
+        },
+      }, 201);
+    }
+
     if (url.includes('/tasks/TSK-42/detail')) {
       if (detailStatus !== 200) {
         return createJsonResponse({
@@ -1801,6 +1845,200 @@ describe('Task browser runtime coverage', () => {
     });
   });
 
+  it('renders close review governance with readiness, cancellation recommendations, and human decision state', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'human-1',
+        tenant_id: 'tenant-a',
+        roles: ['reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      detailOverride: {
+        task: { id: 'TSK-42', stage: 'PM_CLOSE_REVIEW', status: 'blocked' },
+        summary: {
+          nextAction: {
+            label: 'Human close review is required before final closure.',
+            source: 'system',
+            overdue: false,
+            waitingOn: 'Awaiting Human Close Review',
+          },
+          blockedState: { isBlocked: true, label: 'Blocked', waitingOn: 'Child Task Investigation' },
+        },
+        context: {
+          closeGovernance: {
+            active: true,
+            readiness: {
+              state: 'blocked',
+              checklist: [
+                { key: 'acceptance-criteria', label: 'Acceptance criteria documented', status: 'ready', detail: '2 acceptance criteria recorded.' },
+                { key: 'child-tasks', label: 'Child tasks resolved', status: 'blocked', detail: '1 linked child task still open.' },
+              ],
+            },
+            cancellation: {
+              awaitingHumanDecision: true,
+              recommendations: {
+                pm: {
+                  summary: 'PM recommends cancellation because customer timing changed.',
+                  rationale: 'The remaining anomaly child task means this release no longer matches the business window.',
+                },
+                architect: {
+                  summary: 'Architect agrees cancellation is safer than forcing closure.',
+                  rationale: 'The close gate is technically blocked until the anomaly child is resolved.',
+                },
+              },
+            },
+            humanDecision: {
+              status: 'requested_more_context',
+              summary: 'Human stakeholder needs a clearer tradeoff between release delay and cancellation.',
+              latestDecision: {
+                summary: 'Provide the customer impact and expected remediation time.',
+                rationale: 'Decision deferred pending more context.',
+              },
+            },
+            backtrack: {
+              available: true,
+              latestReason: 'The open anomaly child task means the close gate failed.',
+            },
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('heading', { name: 'Close review governance' })).toBeInTheDocument();
+    expect(screen.getByText('Close readiness blocked')).toBeInTheDocument();
+    expect(screen.getByText('Cancellation recommendations')).toBeInTheDocument();
+    expect(screen.getByText(/PM recommends cancellation because customer timing changed/i)).toBeInTheDocument();
+    expect(screen.getByText(/Architect agrees cancellation is safer/i)).toBeInTheDocument();
+    expect(screen.getByText('Latest human decision')).toBeInTheDocument();
+    expect(screen.getByText(/Provide the customer impact and expected remediation time/i)).toBeInTheDocument();
+    expect(screen.getByText('Backtrack signal')).toBeInTheDocument();
+    expect(screen.getByText(/close gate failed/i)).toBeInTheDocument();
+  });
+
+  it('submits close-review recommendation, exceptional dispute escalation, and backtrack actions from task detail for PM sessions', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        task: { id: 'TSK-42', stage: 'PM_CLOSE_REVIEW', status: 'blocked' },
+        context: {
+          closeGovernance: {
+            active: true,
+            readiness: { state: 'blocked', checklist: [] },
+            cancellation: { awaitingHumanDecision: true, recommendations: { pm: null, architect: null } },
+            humanDecision: { required: true, status: 'awaiting_decision', summary: 'Human decision required.', latestDecision: null },
+            escalation: null,
+            backtrack: { available: true, latestReason: 'Close gate failed.', latestReasonCode: 'criteria_gap' },
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Close review governance' });
+    fireEvent.change(screen.getByLabelText('Cancellation recommendation summary'), { target: { value: 'PM recommends cancellation because the release window closed.' } });
+    fireEvent.change(screen.getByLabelText('Cancellation rationale'), { target: { value: 'Business timing no longer supports release.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record cancellation recommendation' }));
+    await screen.findByText('Cancellation recommendation recorded.');
+
+    const recommendationRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/close-review/cancellation-recommendation') && init?.method === 'POST');
+    expect(recommendationRequest).toBeTruthy();
+    expect(JSON.parse(String(recommendationRequest?.[1]?.body))).toMatchObject({
+      summary: 'PM recommends cancellation because the release window closed.',
+      rationale: 'Business timing no longer supports release.',
+    });
+
+    fireEvent.change(screen.getByLabelText('Exceptional dispute summary'), { target: { value: 'PM disputes whether cancellation is safer than reopening implementation.' } });
+    fireEvent.change(screen.getByLabelText('Recommendation for human decision'), { target: { value: 'Review the disputed close path and decide whether to cancel or reopen implementation.' } });
+    fireEvent.change(screen.getByLabelText('Dispute rationale'), { target: { value: 'Customer timing changed, but the implementation cost of reopening is still acceptable.' } });
+    fireEvent.change(screen.getByLabelText('Escalation severity'), { target: { value: 'critical' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Escalate exceptional dispute' }));
+    await screen.findByText('Exceptional dispute escalated for human review.');
+
+    const exceptionalDisputeRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/close-review/exceptional-dispute') && init?.method === 'POST');
+    expect(exceptionalDisputeRequest).toBeTruthy();
+    expect(JSON.parse(String(exceptionalDisputeRequest?.[1]?.body))).toMatchObject({
+      summary: 'PM disputes whether cancellation is safer than reopening implementation.',
+      recommendation: 'Review the disputed close path and decide whether to cancel or reopen implementation.',
+      rationale: 'Customer timing changed, but the implementation cost of reopening is still acceptable.',
+      severity: 'critical',
+    });
+
+    fireEvent.change(screen.getByLabelText('Agreement artifact'), { target: { value: 'pm+architect-close-review-2026-04-15' } });
+    fireEvent.change(screen.getByLabelText('Backtrack rationale'), { target: { value: 'The close gate failed and implementation must resume.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Backtrack to implementation' }));
+    await screen.findByText('Close review backtracked to implementation.');
+
+    const backtrackRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/close-review/backtrack') && init?.method === 'POST');
+    expect(backtrackRequest).toBeTruthy();
+    expect(JSON.parse(String(backtrackRequest?.[1]?.body))).toMatchObject({
+      reasonCode: 'criteria_gap',
+      agreementArtifact: 'pm+architect-close-review-2026-04-15',
+      rationale: 'The close gate failed and implementation must resume.',
+    });
+  });
+
+  it('allows canonical human-role sessions to record a human close decision', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'human-1',
+        tenant_id: 'tenant-a',
+        roles: ['human', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        task: { id: 'TSK-42', stage: 'PM_CLOSE_REVIEW', status: 'waiting' },
+        context: {
+          closeGovernance: {
+            active: true,
+            readiness: { state: 'pending', checklist: [] },
+            cancellation: { awaitingHumanDecision: true, recommendations: { pm: null, architect: null } },
+            humanDecision: { required: true, status: 'awaiting_decision', summary: 'Human decision required.', latestDecision: null },
+            backtrack: { available: false, latestReason: null, latestReasonCode: null },
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Close review governance' });
+    fireEvent.change(screen.getByLabelText('Human decision'), { target: { value: 'request_more_context' } });
+    fireEvent.change(screen.getByLabelText('Decision summary'), { target: { value: 'Need the remediation timeline before deciding.' } });
+    fireEvent.change(screen.getByLabelText('Rationale'), { target: { value: 'Decision deferred pending more delivery context.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record human decision' }));
+
+    await screen.findByText('Human close decision recorded.');
+    const decisionRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/close-review/human-decision') && init?.method === 'POST');
+    expect(decisionRequest).toBeTruthy();
+    expect(JSON.parse(String(decisionRequest?.[1]?.body))).toMatchObject({
+      outcome: 'request_more_context',
+      summary: 'Need the remediation timeline before deciding.',
+      rationale: 'Decision deferred pending more delivery context.',
+      confirmationRequired: true,
+    });
+  });
+
   it('does not show PM business-context re-entry for non-anomaly backlog children', async () => {
     writeBrowserSessionConfig({
       apiBaseUrl: '',
@@ -2151,15 +2389,143 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText(/Routed to PM because the task is explicitly waiting on PM action/i)).toBeInTheDocument();
   });
 
-  it('renders a Human Stakeholder inbox route for approval-driven work', async () => {
-    installTaskFetchMock();
+  it('renders a Human Stakeholder inbox route for approval-driven work and records decisions inline', async () => {
+    installTaskFetchMock({
+      tasksOverride: [
+        {
+          task_id: 'TSK-42',
+          tenant_id: 'tenant-a',
+          title: 'Restricted owner surface',
+          priority: 'P2',
+          current_stage: 'PM_CLOSE_REVIEW',
+          current_owner: 'masked',
+          owner: { actor_id: 'masked', display_name: '', redacted: true },
+          blocked: false,
+          closed: false,
+          waiting_state: 'awaiting_human_close_review',
+          next_required_action: 'Human approval required',
+          queue_entered_at: '2026-04-01T15:00:03.000Z',
+          freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:03.000Z' },
+          close_governance: {
+            humanDecision: { required: true, status: 'awaiting_decision', summary: 'Human stakeholder decision required for governed close review.' },
+            cancellation: {
+              awaitingHumanDecision: true,
+              recommendations: {
+                pm: { summary: 'PM recommends cancellation.', rationale: 'Support load is down and the rollout is no longer justified.' },
+                architect: { summary: 'Architect concurs with cancellation.', rationale: 'No remaining technical blockers justify keeping this open.' },
+              },
+            },
+          },
+        },
+      ],
+    });
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'human-1',
+        tenant_id: 'tenant-a',
+        roles: ['human', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
     window.history.pushState({}, '', '/inbox/human');
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Human Stakeholder Inbox' });
     expect(screen.getByText('Restricted owner surface')).toBeInTheDocument();
-    expect(screen.getByText('Human approval required')).toBeInTheDocument();
-    expect(screen.getByText(/waiting on human approval or escalation handling/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Human stakeholder decision required for governed close review.').length).toBeGreaterThan(0);
+    expect(screen.getByText(/decision-ready close governance item/i)).toBeInTheDocument();
+    expect(screen.getByText('PM recommends cancellation.')).toBeInTheDocument();
+    expect(screen.getByText('Architect concurs with cancellation.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Human decision for TSK-42'), { target: { value: 'request_more_context' } });
+    fireEvent.change(screen.getByLabelText('Decision summary for TSK-42'), { target: { value: 'Need a clearer rollback impact statement.' } });
+    fireEvent.change(screen.getByLabelText('Decision rationale for TSK-42'), { target: { value: 'The current recommendation does not explain user impact if the task is cancelled.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record human decision' }));
+
+    expect(await screen.findByText('Human close decision recorded.')).toBeInTheDocument();
+  });
+
+  it('renders monitoring expiry and exceptional dispute escalation cards in the human inbox', async () => {
+    installTaskFetchMock({
+      tasksOverride: [
+        {
+          task_id: 'TSK-42',
+          tenant_id: 'tenant-a',
+          title: 'Expired monitoring window',
+          priority: 'P1',
+          current_stage: 'SRE_MONITORING',
+          current_owner: 'engineer',
+          owner: { actor_id: 'engineer', display_name: 'engineer' },
+          blocked: false,
+          closed: false,
+          waiting_state: 'awaiting_human_stakeholder_escalation',
+          next_required_action: 'Human stakeholder escalation required after monitoring window expiry.',
+          queue_entered_at: '2026-04-01T15:00:03.000Z',
+          freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:03.000Z' },
+          close_governance: {
+            humanDecision: { required: true, status: 'awaiting_decision', summary: 'SRE monitoring expired without approval.' },
+            cancellation: { awaitingHumanDecision: false, recommendations: { pm: null, architect: null } },
+            escalation: {
+              source: 'monitoring_expiry',
+              summary: 'SRE monitoring window expired without approval.',
+              recommendation: 'Decide whether to cancel the release or reopen implementation after monitoring expired without approval.',
+              rationale: null,
+              severity: 'warning',
+              occurredAt: '2026-04-01T15:05:00.000Z',
+            },
+          },
+        },
+        {
+          task_id: 'TSK-45',
+          tenant_id: 'tenant-a',
+          title: 'Close path dispute',
+          priority: 'P2',
+          current_stage: 'PM_CLOSE_REVIEW',
+          current_owner: 'architect',
+          owner: { actor_id: 'architect', display_name: 'architect' },
+          blocked: false,
+          closed: false,
+          waiting_state: 'awaiting_human_stakeholder_escalation',
+          next_required_action: 'Human stakeholder escalation required for exceptional dispute.',
+          queue_entered_at: '2026-04-01T16:00:03.000Z',
+          freshness: { status: 'fresh', last_updated_at: '2026-04-01T16:00:03.000Z' },
+          close_governance: {
+            humanDecision: { required: true, status: 'awaiting_decision', summary: 'PM and Architect dispute whether to cancel or reopen implementation.' },
+            cancellation: { awaitingHumanDecision: false, recommendations: { pm: null, architect: null } },
+            escalation: {
+              source: 'exceptional_dispute',
+              summary: 'PM and Architect dispute whether to cancel or reopen implementation.',
+              recommendation: 'Review the dispute and decide whether to approve, reject, or request more context.',
+              rationale: 'The close gate failed, but the implementation reopen cost is still under debate.',
+              severity: 'critical',
+              occurredAt: '2026-04-01T16:05:00.000Z',
+            },
+          },
+        },
+      ],
+    });
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'human-1',
+        tenant_id: 'tenant-a',
+        roles: ['human', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    window.history.pushState({}, '', '/inbox/human');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Human Stakeholder Inbox' });
+    expect(screen.getByText('Expired monitoring window')).toBeInTheDocument();
+    expect(screen.getByText('Close path dispute')).toBeInTheDocument();
+    expect(screen.getByText('Monitoring expiry escalation')).toBeInTheDocument();
+    expect(screen.getByText('Exceptional dispute escalation')).toBeInTheDocument();
+    expect(screen.getByText(/Decide whether to cancel the release or reopen implementation after monitoring expired without approval/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review the dispute and decide whether to approve, reject, or request more context/i)).toBeInTheDocument();
   });
 
   it('passes an axe smoke scan for the PM overview route', async () => {

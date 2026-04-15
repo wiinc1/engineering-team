@@ -79,4 +79,5 @@
 - governance review tasks are shown only on that dedicated route and are intentionally excluded from the default task list, board, and PM overview delivery surfaces
 - tier-specific engineer owners still collapse into the canonical `engineer` route family for inbox and overview grouping while preserving human-readable labels in the UI
 - `/inbox/sre` is a protected route in the authenticated shell and now renders a deployment-aware monitoring dashboard for tasks actively in the `SRE_MONITORING` stage
+- `/inbox/human` is a protected route in the authenticated shell and now renders governed close-review decision cards for cancellation recommendations and exceptional-dispute escalations
 - protected `/tasks/{taskId}` sessions can now surface the SRE-only anomaly-child-task form on task detail, so browser-shell auth coverage must continue to protect that route restoration path as detail capabilities expand
