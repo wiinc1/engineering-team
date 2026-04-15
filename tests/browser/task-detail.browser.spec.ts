@@ -121,7 +121,7 @@ async function installApiMocks(page, options: {
 async function openRoute(page, route: string, expectedHeading: string | null = 'Wire task detail') {
   await page.goto(route, { waitUntil: 'domcontentloaded' });
   if (expectedHeading) {
-    await expect(page.getByRole('heading', { name: expectedHeading })).toBeVisible();
+    await expect(page.getByRole('heading', { name: expectedHeading, exact: true })).toBeVisible();
   }
 }
 
@@ -328,5 +328,62 @@ test.describe('task detail browser verification', () => {
     await page.getByLabel('Why does this need higher-tier support?').fill('The implementation now crosses service boundaries and needs senior ownership.');
     await page.getByRole('button', { name: 'Request higher-tier support' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Responsible escalation recorded and surfaced for architect review.' })).toBeVisible();
+  });
+
+  test('shows deployment-aware SRE monitoring rows in the browser inbox flow', async ({ page }) => {
+    await installApiMocks(page, {
+      sessionClaims: {
+        sub: 'sre-1',
+        tenant_id: 'tenant-a',
+        roles: ['sre', 'reader'],
+        exp: Math.floor(Date.now() / 1000) + (60 * 60),
+      },
+      taskItems: [
+        {
+          task_id: 'TSK-SRE-BROWSER-1',
+          tenant_id: 'tenant-a',
+          title: 'Observe production telemetry',
+          priority: 'P1',
+          current_stage: 'SRE_MONITORING',
+          current_owner: 'engineer',
+          owner: { actor_id: 'engineer', display_name: 'Engineer' },
+          blocked: false,
+          closed: false,
+          waiting_state: null,
+          next_required_action: 'SRE monitoring validation is required.',
+          queue_entered_at: '2026-04-15T12:00:00.000Z',
+          freshness: { status: 'fresh', last_updated_at: '2026-04-15T12:00:00.000Z' },
+          monitoring: {
+            riskLevel: 'low',
+            timeRemainingLabel: '47h remaining',
+            windowEndsAt: '2026-04-17T12:00:00.000Z',
+            deployment: {
+              environment: 'production',
+              version: '2026.04.15-1',
+              url: 'https://deploy.example/releases/901',
+            },
+            linkedPrs: [{ number: 901 }],
+            commitSha: 'abc1234def5678',
+            telemetry: {
+              freshness: 'fresh',
+              eventCount: 3,
+              drilldowns: {
+                metrics: 'https://metrics.example/sre-901',
+                logs: 'https://logs.example/sre-901',
+                traces: 'https://traces.example/sre-901',
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await openRoute(page, '/inbox/sre', 'SRE Inbox');
+    await expect(page.getByLabel('SRE monitoring dashboard')).toBeVisible();
+    await expect(page.getByText('Observe production telemetry')).toBeVisible();
+    await expect(page.getByText('production', { exact: true })).toBeVisible();
+    await expect(page.getByText(/2026\.04\.15-1/)).toBeVisible();
+    await expect(page.getByText('PR #901')).toBeVisible();
+    await expect(page.getByText('abc1234def5678')).toBeVisible();
   });
 });

@@ -9,6 +9,8 @@ info:
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
     The `/overview/governance` route is a dedicated operational surface for governance review tasks and
     is intentionally separate from standard delivery queues.
+    `/inbox/sre` is the protected SRE monitoring dashboard route and consumes deployment-aware monitoring
+    preview data from the projected task-list response.
 paths:
   /auth/session:
     post:

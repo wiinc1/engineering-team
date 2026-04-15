@@ -343,6 +343,20 @@ function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders
         body: JSON.stringify(payload),
       });
     },
+    startSreMonitoring(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/sre-monitoring/start`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    approveSreMonitoring(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/sre-monitoring/approve`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
     fetchAssignableAgents() { return request('/ai-agents'); },
     assignTaskOwner(taskId, agentId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });

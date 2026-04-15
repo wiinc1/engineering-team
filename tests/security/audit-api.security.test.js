@@ -203,6 +203,35 @@ test('rejects engineer-only delivery mutations when the task has been reassigned
   });
 });
 
+test('rejects SRE monitoring mutations for callers without SRE or admin privileges', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const readerAuth = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-SRE/sre-monitoring/start`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...readerAuth },
+      body: JSON.stringify({
+        deploymentEnvironment: 'production',
+        deploymentUrl: 'https://deploy.example/releases/sec-1',
+        deploymentVersion: '2026.04.15-1',
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'forbidden');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-SRE/sre-monitoring/approve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...readerAuth },
+      body: JSON.stringify({
+        reason: 'No authority',
+        evidence: ['reader attempted approval'],
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'forbidden');
+  });
+});
+
 test('browser auth bootstrap rejects missing and incomplete auth codes', async () => {
   await withServer(async ({ baseUrl, secret, baseDir }) => {
     let response = await fetch(`${baseUrl}/auth/session`, {

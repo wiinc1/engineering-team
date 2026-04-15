@@ -8,6 +8,7 @@ info:
     Governance note: assignment runtime changes should update this spec in the same pull request.
     Delivery-loop mutations that are reserved for the currently assigned engineer role now reject callers
     that no longer match the task's canonical assignee.
+    Shared browser surfaces such as `/inbox/sre` remain read-only unless a dedicated workflow endpoint is used.
 paths:
   /tasks/{taskId}/assignment:
     patch:

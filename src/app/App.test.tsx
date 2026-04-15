@@ -181,6 +181,28 @@ function installTaskFetchMock({
       }, 202);
     }
 
+    if (url.endsWith('/tasks/TSK-42/sre-monitoring/start') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          windowStartedAt: '2026-04-01T16:00:00.000Z',
+          windowEndsAt: '2026-04-03T16:00:00.000Z',
+        },
+      }, 201);
+    }
+
+    if (url.endsWith('/tasks/TSK-42/sre-monitoring/approve') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          approvedAt: '2026-04-01T18:00:00.000Z',
+          nextStage: 'PM_CLOSE_REVIEW',
+        },
+      }, 201);
+    }
+
     if (url.includes('/tasks/TSK-42/detail')) {
       if (detailStatus !== 200) {
         return createJsonResponse({
@@ -1562,6 +1584,61 @@ describe('Task browser runtime coverage', () => {
     await screen.findByText('0 tasks routed to SRE.');
     expect(screen.getByRole('heading', { name: 'No tasks routed to SRE' })).toBeInTheDocument();
     expect(screen.getByText(/This is not a loading state/i)).toBeInTheDocument();
+  });
+
+  it('routes SRE monitoring work into the SRE inbox by stage and shows deployment visibility', async () => {
+    installTaskFetchMock({
+      tasksOverride: [
+        {
+          task_id: 'TSK-SRE-1',
+          tenant_id: 'tenant-a',
+          title: 'Monitor rollout',
+          priority: 'P1',
+          current_stage: 'SRE_MONITORING',
+          current_owner: 'engineer',
+          owner: { actor_id: 'engineer', display_name: 'engineer' },
+          blocked: false,
+          closed: false,
+          waiting_state: null,
+          next_required_action: 'Observe production telemetry and approve early only if the rollout is stable.',
+          queue_entered_at: '2026-04-01T15:00:00.000Z',
+          freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
+          monitoring: {
+            state: 'active',
+            riskLevel: 'medium',
+            timeRemainingMs: 3_600_000,
+            timeRemainingLabel: '1h 0m',
+            windowEndsAt: '2026-04-03T16:00:00.000Z',
+            deployment: {
+              environment: 'production',
+              version: '2026.04.14-1',
+              url: 'https://deploy.example/releases/501',
+            },
+            linkedPrs: [{ number: 501 }],
+            commitSha: 'abc1234def5678',
+            telemetry: {
+              freshness: 'fresh',
+              eventCount: 12,
+              drilldowns: {
+                metrics: 'https://metrics.example/task/TSK-SRE-1',
+                logs: 'https://logs.example/task/TSK-SRE-1',
+                traces: 'https://traces.example/task/TSK-SRE-1',
+              },
+            },
+          },
+        },
+      ],
+    });
+    window.history.pushState({}, '', '/inbox/sre');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'SRE Inbox' });
+    await screen.findByText('1 task routed to SRE.');
+    expect(screen.getByText('Monitor rollout')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Deployment' })).toBeInTheDocument();
+    expect(screen.getByText('production')).toBeInTheDocument();
+    expect(screen.getByText(/2026\.04\.14-1 · https:\/\/deploy\.example\/releases\/501/)).toBeInTheDocument();
+    expect(screen.getByText(/actively in the SRE monitoring stage/i)).toBeInTheDocument();
   });
 
   it('keeps role inbox counts hidden and shows a degraded state when canonical roster loading fails', async () => {

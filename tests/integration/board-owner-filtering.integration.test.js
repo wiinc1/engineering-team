@@ -130,4 +130,56 @@ describe('board owner filtering integration', () => {
     await screen.findByText('5 cards shown.');
     expect(screen.getAllByText('QA Engineer · QA').length).toBeGreaterThan(0);
   });
+
+  it('routes SRE monitoring work to the SRE inbox by stage even when an engineer remains assigned', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJzcmUtMSIsInRlbmFudF9pZCI6InRlbmFudC1ib2FyZC1vd25lciIsInJvbGVzIjpbInNyZSIsInJlYWRlciJdfQ.signature',
+    });
+
+    const fetchMock = vi.fn(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith('/ai-agents')) return createJsonResponse({ items: fixture.agents });
+      if (url.endsWith('/tasks') && (!init || !init.method || init.method === 'GET')) {
+        return createJsonResponse({
+          items: [
+            {
+              task_id: 'TSK-SRE-STAGE-1',
+              tenant_id: fixture.tenant_id,
+              title: 'Stage-routed SRE task',
+              priority: 'P1',
+              current_stage: 'SRE_MONITORING',
+              current_owner: 'engineer',
+              owner: { actor_id: 'engineer', display_name: 'Engineer' },
+              blocked: false,
+              closed: false,
+              waiting_state: null,
+              next_required_action: 'SRE monitoring validation is required.',
+              freshness: { status: 'fresh', last_updated_at: '2026-04-15T12:00:00.000Z' },
+              monitoring: {
+                riskLevel: 'low',
+                timeRemainingLabel: '47h remaining',
+                windowEndsAt: '2026-04-17T12:00:00.000Z',
+                deployment: { environment: 'production', version: '2026.04.15-1', url: 'https://deploy.example/releases/901' },
+                linkedPrs: [{ number: 901 }],
+                commitSha: 'abc1234def5678',
+                telemetry: { freshness: 'fresh', eventCount: 3, drilldowns: {} },
+              },
+            },
+          ],
+        });
+      }
+
+      throw new Error(`Unhandled fetch URL in integration test: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.pushState({}, '', '/inbox/sre');
+    render(React.createElement(App));
+
+    await screen.findByRole('heading', { name: 'SRE Inbox' });
+    expect(screen.getByText('Stage-routed SRE task')).toBeInTheDocument();
+    expect(screen.getByText(/actively in the SRE monitoring stage/i)).toBeInTheDocument();
+    expect(screen.getByText('production')).toBeInTheDocument();
+  });
 });

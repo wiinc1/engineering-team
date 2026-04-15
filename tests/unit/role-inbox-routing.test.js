@@ -30,7 +30,9 @@ describe('role inbox routing', () => {
     const seniorEngineerTask = { current_owner: 'engineer-sr', owner: { actor_id: 'engineer-sr' } };
     const pmTask = { current_owner: null, owner: null, waiting_state: 'awaiting_pm_decision' };
     const architectWaitTask = { current_owner: 'engineer', owner: { actor_id: 'engineer' }, waiting_state: 'awaiting_architect_decision' };
+    const sreMonitoringTask = { current_owner: 'engineer', owner: { actor_id: 'engineer' }, current_stage: 'SRE_MONITORING' };
     const humanTask = { current_owner: null, owner: null, next_required_action: 'Human approval required' };
+    const escalatedSreTask = { current_owner: 'engineer', owner: { actor_id: 'engineer' }, current_stage: 'SRE_MONITORING', waiting_state: 'awaiting_human_stakeholder_escalation' };
     const unassignedTask = { current_owner: null, owner: null };
     const staleTask = { current_owner: 'ghost', owner: { actor_id: 'ghost' } };
     const governanceTask = { current_owner: 'architect', owner: { actor_id: 'architect' }, task_type: 'governance_review' };
@@ -40,7 +42,9 @@ describe('role inbox routing', () => {
     expect(resolveRoleInboxMembership(seniorEngineerTask, agentLookup)).toMatchObject({ inboxRole: 'engineer', reason: 'matched-pattern' });
     expect(resolveRoleInboxMembership(pmTask, agentLookup)).toMatchObject({ inboxRole: 'pm', reason: 'waiting-pm' });
     expect(resolveRoleInboxMembership(architectWaitTask, agentLookup)).toMatchObject({ inboxRole: 'architect', reason: 'waiting-architect' });
+    expect(resolveRoleInboxMembership(sreMonitoringTask, agentLookup)).toMatchObject({ inboxRole: 'sre', reason: 'stage-sre-monitoring' });
     expect(resolveRoleInboxMembership(humanTask, agentLookup)).toMatchObject({ inboxRole: 'human', reason: 'waiting-human' });
+    expect(resolveRoleInboxMembership(escalatedSreTask, agentLookup)).toMatchObject({ inboxRole: 'human', reason: 'waiting-human' });
     expect(resolveRoleInboxMembership(unassignedTask, agentLookup)).toMatchObject({ inboxRole: null, reason: 'unassigned' });
     expect(resolveRoleInboxMembership(staleTask, agentLookup)).toMatchObject({ inboxRole: null, reason: 'unknown-owner', isFallback: true });
     expect(resolveRoleInboxMembership(governanceTask, agentLookup)).toMatchObject({ inboxRole: null, reason: 'governance-review' });
@@ -78,6 +82,16 @@ describe('role inbox routing', () => {
     ]);
 
     expect(ordered.map((item) => item.task_id)).toEqual(['TSK-1', 'TSK-2', 'TSK-4', 'TSK-3']);
+  });
+
+  it('sorts SRE inbox rows by remaining monitoring time after priority', () => {
+    const ordered = sortInboxItems([
+      { task_id: 'TSK-3', priority: 'P1', monitoring: { timeRemainingMs: 6_000 }, freshness: { last_updated_at: '2026-04-01T00:00:03.000Z' } },
+      { task_id: 'TSK-1', priority: 'P1', monitoring: { timeRemainingMs: 1_000 }, freshness: { last_updated_at: '2026-04-01T00:00:01.000Z' } },
+      { task_id: 'TSK-2', priority: 'P1', monitoring: { timeRemainingMs: 3_000 }, freshness: { last_updated_at: '2026-04-01T00:00:02.000Z' } },
+    ], 'sre');
+
+    expect(ordered.map((item) => item.task_id)).toEqual(['TSK-1', 'TSK-2', 'TSK-3']);
   });
 
   it('marks active work as non-preemptive in the queue reason', () => {

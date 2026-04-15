@@ -119,4 +119,17 @@ test.describe('authenticated browser app shell', () => {
     await expect(page.getByRole('heading', { name: 'Sign in to the workflow app' })).toBeVisible();
     await expect(page.getByRole('status')).toContainText('Your session expired. Sign in again to continue.');
   });
+
+  test('restores a protected SRE inbox route after sign-in', async ({ page }) => {
+    await page.goto('/inbox/sre', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to the workflow app' })).toBeVisible();
+
+    await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
+    await page.getByLabel('API base URL').fill('/api');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page.getByRole('heading', { name: 'SRE Inbox', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/inbox\/sre/);
+    await expect(page.locator('.lede')).toContainText('Read-only monitoring inbox');
+  });
 });

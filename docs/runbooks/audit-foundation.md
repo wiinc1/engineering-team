@@ -74,6 +74,7 @@ Audit HTTP maintenance note:
 - Current nearest artifacts for HTTP-surface changes are this runbook plus the matching `docs/api/*.yml` contract for the affected route family.
 - Engineer-only delivery-loop mutations now validate the task's current canonical assignee before accepting writes.
 - Tier-based reassignment may emit explicit assignee ids such as `engineer-sr` in workflow payloads and task-detail context so downstream consumers can tell when ownership changed materially.
+- SRE monitoring expiry is now worker-driven: reads reflect the current state but no longer append escalation events when the window has expired.
 
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
@@ -158,6 +159,8 @@ npm run audit:rebuild -- /path/to/repo-root
 npm run audit:project -- /path/to/repo-root 100
 ```
 
+Projection-worker processing also evaluates expired SRE monitoring windows through `processExpiredSreMonitoring`, so bounded worker progress materializes any overdue human escalation events.
+
 ### Process queued outbox messages
 ```bash
 npm run audit:outbox -- /path/to/repo-root 100
@@ -195,6 +198,13 @@ Immediate action:
 1. Confirm whether the disable is intentional.
 2. Re-enable `FF_AUDIT_FOUNDATION` when safe.
 3. Replay queues if lag accumulated while disabled.
+
+### SRE monitoring window expired without escalation
+Symptom: a task remains in `SRE_MONITORING` past its deadline with no human escalation.
+Immediate action:
+1. Confirm the projection worker is running or invoke bounded worker processing locally.
+2. Verify the task has `sre_monitoring_window_ends_at` set and no `sre_approved_at`.
+3. Re-run projection worker processing; successful processing should append an auditable `task.escalated` event with `reason=sre_monitoring_window_expired`.
 
 ## Observability hooks
 Structured log fields emitted in this slice:

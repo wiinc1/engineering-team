@@ -36,14 +36,14 @@ function githubSignature(secret, body) {
 async function withServer(run, options = {}) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-api-'));
   const secret = 'test-secret';
-  const { server } = createAuditApiServer({ baseDir, jwtSecret: secret, ...options });
+  const { server, store } = createAuditApiServer({ baseDir, jwtSecret: secret, ...options });
 
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
   try {
-    await run({ baseDir, baseUrl, secret });
+    await run({ baseDir, baseUrl, secret, store });
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
@@ -1756,6 +1756,272 @@ test('records structured QA results, routes fail/pass outcomes, preserves re-tes
     state = await response.json();
     assert.equal(state.current_stage, 'SRE_MONITORING');
   });
+});
+
+test('starts SRE monitoring after deploy confirmation and allows early approval into close review', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['contributor'] }),
+    };
+    const sreHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'sre-1', tenant_id: 'tenant-sre', roles: ['sre', 'reader'] }),
+    };
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-1', tenant_id: 'tenant-sre', roles: ['engineer', 'contributor'] }),
+    };
+    const qaHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'qa-1', tenant_id: 'tenant-sre', roles: ['qa', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SRE-1',
+        payload: {
+          title: 'Monitor production rollout',
+          initial_stage: 'IMPLEMENTATION',
+          linked_prs: [{
+            id: 'pr-sre-1',
+            number: 501,
+            title: 'feat: sre monitoring',
+            repository: 'wiinc1/engineering-team',
+            merged: true,
+            state: 'closed',
+            merged_at: '2026-04-14T12:00:00.000Z',
+          }],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.assigned',
+        actorType: 'user',
+        idempotencyKey: 'assign:TSK-SRE-1:engineer-1',
+        payload: { assignee: 'engineer-1' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'abc1234def5678', prUrl: 'https://github.com/wiinc1/engineering-team/pull/501' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: 'move:TSK-SRE-1:QA_TESTING',
+        payload: {
+          from_stage: 'IMPLEMENTATION',
+          to_stage: 'QA_TESTING',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/qa-results`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        outcome: 'pass',
+        summary: 'Deployment validation stayed stable.',
+        scenarios: ['smoke'],
+        findings: [],
+        reproductionSteps: [],
+        stackTraces: [],
+        envLogs: [],
+        retestScope: ['smoke'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/sre-monitoring/start`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        deploymentEnvironment: 'production',
+        deploymentUrl: 'https://deploy.example/releases/501',
+        deploymentVersion: '2026.04.14-1',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/detail`, {
+      headers: authHeaders(secret, { sub: 'sre-1', tenant_id: 'tenant-sre', roles: ['sre', 'reader'] }),
+    });
+    assert.equal(response.status, 200);
+    let detail = await response.json();
+    assert.equal(detail.context.sreMonitoring.state, 'active');
+    assert.equal(detail.context.sreMonitoring.deployment.environment, 'production');
+    assert.equal(detail.context.sreMonitoring.deployment.version, '2026.04.14-1');
+    assert.equal(detail.context.sreMonitoring.commitSha, 'abc1234def5678');
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: authHeaders(secret, { sub: 'sre-1', tenant_id: 'tenant-sre', roles: ['sre', 'reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const monitoringRow = list.items.find((item) => item.task_id === 'TSK-SRE-1');
+    assert.equal(monitoringRow.monitoring.deployment.environment, 'production');
+    assert.equal(monitoringRow.monitoring.deployment.version, '2026.04.14-1');
+    assert.equal(monitoringRow.monitoring.deployment.url, 'https://deploy.example/releases/501');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/sre-monitoring/approve`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        reason: 'Stable metrics, logs, and traces after deployment.',
+        evidence: ['latency steady', 'error budget unchanged'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['reader'] }),
+    });
+    const state = await response.json();
+    assert.equal(state.current_stage, 'PM_CLOSE_REVIEW');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-1/detail`, {
+      headers: authHeaders(secret, { sub: 'sre-1', tenant_id: 'tenant-sre', roles: ['sre', 'reader'] }),
+    });
+    detail = await response.json();
+    assert.equal(detail.context.sreMonitoring.state, 'approved');
+    assert.equal(detail.context.sreMonitoring.approval.reason, 'Stable metrics, logs, and traces after deployment.');
+  });
+});
+
+test('auto-escalates expired SRE monitoring windows into human stakeholder review without read side effects', async () => {
+  await withServer(async ({ baseUrl, secret, store }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SRE-2/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SRE-2',
+        payload: {
+          title: 'Expired monitoring task',
+          initial_stage: 'SRE_MONITORING',
+          linked_prs: [{
+            id: 'pr-sre-2',
+            number: 502,
+            title: 'feat: expired sre monitoring',
+            repository: 'wiinc1/engineering-team',
+            merged: true,
+            state: 'closed',
+            merged_at: '2026-04-13T12:00:00.000Z',
+          }],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    let stateResponse = await fetch(`${baseUrl}/tasks/TSK-SRE-2/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['reader'] }),
+    });
+    assert.equal(stateResponse.status, 200);
+    let state = await stateResponse.json();
+    assert.equal(state.waiting_state, null);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-2/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.sre_monitoring_started',
+        actorType: 'user',
+        idempotencyKey: 'start:TSK-SRE-2',
+        payload: {
+          deployment_environment: 'production',
+          deployment_url: 'https://deploy.example/releases/502',
+          deployment_version: '2026.04.12-1',
+          deployment_status: 'success',
+          window_hours: 48,
+          window_ends_at: '2026-04-13T00:00:00.000Z',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const expiryProcessing = await store.processExpiredSreMonitoring();
+    assert.equal(expiryProcessing.processed, 1);
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const expiredItem = list.items.find((item) => item.task_id === 'TSK-SRE-2');
+    assert.equal(expiredItem.monitoring.state, 'escalated');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SRE-2/detail`, {
+      headers: authHeaders(secret, { sub: 'sre-1', tenant_id: 'tenant-sre', roles: ['sre', 'reader'] }),
+    });
+    const detail = await response.json();
+    assert.equal(detail.context.sreMonitoring.state, 'escalated');
+    assert.equal(detail.summary.nextAction.label, 'Human stakeholder escalation required after monitoring window expiry.');
+
+    stateResponse = await fetch(`${baseUrl}/tasks/TSK-SRE-2/state`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['reader'] }),
+    });
+    state = await stateResponse.json();
+    assert.equal(state.waiting_state, 'awaiting_human_stakeholder_escalation');
+  });
+});
+
+test('supports all documented SRE monitoring feature-flag aliases', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-SRE-FLAG/sre-monitoring/start`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['sre'] }),
+      },
+      body: JSON.stringify({
+        deploymentEnvironment: 'production',
+        deploymentUrl: 'https://deploy.example/releases/900',
+        deploymentVersion: '2026.04.15-1',
+      }),
+    });
+    assert.equal(response.status, 503);
+  }, { 'ff-sre-monitoring': false });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-SRE-FLAG/sre-monitoring/start`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-sre', roles: ['sre'] }),
+      },
+      body: JSON.stringify({
+        deploymentEnvironment: 'production',
+        deploymentUrl: 'https://deploy.example/releases/900',
+        deploymentVersion: '2026.04.15-1',
+      }),
+    });
+    assert.equal(response.status, 503);
+  }, { ff_sre_monitoring: false });
 });
 
 test('supports AI-agent registry reads and assignment writes on the audit API path', async () => {

@@ -172,3 +172,26 @@ Failing QA runs generate a packaged engineer-facing artifact containing:
 
 - Inactivity reassignment can create a dedicated governance review task typed as `governance_review`.
 - Governance review tasks are operational follow-up artifacts, not standard delivery work, and should be shown on a dedicated governance review surface rather than in normal delivery queues.
+
+## SRE monitoring workflow
+
+### Monitoring start requirements
+
+- A passing QA result routes work into `SRE_MONITORING`.
+- SRE or admin starts the monitoring window through the dedicated SRE monitoring route, not via assignment controls.
+- Start requires durable deployment confirmation fields:
+  - deployment environment
+  - deployment URL
+  - deployment version
+- The task-list projection exposes enough monitoring preview data for `/inbox/sre` to render countdown, deployment, PR, commit, and telemetry drilldowns without client fan-out.
+
+### Routing precedence
+
+- Active `SRE_MONITORING` work routes to the SRE inbox by stage, even when the assigned owner remains an engineer.
+- Explicit human waiting-state or stakeholder escalation routing takes precedence so expired monitoring work leaves the SRE inbox and appears in the human inbox.
+
+### Expiry handling
+
+- Expired windows are materialized by worker processing rather than task reads.
+- The worker appends an auditable `task.escalated` event with `reason=sre_monitoring_window_expired`.
+- Resulting state should carry `waiting_state=awaiting_human_stakeholder_escalation` and a human-focused next action.

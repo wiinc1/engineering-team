@@ -64,6 +64,8 @@ paths:
         Tier-specific assignee ids such as `engineer-jr`, `engineer-sr`, and `engineer-principal`
         remain valid projected owner values and should still collapse into the canonical engineer route family
         for browser overview and inbox grouping.
+        Tasks in `SRE_MONITORING` route to the SRE inbox by workflow stage before owner-based routing;
+        explicit human waiting-state or approval escalation still takes precedence over SRE routing.
       responses:
         '200':
           description: Task-list summaries

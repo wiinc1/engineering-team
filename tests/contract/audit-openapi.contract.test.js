@@ -50,6 +50,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
   const ownerReadSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-owner-surfaces-openapi.yml'), 'utf8');
   const browserAuthSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/authenticated-browser-app-openapi.yml'), 'utf8');
   const assignmentSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-assignment-openapi.yml'), 'utf8');
+  const taskDetailSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-detail-history-telemetry-openapi.yml'), 'utf8');
 
   for (const snippet of [
     '/tasks:',
@@ -59,6 +60,8 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/state:',
     '/tasks/{id}/relationships:',
     '/tasks/{id}/observability-summary:',
+    '/tasks/{id}/sre-monitoring/start:',
+    '/tasks/{id}/sre-monitoring/approve:',
     '/metrics:',
     '/projections/process:',
     'BearerAuth:',
@@ -68,6 +71,10 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'limit',
     'dateFrom',
     'dateTo',
+    'queue_entered_at',
+    'wip_owner',
+    'ff-sre-monitoring',
+    'processExpiredSreMonitoring',
     'approved_correlation_ids',
     'current_owner',
     'List projected task summaries with additive owner metadata',
@@ -102,8 +109,20 @@ test('openapi contract documents the live audit routes and auth model', () => {
   for (const snippet of [
     'Only the currently assigned owner may perform this action.',
     'engineer-sr',
+    'Shared browser surfaces such as `/inbox/sre` remain read-only unless a dedicated workflow endpoint is used.',
   ]) {
     assert.match(assignmentSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const snippet of [
+    'sreMonitoring',
+    'deployment',
+    'windowEndsAt',
+    'telemetry',
+    'approval',
+    'escalation',
+  ]) {
+    assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 

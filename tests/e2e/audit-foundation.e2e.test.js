@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit');
+const { createProjectionWorker } = require('../../lib/audit/workers');
 
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -22,12 +23,12 @@ function authHeaders(secret, roles, overrides = {}) {
 async function withServer(run, options = {}) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-e2e-'));
   const secret = 'e2e-secret';
-  const { server } = createAuditApiServer({ baseDir, jwtSecret: secret, ...options });
+  const { server, store } = createAuditApiServer({ baseDir, jwtSecret: secret, ...options });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
 
   try {
-    await run({ baseUrl: `http://127.0.0.1:${port}`, secret, baseDir });
+    await run({ baseUrl: `http://127.0.0.1:${port}`, secret, baseDir, store });
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
@@ -283,6 +284,72 @@ test('must-have: unauthorized callers are blocked by tenant-scoped RBAC and cann
       }),
     });
     assert.equal(response.status, 403);
+  });
+});
+
+test('must-have: worker processing materializes expired SRE monitoring escalation without a read-side write', async () => {
+  await withServer(async ({ baseUrl, secret, store }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['contributor']),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-E2E-SRE-001/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-E2E-SRE-001',
+        payload: {
+          title: 'Expired SRE monitoring task',
+          initial_stage: 'SRE_MONITORING',
+          linked_prs: [{
+            id: 'pr-e2e-sre-1',
+            number: 901,
+            title: 'feat: sre monitoring e2e',
+            repository: 'wiinc1/engineering-team',
+            merged: true,
+            state: 'closed',
+            merged_at: '2026-04-14T12:00:00.000Z',
+          }],
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-SRE-001/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.sre_monitoring_started',
+        actorType: 'user',
+        idempotencyKey: 'start:TSK-E2E-SRE-001',
+        payload: {
+          deployment_environment: 'production',
+          deployment_url: 'https://deploy.example/releases/901',
+          deployment_version: '2026.04.15-1',
+          deployment_status: 'success',
+          window_hours: 48,
+          window_ends_at: '2026-04-14T00:00:00.000Z',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-SRE-001/state`, { headers: authHeaders(secret, ['reader']) });
+    assert.equal(response.status, 200);
+    let state = await response.json();
+    assert.equal(state.waiting_state, null);
+
+    const worker = createProjectionWorker(store, { batchSize: 25 });
+    const result = await worker.runOnce();
+    assert.equal(result.expiredProcessed, 1);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-SRE-001/state`, { headers: authHeaders(secret, ['reader']) });
+    assert.equal(response.status, 200);
+    state = await response.json();
+    assert.equal(state.waiting_state, 'awaiting_human_stakeholder_escalation');
   });
 });
 
