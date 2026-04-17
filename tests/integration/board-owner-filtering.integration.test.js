@@ -219,6 +219,7 @@ describe('board owner filtering integration', () => {
                 },
                 humanDecision: {
                   required: true,
+                  decisionReady: true,
                   summary: 'Human stakeholder decision required before the task can close.',
                 },
               },

@@ -67,6 +67,13 @@ pgTest('postgres audit flow covers migration -> ingest -> projection queue -> ou
     });
     assert.equal(response.status, 202);
 
+    const projectedStateBeforeProcessing = await store.getTaskCurrentState('TSK-PG-001', { tenantId: 'tenant-int' });
+    assert.equal(projectedStateBeforeProcessing, null);
+    const mutationStateBeforeProcessing = await store.getTaskCurrentStateForMutation('TSK-PG-001', { tenantId: 'tenant-int' });
+    assert.equal(mutationStateBeforeProcessing.current_stage, 'IN_PROGRESS');
+    assert.equal(mutationStateBeforeProcessing.waiting_state, null);
+    assert.equal(mutationStateBeforeProcessing.wip_owner, 'principal-engineer');
+
     const readHeaders = authHeaders(secret, { roles: ['reader'] });
     response = await fetch(`${baseUrl}/tasks/TSK-PG-001/history`, { headers: readHeaders });
     assert.equal(response.status, 200);

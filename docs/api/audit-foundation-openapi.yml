@@ -5,6 +5,8 @@ info:
   description: |
     Canonical audit and workflow HTTP contract.
     The task-list projection now also carries additive queue/WIP metadata, optional SRE monitoring preview data, and close-governance escalation previews used by the human decision inbox.
+    Human close decisions are accepted only when governed close review is decision-ready: either both PM and Architect cancellation recommendations exist or an active human escalation is present.
+    Close-review backtrack now uses a dual-party agreement handshake: the first PM/Architect request records a recommendation and the counterpart request completes the stage change to `IMPLEMENTATION`.
     SRE monitoring runtime accepts both `ff_sre_monitoring` and `ff-sre-monitoring` as equivalent feature-flag names.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
 components:

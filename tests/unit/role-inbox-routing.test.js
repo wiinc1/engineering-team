@@ -93,6 +93,7 @@ describe('role inbox routing', () => {
           },
           humanDecision: {
             required: true,
+            decisionReady: true,
             summary: 'Human stakeholder decision required before the task can close.',
           },
         },

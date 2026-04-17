@@ -1922,6 +1922,47 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText(/close gate failed/i)).toBeInTheDocument();
   });
 
+  it('hides stakeholder actions in task detail until close governance is decision-ready', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'human-1',
+        tenant_id: 'tenant-a',
+        roles: ['human', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      detailOverride: {
+        task: { id: 'TSK-42', stage: 'PM_CLOSE_REVIEW', status: 'waiting' },
+        context: {
+          closeGovernance: {
+            active: true,
+            readiness: { state: 'blocked', checklist: [] },
+            cancellation: { awaitingHumanDecision: false, recommendations: { pm: null, architect: null } },
+            humanDecision: {
+              required: false,
+              decisionReady: false,
+              status: 'not_required',
+              summary: 'Human review is not decision-ready until both PM and Architect recommendations are recorded or an escalation is raised.',
+              pendingReason: 'Human review is not decision-ready until both PM and Architect recommendations are recorded or an escalation is raised.',
+              latestDecision: null,
+            },
+            escalation: null,
+            backtrack: { available: false, latestReason: null, latestReasonCode: null },
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Close review governance' });
+    expect(screen.queryByLabelText('Human decision')).not.toBeInTheDocument();
+    expect(screen.getByText(/not decision-ready/i)).toBeInTheDocument();
+  });
+
   it('submits close-review recommendation, exceptional dispute escalation, and backtrack actions from task detail for PM sessions', async () => {
     writeBrowserSessionConfig({
       apiBaseUrl: '',

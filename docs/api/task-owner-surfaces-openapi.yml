@@ -69,6 +69,8 @@ paths:
         When governed close review is waiting on a human decision, the additive `close_governance`
         preview on task-list items supplies the recommendation and escalation summaries used by the
         authenticated Human Inbox decision cards.
+        Those Human Inbox cards should only be rendered for decision-ready close-governance items; a PM-close-review
+        task with only one recommendation remains out of the inbox until the backend marks `humanDecision.decisionReady=true`.
       responses:
         '200':
           description: Task-list summaries

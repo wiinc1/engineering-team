@@ -2485,15 +2485,36 @@ test('records governed close-review recommendations, human decisions, and backtr
         summary: 'Close review backtracked after joint PM/Architect agreement.',
       }),
     });
-    assert.equal(response.status, 201);
+    assert.equal(response.status, 202);
     const backtrackPayload = await response.json();
-    assert.equal(backtrackPayload.data.routedToStage, 'IMPLEMENTATION');
+    assert.equal(backtrackPayload.data.awaitingRole, 'architect');
 
     response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/state`, {
       headers: readerHeaders,
     });
     assert.equal(response.status, 200);
-    const state = await response.json();
+    let state = await response.json();
+    assert.equal(state.current_stage, 'PM_CLOSE_REVIEW');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/close-review/backtrack`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The release evidence package is incomplete and needs implementation follow-up.',
+        agreementArtifact: 'pm+architect-close-review-2026-04-15',
+        summary: 'Close review backtracked after joint PM/Architect agreement.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const finalBacktrackPayload = await response.json();
+    assert.equal(finalBacktrackPayload.data.routedToStage, 'IMPLEMENTATION');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/state`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    state = await response.json();
     assert.equal(state.current_stage, 'IMPLEMENTATION');
 
     response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-ROUTE-1/detail`, {
@@ -2501,6 +2522,138 @@ test('records governed close-review recommendations, human decisions, and backtr
     });
     detail = await response.json();
     assert.equal(detail.context.closeGovernance.backtrack.latestReason, 'The release evidence package is incomplete and needs implementation follow-up.');
+  });
+});
+
+test('rejects human decisions that are not yet decision-ready and requires dual-party backtrack agreement', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-close', roles: ['contributor'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-1', tenant_id: 'tenant-close', roles: ['pm', 'reader'] }),
+    };
+    const architectHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'architect-1', tenant_id: 'tenant-close', roles: ['architect'] }),
+    };
+    const humanHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'human-1', tenant_id: 'tenant-close', roles: ['stakeholder'] }),
+    };
+    const readerHeaders = authHeaders(secret, { tenant_id: 'tenant-close', roles: ['reader'] });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CLOSE-GUARDS-1',
+        payload: {
+          title: 'Close governance guardrails',
+          initial_stage: 'PM_CLOSE_REVIEW',
+          acceptance_criteria: ['Keep human close decisions explicit'],
+          waiting_state: 'awaiting_human_close_review',
+          next_required_action: 'Human close review is required before final closure.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/close-review/human-decision`, {
+      method: 'POST',
+      headers: humanHeaders,
+      body: JSON.stringify({
+        outcome: 'approve',
+        summary: 'Approving before the workflow is decision-ready.',
+        rationale: 'This should be rejected until governance prerequisites are met.',
+      }),
+    });
+    assert.equal(response.status, 409);
+    let payload = await response.json();
+    assert.equal(payload.error.code, 'human_close_decision_not_ready');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/close-review/cancellation-recommendation`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        summary: 'PM recommends cancellation because the release window closed.',
+        rationale: 'The business deadline passed while the task remained in close review.',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/close-review/human-decision`, {
+      method: 'POST',
+      headers: humanHeaders,
+      body: JSON.stringify({
+        outcome: 'reject',
+        summary: 'Still not decision-ready with only one recommendation.',
+        rationale: 'Architect evidence is still missing.',
+      }),
+    });
+    assert.equal(response.status, 409);
+    payload = await response.json();
+    assert.equal(payload.error.code, 'human_close_decision_not_ready');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/close-review/backtrack`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The close gate failed and implementation follow-up is required.',
+        agreementArtifact: 'pm+architect-close-review-2026-04-16',
+        summary: 'PM recommends backtracking the task.',
+      }),
+    });
+    assert.equal(response.status, 202);
+    payload = await response.json();
+    assert.equal(payload.data.awaitingRole, 'architect');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/state`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    let state = await response.json();
+    assert.equal(state.current_stage, 'PM_CLOSE_REVIEW');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/close-review/backtrack`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The close gate failed and implementation follow-up is required.',
+        agreementArtifact: 'pm+architect-close-review-2026-04-16',
+        summary: 'PM recommends backtracking the task.',
+      }),
+    });
+    assert.equal(response.status, 409);
+    payload = await response.json();
+    assert.equal(payload.error.code, 'close_backtrack_recommendation_already_recorded');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/close-review/backtrack`, {
+      method: 'POST',
+      headers: architectHeaders,
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The close gate failed and implementation follow-up is required.',
+        agreementArtifact: 'pm+architect-close-review-2026-04-16',
+        summary: 'Architect agrees the task must return to implementation.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    payload = await response.json();
+    assert.equal(payload.data.routedToStage, 'IMPLEMENTATION');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CLOSE-GUARDS-1/state`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    state = await response.json();
+    assert.equal(state.current_stage, 'IMPLEMENTATION');
   });
 });
 

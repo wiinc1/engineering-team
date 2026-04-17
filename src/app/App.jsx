@@ -1147,7 +1147,9 @@ export function App() {
   const canSubmitPmBusinessContext = model.kind === 'detail' && canCompletePmBusinessContext(tokenClaims) && model.detail?.task?.stage === 'BACKLOG' && pmBusinessContextRequired;
   const canSubmitCloseCancellationRecommendation = closeReviewActive && canRecordCloseCancellationRecommendation(tokenClaims);
   const canSubmitExceptionalDispute = closeReviewActive && canRecordCloseCancellationRecommendation(tokenClaims);
-  const canSubmitHumanCloseDecision = closeReviewActive && canRecordHumanCloseDecision(tokenClaims);
+  const canSubmitHumanCloseDecision = closeReviewActive
+    && canRecordHumanCloseDecision(tokenClaims)
+    && closeGovernance?.humanDecision?.decisionReady !== false;
   const canSubmitHumanInboxDecision = activeInboxRole === 'human' && canRecordHumanCloseDecision(tokenClaims);
   const canSubmitCloseBacktrack = closeReviewActive && closeGovernance?.backtrack?.available && canRequestCloseReviewBacktrack(tokenClaims);
   const workflowThreadNotificationTargets = defaultWorkflowNotificationTargets(workflowThreadDraft.commentType, workflowThreadDraft.blocking);
@@ -1556,14 +1558,20 @@ export function App() {
     if (!routeTaskId) return;
     setCloseBacktrackStatus({ kind: 'loading', message: 'Backtracking close review to implementation…' });
     try {
-      await taskClient.submitCloseReviewBacktrack(routeTaskId, {
+      const result = await taskClient.submitCloseReviewBacktrack(routeTaskId, {
         reasonCode: closeBacktrackDraft.reasonCode,
         rationale: closeBacktrackDraft.rationale,
         agreementArtifact: closeBacktrackDraft.agreementArtifact,
         summary: closeBacktrackDraft.summary,
       });
       await reloadTask();
-      setCloseBacktrackStatus({ kind: 'success', message: 'Close review backtracked to implementation.' });
+      const awaitingRole = result?.data?.awaitingRole;
+      setCloseBacktrackStatus({
+        kind: 'success',
+        message: awaitingRole
+          ? `Backtrack recommendation recorded. ${awaitingRole === 'pm' ? 'PM' : 'Architect'} approval is still required.`
+          : 'Close review backtracked to implementation.',
+      });
     } catch (error) {
       setCloseBacktrackStatus({ kind: 'error', message: error?.message || 'Close review backtrack failed.' });
     }

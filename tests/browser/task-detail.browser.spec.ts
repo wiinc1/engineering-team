@@ -58,6 +58,8 @@ const taskDetailPayload = {
       humanDecision: {
         status: 'pending',
         summary: 'Human stakeholder decision required before the task can close.',
+        decisionReady: false,
+        pendingReason: 'Human review is not decision-ready until both PM and Architect recommendations are recorded or an escalation is raised.',
       },
       backtrack: {
         available: true,
@@ -291,6 +293,7 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByText('Exceptional dispute escalation')).toBeVisible();
     await expect(page.getByLabel('Recommendation for human')).toHaveValue('Decide whether to cancel the release or reopen implementation.');
     await expect(page.getByLabel('Backtrack rationale')).toHaveValue('An unresolved child task is still blocking closure.');
+    await expect(page.getByLabel('Human decision', { exact: true })).toHaveCount(0);
   });
 
   test('supports keyboard-first navigation to blockers and activity tabs on mobile', async ({ page }) => {

@@ -145,5 +145,6 @@ test.describe('authenticated browser app shell', () => {
     await expect(page.getByRole('heading', { name: 'Human Stakeholder inbox routing', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/inbox\/human/);
     await expect(page.locator('.role-inbox-toolbar__cue')).toContainText('Decision-ready items appear here only when governed close review or escalation handling is explicitly waiting on a human stakeholder decision.');
+    await expect(page.locator('.role-inbox-toolbar__cue')).toContainText('Decision-ready');
   });
 });

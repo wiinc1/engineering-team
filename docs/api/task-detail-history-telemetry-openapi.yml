@@ -6,6 +6,8 @@ info:
     Canonical read-side contracts for SF-019 / issue #27.
     These contracts are additive on top of the SF-017 audit foundation and are safe for the Task Detail UI to consume without frontend inference.
     Governance note: task-detail UI changes should update this contract in the same pull request.
+    Governed close-review payloads now include explicit decision-readiness semantics so the browser can hide
+    stakeholder actions until either dual cancellation recommendations or an active escalation exists.
 components:
   securitySchemes:
     BearerAuth:
@@ -385,7 +387,7 @@ components:
                   additionalProperties: true
             closeGovernance:
               type: [object, 'null']
-              description: Governed close-review summary, including normalized readiness, cancellation recommendations, human decisions, and additive escalation cards for monitoring expiry or exceptional dispute handling.
+              description: Governed close-review summary, including normalized readiness, cancellation recommendations, human decisions, explicit `decisionReady`/`pendingReason` semantics, and additive escalation cards for monitoring expiry or exceptional dispute handling.
               additionalProperties: true
         relations:
           type: object
