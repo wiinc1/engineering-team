@@ -25,3 +25,16 @@ Verification evidence:
 
 Tracker note:
 - Issue #21 remained open at audit time even though the implementation and verification evidence now satisfy its stated acceptance criteria.
+
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, testing and quality assurance, deployment and release, observability and monitoring, team and process
+- Evidence in this report: code-to-issue acceptance audit for the production loop/governance batch, live verification results, and tracker reconciliation evidence
+- Gap observed: this report uses repository evidence and a live Supabase-backed integration path rather than a separate production release audit. Documented rationale: repository acceptance and release validation are separate controls, and the branch audit only needs to prove implementation and verification alignment before merge (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: `npm test`, `npm run test:integration:postgres`, `npm run change:check`, `npm run standards:check`, `npm run ownership:lint`, `npm run governance:drift:check`
+- Tests added or updated: unit, browser, contract, security, integration, and Postgres-backed regression coverage tied to the production loop/governance wave
+- Rollout or rollback notes: no runtime rollout executed as part of this report; rollback remains standard git revert plus feature-flag disablement for `ff-github-sync`, `ff-sre-monitoring`, `ff-child-task-creation`, and `ff-close-cancellation`
+- Docs updated: this batch audit report plus the adjacent API, runbook, design, and test evidence updates already included on the branch
