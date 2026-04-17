@@ -11,6 +11,10 @@ info:
     is intentionally separate from standard delivery queues.
     `/inbox/sre` is the protected SRE monitoring dashboard route and consumes deployment-aware monitoring
     preview data from the projected task-list response.
+    `/inbox/human` is the protected Human Stakeholder inbox route and consumes governed close-review
+    decision previews, including cancellation recommendations and escalation summaries.
+    The human inbox intentionally shows only decision-ready governed close-review items rather than every
+    task in PM close review.
     Authenticated SRE sessions may also create anomaly child tasks from the protected `/tasks/{taskId}`
     detail route by calling the dedicated monitoring workflow endpoint after bootstrap succeeds.
 paths:

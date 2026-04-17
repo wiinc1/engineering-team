@@ -64,6 +64,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/sre-monitoring/approve:',
     '/tasks/{id}/sre-monitoring/anomaly-child-task:',
     '/tasks/{id}/pm-business-context:',
+    '/tasks/{id}/close-review/exceptional-dispute:',
     '/metrics:',
     '/projections/process:',
     'BearerAuth:',
@@ -77,6 +78,9 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'wip_owner',
     'ff-sre-monitoring',
     'processExpiredSreMonitoring',
+    'close-governance escalation previews',
+    'Human close decisions are accepted only when governed close review is decision-ready',
+    'Close-review backtrack now uses a dual-party agreement handshake',
     'approved_correlation_ids',
     'current_owner',
     'task.pm_business_context_completed',
@@ -105,6 +109,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'expiresAt',
     'Signed browser bootstrap artifact from the trusted internal auth source.',
     '/overview/governance',
+    'only decision-ready governed close-review items',
   ]) {
     assert.match(browserAuthSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -113,6 +118,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'Only the currently assigned owner may perform this action.',
     'engineer-sr',
     'Shared browser surfaces such as `/inbox/sre` remain read-only unless a dedicated workflow endpoint is used.',
+    'Human close decisions and dual-party close-review backtrack recommendations',
   ]) {
     assert.match(assignmentSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -124,6 +130,9 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'telemetry',
     'approval',
     'escalation',
+    'closeGovernance',
+    'decisionReady',
+    'pendingReason',
     'pmBusinessContextReview',
     'finalizedByPm',
     'freezeScope',

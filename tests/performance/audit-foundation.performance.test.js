@@ -69,3 +69,47 @@ test('async projection worker drains a bounded backlog within baseline budget', 
   assert.ok(duration < 2500, `projection queue budget exceeded: ${duration}ms`);
   assert.equal(store.getTaskHistory('TSK-PERF-ASYNC', { tenantId: 'tenant-perf' }).length, totalEvents);
 });
+
+test('close-review escalation and projection stay within baseline budget', () => {
+  const store = createFileAuditStore({ baseDir: makeTempDir(), projectionMode: 'sync' });
+
+  store.appendEvent({
+    tenantId: 'tenant-perf',
+    taskId: 'TSK-PERF-CLOSE',
+    eventType: 'task.created',
+    actorId: 'perf-runner',
+    actorType: 'agent',
+    idempotencyKey: 'perf-close:create',
+    payload: { title: 'Perf close task', initial_stage: 'PM_CLOSE_REVIEW', acceptance_criteria: ['Keep close review governed.'] },
+  });
+
+  const started = performance.now();
+  store.appendEvent({
+    tenantId: 'tenant-perf',
+    taskId: 'TSK-PERF-CLOSE',
+    eventType: 'task.escalated',
+    actorId: 'pm-1',
+    actorType: 'user',
+    idempotencyKey: 'perf-close:exceptional-dispute',
+    payload: {
+      reason: 'exceptional_dispute',
+      severity: 'high',
+      summary: 'PM disputes whether cancellation is safer than reopening implementation.',
+      recommendation_summary: 'Human stakeholder should decide whether to cancel or reopen implementation.',
+      rationale: 'The task can still ship if implementation resumes.',
+      waiting_state: 'awaiting_human_stakeholder_escalation',
+      next_required_action: 'Human stakeholder escalation required for exceptional dispute.',
+    },
+  });
+  const appendDuration = performance.now() - started;
+
+  const readStart = performance.now();
+  const state = store.getTaskCurrentState('TSK-PERF-CLOSE', { tenantId: 'tenant-perf' });
+  const history = store.getTaskHistory('TSK-PERF-CLOSE', { tenantId: 'tenant-perf' });
+  const readDuration = performance.now() - readStart;
+
+  assert.equal(state.waiting_state, 'awaiting_human_stakeholder_escalation');
+  assert.equal(history.length, 2);
+  assert.ok(appendDuration < 250, `close escalation append budget exceeded: ${appendDuration}ms`);
+  assert.ok(readDuration < 150, `close escalation read budget exceeded: ${readDuration}ms`);
+});

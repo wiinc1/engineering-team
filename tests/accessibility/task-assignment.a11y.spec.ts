@@ -20,6 +20,8 @@ describe('task assignment accessibility', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save owner/i })).toBeInTheDocument());
     expect(screen.getByLabelText(/owner/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /assignment/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save owner/i })).toHaveAttribute('type', 'submit');
+    expect(screen.getByText(/writes to the task assignment endpoint/i)).toBeInTheDocument();
 
     const results = await axe.run(container, {
       rules: {

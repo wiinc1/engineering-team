@@ -67,6 +67,13 @@ pgTest('postgres audit flow covers migration -> ingest -> projection queue -> ou
     });
     assert.equal(response.status, 202);
 
+    const projectedStateBeforeProcessing = await store.getTaskCurrentState('TSK-PG-001', { tenantId: 'tenant-int' });
+    assert.equal(projectedStateBeforeProcessing, null);
+    const mutationStateBeforeProcessing = await store.getTaskCurrentStateForMutation('TSK-PG-001', { tenantId: 'tenant-int' });
+    assert.equal(mutationStateBeforeProcessing.current_stage, 'IN_PROGRESS');
+    assert.equal(mutationStateBeforeProcessing.waiting_state, null);
+    assert.equal(mutationStateBeforeProcessing.wip_owner, 'principal-engineer');
+
     const readHeaders = authHeaders(secret, { roles: ['reader'] });
     response = await fetch(`${baseUrl}/tasks/TSK-PG-001/history`, { headers: readHeaders });
     assert.equal(response.status, 200);
@@ -149,6 +156,71 @@ pgTest('postgres store honors ff_audit_foundation kill switch', async () => {
       idempotencyKey: 'create:TSK-PG-DISABLED',
     }), /ff_audit_foundation/);
   } finally {
+    await pool.end();
+  }
+});
+
+pgTest('postgres projection path preserves human stakeholder escalation state for exceptional close-review disputes', async () => {
+  const pool = createPgPoolFromEnv(connectionString);
+  const store = createPostgresAuditStore({ pool, baseDir: process.cwd(), maxAttempts: 2 });
+  const secret = 'integration-secret';
+  const { server } = createAuditApiServer({ store, jwtSecret: secret });
+
+  try {
+    await store.runMigrations({ baseDir: process.cwd() });
+    await pool.query('TRUNCATE audit_projection_queue, audit_outbox, audit_task_history, audit_task_current_state, audit_task_relationships, audit_events, audit_metrics RESTART IDENTITY CASCADE');
+
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { roles: ['contributor'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-1', roles: ['pm'] }),
+    };
+    const readerHeaders = authHeaders(secret, { roles: ['reader'] });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-PG-CLOSE/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-PG-CLOSE',
+        payload: { title: 'Postgres close-review escalation', initial_stage: 'PM_CLOSE_REVIEW', acceptance_criteria: ['Keep close review governed.'] },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-PG-CLOSE/close-review/exceptional-dispute`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        summary: 'PM disputes whether cancellation is safer than reopening implementation.',
+        recommendation: 'Human stakeholder should decide whether to cancel or reopen implementation.',
+        rationale: 'The task can still ship if implementation resumes, but cancellation is also viable.',
+        severity: 'high',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/projections/process?limit=100`, {
+      method: 'POST',
+      headers: authHeaders(secret, { roles: ['admin'] }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-PG-CLOSE/state`, { headers: readerHeaders });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.waiting_state, 'awaiting_human_stakeholder_escalation');
+    assert.match(state.next_required_action, /exceptional dispute/i);
+  } finally {
+    await new Promise(resolve => server.close(() => resolve()));
     await pool.end();
   }
 });

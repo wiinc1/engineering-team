@@ -10,6 +10,10 @@ info:
     that no longer match the task's canonical assignee.
     Shared browser surfaces such as `/inbox/sre` remain read-only unless a dedicated workflow endpoint is used.
     SRE anomaly-to-child-task creation is a separate dedicated workflow endpoint and does not mutate assignment state directly.
+    Governed close-review cancellation recommendations and exceptional-dispute escalations also remain on
+    their dedicated workflow endpoints and do not mutate assignment state directly.
+    Human close decisions and dual-party close-review backtrack recommendations likewise remain on dedicated
+    close-governance endpoints and do not mutate canonical assignment state directly.
 paths:
   /tasks/{taskId}/assignment:
     patch:

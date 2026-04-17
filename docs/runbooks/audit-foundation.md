@@ -78,6 +78,8 @@ Audit HTTP maintenance note:
 - SRE monitoring also exposes `POST /tasks/{id}/sre-monitoring/anomaly-child-task`, which creates a linked child task with machine-generated telemetry context, records the auto-`P0` rationale, and blocks the parent while leaving it readable/commentable.
 - The anomaly-child parent block is cleared automatically when the linked child reaches a resolved terminal state; generic `task.unblocked` event injection is not the supported path for this workflow.
 - PM anomaly follow-up now also exposes `POST /tasks/{id}/pm-business-context`, which records `task.pm_business_context_completed`, clears `pm_business_context_required`, and marks the anomaly context as finalized by PM for task detail consumers. Generic event injection is not a supported completion path for this workflow.
+- Human close decisions now require explicit decision readiness. The runtime rejects stakeholder close decisions until either both PM and Architect cancellation recommendations are recorded or an escalation is active for the task.
+- Close-review backtrack now requires dual-party evidence. The first PM/Architect request records a backtrack recommendation for the supplied agreement artifact; the counterpart request with the same artifact completes the transition back to implementation.
 
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
@@ -208,6 +210,28 @@ Immediate action:
 1. Confirm the projection worker is running or invoke bounded worker processing locally.
 2. Verify the task has `sre_monitoring_window_ends_at` set and no `sre_approved_at`.
 3. Re-run projection worker processing; successful processing should append an auditable `task.escalated` event with `reason=sre_monitoring_window_expired`.
+4. Confirm the task now projects a human decision card with the expiry summary and recommendation in the authenticated browser inbox.
+
+### Exceptional dispute raised during PM close review
+Symptom: PM and Architect cannot align on cancellation vs. reopening implementation, and the final authority must move to a human stakeholder.
+Immediate action:
+1. Use `POST /tasks/{id}/close-review/exceptional-dispute` with a concise summary, recommendation, rationale, and severity.
+2. Confirm the task history contains `task.escalated` with `reason=exceptional_dispute`.
+3. Confirm the task projects `waiting_state=awaiting_human_stakeholder_escalation` and the human inbox renders the escalation card with approve/reject/request-more-context actions.
+
+### Human close decision rejected as not decision-ready
+Symptom: stakeholder action on `POST /tasks/{id}/close-review/human-decision` returns `409 human_close_decision_not_ready`.
+Immediate action:
+1. Confirm whether both PM and Architect cancellation recommendations have been recorded.
+2. If they are not both present, either collect the missing recommendation or raise `POST /tasks/{id}/close-review/exceptional-dispute`.
+3. Re-check the task detail or list projection and confirm `close_governance.humanDecision.decisionReady=true` before retrying the stakeholder decision.
+
+### Close-review backtrack recorded but not yet routed
+Symptom: `POST /tasks/{id}/close-review/backtrack` returns `202` and the task remains in `PM_CLOSE_REVIEW`.
+Immediate action:
+1. Inspect the response payload for `awaitingRole`.
+2. Have the counterpart role submit the same `agreementArtifact` through the backtrack route.
+3. Confirm the follow-up request returns `201` and the task transitions to `IMPLEMENTATION`.
 
 ### Monitoring anomaly requires tracked child work
 Symptom: SRE identifies a production anomaly that should become first-class tracked work.

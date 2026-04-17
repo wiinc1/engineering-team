@@ -346,6 +346,47 @@ function formatStatusIcon(status) {
   }
 }
 
+function formatCloseGovernanceChecklistLabel(status) {
+  switch (status) {
+    case 'ready':
+      return 'Ready';
+    case 'blocked':
+      return 'Blocked';
+    case 'missing':
+      return 'Missing';
+    default:
+      return 'Pending';
+  }
+}
+
+function formatCloseGovernanceHeadline(state) {
+  switch (state) {
+    case 'ready':
+      return 'Close readiness satisfied';
+    case 'blocked':
+      return 'Close readiness blocked';
+    case 'missing_inputs':
+      return 'Close readiness missing inputs';
+    default:
+      return 'Close readiness pending';
+  }
+}
+
+function formatCloseGovernanceDecisionStatus(status) {
+  switch (status) {
+    case 'approved':
+      return 'Human decision approved';
+    case 'rejected':
+      return 'Human decision rejected';
+    case 'requested_more_context':
+      return 'Human decision requested more context';
+    case 'awaiting_decision':
+      return 'Awaiting human decision';
+    default:
+      return 'Human decision not required';
+  }
+}
+
 function normalizeArchitectHandoffDraft(handoff = {}) {
   return {
     readyForEngineering: Boolean(handoff.readyForEngineering),
@@ -500,6 +541,54 @@ function normalizePmBusinessContextDraft(detail = {}) {
   };
 }
 
+function normalizeCloseCancellationDraft(detail = {}) {
+  const recommendation = detail?.context?.closeGovernance?.cancellation?.recommendations?.pm
+    || detail?.context?.closeGovernance?.cancellation?.recommendations?.architect
+    || null;
+  return {
+    summary: recommendation?.summary || '',
+    rationale: recommendation?.rationale || '',
+  };
+}
+
+function normalizeExceptionalDisputeDraft(detail = {}) {
+  const escalation = detail?.context?.closeGovernance?.escalation || null;
+  return {
+    summary: escalation?.summary || '',
+    rationale: escalation?.rationale || '',
+    recommendation: escalation?.recommendation || '',
+    severity: escalation?.severity || 'high',
+  };
+}
+
+function normalizeHumanCloseDecisionDraft(detail = {}) {
+  const latestDecision = detail?.context?.closeGovernance?.humanDecision?.latestDecision || null;
+  return {
+    outcome: latestDecision?.outcome || 'approve',
+    summary: latestDecision?.summary || '',
+    rationale: latestDecision?.rationale || '',
+  };
+}
+
+function normalizeHumanInboxDecisionDraft(item = {}) {
+  const latestDecision = item?.close_governance?.humanDecision?.latestDecision || null;
+  return {
+    outcome: latestDecision?.outcome || 'approve',
+    summary: latestDecision?.summary || '',
+    rationale: latestDecision?.rationale || '',
+  };
+}
+
+function normalizeCloseBacktrackDraft(detail = {}) {
+  const backtrack = detail?.context?.closeGovernance?.backtrack || {};
+  return {
+    reasonCode: backtrack?.latestReasonCode || 'criteria_gap',
+    rationale: backtrack?.latestReason || '',
+    agreementArtifact: '',
+    summary: '',
+  };
+}
+
 function splitTextareaLines(value) {
   return String(value || '')
     .split(/\n+/)
@@ -565,8 +654,15 @@ function canManageAssignment(tokenClaims) {
 }
 
 function hasAnyRole(tokenClaims, expectedRoles) {
-  const roles = Array.isArray(tokenClaims?.roles) ? tokenClaims.roles : [];
-  return expectedRoles.some((role) => roles.includes(role));
+  const roles = (Array.isArray(tokenClaims?.roles) ? tokenClaims.roles : [])
+    .map((role) => String(role || '').trim().toLowerCase())
+    .filter(Boolean)
+    .map((role) => role === 'stakeholder' ? 'human' : role);
+  const normalizedExpected = expectedRoles
+    .map((role) => String(role || '').trim().toLowerCase())
+    .filter(Boolean)
+    .map((role) => role === 'stakeholder' ? 'human' : role);
+  return normalizedExpected.some((role) => roles.includes(role));
 }
 
 function canAskReviewQuestion(tokenClaims) {
@@ -607,6 +703,18 @@ function canResolveReviewQuestion(tokenClaims) {
 
 function canReopenReviewQuestion(tokenClaims) {
   return hasAnyRole(tokenClaims, ['architect', 'pm', 'admin']);
+}
+
+function canRecordCloseCancellationRecommendation(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'architect', 'admin']);
+}
+
+function canRecordHumanCloseDecision(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['human', 'stakeholder', 'admin']);
+}
+
+function canRequestCloseReviewBacktrack(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'architect', 'admin']);
 }
 
 function getEffectiveEngineerTierFromDetail(detail) {
@@ -705,6 +813,16 @@ export function App() {
   const [monitoringAnomalyChildStatus, setMonitoringAnomalyChildStatus] = React.useState({ kind: 'idle', message: '' });
   const [pmBusinessContextDraft, setPmBusinessContextDraft] = React.useState(() => normalizePmBusinessContextDraft());
   const [pmBusinessContextStatus, setPmBusinessContextStatus] = React.useState({ kind: 'idle', message: '' });
+  const [closeCancellationDraft, setCloseCancellationDraft] = React.useState(() => normalizeCloseCancellationDraft());
+  const [closeCancellationStatus, setCloseCancellationStatus] = React.useState({ kind: 'idle', message: '' });
+  const [exceptionalDisputeDraft, setExceptionalDisputeDraft] = React.useState(() => normalizeExceptionalDisputeDraft());
+  const [exceptionalDisputeStatus, setExceptionalDisputeStatus] = React.useState({ kind: 'idle', message: '' });
+  const [humanCloseDecisionDraft, setHumanCloseDecisionDraft] = React.useState(() => normalizeHumanCloseDecisionDraft());
+  const [humanCloseDecisionStatus, setHumanCloseDecisionStatus] = React.useState({ kind: 'idle', message: '' });
+  const [humanInboxDecisionDrafts, setHumanInboxDecisionDrafts] = React.useState({});
+  const [humanInboxDecisionStatuses, setHumanInboxDecisionStatuses] = React.useState({});
+  const [closeBacktrackDraft, setCloseBacktrackDraft] = React.useState(() => normalizeCloseBacktrackDraft());
+  const [closeBacktrackStatus, setCloseBacktrackStatus] = React.useState({ kind: 'idle', message: '' });
   const [lifecycleStatus, setLifecycleStatus] = React.useState({ kind: 'idle', message: '', taskId: null });
   const [sreFindingDraft, setSreFindingDraft] = React.useState('');
   const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
@@ -799,6 +917,10 @@ export function App() {
       setSreApprovalDraft(normalizeSreApprovalDraft(model.detail?.context?.sreMonitoring));
       setMonitoringAnomalyChildDraft(normalizeMonitoringAnomalyChildDraft(model.detail));
       setPmBusinessContextDraft(normalizePmBusinessContextDraft(model.detail));
+      setCloseCancellationDraft(normalizeCloseCancellationDraft(model.detail));
+      setExceptionalDisputeDraft(normalizeExceptionalDisputeDraft(model.detail));
+      setHumanCloseDecisionDraft(normalizeHumanCloseDecisionDraft(model.detail));
+      setCloseBacktrackDraft(normalizeCloseBacktrackDraft(model.detail));
       setSreFindingDraft('');
       setHistoryLoadMoreState({ kind: 'idle', message: '' });
 
@@ -819,6 +941,12 @@ export function App() {
         setSreApprovalStatus({ kind: 'idle', message: '' });
         setMonitoringAnomalyChildStatus({ kind: 'idle', message: '' });
         setPmBusinessContextStatus({ kind: 'idle', message: '' });
+        setCloseCancellationStatus({ kind: 'idle', message: '' });
+        setExceptionalDisputeStatus({ kind: 'idle', message: '' });
+        setHumanCloseDecisionStatus({ kind: 'idle', message: '' });
+        setHumanInboxDecisionDrafts({});
+        setHumanInboxDecisionStatuses({});
+        setCloseBacktrackStatus({ kind: 'idle', message: '' });
         setLifecycleStatus({ kind: 'idle', message: '', taskId: null });
       }
     }
@@ -1009,12 +1137,21 @@ export function App() {
   const sreMonitoring = model.kind === 'detail' ? (model.detail?.context?.sreMonitoring || null) : null;
   const sreMonitoringEnabled = model.kind === 'detail' && model.detail?.task?.stage === 'SRE_MONITORING' && canManageSreMonitoring(tokenClaims);
   const canCreateMonitoringAnomalyChildTask = sreMonitoringEnabled;
+  const closeGovernance = model.kind === 'detail' ? (model.detail?.context?.closeGovernance || null) : null;
+  const closeReviewActive = model.kind === 'detail' && Boolean(closeGovernance?.active);
   const pmBusinessContextRequired = model.kind === 'detail'
     && model.detail?.task?.stage === 'BACKLOG'
     && model.detail?.context?.pmBusinessContextReview?.finalized === false
     && Boolean(model.detail?.context?.anomalyChildTask)
     && Boolean(model.detail?.relations?.parentTask);
   const canSubmitPmBusinessContext = model.kind === 'detail' && canCompletePmBusinessContext(tokenClaims) && model.detail?.task?.stage === 'BACKLOG' && pmBusinessContextRequired;
+  const canSubmitCloseCancellationRecommendation = closeReviewActive && canRecordCloseCancellationRecommendation(tokenClaims);
+  const canSubmitExceptionalDispute = closeReviewActive && canRecordCloseCancellationRecommendation(tokenClaims);
+  const canSubmitHumanCloseDecision = closeReviewActive
+    && canRecordHumanCloseDecision(tokenClaims)
+    && closeGovernance?.humanDecision?.decisionReady !== false;
+  const canSubmitHumanInboxDecision = activeInboxRole === 'human' && canRecordHumanCloseDecision(tokenClaims);
+  const canSubmitCloseBacktrack = closeReviewActive && closeGovernance?.backtrack?.available && canRequestCloseReviewBacktrack(tokenClaims);
   const workflowThreadNotificationTargets = defaultWorkflowNotificationTargets(workflowThreadDraft.commentType, workflowThreadDraft.blocking);
   const latestQaResult = model.kind === 'detail' ? (model.detail?.context?.qaResults?.latest || null) : null;
   const latestFailedQa = model.kind === 'detail' ? (model.detail?.context?.qaResults?.items || []).find((item) => item.outcome === 'fail') || null : null;
@@ -1330,6 +1467,116 @@ export function App() {
     }
   }, [pmBusinessContextDraft.businessContext, reloadTask, routeTaskId, taskClient]);
 
+  const submitCloseCancellationRecommendation = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setCloseCancellationStatus({ kind: 'loading', message: 'Recording cancellation recommendation…' });
+    try {
+      await taskClient.submitCloseCancellationRecommendation(routeTaskId, {
+        summary: closeCancellationDraft.summary,
+        rationale: closeCancellationDraft.rationale,
+      });
+      await reloadTask();
+      setCloseCancellationStatus({ kind: 'success', message: 'Cancellation recommendation recorded.' });
+    } catch (error) {
+      setCloseCancellationStatus({ kind: 'error', message: error?.message || 'Cancellation recommendation failed.' });
+    }
+  }, [closeCancellationDraft, reloadTask, routeTaskId, taskClient]);
+
+  const submitExceptionalDispute = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setExceptionalDisputeStatus({ kind: 'loading', message: 'Escalating exceptional dispute…' });
+    try {
+      await taskClient.submitExceptionalDispute(routeTaskId, {
+        summary: exceptionalDisputeDraft.summary,
+        rationale: exceptionalDisputeDraft.rationale,
+        recommendation: exceptionalDisputeDraft.recommendation,
+        severity: exceptionalDisputeDraft.severity,
+      });
+      await reloadTask();
+      setExceptionalDisputeStatus({ kind: 'success', message: 'Exceptional dispute escalated for human review.' });
+    } catch (error) {
+      setExceptionalDisputeStatus({ kind: 'error', message: error?.message || 'Exceptional dispute escalation failed.' });
+    }
+  }, [exceptionalDisputeDraft, reloadTask, routeTaskId, taskClient]);
+
+  const submitHumanCloseDecision = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setHumanCloseDecisionStatus({ kind: 'loading', message: 'Recording human close decision…' });
+    try {
+      await taskClient.submitHumanCloseDecision(routeTaskId, {
+        outcome: humanCloseDecisionDraft.outcome,
+        summary: humanCloseDecisionDraft.summary,
+        rationale: humanCloseDecisionDraft.rationale,
+        confirmationRequired: humanCloseDecisionDraft.outcome !== 'approve',
+      });
+      await reloadTask();
+      setHumanCloseDecisionStatus({ kind: 'success', message: 'Human close decision recorded.' });
+    } catch (error) {
+      setHumanCloseDecisionStatus({ kind: 'error', message: error?.message || 'Human close decision failed.' });
+    }
+  }, [humanCloseDecisionDraft, reloadTask, routeTaskId, taskClient]);
+
+  const submitHumanInboxDecision = React.useCallback(async (event, item) => {
+    event.preventDefault();
+    const taskId = item?.task_id;
+    if (!taskId) return;
+    const draft = humanInboxDecisionDrafts[taskId] || normalizeHumanInboxDecisionDraft(item);
+    setHumanInboxDecisionStatuses((current) => ({
+      ...current,
+      [taskId]: { kind: 'loading', message: 'Recording human close decision…' },
+    }));
+    try {
+      await taskClient.submitHumanCloseDecision(taskId, {
+        outcome: draft.outcome,
+        summary: draft.summary,
+        rationale: draft.rationale,
+        confirmationRequired: draft.outcome !== 'approve',
+      });
+      setHumanInboxDecisionDrafts((current) => {
+        const next = { ...current };
+        delete next[taskId];
+        return next;
+      });
+      await reloadTask();
+      setHumanInboxDecisionStatuses((current) => ({
+        ...current,
+        [taskId]: { kind: 'success', message: 'Human close decision recorded.' },
+      }));
+    } catch (error) {
+      setHumanInboxDecisionStatuses((current) => ({
+        ...current,
+        [taskId]: { kind: 'error', message: error?.message || 'Human close decision failed.' },
+      }));
+    }
+  }, [humanInboxDecisionDrafts, reloadTask, taskClient]);
+
+  const submitCloseBacktrack = React.useCallback(async (event) => {
+    event.preventDefault();
+    if (!routeTaskId) return;
+    setCloseBacktrackStatus({ kind: 'loading', message: 'Backtracking close review to implementation…' });
+    try {
+      const result = await taskClient.submitCloseReviewBacktrack(routeTaskId, {
+        reasonCode: closeBacktrackDraft.reasonCode,
+        rationale: closeBacktrackDraft.rationale,
+        agreementArtifact: closeBacktrackDraft.agreementArtifact,
+        summary: closeBacktrackDraft.summary,
+      });
+      await reloadTask();
+      const awaitingRole = result?.data?.awaitingRole;
+      setCloseBacktrackStatus({
+        kind: 'success',
+        message: awaitingRole
+          ? `Backtrack recommendation recorded. ${awaitingRole === 'pm' ? 'PM' : 'Architect'} approval is still required.`
+          : 'Close review backtracked to implementation.',
+      });
+    } catch (error) {
+      setCloseBacktrackStatus({ kind: 'error', message: error?.message || 'Close review backtrack failed.' });
+    }
+  }, [closeBacktrackDraft, reloadTask, routeTaskId, taskClient]);
+
   const handleSignIn = React.useCallback(async (event) => {
     event.preventDefault();
     const apiBaseUrl = String(signInDraft.apiBaseUrl || '').trim().replace(/\/+$/, '');
@@ -1613,6 +1860,8 @@ export function App() {
 	                  <p className="role-inbox-toolbar__cue">
 	                    {activeInboxRole === 'sre'
 	                      ? 'Tasks appear here when they are actively in the SRE monitoring stage or when routing metadata explicitly points to SRE ownership.'
+	                      : activeInboxRole === 'human'
+                          ? 'Decision-ready items appear here only when governed close review or escalation handling is explicitly waiting on a human stakeholder decision.'
 	                      : `Tasks appear here only when their current assigned owner resolves to the ${getRoleInboxLabel(activeInboxRole)} canonical role. Unassigned tasks appear in no role inbox.`}
 	                  </p>
 	                </div>
@@ -1816,7 +2065,138 @@ export function App() {
             </div>
           ) : null}
 
-          {roleInboxState.kind === 'ready' && activeInboxRole && activeInboxRole !== 'sre' && roleInboxItems.length ? (
+          {roleInboxState.kind === 'ready' && activeInboxRole === 'human' && roleInboxItems.length ? (
+            <div className="decision-inbox-list" aria-label="Human decision queue">
+              {roleInboxItems.map((item) => {
+                const closeGovernanceItem = item.close_governance || {};
+                const cancellationRecommendations = closeGovernanceItem.cancellation?.recommendations || {};
+                const escalation = closeGovernanceItem.escalation || null;
+                const latestDecision = closeGovernanceItem.humanDecision?.latestDecision || null;
+                const draft = humanInboxDecisionDrafts[item.task_id] || normalizeHumanInboxDecisionDraft(item);
+                const status = humanInboxDecisionStatuses[item.task_id] || { kind: 'idle', message: '' };
+                return (
+                  <article key={item.task_id} className="detail-card detail-card--full decision-inbox-card">
+                    <div className="decision-inbox-card__header">
+                      <div>
+                        <p className="eyebrow">Human decision required</p>
+                        <h3>
+                          <a href={`/tasks/${encodeURIComponent(item.task_id)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.task_id)}`); }}>
+                            {item.title || item.task_id}
+                          </a>
+                        </h3>
+                        <p className="task-list-meta">{item.task_id} · {item.current_stage || '—'} · {item.priority || '—'} priority</p>
+                      </div>
+                      <div className="decision-inbox-card__meta">
+                        <span className="routing-badge">{item.queueReason.label}</span>
+                        <span className={`owner-badge owner-badge--${item.ownerPresentation.tone}`}>{item.ownerPresentation.label}</span>
+                      </div>
+                    </div>
+
+                    <div className="review-question-note">
+                      <span>Decision summary</span>
+                      <p>{closeGovernanceItem.humanDecision?.summary || escalation?.summary || item.next_required_action || 'Governed close review is waiting on a human decision.'}</p>
+                      <p className="task-list-meta">{item.queueReason.detail}</p>
+                    </div>
+
+                    {cancellationRecommendations.pm || cancellationRecommendations.architect ? (
+                      <div className="review-question-note">
+                        <span>Recommendation snapshot</span>
+                        {cancellationRecommendations.pm ? (
+                          <div className="review-question-note__recommendation" key="pm-recommendation">
+                            <p><strong>PM:</strong> {cancellationRecommendations.pm.summary || 'Recommendation recorded.'}</p>
+                            {cancellationRecommendations.pm.rationale ? <p className="task-list-meta">{cancellationRecommendations.pm.rationale}</p> : null}
+                          </div>
+                        ) : null}
+                        {cancellationRecommendations.architect ? (
+                          <div className="review-question-note__recommendation" key="architect-recommendation">
+                            <p><strong>Architect:</strong> {cancellationRecommendations.architect.summary || 'Recommendation recorded.'}</p>
+                            {cancellationRecommendations.architect.rationale ? <p className="task-list-meta">{cancellationRecommendations.architect.rationale}</p> : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {escalation ? (
+                      <div className="review-question-note">
+                        <span>{escalation.source === 'monitoring_expiry' ? 'Monitoring expiry escalation' : 'Exceptional dispute escalation'}</span>
+                        <p><strong>Recommendation:</strong> {escalation.recommendation || 'Human review required.'}</p>
+                        {escalation.rationale ? <p className="task-list-meta">{escalation.rationale}</p> : null}
+                        <p className="task-list-meta">{String(escalation.severity || 'warning').toUpperCase()} · {escalation.occurredAt || 'No timestamp recorded'}</p>
+                      </div>
+                    ) : null}
+
+                    {latestDecision ? (
+                      <div className="review-question-note">
+                        <span>Latest decision</span>
+                        <p><strong>{formatCloseGovernanceDecisionStatus(closeGovernanceItem.humanDecision?.status)}</strong></p>
+                        {latestDecision.summary ? <p>{latestDecision.summary}</p> : null}
+                        {latestDecision.rationale ? <p className="task-list-meta">{latestDecision.rationale}</p> : null}
+                      </div>
+                    ) : null}
+
+                    {canSubmitHumanInboxDecision ? (
+                      <form className="architect-handoff-form" onSubmit={(event) => void submitHumanInboxDecision(event, item)}>
+                        <label>
+                          {`Human decision for ${item.task_id}`}
+                          <select
+                            aria-label={`Human decision for ${item.task_id}`}
+                            value={draft.outcome}
+                            onChange={(event) => setHumanInboxDecisionDrafts((current) => ({
+                              ...current,
+                              [item.task_id]: { ...draft, outcome: event.target.value },
+                            }))}
+                          >
+                            <option value="approve">Approve</option>
+                            <option value="reject">Reject</option>
+                            <option value="request_more_context">Request more context</option>
+                          </select>
+                        </label>
+                        <label>
+                          Decision summary
+                          <textarea
+                            aria-label={`Decision summary for ${item.task_id}`}
+                            value={draft.summary}
+                            onChange={(event) => setHumanInboxDecisionDrafts((current) => ({
+                              ...current,
+                              [item.task_id]: { ...draft, summary: event.target.value },
+                            }))}
+                            placeholder="Short, mobile-scannable decision summary."
+                          />
+                        </label>
+                        <label>
+                          Rationale
+                          <textarea
+                            aria-label={`Decision rationale for ${item.task_id}`}
+                            value={draft.rationale}
+                            onChange={(event) => setHumanInboxDecisionDrafts((current) => ({
+                              ...current,
+                              [item.task_id]: { ...draft, rationale: event.target.value },
+                            }))}
+                            placeholder="Required when rejecting or requesting more context."
+                          />
+                        </label>
+                        <div className="assignment-form__actions">
+                          <button type="submit" disabled={status.kind === 'loading'}>
+                            {status.kind === 'loading' ? 'Recording…' : 'Record human decision'}
+                          </button>
+                          <button type="button" className="button-secondary" onClick={() => navigate(`/tasks/${encodeURIComponent(item.task_id)}`)}>
+                            Open task detail
+                          </button>
+                        </div>
+                        {status.kind !== 'idle' ? (
+                          <p className={`assignment-status assignment-status--${status.kind}`} role={status.kind === 'error' ? 'alert' : 'status'}>
+                            {status.message}
+                          </p>
+                        ) : null}
+                      </form>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {roleInboxState.kind === 'ready' && activeInboxRole && activeInboxRole !== 'sre' && activeInboxRole !== 'human' && roleInboxItems.length ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -2214,6 +2594,257 @@ export function App() {
                   <h3>Error samples</h3>
                   {renderList(model.detail.context.anomalyChildTask.errorSamples, 'No error samples captured.')}
                 </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {model.detail?.context?.closeGovernance?.active ? (
+            <section className="detail-card detail-card--full" aria-label="Close review governance">
+              <h2>Close review governance</h2>
+              <div className="review-question-note">
+                <span>{formatCloseGovernanceHeadline(model.detail.context.closeGovernance.readiness?.state)}</span>
+                <p>{model.detail.context.closeGovernance.humanDecision?.summary || model.detail.context.closeGovernance.escalation?.summary || model.detail.summary?.nextAction?.label || 'Governed close review is active.'}</p>
+                <p className="task-list-meta">
+                  {formatCloseGovernanceDecisionStatus(model.detail.context.closeGovernance.humanDecision?.status)}
+                  {model.detail.context.closeGovernance.backtrack?.available ? ' · Backtrack to implementation is available if the close gate fails.' : ''}
+                </p>
+              </div>
+
+              <div className="review-question-note">
+                <span>Readiness checklist</span>
+                <ul className="detail-bullets">
+                  {(model.detail.context.closeGovernance.readiness?.checklist || []).map((item) => (
+                    <li key={item.key || item.id || item.label}>
+                      <strong>{item.label}</strong>
+                      <span>{formatCloseGovernanceChecklistLabel(item.status)} · {item.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {(model.detail.context.closeGovernance.cancellation?.recommendations?.pm || model.detail.context.closeGovernance.cancellation?.recommendations?.architect) ? (
+                <div className="review-question-note">
+                  <span>Cancellation recommendations</span>
+                  {model.detail.context.closeGovernance.cancellation.recommendations.pm ? (
+                    <div className="review-question-note__recommendation">
+                      <p><strong>PM:</strong> {model.detail.context.closeGovernance.cancellation.recommendations.pm.summary || 'Recommendation recorded.'}</p>
+                      {model.detail.context.closeGovernance.cancellation.recommendations.pm.rationale ? <p className="task-list-meta">{model.detail.context.closeGovernance.cancellation.recommendations.pm.rationale}</p> : null}
+                    </div>
+                  ) : null}
+                  {model.detail.context.closeGovernance.cancellation.recommendations.architect ? (
+                    <div className="review-question-note__recommendation">
+                      <p><strong>Architect:</strong> {model.detail.context.closeGovernance.cancellation.recommendations.architect.summary || 'Recommendation recorded.'}</p>
+                      {model.detail.context.closeGovernance.cancellation.recommendations.architect.rationale ? <p className="task-list-meta">{model.detail.context.closeGovernance.cancellation.recommendations.architect.rationale}</p> : null}
+                    </div>
+                  ) : null}
+                  {model.detail.context.closeGovernance.cancellation.awaitingHumanDecision ? (
+                    <p className="task-list-meta">Human stakeholder decision is still required before the cancellation path can conclude.</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {model.detail.context.closeGovernance.escalation ? (
+                <div className="review-question-note">
+                  <span>{model.detail.context.closeGovernance.escalation.source === 'monitoring_expiry' ? 'Monitoring expiry escalation' : 'Exceptional dispute escalation'}</span>
+                  <p>{model.detail.context.closeGovernance.escalation.summary}</p>
+                  <p><strong>Recommendation:</strong> {model.detail.context.closeGovernance.escalation.recommendation || 'Human review required.'}</p>
+                  {model.detail.context.closeGovernance.escalation.rationale ? <p className="task-list-meta">{model.detail.context.closeGovernance.escalation.rationale}</p> : null}
+                </div>
+              ) : null}
+
+              {model.detail.context.closeGovernance.humanDecision?.latestDecision ? (
+                <div className="review-question-note">
+                  <span>Latest human decision</span>
+                  <p><strong>{formatCloseGovernanceDecisionStatus(model.detail.context.closeGovernance.humanDecision.status)}</strong></p>
+                  {model.detail.context.closeGovernance.humanDecision.latestDecision.summary ? <p>{model.detail.context.closeGovernance.humanDecision.latestDecision.summary}</p> : null}
+                  {model.detail.context.closeGovernance.humanDecision.latestDecision.rationale ? <p className="task-list-meta">{model.detail.context.closeGovernance.humanDecision.latestDecision.rationale}</p> : null}
+                </div>
+              ) : null}
+
+              {model.detail.context.closeGovernance.backtrack?.latestReason ? (
+                <div className="review-question-note">
+                  <span>Backtrack signal</span>
+                  <p>{model.detail.context.closeGovernance.backtrack.latestReason}</p>
+                </div>
+              ) : null}
+
+              {canSubmitCloseCancellationRecommendation ? (
+                <form className="architect-handoff-form" onSubmit={submitCloseCancellationRecommendation}>
+                  <label>
+                    Cancellation recommendation summary
+                    <textarea
+                      value={closeCancellationDraft.summary}
+                      onChange={(event) => setCloseCancellationDraft((current) => ({ ...current, summary: event.target.value }))}
+                      placeholder="Short recommendation summary for PM or Architect review."
+                    />
+                  </label>
+                  <label>
+                    Cancellation rationale
+                    <textarea
+                      value={closeCancellationDraft.rationale}
+                      onChange={(event) => setCloseCancellationDraft((current) => ({ ...current, rationale: event.target.value }))}
+                      placeholder="Why cancellation is the governed outcome."
+                    />
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={closeCancellationStatus.kind === 'loading'}>
+                      {closeCancellationStatus.kind === 'loading' ? 'Recording…' : 'Record cancellation recommendation'}
+                    </button>
+                  </div>
+                  {closeCancellationStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${closeCancellationStatus.kind}`} role={closeCancellationStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {closeCancellationStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
+
+              {canSubmitExceptionalDispute ? (
+                <form className="architect-handoff-form" onSubmit={submitExceptionalDispute}>
+                  <label>
+                    Exceptional dispute summary
+                    <textarea
+                      value={exceptionalDisputeDraft.summary}
+                      onChange={(event) => setExceptionalDisputeDraft((current) => ({ ...current, summary: event.target.value }))}
+                      placeholder="Short summary of the disputed close-review outcome."
+                    />
+                  </label>
+                  <label>
+                    Recommendation for human decision
+                    <textarea
+                      value={exceptionalDisputeDraft.recommendation}
+                      onChange={(event) => setExceptionalDisputeDraft((current) => ({ ...current, recommendation: event.target.value }))}
+                      placeholder="Recommendation shown on the human decision card."
+                    />
+                  </label>
+                  <label>
+                    Dispute rationale
+                    <textarea
+                      value={exceptionalDisputeDraft.rationale}
+                      onChange={(event) => setExceptionalDisputeDraft((current) => ({ ...current, rationale: event.target.value }))}
+                      placeholder="Explain why the close path is disputed and needs explicit human resolution."
+                    />
+                  </label>
+                  <label>
+                    Escalation severity
+                    <select
+                      aria-label="Escalation severity"
+                      value={exceptionalDisputeDraft.severity}
+                      onChange={(event) => setExceptionalDisputeDraft((current) => ({ ...current, severity: event.target.value }))}
+                    >
+                      <option value="warning">Warning</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={exceptionalDisputeStatus.kind === 'loading'}>
+                      {exceptionalDisputeStatus.kind === 'loading' ? 'Escalating…' : 'Escalate exceptional dispute'}
+                    </button>
+                  </div>
+                  {exceptionalDisputeStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${exceptionalDisputeStatus.kind}`} role={exceptionalDisputeStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {exceptionalDisputeStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
+
+              {canSubmitHumanCloseDecision ? (
+                <form className="architect-handoff-form" onSubmit={submitHumanCloseDecision}>
+                  <label>
+                    Human decision
+                    <select
+                      aria-label="Human decision"
+                      value={humanCloseDecisionDraft.outcome}
+                      onChange={(event) => setHumanCloseDecisionDraft((current) => ({ ...current, outcome: event.target.value }))}
+                    >
+                      <option value="approve">Approve</option>
+                      <option value="reject">Reject</option>
+                      <option value="request_more_context">Request more context</option>
+                    </select>
+                  </label>
+                  <label>
+                    Decision summary
+                    <textarea
+                      value={humanCloseDecisionDraft.summary}
+                      onChange={(event) => setHumanCloseDecisionDraft((current) => ({ ...current, summary: event.target.value }))}
+                      placeholder="Short, mobile-scannable decision summary."
+                    />
+                  </label>
+                  <label>
+                    Rationale
+                    <textarea
+                      value={humanCloseDecisionDraft.rationale}
+                      onChange={(event) => setHumanCloseDecisionDraft((current) => ({ ...current, rationale: event.target.value }))}
+                      placeholder="Required when rejecting or requesting more context."
+                    />
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={humanCloseDecisionStatus.kind === 'loading'}>
+                      {humanCloseDecisionStatus.kind === 'loading' ? 'Recording…' : 'Record human decision'}
+                    </button>
+                  </div>
+                  {humanCloseDecisionStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${humanCloseDecisionStatus.kind}`} role={humanCloseDecisionStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {humanCloseDecisionStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : null}
+
+              {canSubmitCloseBacktrack ? (
+                <form className="architect-handoff-form" onSubmit={submitCloseBacktrack}>
+                  <label>
+                    Backtrack reason
+                    <select
+                      aria-label="Backtrack reason"
+                      value={closeBacktrackDraft.reasonCode}
+                      onChange={(event) => setCloseBacktrackDraft((current) => ({ ...current, reasonCode: event.target.value }))}
+                    >
+                      <option value="criteria_gap">Criteria gap</option>
+                      <option value="open_child_tasks">Open child tasks</option>
+                      <option value="open_pull_requests">Open pull requests</option>
+                      <option value="monitoring_degraded">Monitoring degraded</option>
+                      <option value="cancellation_rejected">Cancellation rejected</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    Agreement artifact
+                    <input
+                      value={closeBacktrackDraft.agreementArtifact}
+                      onChange={(event) => setCloseBacktrackDraft((current) => ({ ...current, agreementArtifact: event.target.value }))}
+                      placeholder="pm+architect-close-review-2026-04-15"
+                    />
+                  </label>
+                  <label>
+                    Backtrack rationale
+                    <textarea
+                      value={closeBacktrackDraft.rationale}
+                      onChange={(event) => setCloseBacktrackDraft((current) => ({ ...current, rationale: event.target.value }))}
+                      placeholder="Why the close gate failed and implementation must resume."
+                    />
+                  </label>
+                  <label>
+                    Backtrack summary
+                    <textarea
+                      value={closeBacktrackDraft.summary}
+                      onChange={(event) => setCloseBacktrackDraft((current) => ({ ...current, summary: event.target.value }))}
+                      placeholder="Optional short summary for the audit trail."
+                    />
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={closeBacktrackStatus.kind === 'loading'}>
+                      {closeBacktrackStatus.kind === 'loading' ? 'Backtracking…' : 'Backtrack to implementation'}
+                    </button>
+                  </div>
+                  {closeBacktrackStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${closeBacktrackStatus.kind}`} role={closeBacktrackStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {closeBacktrackStatus.message}
+                    </p>
+                  ) : null}
+                </form>
               ) : null}
             </section>
           ) : null}

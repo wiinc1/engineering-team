@@ -125,6 +125,10 @@ export function resolveRoleInboxMembership(item, agentLookup) {
 
   const waitingState = String(item?.waiting_state || '').trim().toLowerCase();
   const nextRequiredAction = String(item?.next_required_action || '').trim().toLowerCase();
+  const closeGovernance = item?.close_governance || {};
+  const humanDecisionRequired = closeGovernance?.humanDecision?.required === true;
+  const humanDecisionReady = closeGovernance?.humanDecision?.decisionReady !== false;
+  const awaitingHumanDecision = closeGovernance?.cancellation?.awaitingHumanDecision === true;
 
   if (waitingState.includes('pm') || nextRequiredAction.includes('pm')) {
     return {
@@ -144,11 +148,13 @@ export function resolveRoleInboxMembership(item, agentLookup) {
     };
   }
 
-  if (waitingState.includes('human') || waitingState.includes('stakeholder') || nextRequiredAction.includes('human') || nextRequiredAction.includes('stakeholder') || nextRequiredAction.includes('approval')) {
+  if ((humanDecisionRequired && humanDecisionReady) || awaitingHumanDecision || waitingState.includes('human') || waitingState.includes('stakeholder') || nextRequiredAction.includes('human') || nextRequiredAction.includes('stakeholder') || nextRequiredAction.includes('approval')) {
     return {
       inboxRole: 'human',
-      reason: 'waiting-human',
-      routingLabel: 'Routed to Human Stakeholder because the task is explicitly waiting on human approval or escalation handling.',
+      reason: (humanDecisionRequired && humanDecisionReady) || awaitingHumanDecision ? 'close-governance-human-decision' : 'waiting-human',
+      routingLabel: (humanDecisionRequired && humanDecisionReady) || awaitingHumanDecision
+        ? 'Routed to Human Stakeholder because governed close review is waiting on a human decision rather than routine operational handling.'
+        : 'Routed to Human Stakeholder because the task is explicitly waiting on human approval or escalation handling.',
       isFallback: false,
     };
   }
@@ -412,6 +418,16 @@ export function resolveQueueReason(item, roleKey) {
   const active = ACTIVE_STAGES.has(item?.current_stage || '');
   const actionNeeded = item?.next_required_action || null;
   const queueEnteredAt = item?.queue_entered_at || item?.freshness?.last_updated_at || null;
+  const closeGovernance = item?.close_governance || null;
+  const escalationSummary = closeGovernance?.escalation?.summary || closeGovernance?.escalation?.recommendation || null;
+  const humanDecisionSummary = closeGovernance?.humanDecision?.summary || closeGovernance?.latestDecision?.summary || null;
+
+  if (normalizedRole === 'human' && ((closeGovernance?.humanDecision?.required && closeGovernance?.humanDecision?.decisionReady !== false) || closeGovernance?.cancellation?.awaitingHumanDecision)) {
+    return {
+      label: humanDecisionSummary || escalationSummary || 'Human decision required',
+      detail: `Decision-ready close governance item. Ordered by priority first, then queue age (${queueEnteredAt || 'unknown'}), then task ID for stable tie-breaking.`,
+    };
+  }
 
   if (actionNeeded) {
     return {

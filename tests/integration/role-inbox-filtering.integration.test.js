@@ -132,6 +132,15 @@ test('integration: task summaries expose queue-entered and WIP semantics for PM 
     });
 
     await createTask(baseUrl, secret, {
+      task_id: 'TSK-INBOX-HUMAN-ESC',
+      title: 'Resolve exceptional dispute',
+      initial_stage: 'PM_CLOSE_REVIEW',
+      priority: 'P1',
+      waiting_state: 'awaiting_human_stakeholder_escalation',
+      next_required_action: 'Human stakeholder escalation required for exceptional dispute.',
+    });
+
+    await createTask(baseUrl, secret, {
       task_id: 'TSK-INBOX-WIP',
       title: 'Work in progress',
       initial_stage: 'TODO',
@@ -158,6 +167,7 @@ test('integration: task summaries expose queue-entered and WIP semantics for PM 
     const payload = await response.json();
     const pmTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-PM');
     const humanTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-HUMAN');
+    const humanEscalationTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-HUMAN-ESC');
     const wipTask = payload.items.find((item) => item.task_id === 'TSK-INBOX-WIP');
 
     assert.equal(pmTask.waiting_state, 'awaiting_pm_decision');
@@ -167,6 +177,11 @@ test('integration: task summaries expose queue-entered and WIP semantics for PM 
     assert.equal(humanTask.waiting_state, 'awaiting_human_approval');
     assert.equal(humanTask.next_required_action, 'Human approval required');
     assert.ok(humanTask.queue_entered_at);
+
+    assert.equal(humanEscalationTask.waiting_state, 'awaiting_human_stakeholder_escalation');
+    assert.equal(humanEscalationTask.next_required_action, 'Human stakeholder escalation required for exceptional dispute.');
+    assert.equal(humanEscalationTask.current_stage, 'PM_CLOSE_REVIEW');
+    assert.ok(humanEscalationTask.queue_entered_at);
 
     assert.equal(wipTask.current_stage, 'IN_PROGRESS');
     assert.equal(wipTask.wip_owner, 'engineer');

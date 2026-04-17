@@ -260,6 +260,142 @@ test('rejects SRE monitoring mutations for callers without SRE or admin privileg
   });
 });
 
+test('rejects exceptional-dispute escalation for readers while allowing canonical human decisions on stakeholder escalation items', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const readerAuth = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const stakeholderAuth = { authorization: `Bearer ${sign({ sub: 'human', tenant_id: 'tenant-sec', roles: ['stakeholder'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SEC-CLOSE',
+        payload: { title: 'Close-review security task', initial_stage: 'PM_CLOSE_REVIEW' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE/close-review/exceptional-dispute`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...readerAuth },
+      body: JSON.stringify({
+        summary: 'Reader should not be able to escalate.',
+        recommendation: 'Reject unauthorized escalation.',
+        rationale: 'No write privileges.',
+        severity: 'high',
+      }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE/close-review/exceptional-dispute`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({
+        summary: 'PM disputes whether cancellation is safer than reopening implementation.',
+        recommendation: 'Human stakeholder should decide whether to cancel or reopen implementation.',
+        rationale: 'Business timing changed after the close gate failed.',
+        severity: 'critical',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE/close-review/human-decision`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...stakeholderAuth },
+      body: JSON.stringify({
+        outcome: 'request_more_context',
+        summary: 'Need a clearer customer impact statement.',
+        rationale: 'Escalation copy is not yet sufficient.',
+        confirmationRequired: true,
+      }),
+    });
+    assert.equal(response.status, 201);
+  });
+});
+
+test('rejects premature human close decisions and requires counterpart approval before close-review backtrack routes', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm', 'reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const architectAuth = { authorization: `Bearer ${sign({ sub: 'architect', tenant_id: 'tenant-sec', roles: ['architect'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const stakeholderAuth = { authorization: `Bearer ${sign({ sub: 'stakeholder', tenant_id: 'tenant-sec', roles: ['stakeholder'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE-GUARD/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SEC-CLOSE-GUARD',
+        payload: {
+          title: 'Governed close review security guardrails',
+          initial_stage: 'PM_CLOSE_REVIEW',
+          acceptance_criteria: ['Keep stakeholder actions explicit'],
+          waiting_state: 'awaiting_human_close_review',
+          next_required_action: 'Human close review is required before final closure.',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE-GUARD/close-review/human-decision`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...stakeholderAuth },
+      body: JSON.stringify({
+        outcome: 'approve',
+        summary: 'Attempting to approve before decision readiness exists.',
+        rationale: 'This should be rejected.',
+      }),
+    });
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error.code, 'human_close_decision_not_ready');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE-GUARD/close-review/backtrack`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The close gate failed and implementation follow-up is required.',
+        agreementArtifact: 'pm+architect-security-guard',
+      }),
+    });
+    assert.equal(response.status, 202);
+    let payload = await response.json();
+    assert.equal(payload.data.awaitingRole, 'architect');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE-GUARD/state`, {
+      headers: stakeholderAuth,
+    });
+    assert.equal(response.status, 200);
+    let state = await response.json();
+    assert.equal(state.current_stage, 'PM_CLOSE_REVIEW');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE-GUARD/close-review/backtrack`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...architectAuth },
+      body: JSON.stringify({
+        reasonCode: 'criteria_gap',
+        rationale: 'The close gate failed and implementation follow-up is required.',
+        agreementArtifact: 'pm+architect-security-guard',
+      }),
+    });
+    assert.equal(response.status, 201);
+    payload = await response.json();
+    assert.equal(payload.data.routedToStage, 'IMPLEMENTATION');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CLOSE-GUARD/state`, {
+      headers: stakeholderAuth,
+    });
+    assert.equal(response.status, 200);
+    state = await response.json();
+    assert.equal(state.current_stage, 'IMPLEMENTATION');
+  });
+});
+
 test('rejects generic anomaly-workflow event bypasses for PM completion and parent unblocking', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };

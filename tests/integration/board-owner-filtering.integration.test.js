@@ -182,4 +182,62 @@ describe('board owner filtering integration', () => {
     expect(screen.getByText(/actively in the SRE monitoring stage/i)).toBeInTheDocument();
     expect(screen.getByText('production')).toBeInTheDocument();
   });
+
+  it('routes governed close-review escalations into the Human inbox from additive owner-surface previews', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: 'header.eyJzdWIiOiJodW1hbi0xIiwidGVuYW50X2lkIjoidGVuYW50LWJvYXJkLW93bmVyIiwicm9sZXMiOlsiaHVtYW4iLCJyZWFkZXIiXX0.signature',
+    });
+
+    const fetchMock = vi.fn(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith('/ai-agents')) return createJsonResponse({ items: fixture.agents });
+      if (url.endsWith('/tasks') && (!init || !init.method || init.method === 'GET')) {
+        return createJsonResponse({
+          items: [
+            {
+              task_id: 'TSK-HUMAN-ESC-1',
+              tenant_id: fixture.tenant_id,
+              title: 'Resolve exceptional dispute',
+              priority: 'P1',
+              current_stage: 'PM_CLOSE_REVIEW',
+              current_owner: null,
+              owner: null,
+              blocked: true,
+              closed: false,
+              waiting_state: 'awaiting_human_stakeholder_escalation',
+              next_required_action: 'Human stakeholder escalation required for exceptional dispute.',
+              freshness: { status: 'fresh', last_updated_at: '2026-04-15T12:05:00.000Z' },
+              close_governance: {
+                cancellation: { awaitingHumanDecision: true, recommendations: {} },
+                escalation: {
+                  source: 'exceptional_dispute',
+                  summary: 'A human stakeholder must resolve the exceptional dispute before close review can finish.',
+                  recommendation: 'Decide whether to cancel the release or reopen implementation.',
+                  severity: 'critical',
+                  occurredAt: '2026-04-15T12:00:00.000Z',
+                },
+                humanDecision: {
+                  required: true,
+                  decisionReady: true,
+                  summary: 'Human stakeholder decision required before the task can close.',
+                },
+              },
+            },
+          ],
+        });
+      }
+
+      throw new Error(`Unhandled fetch URL in integration test: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.pushState({}, '', '/inbox/human');
+    render(React.createElement(App));
+
+    await screen.findByRole('heading', { name: 'Human Stakeholder inbox routing' });
+    expect(screen.getByText('Resolve exceptional dispute')).toBeInTheDocument();
+    expect(screen.getByText('Exceptional dispute escalation')).toBeInTheDocument();
+    expect(screen.getByText(/governed close review or escalation handling/i)).toBeInTheDocument();
+  });
 });
