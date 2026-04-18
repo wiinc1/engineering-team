@@ -9,7 +9,7 @@
 
 | Task | Priority | Assignee | Status | Updated |
 |------|----------|----------|--------|---------|
-| — | — | — | — | — |
+| TSK-004 — Complete Production Identity Provider Cutover | P1 | dev | TODO | 2026-04-17 |
 
 ---
 
@@ -17,7 +17,7 @@
 
 | Task | Priority | Age |
 |------|----------|-----|
-| TSK-002 — Assign AI Agent to a Task (needs re-scope; core behavior already shipped) | P1 | 8d |
+| — | — | — |
 
 ---
 
@@ -45,10 +45,10 @@ BACKLOG → TODO → IN_PROGRESS → VERIFY → DONE
 Open:        1
 In Progress: 0
 Verify:      0
-Done:        1
+Done:        3
 Reopened:    0
 ```
 
 ---
 
-_Last sync: 2026-04-09_
+_Last sync: 2026-04-17_

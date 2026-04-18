@@ -1,9 +1,9 @@
 # TSK-001 — Software Factory Framework Scaffold
 
 **Created:** 2026-03-30 18:45 CDT
-**Updated:** 2026-03-30 18:45 CDT
+**Updated:** 2026-04-17 19:15 CDT
 **ID:** TSK-001
-**Status:** IN_PROGRESS
+**Status:** DONE
 
 ## 📌 Summary
 
@@ -14,10 +14,10 @@ Build the initial software factory framework: kanban board, task template, agent
 - [x] BOARD.md — Kanban board with workflow states
 - [x] TASKFILE.md — Task definition template
 - [x] tasks/TSK-001-framework-scaffold.md — This file
-- [ ] agents/ profiles (dev, sre, qa, research, design)
-- [ ] COMMANDS.md — Discord command reference
-- [ ] SESSION.md — Sprint/active session log
-- [ ] GitHub repo sync established
+- [x] agents/ profiles (dev, sre, qa, research, design)
+- [x] COMMANDS.md — Discord command reference
+- [x] SESSION.md — Sprint/active session log
+- [x] GitHub repo sync established
 
 ## 🧑‍💻 Agent
 
@@ -26,11 +26,11 @@ Build the initial software factory framework: kanban board, task template, agent
 
 ## 📋 SRE Verification Checklist
 
-- [ ] Logs reviewed (no ERROR-level entries)
-- [ ] Telemetry/metrics within baseline
-- [ ] Exit codes clean
-- [ ] Smoke/synthetic checks passed
-- [ ] No regressions in downstream services
+- [x] Logs reviewed (no ERROR-level entries)
+- [x] Telemetry/metrics within baseline
+- [x] Exit codes clean
+- [x] Smoke/synthetic checks passed
+- [x] No regressions in downstream services
 
 ## Standards Alignment
 
@@ -45,6 +45,7 @@ Build the initial software factory framework: kanban board, task template, agent
 | 2026-03-30 | — | BACKLOG | main | Created |
 | 2026-03-30 | BACKLOG | TODO | main | Approved |
 | 2026-03-30 | TODO | IN_PROGRESS | main | Dispatched |
+| 2026-04-17 | IN_PROGRESS | DONE | main | Re-baselined after the scaffold artifacts and repo sync were verified on `main` |
 
 ## 📎 Findings (if reopened)
 
@@ -53,7 +54,7 @@ Build the initial software factory framework: kanban board, task template, agent
 
 ## 💬 Notes
 
-Initial framework bootstrap. GitHub repo is empty — this task seeds the entire structure.
+Initial framework bootstrap. The original checklist lagged behind the shipped repository state; the current repo contains the scaffold artifacts, agent profile documentation, command reference, active session tracking, and synced git history.
 
 ## Required Evidence
 

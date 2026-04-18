@@ -1,26 +1,68 @@
 openapi: 3.1.0
 info:
   title: Authenticated Browser App Session API
-  version: 0.1.0
+  version: 0.2.0
   description: |
-    Browser-facing internal auth bootstrap endpoint for the authenticated app shell.
+    Browser auth contract for the authenticated app shell.
     Governance note: browser-shell session and route changes should update this spec in the same pull request.
     Protected browser-shell routes in the current client include `/tasks`, `/tasks?view=board`,
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
-    The `/overview/governance` route is a dedicated operational surface for governance review tasks and
-    is intentionally separate from standard delivery queues.
-    `/inbox/sre` is the protected SRE monitoring dashboard route and consumes deployment-aware monitoring
-    preview data from the projected task-list response.
-    `/inbox/human` is the protected Human Stakeholder inbox route and consumes governed close-review
-    decision previews, including cancellation recommendations and escalation summaries.
-    The human inbox intentionally shows only decision-ready governed close-review items rather than every
-    task in PM close review.
-    Authenticated SRE sessions may also create anomaly child tasks from the protected `/tasks/{taskId}`
-    detail route by calling the dedicated monitoring workflow endpoint after bootstrap succeeds.
+    Production sign-in uses a hosted OIDC Authorization Code + PKCE flow with the callback handled at `/auth/callback`.
+    The internal browser bootstrap endpoint remains a compatibility fallback for local/internal environments only.
 paths:
+  /sign-in:
+    get:
+      summary: Browser entry route for enterprise sign-in
+      description: |
+        The SPA renders the sign-in screen and starts hosted OIDC Authorization Code + PKCE when the user selects the enterprise sign-in action.
+        The route also accepts `next` and `reason` query parameters for protected-route restore and recovery messaging.
+      parameters:
+        - in: query
+          name: next
+          schema:
+            type: string
+          description: In-app route to restore after successful authentication.
+        - in: query
+          name: reason
+          schema:
+            type: string
+            enum: [expired, signed_out, oidc_error]
+          description: Optional user-facing recovery reason shown by the SPA.
+      responses:
+        '200':
+          description: Sign-in screen rendered by the browser app.
+  /auth/callback:
+    get:
+      summary: Browser OIDC callback route
+      description: |
+        The SPA receives the authorization response on this route, validates PKCE state from session storage,
+        exchanges the code with the provider token endpoint, stores the returned access token, and restores the queued in-app route.
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+        - in: query
+          name: state
+          schema:
+            type: string
+        - in: query
+          name: error
+          schema:
+            type: string
+        - in: query
+          name: error_description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Callback route rendered by the browser app.
   /auth/session:
     post:
       summary: Exchange a trusted internal browser auth code for a browser JWT session
+      description: |
+        Compatibility-only local/internal fallback.
+        This endpoint should be disabled in production with `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`.
       requestBody:
         required: true
         content:
@@ -33,59 +75,18 @@ paths:
                 authCode:
                   type: string
                   description: Signed browser bootstrap artifact from the trusted internal auth source.
-            examples:
-              trustedBootstrap:
-                value:
-                  authCode: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.trusted-browser-bootstrap.signature
       responses:
         '200':
-          description: Session created
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - success
-                  - data
-                properties:
-                  success:
-                    type: boolean
-                    const: true
-                  data:
-                    type: object
-                    required:
-                      - accessToken
-                      - expiresAt
-                      - claims
-                    properties:
-                      accessToken:
-                        type: string
-                        description: Bearer JWT for the task and audit APIs.
-                      expiresAt:
-                        type: string
-                        format: date-time
-                      claims:
-                        type: object
-                        required:
-                          - tenant_id
-                          - actor_id
-                          - roles
-                        properties:
-                          tenant_id:
-                            type: string
-                          actor_id:
-                            type: string
-                          roles:
-                            type: array
-                            items:
-                              type: string
+          description: Compatibility session created.
         '400':
-          description: Missing authCode
+          description: Missing authCode.
         '401':
-          description: Invalid, expired, or untrusted auth bootstrap code
+          description: Invalid, expired, or untrusted auth bootstrap code.
+        '404':
+          description: Internal browser auth bootstrap disabled in this environment.
   /api/auth/session:
     post:
-      summary: Compatibility alias for the browser session bootstrap endpoint
+      summary: Compatibility alias for the internal browser bootstrap endpoint
       responses:
         '200':
-          description: Same contract as POST /auth/session
+          description: Same contract as POST /auth/session.

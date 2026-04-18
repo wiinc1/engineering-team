@@ -19,6 +19,9 @@
 | 2026-04-09 17:28 | TSK-003 moved to VERIFY after full automated test pass |
 | 2026-04-09 17:35 | TSK-003 moved to DONE after lightweight SRE verification |
 | 2026-04-09 17:35 | TSK-002 reassessed as a re-scope candidate, not a missing implementation |
+| 2026-04-17 19:15 | TSK-001 re-baselined to DONE after repo-state verification |
+| 2026-04-17 19:15 | TSK-002 re-baselined as DONE in task artifact and removed from backlog drift |
+| 2026-04-17 19:15 | TSK-004 created and moved to TODO as the next execution task |
 
 ---
 
@@ -36,17 +39,18 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| TSK-001 | IN_PROGRESS | Original framework scaffold; session metadata lagged behind later delivered work |
+| TSK-001 | DONE | Framework/bootstrap artifacts verified on `main`; tracker state was corrected on 2026-04-17 |
 | TSK-003 | DONE | Browser matrix expanded to include Firefox, docs updated, and full automated suite passed |
 | PR #56 | DONE | Task-detail review questions and browser/runtime work merged to `main` |
 | PR #57 | DONE | PM overview routing audit gaps fixed and merged to `main` |
+| PR #82 | DONE | Close-review governance and production loop batch work merged to `main` |
 
 ---
 
 ## 🔭 Next Up
 
-- Clean up generated repo noise from `node_modules/` and `test-results/`
-- Re-scope TSK-002 into a smaller follow-up if additional assignment work is still wanted
+- Execute TSK-004 to complete the production identity-provider browser cutover
+- Keep `/auth/session` compatibility mode documented as temporary until the production flow lands
 
 ---
 

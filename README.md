@@ -94,7 +94,8 @@ Task-detail contract notes for approval readiness:
 - App runtime: `src/app/`
 - Route/page module still lives at `src/features/task-detail/route.js`
 - Feature shell still lives at `src/features/task-detail/`
-- Internal-use auth bootstrap now starts at `/sign-in` and exchanges a trusted browser auth code for a tab-scoped JWT session stored in `sessionStorage`.
+- Production browser sign-in now starts at `/sign-in` and uses a hosted OIDC Authorization Code + PKCE flow. The callback route is `/auth/callback`, and the resulting provider-issued access token is stored in `sessionStorage`.
+- The trusted browser auth code exchange on `POST /auth/session` remains available only as an internal/local fallback when explicitly enabled.
 - The app protects `/tasks`, `/tasks?view=board`, `/overview/pm`, `/inbox/:role`, and `/tasks/:taskId`; unauthenticated or expired sessions are redirected back to `/sign-in`.
 - PM/admin tokens also unlock the task assignment control, which reads `GET /ai-agents` and writes `PATCH /tasks/:taskId/assignment`.
 - Reader-level tokens still see owner metadata on `GET /tasks/:taskId` and `GET /tasks`; they just do not get assignment controls.
@@ -103,13 +104,18 @@ Run it locally:
 - `npm install`
 - `npm run dev`
 - open `http://127.0.0.1:5173/`
-- sign in through the internal browser auth form using a trusted browser auth code from the approved internal auth source
+- configure `VITE_OIDC_DISCOVERY_URL` and `VITE_OIDC_CLIENT_ID` for enterprise sign-in, or keep `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true` to use the internal bootstrap fallback in local/internal environments
 
 Point the browser app at the API:
 - same-origin default: leave `VITE_TASK_API_BASE_URL` empty
 - separate API origin: set `VITE_TASK_API_BASE_URL=http://127.0.0.1:3000`
 - or use the dev proxy: set `VITE_TASK_API_PROXY_TARGET=http://127.0.0.1:3000`
 - operators can override the API origin at runtime from the session panel without rebuilding
+- browser auth env vars:
+- `VITE_OIDC_DISCOVERY_URL`
+- `VITE_OIDC_CLIENT_ID`
+- optional `VITE_OIDC_REDIRECT_URI`, `VITE_OIDC_SCOPE`, `VITE_OIDC_LOGOUT_URL`, and `VITE_OIDC_LOGOUT_REDIRECT_URI`
+- set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false` for production browser builds so the internal fallback form is hidden
 
 ### Vercel deployment
 - This repo can now run on a single Vercel project with the SPA plus serverless API routes.
@@ -118,7 +124,8 @@ Point the browser app at the API:
 - Vercel additionally exposes explicit `api/v1/tasks.js`, `api/v1/tasks/[...route].js`, and `api/v1/ai-agents.js` handlers so the versioned task-platform routes do not depend on nested catch-all matching quirks.
 - To avoid route collisions between SPA paths like `/tasks/...` and API paths like `/tasks/...`, set `VITE_TASK_API_BASE_URL=/backend` in Vercel.
 - `vercel.json` rewrites `/backend/*` to the Vercel API functions and falls back non-API browser routes to `index.html`.
-- Required backend env vars in Vercel: `DATABASE_URL`, `AUTH_JWT_SECRET`, and any optional issuer/audience or browser-auth-code settings your environment enforces.
+- Required backend env vars in Vercel: `DATABASE_URL`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`.
+- Keep `AUTH_JWT_SECRET` and `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false` only if you still need compatibility tokens for a non-production fallback path; the default production browser flow should use provider-issued tokens directly.
 
 Build/package the thin browser app:
 - `npm run build:browser`
