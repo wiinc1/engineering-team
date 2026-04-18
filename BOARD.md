@@ -9,7 +9,7 @@
 
 | Task | Priority | Assignee | Status | Updated |
 |------|----------|----------|--------|---------|
-| TSK-004 — Complete Production Identity Provider Cutover | P1 | dev | TODO | 2026-04-17 |
+| — | — | — | — | — |
 
 ---
 
@@ -42,10 +42,10 @@ BACKLOG → TODO → IN_PROGRESS → VERIFY → DONE
 ## 📊 Metrics
 
 ```
-Open:        1
+Open:        0
 In Progress: 0
 Verify:      0
-Done:        3
+Done:        4
 Reopened:    0
 ```
 

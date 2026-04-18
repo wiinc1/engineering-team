@@ -22,6 +22,9 @@
 | 2026-04-17 19:15 | TSK-001 re-baselined to DONE after repo-state verification |
 | 2026-04-17 19:15 | TSK-002 re-baselined as DONE in task artifact and removed from backlog drift |
 | 2026-04-17 19:15 | TSK-004 created and moved to TODO as the next execution task |
+| 2026-04-17 20:05 | TSK-004 moved to IN_PROGRESS and completed provider-backed browser callback + fallback rollout work |
+| 2026-04-17 20:05 | TSK-004 moved to VERIFY after `npm test` passed |
+| 2026-04-17 20:05 | TSK-004 moved to DONE after push to `main` and tracker closeout |
 
 ---
 
@@ -41,6 +44,7 @@
 |------|--------|-------|
 | TSK-001 | DONE | Framework/bootstrap artifacts verified on `main`; tracker state was corrected on 2026-04-17 |
 | TSK-003 | DONE | Browser matrix expanded to include Firefox, docs updated, and full automated suite passed |
+| TSK-004 | DONE | OIDC browser callback flow, compatibility fallback controls, docs, and full automated verification shipped on `main` |
 | PR #56 | DONE | Task-detail review questions and browser/runtime work merged to `main` |
 | PR #57 | DONE | PM overview routing audit gaps fixed and merged to `main` |
 | PR #82 | DONE | Close-review governance and production loop batch work merged to `main` |
@@ -49,8 +53,8 @@
 
 ## 🔭 Next Up
 
-- Execute TSK-004 to complete the production identity-provider browser cutover
-- Keep `/auth/session` compatibility mode documented as temporary until the production flow lands
+- Select the next scoped follow-up after the production identity-provider browser cutover
+- Keep the internal `/auth/session` fallback constrained to explicit local/internal use only
 
 ---
 
