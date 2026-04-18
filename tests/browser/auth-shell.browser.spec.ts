@@ -20,7 +20,45 @@ const taskListPayload = {
   ],
 };
 
+const OIDC_DISCOVERY_URL = 'https://idp.example/.well-known/openid-configuration';
+const OIDC_AUTHORIZE_URL = 'https://idp.example/oauth2/authorize';
+const OIDC_TOKEN_URL = 'https://idp.example/oauth2/token';
+
 async function installApiMocks(page) {
+  await page.route(OIDC_DISCOVERY_URL, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      headers: {
+        'access-control-allow-origin': '*',
+      },
+      json: {
+        authorization_endpoint: OIDC_AUTHORIZE_URL,
+        token_endpoint: OIDC_TOKEN_URL,
+      },
+    });
+  });
+
+  await page.route(OIDC_TOKEN_URL, async (route) => {
+    const claims = {
+      sub: 'pm-1',
+      tenant_id: 'tenant-a',
+      roles: ['pm', 'reader'],
+      exp: Math.floor(Date.now() / 1000) + (60 * 60),
+    };
+    const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
+    await route.fulfill({
+      contentType: 'application/json',
+      headers: {
+        'access-control-allow-origin': '*',
+      },
+      json: {
+        access_token: `header.${payload}.signature`,
+        expires_in: 3600,
+        token_type: 'Bearer',
+      },
+    });
+  });
+
   await page.route('**/auth/session', async (route) => {
     const body = route.request().postDataJSON();
     if (body?.authCode !== 'signed-browser-auth-code') {
@@ -78,6 +116,18 @@ async function installApiMocks(page) {
 
 test.describe('authenticated browser app shell', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(({ discoveryUrl, clientId, redirectUri }) => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        oidcDiscoveryUrl: discoveryUrl,
+        oidcClientId: clientId,
+        oidcRedirectUri: redirectUri,
+        internalAuthBootstrapEnabled: true,
+      };
+    }, {
+      discoveryUrl: OIDC_DISCOVERY_URL,
+      clientId: 'browser-client',
+      redirectUri: 'http://127.0.0.1:4174/auth/callback',
+    });
     await installApiMocks(page);
   });
 
@@ -85,11 +135,12 @@ test.describe('authenticated browser app shell', () => {
     await page.goto('/tasks?view=board', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Sign in to the workflow app' })).toBeVisible();
     await expect(page).toHaveURL(/\/sign-in\?/);
+    await expect(page.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeVisible();
     await expect(page.getByLabel('Trusted auth code')).toBeEditable();
 
     await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
     await page.getByLabel('API base URL').fill('/api');
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
 
     await expect(page.getByRole('heading', { name: 'Task list' })).toBeVisible();
     await expect(page).toHaveURL(/\/tasks\?view=board/);
@@ -127,7 +178,7 @@ test.describe('authenticated browser app shell', () => {
 
     await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
     await page.getByLabel('API base URL').fill('/api');
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
 
     await expect(page.getByRole('heading', { name: 'SRE Inbox', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/inbox\/sre/);
@@ -140,11 +191,31 @@ test.describe('authenticated browser app shell', () => {
 
     await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
     await page.getByLabel('API base URL').fill('/api');
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
 
     await expect(page.getByRole('heading', { name: 'Human Stakeholder inbox routing', exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/inbox\/human/);
     await expect(page.locator('.role-inbox-toolbar__cue')).toContainText('Decision-ready items appear here only when governed close review or escalation handling is explicitly waiting on a human stakeholder decision.');
     await expect(page.locator('.role-inbox-toolbar__cue')).toContainText('Decision-ready');
+  });
+
+  test('completes an enterprise callback and restores the deep-linked board route', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem(
+        'engineering-team.oidc-transaction',
+        JSON.stringify({
+          state: 'callback-state',
+          codeVerifier: 'callback-verifier',
+          nonce: 'callback-nonce',
+          next: '/tasks?view=board',
+          apiBaseUrl: '/api',
+        }),
+      );
+    });
+
+    await page.goto('/auth/callback?code=oidc-code&state=callback-state', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Task list' })).toBeVisible();
+    await expect(page).toHaveURL(/\/tasks\?view=board/);
+    await expect(page.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
   });
 });

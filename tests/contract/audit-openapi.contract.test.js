@@ -102,14 +102,15 @@ test('openapi contract documents the live audit routes and auth model', () => {
   }
 
   for (const snippet of [
+    '/sign-in:',
+    '/auth/callback:',
     '/auth/session:',
     '/api/auth/session:',
     'authCode',
-    'accessToken',
-    'expiresAt',
     'Signed browser bootstrap artifact from the trusted internal auth source.',
+    'Authorization Code + PKCE',
+    'oidc_error',
     '/overview/governance',
-    'only decision-ready governed close-review items',
   ]) {
     assert.match(browserAuthSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }

@@ -148,6 +148,23 @@ test('rejects malformed browser auth bootstrap requests', async () => {
   });
 });
 
+test('disables internal browser auth bootstrap outside local mode when explicitly turned off', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        authCode: browserAuthCode(secret),
+      }),
+    });
+    assert.equal(response.status, 404);
+    assert.equal((await response.json()).error.code, 'internal_browser_auth_disabled');
+  }, {
+    runtimeEnv: 'production',
+    enableInternalBrowserAuthBootstrap: false,
+  });
+});
+
 test('syncs GitHub pull request webhook state into task detail relationships', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const createRes = await fetch(`${baseUrl}/tasks/TSK-500/events`, {

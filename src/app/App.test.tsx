@@ -30,6 +30,9 @@ function makeToken(claims: Record<string, unknown>) {
 }
 
 const TRUSTED_AUTH_CODE = 'signed-browser-auth-code';
+const OIDC_DISCOVERY_URL = 'https://idp.example/.well-known/openid-configuration';
+const OIDC_AUTHORIZE_URL = 'https://idp.example/oauth2/authorize';
+const OIDC_TOKEN_URL = 'https://idp.example/oauth2/token';
 
 function makeFutureExpiry(hoursAhead = 24) {
   return new Date(Date.now() + hoursAhead * 60 * 60 * 1000).toISOString();
@@ -71,6 +74,26 @@ function installTaskFetchMock({
 
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+
+    if (url === OIDC_DISCOVERY_URL) {
+      return createJsonResponse({
+        authorization_endpoint: OIDC_AUTHORIZE_URL,
+        token_endpoint: OIDC_TOKEN_URL,
+      });
+    }
+
+    if (url === OIDC_TOKEN_URL && init?.method === 'POST') {
+      return createJsonResponse({
+        access_token: makeToken({
+          sub: 'pm-1',
+          tenant_id: 'tenant-a',
+          roles: ['pm', 'reader'],
+          exp: makeFutureExp(),
+        }),
+        expires_in: 3600,
+        token_type: 'Bearer',
+      });
+    }
 
     if (url.endsWith('/auth/session') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body || '{}'));
@@ -574,6 +597,12 @@ function installTaskFetchMock({
 
 describe('Task browser runtime coverage', () => {
   beforeEach(() => {
+    (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+      oidcDiscoveryUrl: OIDC_DISCOVERY_URL,
+      oidcClientId: 'browser-client',
+      oidcRedirectUri: 'http://localhost:3000/auth/callback',
+      internalAuthBootstrapEnabled: true,
+    };
     window.history.pushState({}, '', '/tasks/TSK-42');
     writeBrowserSessionConfig({
       apiBaseUrl: '',
@@ -590,6 +619,7 @@ describe('Task browser runtime coverage', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    delete (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__;
   });
 
   it('renders task detail with existing assignment behavior intact', async () => {
@@ -618,8 +648,9 @@ describe('Task browser runtime coverage', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(screen.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use internal bootstrap fallback' }));
 
     await screen.findByRole('heading', { name: 'Task list' });
     expect(fetchMock).toHaveBeenCalledWith(
@@ -633,6 +664,26 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
   });
 
+  it('completes an enterprise callback and restores the queued board route', async () => {
+    clearBrowserSessionConfig();
+    installTaskFetchMock();
+    window.sessionStorage.setItem('engineering-team.oidc-transaction', JSON.stringify({
+      state: 'callback-state',
+      codeVerifier: 'callback-verifier',
+      nonce: 'callback-nonce',
+      next: '/tasks?view=board',
+      apiBaseUrl: '',
+    }));
+    window.history.pushState({}, '', '/auth/callback?code=oidc-code&state=callback-state');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task list' });
+    await screen.findByText('6 cards shown.');
+    expect(window.location.pathname).toBe('/tasks');
+    expect(window.location.search).toBe('?view=board');
+    expect(screen.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('restores board view query state after sign-in', async () => {
     clearBrowserSessionConfig();
     installTaskFetchMock();
@@ -644,7 +695,7 @@ describe('Task browser runtime coverage', () => {
     expect(window.location.search).toContain('next=%2Ftasks%3Fview%3Dboard');
 
     fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use internal bootstrap fallback' }));
 
     await screen.findByRole('heading', { name: 'Task list' });
     await screen.findByText('6 cards shown.');
@@ -675,7 +726,7 @@ describe('Task browser runtime coverage', () => {
     expect(window.location.search).toContain('next=%2Foverview%2Fpm%3Fbucket%3Dneeds-routing-attention');
 
     fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use internal bootstrap fallback' }));
 
     await screen.findByRole('heading', { name: 'PM Overview' });
     await screen.findByText('2 tasks shown in Needs routing attention.');
@@ -695,7 +746,7 @@ describe('Task browser runtime coverage', () => {
     expect(window.location.search).toContain('next=%2Ftasks%2FTSK-42%3Ftab%3Dtelemetry');
 
     fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use internal bootstrap fallback' }));
 
     await screen.findByRole('heading', { name: 'Wire task detail' });
     expect(window.location.pathname).toBe('/tasks/TSK-42');
@@ -715,7 +766,7 @@ describe('Task browser runtime coverage', () => {
     expect(window.location.search).toContain('next=%2Finbox%2Fqa%3Fsource%3Dalert');
 
     fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use internal bootstrap fallback' }));
 
     await screen.findByRole('heading', { name: 'QA Inbox' });
     expect(window.location.pathname).toBe('/inbox/qa');

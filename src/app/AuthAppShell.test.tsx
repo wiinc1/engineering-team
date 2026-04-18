@@ -14,6 +14,9 @@ function createJsonResponse(payload: unknown, status = 200) {
 }
 
 const TRUSTED_AUTH_CODE = 'signed-browser-auth-code';
+const OIDC_DISCOVERY_URL = 'https://idp.example/.well-known/openid-configuration';
+const OIDC_AUTHORIZE_URL = 'https://idp.example/oauth2/authorize';
+const OIDC_TOKEN_URL = 'https://idp.example/oauth2/token';
 
 function makeToken(claims: Record<string, unknown>) {
   return `header.${btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')}.signature`;
@@ -30,6 +33,26 @@ function makeFutureExp(hoursAhead = 24) {
 function installAuthFetchMock() {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+
+    if (url === OIDC_DISCOVERY_URL) {
+      return createJsonResponse({
+        authorization_endpoint: OIDC_AUTHORIZE_URL,
+        token_endpoint: OIDC_TOKEN_URL,
+      });
+    }
+
+    if (url === OIDC_TOKEN_URL && init?.method === 'POST') {
+      return createJsonResponse({
+        access_token: makeToken({
+          sub: 'pm-1',
+          tenant_id: 'tenant-a',
+          roles: ['pm', 'reader'],
+          exp: makeFutureExp(),
+        }),
+        expires_in: 3600,
+        token_type: 'Bearer',
+      });
+    }
 
     if (url.endsWith('/auth/session') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body || '{}'));
@@ -103,12 +126,20 @@ function installAuthFetchMock() {
 describe('Authenticated browser app shell', () => {
   beforeEach(() => {
     clearBrowserSessionConfig();
+    window.sessionStorage.removeItem('engineering-team.oidc-transaction');
+    (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+      oidcDiscoveryUrl: OIDC_DISCOVERY_URL,
+      oidcClientId: 'browser-client',
+      oidcRedirectUri: 'http://localhost:3000/auth/callback',
+      internalAuthBootstrapEnabled: true,
+    };
     window.history.pushState({}, '', '/sign-in');
   });
 
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    delete (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__;
   });
 
   it('passes an axe smoke scan for the sign-in route', async () => {
@@ -116,6 +147,7 @@ describe('Authenticated browser app shell', () => {
     const { container } = render(<App />);
 
     await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(screen.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeInTheDocument();
     expect(screen.getByLabelText('Trusted auth code')).toBeInTheDocument();
     expect(screen.getByLabelText('API base URL')).toBeInTheDocument();
 
@@ -135,7 +167,25 @@ describe('Authenticated browser app shell', () => {
 
     await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
     fireEvent.change(screen.getByLabelText('Trusted auth code'), { target: { value: TRUSTED_AUTH_CODE } });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Use internal bootstrap fallback' }));
+
+    await screen.findByRole('tablist', { name: 'Task overview mode' });
+    expect(window.location.pathname).toBe('/tasks');
+    expect(window.location.search).toContain('view=board');
+    expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
+  });
+
+  it('completes the enterprise callback flow and restores the deep-linked board route', async () => {
+    installAuthFetchMock();
+    window.sessionStorage.setItem('engineering-team.oidc-transaction', JSON.stringify({
+      state: 'callback-state',
+      codeVerifier: 'callback-verifier',
+      nonce: 'callback-nonce',
+      next: '/tasks?view=board',
+      apiBaseUrl: '',
+    }));
+    window.history.pushState({}, '', '/auth/callback?code=oidc-code&state=callback-state');
+    render(<App />);
 
     await screen.findByRole('tablist', { name: 'Task overview mode' });
     expect(window.location.pathname).toBe('/tasks');

@@ -6,9 +6,13 @@ import { TaskDetailActivityShell } from '../features/task-detail/TaskDetailActiv
 import { StageTransition } from '../features/task-detail/StageTransition';
 import { TaskCreationPage } from '../features/task-creation/TaskCreationPage';
 import {
+  beginOidcSignIn,
+  buildOidcLogoutUrl,
   buildAuthHeaders,
+  completeOidcSignIn,
   hasSessionExpired,
   isAuthenticatedSession,
+  readAuthRuntimeConfig,
   readBrowserSessionConfig,
   readSessionClaims,
   resolveApiBaseUrl,
@@ -60,10 +64,15 @@ const WORKFLOW_NOTIFICATION_TARGET_LABELS = {
   followers: 'Followers',
 };
 const SIGN_IN_PATH = '/sign-in';
+const AUTH_CALLBACK_PATH = '/auth/callback';
 const SIGN_IN_TIMEOUT_MS = 5000;
 
 function matchSignInRoute(pathname = '') {
   return ((pathname || '').replace(/\/+$/, '') || '/') === SIGN_IN_PATH;
+}
+
+function matchAuthCallbackRoute(pathname = '') {
+  return ((pathname || '').replace(/\/+$/, '') || '/') === AUTH_CALLBACK_PATH;
 }
 
 function isProtectedRoute(pathname = '') {
@@ -99,6 +108,17 @@ function defaultSignInDraft(apiBaseUrl = '') {
     apiBaseUrl,
     authCode: '',
   };
+}
+
+function getSignInReasonMessage(reason = '') {
+  switch (String(reason || '').trim()) {
+    case 'expired':
+      return 'Your session expired. Sign in again to continue.';
+    case 'signed_out':
+      return 'You signed out of the workflow app.';
+    default:
+      return '';
+  }
 }
 
 function toSessionConfigFromExchange(data, apiBaseUrl) {
@@ -827,10 +847,14 @@ export function App() {
   const [sreFindingDraft, setSreFindingDraft] = React.useState('');
   const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
   const signInState = React.useMemo(() => readSignInState(search), [search]);
+  const authRuntimeConfig = React.useMemo(() => readAuthRuntimeConfig(), []);
   const tokenClaims = React.useMemo(() => readSessionClaims(sessionConfig), [sessionConfig]);
   const resolvedApiBaseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
   const isAuthenticated = isAuthenticatedSession(sessionConfig);
   const lastDetailTaskIdRef = React.useRef(null);
+  const authCallbackHandledRef = React.useRef(false);
+  const authCallbackPromiseRef = React.useRef(null);
+  const visibleAuthNotice = authNotice || getSignInReasonMessage(signInState.reason);
 
   const clearSessionForSignIn = React.useCallback((message, reason = 'expired') => {
     const preserved = writeBrowserSessionConfig({
@@ -872,7 +896,7 @@ export function App() {
     }
 
     if (!isAuthenticated) {
-      if (matchSignInRoute(pathname)) return;
+      if (matchSignInRoute(pathname) || matchAuthCallbackRoute(pathname)) return;
       if (!isProtectedRoute(pathname)) {
         navigate(SIGN_IN_PATH, buildSignInSearch('/tasks'), { replace: true });
         return;
@@ -891,6 +915,46 @@ export function App() {
       navigate(nextRoute.pathname, nextRoute.search, { replace: true });
     }
   }, [clearSessionForSignIn, isAuthenticated, navigate, pathname, search, sessionConfig, signInState.next]);
+
+  React.useEffect(() => {
+    if (!matchAuthCallbackRoute(pathname) || isAuthenticated) {
+      authCallbackHandledRef.current = false;
+      authCallbackPromiseRef.current = null;
+      return;
+    }
+    if (!authCallbackHandledRef.current) {
+      authCallbackHandledRef.current = true;
+      setSignInStatus({ kind: 'loading', message: 'Completing enterprise sign-in…' });
+    }
+    if (!authCallbackPromiseRef.current) {
+      authCallbackPromiseRef.current = completeOidcSignIn({
+        config: authRuntimeConfig,
+        search,
+        fetchImpl: (...args) => window.fetch(...args),
+      });
+    }
+
+    let cancelled = false;
+    authCallbackPromiseRef.current.then((result) => {
+      if (cancelled) return;
+      authCallbackPromiseRef.current = null;
+      setSessionConfig(result.sessionConfig);
+      setAuthNotice('');
+      setSignInStatus({ kind: 'success', message: 'Signed in.' });
+      const nextRoute = splitRouteTarget(result.next);
+      navigate(nextRoute.pathname, nextRoute.search, { replace: true });
+    }).catch((error) => {
+      if (cancelled) return;
+      authCallbackPromiseRef.current = null;
+      setAuthNotice(error?.message || 'Enterprise sign-in failed.');
+      setSignInStatus({ kind: 'error', message: error?.message || 'Enterprise sign-in failed.' });
+      navigate(SIGN_IN_PATH, buildSignInSearch('/tasks', 'oidc_error'), { replace: true });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authRuntimeConfig, isAuthenticated, navigate, pathname, search]);
 
   React.useEffect(() => {
     if (model.kind === 'detail') {
@@ -1600,9 +1664,41 @@ export function App() {
     }
   }, [navigate, signInDraft, signInState.next]);
 
+  const handleEnterpriseSignIn = React.useCallback(async () => {
+    setSignInStatus({ kind: 'loading', message: 'Redirecting to enterprise sign-in…' });
+    try {
+      await beginOidcSignIn({
+        config: authRuntimeConfig,
+        next: signInState.next,
+        apiBaseUrl: String(signInDraft.apiBaseUrl || resolvedApiBaseUrl || '').trim().replace(/\/+$/, ''),
+        fetchImpl: (...args) => window.fetch(...args),
+      });
+    } catch (error) {
+      setSignInStatus({ kind: 'error', message: error?.message || 'Enterprise sign-in failed.' });
+    }
+  }, [authRuntimeConfig, resolvedApiBaseUrl, signInDraft.apiBaseUrl, signInState.next]);
+
   const handleSignOut = React.useCallback(() => {
-    clearSessionForSignIn('You signed out of the workflow app.', 'signed_out');
-  }, [clearSessionForSignIn]);
+    const logoutUrl = buildOidcLogoutUrl(authRuntimeConfig);
+    const preserved = writeBrowserSessionConfig({
+      apiBaseUrl: resolvedApiBaseUrl,
+    });
+    setSessionConfig(preserved);
+    setSignInDraft((current) => ({
+      ...current,
+      apiBaseUrl: preserved.apiBaseUrl || current.apiBaseUrl,
+      authCode: '',
+    }));
+    setAuthNotice('');
+    setSignInStatus({ kind: 'idle', message: '' });
+
+    if (logoutUrl) {
+      window.location.assign(logoutUrl);
+      return;
+    }
+
+    navigate(SIGN_IN_PATH, buildSignInSearch('/tasks', 'signed_out'), { replace: true });
+  }, [authRuntimeConfig, navigate, resolvedApiBaseUrl]);
 
   const handleTaskCreated = React.useCallback(() => {
     navigate('/tasks');
@@ -1676,46 +1772,72 @@ export function App() {
           <div className="auth-card__intro">
             <p className="eyebrow">Authenticated browser shell for US-002</p>
             <h1>Sign in to the workflow app</h1>
-            <p className="lede">Submit a trusted internal browser auth code to start a tab-scoped session for the task list, board, PM overview, inboxes, and task detail routes.</p>
+            <p className="lede">
+              {matchAuthCallbackRoute(pathname)
+                ? 'Completing the enterprise sign-in callback for the task list, board, PM overview, inboxes, and task detail routes.'
+                : 'Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.'}
+            </p>
           </div>
 
-          {authNotice ? (
+          {visibleAuthNotice ? (
             <p className="auth-status auth-status--notice" role="status">
-              {authNotice}
+              {visibleAuthNotice}
             </p>
           ) : null}
 
-          <form className="session-form auth-form" onSubmit={handleSignIn}>
-            <label>
-              Trusted auth code
-              <input
-                name="authCode"
-                value={signInDraft.authCode}
-                onChange={(event) => setSignInDraft((current) => ({ ...current, authCode: event.target.value }))}
-                placeholder="Paste the signed browser auth code"
-              />
-            </label>
+          {matchAuthCallbackRoute(pathname) ? (
+            <p className="auth-status auth-status--notice" role="status">
+              {signInStatus.kind === 'loading' ? signInStatus.message : 'Completing enterprise sign-in…'}
+            </p>
+          ) : (
+            <>
+              <div className="session-form__actions">
+                <button type="button" onClick={handleEnterpriseSignIn} disabled={signInStatus.kind === 'loading' || !authRuntimeConfig.isOidcConfigured}>
+                  {signInStatus.kind === 'loading' ? signInStatus.message : 'Continue with enterprise sign-in'}
+                </button>
+              </div>
 
-            <label>
-              API base URL
-              <input
-                name="apiBaseUrl"
-                value={signInDraft.apiBaseUrl}
-                onChange={(event) => setSignInDraft((current) => ({ ...current, apiBaseUrl: event.target.value }))}
-                placeholder={envApiBaseUrl || 'same-origin'}
-              />
-            </label>
+              {!authRuntimeConfig.isOidcConfigured ? (
+                <p className="auth-status auth-status--error" role="alert">
+                  Enterprise sign-in is not configured for this environment.
+                </p>
+              ) : null}
 
-            <div className="session-form__actions">
-              <button type="submit" disabled={signInStatus.kind === 'loading'}>
-                {signInStatus.kind === 'loading' ? 'Signing in…' : 'Sign in'}
-              </button>
-            </div>
+              {authRuntimeConfig.internalAuthBootstrapEnabled ? (
+                <form className="session-form auth-form" onSubmit={handleSignIn}>
+                  <label>
+                    Trusted auth code
+                    <input
+                      name="authCode"
+                      value={signInDraft.authCode}
+                      onChange={(event) => setSignInDraft((current) => ({ ...current, authCode: event.target.value }))}
+                      placeholder="Paste the signed browser auth code"
+                    />
+                  </label>
 
-            {signInStatus.kind === 'error' ? (
-              <p className="auth-status auth-status--error" role="alert">{signInStatus.message}</p>
-            ) : null}
-          </form>
+                  <label>
+                    API base URL
+                    <input
+                      name="apiBaseUrl"
+                      value={signInDraft.apiBaseUrl}
+                      onChange={(event) => setSignInDraft((current) => ({ ...current, apiBaseUrl: event.target.value }))}
+                      placeholder={envApiBaseUrl || 'same-origin'}
+                    />
+                  </label>
+
+                  <div className="session-form__actions">
+                    <button type="submit" className="button-secondary" disabled={signInStatus.kind === 'loading'}>
+                      Use internal bootstrap fallback
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {signInStatus.kind === 'error' ? (
+                <p className="auth-status auth-status--error" role="alert">{signInStatus.message}</p>
+              ) : null}
+            </>
+          )}
         </section>
       </main>
     );
