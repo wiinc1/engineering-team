@@ -4,6 +4,19 @@ Date: 2026-04-19
 Branch: `feature/46-48-47-runtime-delegation-wave`
 Scope: issues `#46`, `#48`, and `#47`
 
+## Standards Alignment
+
+- Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring; team and process
+- Evidence expected for this change: runtime delegation implementation diffs, exported metrics artifacts, runbook updates, higher-level verification coverage, mutation-testing configuration, and acceptance audit evidence
+- Gap observed: the only remaining non-code gap is live-smoke confirmation in an environment where the OpenClaw session directory is writable to the smoke harness. Documented rationale: the repo-local implementation and automated verification are complete, while the failing smoke proof is caused by environment-level session-lock permissions rather than missing delegation-path behavior (source https://sre.google/books/).
+
+## Required Evidence
+
+- Commands run: `npm run test:delegation:verification`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:delegation:live-smoke:openclaw`, `openclaw agent --local --json --agent sr-engineer --message "Please implement this fix" --timeout 20`
+- Tests added or updated: `tests/unit/runtime-delegation.test.js`, `tests/unit/specialist-delegation.test.js`, `tests/unit/validate-specialist-runtime.test.js`, `tests/integration/specialist-delegation.integration.test.js`
+- Rollout or rollback notes: #48 and #47 are ready for normal merge; #46 should remain open until the live-smoke command passes in the target environment, and rollback would revert this PR if runtime delegation metrics or timeout handling regressed
+- Docs updated: `docs/feature-flags.md`, `docs/runbooks/specialist-delegation.md`, `docs/reports/DELEGATION-46-48-47-ACCEPTANCE-2026-04-19.md`, `monitoring/dashboards/real-specialist-delegation.json`, `monitoring/alerts/real-specialist-delegation.yml`, `stryker.specialist-delegation.conf.json`
+
 ## `#46` Live Runtime-Backed Specialist Delegation
 
 Status: met in repo scope, pending target-environment rerun as operational follow-up

@@ -87,6 +87,7 @@
         "^lib/monitoring/pushgateway\\.js$",
         "^db/migrations/00[1-5]_.*\\.sql$",
         "^db/migrations/007_.*\\.sql$",
+        "^db/migrations/008_.*\\.sql$",
         "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker)\\..+$"
       ],
       "test_requirements": [
@@ -337,6 +338,8 @@
       "runtime_patterns": [
         "^lib/software-factory/.*delegation.*\\.js$",
         "^lib/software-factory/task-dispatch\\.js$",
+        "^scripts/openclaw-specialist-runner\\.js$",
+        "^scripts/push-specialist-delegation-metrics\\.js$",
         "^scripts/validate-specialist-runtime\\.js$",
         "^scripts/command-router\\.js$"
       ],
