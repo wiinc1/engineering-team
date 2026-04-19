@@ -5,7 +5,9 @@ const os = require('os');
 const path = require('path');
 const {
   FALLBACK_REASONS,
+  FALLBACK_REASON_CATEGORIES,
   buildDelegationFallbackMessage,
+  describeDelegationFallback,
   classifyDelegationFailure,
   classifySpecialistRequest,
   createDelegationMetrics,
@@ -93,9 +95,34 @@ test('records attribution mismatches and falls back truthfully', async () => {
 
   assert.equal(result.mode, 'fallback');
   assert.equal(result.metadata.fallbackReason, FALLBACK_REASONS.ATTRIBUTION_MISMATCH);
+  assert.equal(result.metadata.userFacingReasonCategory, FALLBACK_REASON_CATEGORIES.DELEGATION_UNVERIFIED);
   assert.match(result.message, /could not be verified/i);
   assert.equal(metrics.snapshot().attributionMismatchCount, 1);
   assert.equal(result.attribution.handledBy, 'main');
+});
+
+test('accepts runtime agent aliases when ownership carries the original specialist id', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-alias-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegateWork: async () => ({
+      agentId: 'sr-engineer',
+      sessionId: 'runtime-session-alias',
+      output: 'handled by senior engineer',
+      ownership: {
+        specialistId: 'engineer',
+        runtimeAgentId: 'sr-engineer',
+      },
+    }),
+  });
+
+  const result = await coordinator.handleRequest('Please implement this feature', { coordinatorAgent: 'main' });
+
+  assert.equal(result.mode, 'delegated');
+  assert.equal(result.agentId, 'sr-engineer');
+  assert.equal(result.specialist, 'engineer');
+  assert.equal(result.metadata.sessionId, 'runtime-session-alias');
+  assert.equal(result.metadata.ownership.runtimeAgentId, 'sr-engineer');
 });
 
 test('classifyDelegationFailure maps runtime errors to stable fallback reasons', () => {
@@ -106,11 +133,39 @@ test('classifyDelegationFailure maps runtime errors to stable fallback reasons',
   assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_ATTRIBUTION_MISMATCH' }), FALLBACK_REASONS.ATTRIBUTION_MISMATCH);
 });
 
+test('describeDelegationFallback maps every fallback reason to a stable user-facing category', () => {
+  assert.equal(
+    describeDelegationFallback({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.NOT_CONFIGURED }).category,
+    FALLBACK_REASON_CATEGORIES.RUNTIME_NOT_AVAILABLE,
+  );
+  assert.equal(
+    describeDelegationFallback({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.RUNTIME_EXEC_FAILED }).category,
+    FALLBACK_REASON_CATEGORIES.RUNTIME_EXECUTION_FAILED,
+  );
+  assert.equal(
+    describeDelegationFallback({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.INVALID_JSON }).category,
+    FALLBACK_REASON_CATEGORIES.DELEGATION_UNVERIFIED,
+  );
+  assert.equal(
+    describeDelegationFallback({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.MISSING_EVIDENCE }).category,
+    FALLBACK_REASON_CATEGORIES.DELEGATION_UNVERIFIED,
+  );
+  assert.equal(
+    describeDelegationFallback({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.ATTRIBUTION_MISMATCH }).category,
+    FALLBACK_REASON_CATEGORIES.DELEGATION_UNVERIFIED,
+  );
+  assert.equal(
+    describeDelegationFallback({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.UNSUPPORTED_TASK_TYPE }).category,
+    FALLBACK_REASON_CATEGORIES.UNSUPPORTED_RUNTIME_SPECIALIST,
+  );
+});
+
 test('buildDelegationFallbackMessage returns safe user-facing copy per failure class', () => {
   assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.NOT_CONFIGURED }), /not configured or not available/i);
   assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.RUNTIME_EXEC_FAILED }), /failed during execution/i);
   assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.INVALID_JSON }), /could not be verified/i);
-  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.UNSUPPORTED_TASK_TYPE }), /does not map to a supported runtime specialist/i);
+  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.ATTRIBUTION_MISMATCH }), /could not be verified/i);
+  assert.match(buildDelegationFallbackMessage({ specialist: 'engineer', fallbackReason: FALLBACK_REASONS.UNSUPPORTED_TASK_TYPE }), /unsupported for runtime delegation/i);
 });
 
 test('supports feature flag disablement for rollout control', () => {

@@ -44,3 +44,21 @@ services:
         condition: service_healthy
       pushgateway:
         condition: service_started
+  delegation-smoke:
+    build: .
+    command: npm run test:delegation:live-smoke
+    environment:
+      NODE_ENV: development
+      FF_SPECIALIST_DELEGATION: 'true'
+      SPECIALIST_DELEGATION_RUNNER: ${SPECIALIST_DELEGATION_RUNNER:-}
+    volumes:
+      - ./observability:/app/observability
+  delegation-smoke-fixture:
+    build: .
+    command: npm run test:delegation:live-smoke
+    environment:
+      NODE_ENV: development
+      FF_SPECIALIST_DELEGATION: 'true'
+      SPECIALIST_DELEGATION_RUNNER: node /app/tests/fixtures/specialist-runtime-runner.js
+    volumes:
+      - ./observability:/app/observability
