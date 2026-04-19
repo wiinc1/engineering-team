@@ -1,0 +1,10 @@
+{
+  "title": "Orchestration Scheduler",
+  "description": "Dashboard for orchestration run starts, dispatch outcomes, duplicate suppression, fallback reasons, and scheduler latency.",
+  "panels": [
+    { "title": "Request Rate", "metric": "feature_orchestration_scheduler_requests_total" },
+    { "title": "Error Rate", "metric": "feature_orchestration_scheduler_errors_total" },
+    { "title": "Latency p50/p95/p99", "metric": "feature_orchestration_scheduler_duration_seconds" },
+    { "title": "Dispatch Outcomes", "metric": "feature_orchestration_scheduler_dispatch_total" }
+  ]
+}

@@ -140,6 +140,11 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'commentable',
     'childTaskId',
     'waitingState',
+    '/tasks/{id}/orchestration:',
+    'canViewOrchestration',
+    'OrchestrationViewResponse',
+    'dependencyState',
+    'fallbackReason',
   ]) {
     assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -225,6 +230,30 @@ test('documented endpoints satisfy the runtime contract', async () => {
     assert.equal(summary.access.restricted, true);
     assert.deepEqual(summary.correlation.approved_correlation_ids, ['child:TSK-CONTRACT-1', 'create:TSK-CONTRACT-1']);
 
+    response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-1/detail`, { headers: readerHeaders });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.meta.permissions.canViewOrchestration, true);
+    assert.ok(detail.orchestration);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-1/orchestration`, { headers: readerHeaders });
+    assert.equal(response.status, 200);
+    const orchestration = await response.json();
+    assert.ok(orchestration.planner);
+    assert.ok(orchestration.run);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-1/orchestration`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['pm'] }),
+      },
+      body: JSON.stringify({ idempotencyKey: 'orch:contract:1' }),
+    });
+    assert.equal(response.status, 202);
+    const started = await response.json();
+    assert.ok(started.run.runId);
+
     response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-ANOM/events`, {
       method: 'POST',
       headers: contributorHeaders,
@@ -273,10 +302,10 @@ test('documented endpoints satisfy the runtime contract', async () => {
       headers: authHeaders(secret, { roles: ['reader'] }),
     });
     assert.equal(response.status, 200);
-    const detail = await response.json();
-    assert.equal(detail.context.pmBusinessContextReview.finalized, true);
-    assert.equal(detail.context.anomalyChildTask.finalizedByPm, true);
-    assert.equal(detail.relations.parentTask.id, 'TSK-CONTRACT-ANOM');
+    const anomalyDetail = await response.json();
+    assert.equal(anomalyDetail.context.pmBusinessContextReview.finalized, true);
+    assert.equal(anomalyDetail.context.anomalyChildTask.finalizedByPm, true);
+    assert.equal(anomalyDetail.relations.parentTask.id, 'TSK-CONTRACT-ANOM');
 
     response = await fetch(`${baseUrl}/metrics`, { headers: authHeaders(secret, { roles: ['admin'] }) });
     assert.equal(response.status, 200);

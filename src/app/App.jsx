@@ -407,6 +407,38 @@ function formatCloseGovernanceDecisionStatus(status) {
   }
 }
 
+function formatOrchestrationItemStateLabel(state) {
+  switch (state) {
+    case 'ready':
+      return 'Ready';
+    case 'running':
+      return 'Running';
+    case 'blocked':
+      return 'Blocked';
+    case 'failed':
+      return 'Fallback';
+    case 'completed':
+      return 'Completed';
+    default:
+      return 'Unknown';
+  }
+}
+
+function formatDependencyStateLabel(state) {
+  switch (state) {
+    case 'ready':
+      return 'Ready to dispatch';
+    case 'in_progress':
+      return 'Already in progress';
+    case 'blocked':
+      return 'Blocked by dependency';
+    case 'done':
+      return 'Done';
+    default:
+      return 'Unknown';
+  }
+}
+
 function normalizeArchitectHandoffDraft(handoff = {}) {
   return {
     readyForEngineering: Boolean(handoff.readyForEngineering),
@@ -2646,6 +2678,91 @@ export function App() {
               </article>
             </div>
           </section>
+
+          {model.detail?.meta?.permissions?.canViewOrchestration === false ? (
+            <section className="detail-card detail-card--full" aria-label="Orchestration visibility">
+              <h2>Orchestration visibility</h2>
+              <p className="empty-copy">Dependency planning and orchestration details are hidden for this session.</p>
+            </section>
+          ) : model.detail?.orchestration ? (
+            <section className="detail-card detail-card--full" aria-label="Orchestration visibility">
+              <div className="detail-card__header">
+                <div>
+                  <h2>Orchestration visibility</h2>
+                  <p className="task-list-meta">
+                    {model.detail.orchestration.run.state === 'not_started'
+                      ? 'Dependency planning is available, but no coordinator run has been started yet.'
+                      : model.detail.orchestration.run.state === 'empty'
+                        ? 'No child work items are linked to this task yet.'
+                        : `Current run state: ${model.detail.orchestration.run.state.replace(/_/g, ' ')}.`}
+                  </p>
+                </div>
+              </div>
+              <div className="summary-grid orchestration-summary-grid">
+                <article>
+                  <span>Ready</span>
+                  <strong>{model.detail.orchestration.run.summary.readyCount}</strong>
+                </article>
+                <article>
+                  <span>Running</span>
+                  <strong>{model.detail.orchestration.run.summary.runningCount}</strong>
+                </article>
+                <article>
+                  <span>Blocked</span>
+                  <strong>{model.detail.orchestration.run.summary.blockedCount}</strong>
+                </article>
+                <article>
+                  <span>Fallback</span>
+                  <strong>{model.detail.orchestration.run.summary.failedCount}</strong>
+                </article>
+                <article>
+                  <span>Completed</span>
+                  <strong>{model.detail.orchestration.run.summary.completedCount}</strong>
+                </article>
+              </div>
+              {model.detail.orchestration.run.items?.length ? (
+                <div className="orchestration-table" role="table" aria-label="Orchestrated child work items">
+                  <div className="orchestration-table__head" role="rowgroup">
+                    <div role="row">
+                      <span role="columnheader">Work item</span>
+                      <span role="columnheader">State</span>
+                      <span role="columnheader">Dependency status</span>
+                      <span role="columnheader">Why</span>
+                    </div>
+                  </div>
+                  <div className="orchestration-table__body" role="rowgroup">
+                    {model.detail.orchestration.run.items.map((item) => (
+                      <div className="orchestration-table__row" role="row" key={item.id}>
+                        <div role="cell">
+                          <strong>{item.title}</strong>
+                          <span>{item.id}{item.taskType ? ` · ${item.taskType}` : ''}</span>
+                        </div>
+                        <div role="cell">
+                          <strong>{formatOrchestrationItemStateLabel(item.state)}</strong>
+                          {item.specialist ? <span>{item.specialist}{item.actualAgent ? ` → ${item.actualAgent}` : ''}</span> : null}
+                        </div>
+                        <div role="cell">
+                          <strong>{formatDependencyStateLabel(item.dependencyState)}</strong>
+                          {item.dependsOn?.length ? <span>Depends on {item.dependsOn.map((dependency) => dependency.id).join(', ')}</span> : <span>No unmet dependencies</span>}
+                        </div>
+                        <div role="cell">
+                          {item.blockers?.length ? (
+                            <span>{item.blockers.map((blocker) => blocker.reason).join(' · ')}</span>
+                          ) : item.lastMessage ? (
+                            <span>{item.lastMessage}</span>
+                          ) : (
+                            <span>No blocker or fallback details.</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="empty-copy">No orchestrated child work items yet.</p>
+              )}
+            </section>
+          ) : null}
 
           {(model.detail?.relations?.parentTask || model.detail?.relations?.childTasks?.length || model.detail?.context?.anomalyChildTask || model.detail?.blockers?.some((blocker) => blocker.childTaskId)) ? (
             <section className="detail-card detail-card--full" aria-label="Anomaly lineage and blocking">

@@ -1,0 +1,10 @@
+{
+  "title": "Dependency Planner",
+  "description": "Dashboard for dependency planner request rate, error rate, latency, ready-work counts, and invalid graph detection.",
+  "panels": [
+    { "title": "Request Rate", "metric": "feature_dependency_planner_requests_total" },
+    { "title": "Error Rate", "metric": "feature_dependency_planner_errors_total" },
+    { "title": "Latency p50/p95/p99", "metric": "feature_dependency_planner_duration_seconds" },
+    { "title": "Ready Work by State", "metric": "feature_dependency_planner_ready_work_total" }
+  ]
+}

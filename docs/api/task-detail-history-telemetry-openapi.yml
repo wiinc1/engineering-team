@@ -207,6 +207,144 @@ components:
         openCount: { type: integer }
         draftCount: { type: integer }
         blockedCount: { type: integer }
+    OrchestrationDependencyRef:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: string }
+        title: { type: string }
+    OrchestrationBlocker:
+      type: object
+      required: [type, reason]
+      properties:
+        type:
+          type: string
+          enum: [child_dependency, missing_dependency, circular_dependency, task_blocked, waiting_state]
+        reason: { type: string }
+        childTaskId: { type: [string, 'null'] }
+        dependencyState: { type: [string, 'null'], enum: [ready, blocked, in_progress, done, 'null'] }
+        title: { type: [string, 'null'] }
+    OrchestrationPlannerItem:
+      type: object
+      required: [id, title, status, dependencyState, dependsOn, blockers]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        taskType: { type: [string, 'null'] }
+        stage: { type: [string, 'null'] }
+        status: { type: string, enum: [active, waiting, blocked, done] }
+        owner:
+          type: [object, 'null']
+          properties:
+            id: { type: [string, 'null'] }
+            label: { type: string }
+        dependencyState: { type: string, enum: [ready, blocked, in_progress, done] }
+        dependsOn:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchestrationDependencyRef'
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchestrationBlocker'
+    OrchestrationPlannerSummary:
+      type: object
+      required: [total, readyCount, blockedCount, inProgressCount, doneCount, invalidCount]
+      properties:
+        total: { type: integer }
+        readyCount: { type: integer }
+        blockedCount: { type: integer }
+        inProgressCount: { type: integer }
+        doneCount: { type: integer }
+        invalidCount: { type: integer }
+    OrchestrationPlannerResponse:
+      type: object
+      required: [summary, readyWork, items]
+      properties:
+        summary:
+          $ref: '#/components/schemas/OrchestrationPlannerSummary'
+        readyWork:
+          type: array
+          items:
+            type: object
+            required: [id, title, taskType, dependsOn]
+            properties:
+              id: { type: string }
+              title: { type: string }
+              taskType: { type: [string, 'null'] }
+              dependsOn:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrchestrationDependencyRef'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchestrationPlannerItem'
+    OrchestrationRunItem:
+      type: object
+      required: [id, title, state, dependencyState, dependsOn, blockers, dispatchAttempts, delegated]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        taskType: { type: [string, 'null'] }
+        stage: { type: [string, 'null'] }
+        owner:
+          type: [object, 'null']
+          properties:
+            id: { type: [string, 'null'] }
+            label: { type: string }
+        state: { type: string, enum: [ready, running, blocked, failed, completed] }
+        dependencyState: { type: string, enum: [ready, blocked, in_progress, done] }
+        dependsOn:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchestrationDependencyRef'
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchestrationBlocker'
+        specialist: { type: [string, 'null'] }
+        actualAgent: { type: [string, 'null'] }
+        fallbackReason: { type: [string, 'null'] }
+        userFacingReasonCategory: { type: [string, 'null'] }
+        lastMessage: { type: [string, 'null'] }
+        lastUpdatedAt: { type: [string, 'null'], format: date-time }
+        lastDispatchAt: { type: [string, 'null'], format: date-time }
+        dispatchAttempts: { type: integer }
+        delegated: { type: boolean }
+    OrchestrationRunSummary:
+      type: object
+      required: [total, readyCount, runningCount, blockedCount, failedCount, completedCount]
+      properties:
+        total: { type: integer }
+        readyCount: { type: integer }
+        runningCount: { type: integer }
+        blockedCount: { type: integer }
+        failedCount: { type: integer }
+        completedCount: { type: integer }
+    OrchestrationRunResponse:
+      type: object
+      required: [runId, state, startedAt, updatedAt, coordinatorAgent, summary, items]
+      properties:
+        runId: { type: [string, 'null'] }
+        state: { type: string, enum: [not_started, empty, active, idle, failed, complete] }
+        startedAt: { type: [string, 'null'], format: date-time }
+        updatedAt: { type: [string, 'null'], format: date-time }
+        coordinatorAgent: { type: [string, 'null'] }
+        summary:
+          $ref: '#/components/schemas/OrchestrationRunSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchestrationRunItem'
+    OrchestrationViewResponse:
+      type: object
+      required: [planner, run]
+      properties:
+        planner:
+          $ref: '#/components/schemas/OrchestrationPlannerResponse'
+        run:
+          $ref: '#/components/schemas/OrchestrationRunResponse'
     TaskDetailViewResponse:
       type: object
       required: [task, summary, blockers, context, relations, activity, telemetry, meta]
@@ -450,19 +588,25 @@ components:
             access:
               type: [object, 'null']
               additionalProperties: true
+        orchestration:
+          type: [object, 'null']
+          description: Additive dependency-planner and orchestration run view model for authorized callers.
+          allOf:
+            - $ref: '#/components/schemas/OrchestrationViewResponse'
         meta:
           type: object
           required: [permissions, freshness]
           properties:
             permissions:
               type: object
-              required: [canViewComments, canViewAuditLog, canViewTelemetry, canViewChildTasks, canViewLinkedPrMetadata]
+              required: [canViewComments, canViewAuditLog, canViewTelemetry, canViewChildTasks, canViewLinkedPrMetadata, canViewOrchestration]
               properties:
                 canViewComments: { type: boolean }
                 canViewAuditLog: { type: boolean }
                 canViewTelemetry: { type: boolean }
                 canViewChildTasks: { type: boolean }
                 canViewLinkedPrMetadata: { type: boolean }
+                canViewOrchestration: { type: boolean }
             freshness:
               type: object
               required: [status, lastUpdatedAt, liveUpdates, refreshBehavior]
@@ -582,7 +726,7 @@ paths:
   /tasks/{id}/detail:
     get:
       summary: Canonical server-prepared task detail read model for the task detail page
-      description: Returns the full task detail view model used by the task detail UI, including summary, blockers, grouped context, relations, activity, telemetry, and explicit permission/freshness metadata.
+      description: Returns the full task detail view model used by the task detail UI, including summary, blockers, grouped context, relations, activity, telemetry, optional orchestration visibility, and explicit permission/freshness metadata.
       parameters:
         - name: id
           in: path
@@ -597,6 +741,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskDetailViewResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/FeatureDisabled' }
+  /tasks/{id}/orchestration:
+    get:
+      summary: Return the dependency planner and orchestration state for a parent task
+      description: Requires `relationships:read` and returns the same orchestration planner/run payload embedded in task detail when enabled.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      responses:
+        '200':
+          description: Canonical orchestration planner/run payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrchestrationViewResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/FeatureDisabled' }
+    post:
+      summary: Evaluate and persist an orchestration run for the task's ready child work
+      description: Starts or refreshes coordinator-managed orchestration state, dispatching only ready work items when scheduler routing is enabled.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/ActorHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotencyKey: { type: string }
+                actorType: { type: string }
+                source: { type: string }
+                concurrencyLimit: { type: integer, minimum: 1 }
+      responses:
+        '202':
+          description: Orchestration run evaluated and persisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrchestrationViewResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '503': { $ref: '#/components/responses/FeatureDisabled' }

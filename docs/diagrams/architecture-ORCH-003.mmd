@@ -1,0 +1,5 @@
+flowchart LR
+  Browser[Browser task detail] --> Adapter[Task detail adapter]
+  Adapter --> API[Task detail / orchestration API]
+  API --> ReadModel[Server-prepared orchestration view]
+  ReadModel --> Browser

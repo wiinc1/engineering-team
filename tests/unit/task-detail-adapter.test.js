@@ -195,6 +195,67 @@ test('task detail screen model keeps linked PR and spec detail from dedicated en
   assert.equal(model.detail.summary.prStatus.label, '1 open PR linked');
 });
 
+test('task detail client preserves orchestration read-model payloads from the dedicated endpoint', async () => {
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        task: { id: 'TSK-77', title: 'Orchestrated parent', priority: 'P1', stage: 'IMPLEMENT', status: 'active' },
+        summary: {
+          owner: { id: 'pm-1', label: 'PM 1' },
+          workflowStage: { value: 'IMPLEMENT', label: 'Implement' },
+          nextAction: { label: 'Start ready child work', source: 'system', overdue: false, waitingOn: null },
+          prStatus: { label: '0 linked PRs', state: 'empty', total: 0 },
+          childStatus: { label: '3 linked child tasks', state: 'mixed', total: 3, blockedCount: 1 },
+          timers: { queueEnteredAt: null, queueAgeLabel: '5m', lastUpdatedAt: '2026-04-19T10:00:00.000Z', freshness: 'fresh' },
+          blockedState: { isBlocked: false, label: 'Active', waitingOn: null },
+        },
+        blockers: [],
+        context: { businessContext: 'Context', acceptanceCriteria: ['A'], definitionOfDone: ['B'], technicalSpec: null, monitoringSpec: null, pmBusinessContextReview: { completedAt: null, completedBy: null, finalized: false } },
+        relations: { linkedPrs: [], childTasks: [], parentTask: null },
+        activity: { comments: [], auditLog: [] },
+        telemetry: { availability: 'available', lastUpdatedAt: '2026-04-19T10:00:00.000Z', summary: {}, emptyStateReason: null, access: { restricted: false } },
+        orchestration: {
+          planner: {
+            summary: { total: 3, readyCount: 1, blockedCount: 1, inProgressCount: 0, doneCount: 1, invalidCount: 0 },
+            readyWork: [{ id: 'TSK-CHILD-2', title: 'Ready work item', taskType: 'qa', dependsOn: [] }],
+            items: [],
+          },
+          run: {
+            runId: 'run-77',
+            state: 'active',
+            startedAt: '2026-04-19T10:00:00.000Z',
+            updatedAt: '2026-04-19T10:01:00.000Z',
+            coordinatorAgent: 'pm-1',
+            summary: { total: 3, readyCount: 1, runningCount: 1, blockedCount: 1, failedCount: 0, completedCount: 0 },
+            items: [
+              { id: 'TSK-CHILD-2', title: 'Ready work item', state: 'running', dependencyState: 'ready', dependsOn: [], blockers: [] },
+            ],
+          },
+        },
+        meta: {
+          permissions: {
+            canViewComments: true,
+            canViewAuditLog: true,
+            canViewTelemetry: true,
+            canViewChildTasks: true,
+            canViewLinkedPrMetadata: true,
+            canViewOrchestration: true,
+          },
+          freshness: { status: 'fresh', lastUpdatedAt: '2026-04-19T10:01:00.000Z', liveUpdates: false, refreshBehavior: 'manual' },
+        },
+      }),
+    }),
+  });
+
+  const model = await client.fetchTaskDetailScreenData('TSK-77');
+
+  assert.equal(model.detail.orchestration.run.runId, 'run-77');
+  assert.equal(model.detail.orchestration.planner.summary.readyCount, 1);
+  assert.equal(model.detail.meta.permissions.canViewOrchestration, true);
+});
+
 test('detail endpoint non-404 failures do not fan out into legacy fallback requests', async () => {
   const calls = [];
   const client = createTaskDetailApiClient({

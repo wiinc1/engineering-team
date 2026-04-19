@@ -1,0 +1,10 @@
+{
+  "title": "Orchestration Visibility",
+  "description": "Dashboard for orchestration detail view usage, payload shape errors, render latency, and hidden-state frequency.",
+  "panels": [
+    { "title": "Request Rate", "metric": "feature_orchestration_visibility_requests_total" },
+    { "title": "Error Rate", "metric": "feature_orchestration_visibility_errors_total" },
+    { "title": "Latency p50/p95/p99", "metric": "feature_orchestration_visibility_duration_seconds" },
+    { "title": "View States", "metric": "feature_orchestration_visibility_view_total" }
+  ]
+}

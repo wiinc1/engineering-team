@@ -1,0 +1,12 @@
+flowchart TD
+  A[POST orchestration] --> B[Load dependency planner]
+  B --> C[Select ready child work]
+  C --> D{Already running?}
+  D -->|Yes| E[Keep existing running item]
+  D -->|No| F[Dispatch to specialist runtime]
+  F --> G{Delegated?}
+  G -->|Yes| H[Persist running item]
+  G -->|No| I[Persist fallback/failed item]
+  E --> J[Return orchestration run]
+  H --> J
+  I --> J
