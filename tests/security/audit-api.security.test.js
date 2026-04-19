@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit/http');
 const { signBrowserAuthCode } = require('../../lib/auth/jwt');
+const { assertSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
 
 function sign(payload, secret, header = { alg: 'HS256', typ: 'JWT' }) {
   const headerPart = Buffer.from(JSON.stringify(header)).toString('base64url');
@@ -49,6 +50,19 @@ function githubSignature(secret, body) {
 }
 
 // Governance note: audit-facing route changes should keep security coverage updated in the same change set.
+
+test('specialist delegation disablement exposes only the canonical feature flag identifier', () => {
+  assert.throws(
+    () => assertSpecialistDelegationEnabled({ ffSpecialistDelegation: 'false' }),
+    (error) => {
+      assert.equal(error.code, 'feature_disabled');
+      assert.match(error.message, /ff_real_specialist_delegation/);
+      assert.doesNotMatch(error.message, /ff_specialist_delegation/);
+      assert.equal(error.details.feature, 'ff_real_specialist_delegation');
+      return true;
+    },
+  );
+});
 
 test('rejects tampered, expired, and issuer-mismatched bearer tokens', async () => {
   await withServer(async ({ baseUrl, secret }) => {
