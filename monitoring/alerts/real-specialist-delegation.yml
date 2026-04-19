@@ -1,0 +1,10 @@
+alerts:
+  - name: RealSpecialistDelegationFallbackSpike
+    expr: real_specialist_delegation_failure_reason_runtime_exec_failed_total > 5
+    for: 10m
+  - name: RealSpecialistDelegationInvalidEvidenceSpike
+    expr: real_specialist_delegation_failure_category_delegation_unverified_total > 3
+    for: 10m
+  - name: RealSpecialistDelegationNoLiveSuccess
+    expr: real_specialist_delegation_live_success_total == 0
+    for: 30m

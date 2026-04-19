@@ -1,9 +1,11 @@
 # Specialist delegation rollout plan
 
 ## Feature flag
-- `FF_SPECIALIST_DELEGATION=true` enables specialist routing and delegation.
-- `FF_SPECIALIST_DELEGATION=false` disables delegation and keeps the coordinator in direct-response mode.
+- `FF_REAL_SPECIALIST_DELEGATION=true` enables specialist routing and delegation.
+- `FF_REAL_SPECIALIST_DELEGATION=false` disables delegation and keeps the coordinator in direct-response mode.
+- `FF_SPECIALIST_DELEGATION` remains a compatibility alias for older environments.
 - `SPECIALIST_DELEGATION_RUNNER` must point at the real runtime bridge command. Without it, the software factory falls back truthfully and does not claim session ownership.
+- `SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS` or `SPECIALIST_DELEGATION_RUNNER_TIMEOUT_MS` controls the runtime bridge timeout. Default: `20000`.
 
 ## Rollout steps
 1. Enable in local/dev and verify `tests/unit/specialist-delegation.test.js` passes.
@@ -17,10 +19,12 @@
 5. Override aliases if your host uses different agent ids with `OPENCLAW_SPECIALIST_MAP='{"engineer":"jr-engineer","qa":"qa-engineer"}'`.
 6. Move an assigned task into `IN_PROGRESS` and confirm the reply only claims runtime ownership when a real `session_id` is returned.
 7. Confirm `observability/specialist-delegation.jsonl` contains `target_specialist`, `actual_agent`, `session_id`, `ownership`, and `delegation_id`.
-8. Confirm `observability/workflow-audit.log` shows structured attempt, success, fallback, and mismatch events.
-9. Run `npm run test:delegation:live-smoke` or `npm run test:delegation:live-smoke:openclaw` in the target environment and confirm it exits successfully only when runtime delegation is truly confirmed and writes `observability/specialist-delegation-smoke.json`.
-10. Enable in staging with log review for fallback volume and attribution mismatches.
-11. Promote to production only after no unexpected fallback or mismatch spikes are observed.
+8. Confirm `observability/specialist-delegation-metrics.json` is updated with both the raw snapshot and flattened Prometheus-safe metrics.
+9. Run `npm run metrics:delegation:push` with `PUSHGATEWAY_URL` set when you want to publish the latest delegation metrics snapshot to your monitoring stack.
+10. Confirm `observability/workflow-audit.log` shows structured attempt, success, fallback, and mismatch events.
+11. Run `npm run test:delegation:live-smoke` or `npm run test:delegation:live-smoke:openclaw` in the target environment and confirm it exits successfully only when runtime delegation is truly confirmed and writes `observability/specialist-delegation-smoke.json`.
+12. Enable in staging with log review for fallback volume and attribution mismatches.
+13. Promote to production only after no unexpected fallback or mismatch spikes are observed.
 
 ## Docker smoke runner
 - `docker compose run --rm delegation-smoke` runs the same live-smoke validator in a container built from this repo.
@@ -66,10 +70,28 @@
 - `no_clear_specialist_owner`: the request did not resolve to a single specialist owner.
 
 ## Metrics to watch
+- runtime bridge invocation count
+- live delegation success count
 - delegation attempts by target agent
 - delegation success counts
 - delegation failure counts
 - delegation failure counts by fallback reason
+- delegation failure counts by user-facing category
 - fallback-to-coordinator count
 - attribution mismatch count
 - delegation latency histogram
+
+## Dashboards + alert links
+- Dashboard: `/monitoring/dashboards/real-specialist-delegation.json`
+- Alerts: `/monitoring/alerts/real-specialist-delegation.yml`
+
+Prometheus-safe metric names are persisted in `observability/specialist-delegation-metrics.json` and include:
+
+- `real_specialist_delegation_runtime_bridge_invocation_total`
+- `real_specialist_delegation_live_success_total`
+- `real_specialist_delegation_fallback_total`
+- `real_specialist_delegation_attribution_mismatch_total`
+- `real_specialist_delegation_failure_reason_<reason>_total`
+- `real_specialist_delegation_failure_category_<category>_total`
+- `real_specialist_delegation_latency_p50_ms`
+- `real_specialist_delegation_latency_p95_ms`

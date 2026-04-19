@@ -1,0 +1,13 @@
+{
+  "title": "Real Specialist Delegation",
+  "description": "Dashboard for runtime bridge invocation volume, live delegation success, fallback counts by reason/category, attribution mismatches, and delegation latency.",
+  "panels": [
+    "real_specialist_delegation_runtime_bridge_invocation_total",
+    "real_specialist_delegation_live_success_total",
+    "real_specialist_delegation_failure_reason_runtime_exec_failed_total",
+    "real_specialist_delegation_failure_category_delegation_unverified_total",
+    "real_specialist_delegation_fallback_total",
+    "real_specialist_delegation_attribution_mismatch_total",
+    "real_specialist_delegation_latency_p95_ms"
+  ]
+}

@@ -7,7 +7,9 @@ const {
   FALLBACK_REASONS,
   FALLBACK_REASON_CATEGORIES,
   buildDelegationFallbackMessage,
+  delegationMetricsPath,
   describeDelegationFallback,
+  flattenDelegationMetrics,
   classifyDelegationFailure,
   classifySpecialistRequest,
   createDelegationMetrics,
@@ -52,6 +54,7 @@ test('delegates through runtime evidence and returns truthful attribution with a
   assert.equal(artifactLines[0].actual_agent, 'engineer');
   assert.match(artifactLines[0].session_id, /^runtime-session-/);
   assert.equal(artifactLines[0].ownership.runtime, 'fixture-openclaw');
+  assert.equal(result.metadata.metricsPath, delegationMetricsPath(baseDir));
 });
 
 test('falls back explicitly when delegation fails and records failure metrics', async () => {
@@ -76,6 +79,7 @@ test('falls back explicitly when delegation fails and records failure metrics', 
   assert.equal(metrics.snapshot().fallbackToCoordinatorCount, 1);
   assert.equal(metrics.snapshot().delegationFailureByAgent.architect, 1);
   assert.equal(metrics.snapshot().delegationFailureByReason.runtime_exec_failed, 1);
+  assert.equal(metrics.snapshot().delegationFailureByCategory.runtime_execution_failed, 1);
 });
 
 test('records attribution mismatches and falls back truthfully', async () => {
@@ -171,5 +175,24 @@ test('buildDelegationFallbackMessage returns safe user-facing copy per failure c
 test('supports feature flag disablement for rollout control', () => {
   assert.equal(isSpecialistDelegationEnabled({ specialistDelegationEnabled: false }), false);
   assert.equal(isSpecialistDelegationEnabled({ ffSpecialistDelegation: 'false' }), false);
+  assert.equal(isSpecialistDelegationEnabled({ ffRealSpecialistDelegation: 'false' }), false);
   assert.equal(isSpecialistDelegationEnabled({ ffSpecialistDelegation: 'true' }), true);
+  assert.equal(isSpecialistDelegationEnabled({ ffRealSpecialistDelegation: 'true' }), true);
+});
+
+test('flattenDelegationMetrics produces pushgateway-safe numeric keys', () => {
+  const flattened = flattenDelegationMetrics({
+    runtimeBridgeInvocationCount: 2,
+    liveDelegationSuccessCount: 1,
+    fallbackToCoordinatorCount: 1,
+    attributionMismatchCount: 0,
+    delegationFailureByReason: { runtime_exec_failed: 1 },
+    delegationFailureByCategory: { runtime_execution_failed: 1 },
+    delegationLatencyHistogram: { count: 2, p50_ms: 50, p95_ms: 100, max_ms: 120 },
+  });
+
+  assert.equal(flattened.real_specialist_delegation_runtime_bridge_invocation_total, 2);
+  assert.equal(flattened.real_specialist_delegation_failure_reason_runtime_exec_failed_total, 1);
+  assert.equal(flattened.real_specialist_delegation_failure_category_runtime_execution_failed_total, 1);
+  assert.equal(flattened.real_specialist_delegation_latency_p95_ms, 100);
 });
