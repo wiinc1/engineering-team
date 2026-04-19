@@ -1,0 +1,6 @@
+flowchart LR
+  UI[Task Detail UI] --> API[Audit HTTP read model]
+  API --> Planner[Dependency planner]
+  Planner --> Relations[audit_task_relationships]
+  Planner --> State[audit_task_current_state]
+  Planner --> UI

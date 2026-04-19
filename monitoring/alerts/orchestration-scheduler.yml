@@ -1,0 +1,9 @@
+alerts:
+  - name: orchestration-scheduler-p1-unavailable
+    severity: P1
+    condition: orchestration_start_or_update_failures_gt_threshold
+    route: pagerduty
+  - name: orchestration-scheduler-p2-fallback-spike
+    severity: P2
+    condition: fallback_to_coordinator_gt_baseline_10m
+    route: slack:#incidents

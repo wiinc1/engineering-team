@@ -606,6 +606,305 @@ test('returns state, relationships, observability summary, and metrics from proj
   });
 });
 
+test('builds dependency-aware planner state in task detail and orchestration reads', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const writeHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-orch', roles: ['contributor'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-PARENT/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-PARENT',
+        payload: {
+          title: 'Parent task',
+          initial_stage: 'BACKLOG',
+          child_task_ids: ['TSK-CHILD-1', 'TSK-CHILD-2'],
+          child_dependencies: {
+            'TSK-CHILD-2': ['TSK-CHILD-1'],
+          },
+        },
+      }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-CHILD-1/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-CHILD-1', payload: { title: 'Child one', task_type: 'engineer', initial_stage: 'DONE' } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-CHILD-1/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.closed', actorType: 'agent', idempotencyKey: 'close:TSK-CHILD-1', payload: {} }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-CHILD-2/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-CHILD-2', payload: { title: 'Child two', task_type: 'qa', initial_stage: 'TODO' } }),
+    });
+
+    const readHeaders = authHeaders(secret, { tenant_id: 'tenant-orch', roles: ['reader'] });
+    const detailRes = await fetch(`${baseUrl}/tasks/TSK-PARENT/detail`, { headers: readHeaders });
+    const detail = await detailRes.json();
+    assert.equal(detailRes.status, 200);
+    assert.equal(detail.meta.permissions.canViewOrchestration, true);
+    assert.equal(detail.orchestration.planner.summary.readyCount, 1);
+    assert.equal(detail.orchestration.planner.summary.doneCount, 1);
+    assert.equal(detail.orchestration.run.summary.readyCount, 1);
+    assert.equal(detail.orchestration.run.items.find((item) => item.id === 'TSK-CHILD-2').dependencyState, 'ready');
+
+    const orchestrationRes = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, { headers: readHeaders });
+    const orchestration = await orchestrationRes.json();
+    assert.equal(orchestrationRes.status, 200);
+    assert.equal(orchestration.run.state, 'not_started');
+    assert.equal(orchestration.planner.readyWork[0].id, 'TSK-CHILD-2');
+  });
+});
+
+test('omits orchestration visibility when the caller lacks relationship permissions', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const writeHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-orch', roles: ['contributor'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-PARENT/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-PARENT:hidden',
+        payload: { title: 'Parent task', initial_stage: 'BACKLOG', child_task_ids: ['TSK-CHILD-1'] },
+      }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-CHILD-1/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-CHILD-1:hidden', payload: { title: 'Hidden child', initial_stage: 'TODO' } }),
+    });
+
+    const response = await fetch(`${baseUrl}/tasks/TSK-PARENT/detail`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-orch', roles: ['stakeholder'] }),
+    });
+    const detail = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(detail.orchestration, null);
+    assert.equal(detail.meta.permissions.canViewOrchestration, false);
+  });
+});
+
+test('starts orchestration runs, persists fallback details, and avoids duplicate dispatch for running work', async () => {
+  const dispatchCalls = [];
+  await withServer(async ({ baseUrl, secret }) => {
+    const writeHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-orch', roles: ['admin'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-PARENT/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-PARENT:run',
+        payload: {
+          title: 'Parent task',
+          initial_stage: 'BACKLOG',
+          child_task_ids: ['TSK-ENG', 'TSK-QA'],
+        },
+      }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-ENG/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ENG', payload: { title: 'Engineer child', task_type: 'engineer', initial_stage: 'TODO' } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-QA/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-QA', payload: { title: 'QA child', task_type: 'qa', initial_stage: 'TODO' } }),
+    });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ idempotencyKey: 'orch:start:1' }),
+    });
+    let body = await response.json();
+    assert.equal(response.status, 202);
+    assert.equal(body.run.summary.runningCount, 1);
+    assert.equal(body.run.summary.failedCount, 1);
+    assert.equal(body.run.items.find((item) => item.id === 'TSK-QA').fallbackReason, 'runtime_exec_failed');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ idempotencyKey: 'orch:start:2' }),
+    });
+    body = await response.json();
+    assert.equal(response.status, 202);
+    assert.equal(body.run.summary.runningCount, 1);
+    assert.equal(dispatchCalls.filter((taskId) => taskId === 'TSK-ENG').length, 1);
+  }, {
+    dispatchWork: async (task) => {
+      dispatchCalls.push(task.id);
+      if (task.id === 'TSK-ENG') {
+        return {
+          mode: 'delegated',
+          agentId: 'engineer',
+          specialist: 'engineer',
+          message: 'Delegated to engineer.',
+          metadata: {},
+        };
+      }
+      return {
+        mode: 'fallback',
+        agentId: 'main',
+        specialist: null,
+        message: 'Coordinator handling this request because runtime delegation for specialist `qa` failed during execution.',
+        metadata: {
+          fallbackReason: 'runtime_exec_failed',
+          userFacingReasonCategory: 'runtime_execution_failed',
+        },
+      };
+    },
+  });
+});
+
+test('records orchestration metrics for detail reads, orchestration reads, starts, and dispatch outcomes', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const writeHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-orch-metrics', roles: ['admin'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-PARENT/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-PARENT:metrics',
+        payload: {
+          title: 'Parent task',
+          initial_stage: 'BACKLOG',
+          child_task_ids: ['TSK-ENG', 'TSK-QA'],
+          child_dependencies: { 'TSK-QA': ['TSK-ENG'] },
+        },
+      }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-ENG/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ENG:metrics', payload: { title: 'Engineer child', task_type: 'engineer', initial_stage: 'TODO' } }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-QA/events`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-QA:metrics', payload: { title: 'QA child', task_type: 'qa', initial_stage: 'TODO' } }),
+    });
+
+    const readHeaders = authHeaders(secret, { tenant_id: 'tenant-orch-metrics', roles: ['reader'] });
+    let response = await fetch(`${baseUrl}/tasks/TSK-PARENT/detail`, { headers: readHeaders });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, { headers: readHeaders });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, {
+      method: 'POST',
+      headers: writeHeaders,
+      body: JSON.stringify({ idempotencyKey: 'orch:metrics:start' }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/metrics`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-orch-metrics', roles: ['admin'] }),
+    });
+    const metrics = await response.text();
+    assert.match(metrics, /feature_dependency_planner_requests_total 2/);
+    assert.match(metrics, /feature_dependency_planner_ready_work_total 2/);
+    assert.match(metrics, /feature_orchestration_visibility_requests_total 2/);
+    assert.match(metrics, /feature_orchestration_visibility_view_total 2/);
+    assert.match(metrics, /feature_orchestration_scheduler_requests_total 1/);
+    assert.match(metrics, /feature_orchestration_scheduler_dispatch_total 1/);
+    assert.match(metrics, /feature_orchestration_scheduler_fallback_total 0/);
+    assert.match(metrics, /feature_orchestration_scheduler_duplicate_skip_total 0/);
+  }, {
+    dispatchWork: async () => ({
+      mode: 'delegated',
+      agentId: 'engineer',
+      specialist: 'engineer',
+      message: 'Delegated to engineer.',
+      metadata: {},
+    }),
+  });
+});
+
+test('restricts orchestration starts to PM and admin roles', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const adminHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { tenant_id: 'tenant-orch-authz', roles: ['admin'] }),
+    };
+
+    await fetch(`${baseUrl}/tasks/TSK-PARENT/events`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-PARENT:authz',
+        payload: {
+          title: 'Parent task',
+          initial_stage: 'BACKLOG',
+          child_task_ids: ['TSK-ENG'],
+        },
+      }),
+    });
+    await fetch(`${baseUrl}/tasks/TSK-ENG/events`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({ eventType: 'task.created', actorType: 'agent', idempotencyKey: 'create:TSK-ENG:authz', payload: { title: 'Engineer child', task_type: 'engineer', initial_stage: 'TODO' } }),
+    });
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-orch-authz', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({ idempotencyKey: 'orch:authz:contributor' }),
+    });
+    assert.equal(response.status, 403);
+    let body = await response.json();
+    assert.equal(body.error.code, 'forbidden');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-PARENT/orchestration`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-orch-authz', roles: ['pm'] }),
+      },
+      body: JSON.stringify({ idempotencyKey: 'orch:authz:pm' }),
+    });
+    assert.equal(response.status, 202);
+  }, {
+    dispatchWork: async () => ({
+      mode: 'delegated',
+      agentId: 'engineer',
+      specialist: 'engineer',
+      message: 'Delegated to engineer.',
+      metadata: {},
+    }),
+  });
+});
+
 test('omits restricted detail sections server-side for low-permission viewers', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const writeHeaders = {

@@ -1,0 +1,9 @@
+alerts:
+  - name: dependency-planner-p1-error-rate
+    severity: P1
+    condition: error_rate_gt_1_percent_5m
+    route: pagerduty
+  - name: dependency-planner-p2-invalid-graph-spike
+    severity: P2
+    condition: invalid_dependency_graphs_gt_baseline_10m
+    route: slack:#incidents

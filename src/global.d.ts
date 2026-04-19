@@ -3,18 +3,14 @@ declare module '*.module.css' {
   export default classes;
 }
 
-declare global {
-  interface Window {
-    __ENGINEERING_TEAM_RUNTIME_CONFIG__?: {
-      oidcDiscoveryUrl?: string,
-      oidcClientId?: string,
-      oidcRedirectUri?: string,
-      oidcScope?: string,
-      oidcLogoutUrl?: string,
-      oidcLogoutRedirectUri?: string,
-      internalAuthBootstrapEnabled?: boolean,
-    };
-  }
+interface Window {
+  __ENGINEERING_TEAM_RUNTIME_CONFIG__?: {
+    oidcDiscoveryUrl?: string,
+    oidcClientId?: string,
+    oidcRedirectUri?: string,
+    oidcScope?: string,
+    oidcLogoutUrl?: string,
+    oidcLogoutRedirectUri?: string,
+    internalAuthBootstrapEnabled?: boolean,
+  };
 }
-
-export {};

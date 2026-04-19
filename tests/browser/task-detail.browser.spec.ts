@@ -80,6 +80,23 @@ const taskDetailPayload = {
     auditLogPageInfo: { limit: 25, next_cursor: null, has_more: false },
   },
   telemetry: { availability: 'available', lastUpdatedAt: '2026-04-01T15:00:00.000Z', summary: {}, emptyStateReason: null, access: { restricted: false, omission_applied: false, omitted_fields: [] } },
+  orchestration: {
+    planner: {
+      summary: { total: 3, readyCount: 1, blockedCount: 1, inProgressCount: 0, doneCount: 1, invalidCount: 0 },
+      readyWork: [{ id: 'TSK-44', title: 'Run QA verification', taskType: 'qa', dependsOn: [] }],
+      items: [],
+    },
+    run: {
+      runId: 'run-browser-1',
+      state: 'active',
+      summary: { total: 3, readyCount: 1, runningCount: 1, blockedCount: 1, failedCount: 0, completedCount: 1 },
+      items: [
+        { id: 'TSK-43', title: 'Completed child', taskType: 'engineer', state: 'completed', dependencyState: 'done', dependsOn: [], blockers: [] },
+        { id: 'TSK-44', title: 'Run QA verification', taskType: 'qa', state: 'running', dependencyState: 'ready', dependsOn: [], blockers: [], specialist: 'qa', actualAgent: 'qa' },
+        { id: 'TSK-45', title: 'Blocked handoff', taskType: 'qa', state: 'blocked', dependencyState: 'blocked', dependsOn: [{ id: 'TSK-43', title: 'Completed child' }], blockers: [{ reason: 'Blocked by child task TSK-43.' }] },
+      ],
+    },
+  },
   meta: {
     permissions: {
       canViewComments: true,
@@ -87,6 +104,7 @@ const taskDetailPayload = {
       canViewTelemetry: true,
       canViewChildTasks: true,
       canViewLinkedPrMetadata: true,
+      canViewOrchestration: true,
     },
     freshness: { status: 'fresh', lastUpdatedAt: '2026-04-01T15:00:00.000Z' },
   },
@@ -294,6 +312,35 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByLabel('Recommendation for human')).toHaveValue('Decide whether to cancel the release or reopen implementation.');
     await expect(page.getByLabel('Backtrack rationale')).toHaveValue('An unresolved child task is still blocking closure.');
     await expect(page.getByLabel('Human decision', { exact: true })).toHaveCount(0);
+  });
+
+  test('renders orchestration visibility with summary counts and blocker reasons', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openRoute(page, '/tasks/TSK-42');
+
+    await expect(page.getByRole('heading', { name: 'Orchestration visibility' })).toBeVisible();
+    await expect(page.getByText('Run QA verification')).toBeVisible();
+    await expect(page.getByText('Blocked by child task TSK-43.')).toBeVisible();
+    await expect(page.getByText('Current run state: active.')).toBeVisible();
+  });
+
+  test('renders the hidden orchestration state when server-side permissions omit the section', async ({ page }) => {
+    await installApiMocks(page, {
+      detailPayload: {
+        ...taskDetailPayload,
+        orchestration: null,
+        meta: {
+          ...taskDetailPayload.meta,
+          permissions: {
+            ...taskDetailPayload.meta.permissions,
+            canViewOrchestration: false,
+          },
+        },
+      },
+    });
+
+    await openRoute(page, '/tasks/TSK-42');
+    await expect(page.getByText('Dependency planning and orchestration details are hidden for this session.')).toBeVisible();
   });
 
   test('supports keyboard-first navigation to blockers and activity tabs on mobile', async ({ page }) => {

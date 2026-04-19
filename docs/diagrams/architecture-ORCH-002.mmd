@@ -1,0 +1,6 @@
+flowchart LR
+  UI[Coordinator / Task Detail] --> API[Audit HTTP orchestration route]
+  API --> Planner[Dependency planner]
+  API --> Scheduler[Orchestration scheduler]
+  Scheduler --> Runtime[Specialist delegation bridge]
+  Scheduler --> Relations[audit_task_relationships.orchestration_state]

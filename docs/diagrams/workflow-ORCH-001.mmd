@@ -1,0 +1,8 @@
+flowchart TD
+  A[Parent task detail requested] --> B[Load child-task relationships]
+  B --> C[Normalize child dependency graph]
+  C --> D{Graph valid?}
+  D -->|No| E[Emit invalid blocker state]
+  D -->|Yes| F[Compute child dependency states]
+  F --> G[Return planner summary and readyWork]
+  E --> G

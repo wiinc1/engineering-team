@@ -2312,18 +2312,119 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     fireEvent.change(screen.getByLabelText('Re-tier rationale'), { target: { value: 'Cross-service complexity now requires senior ownership.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Update engineer tier' }));
-    await waitFor(() => {
-      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Engineer tier updated.'))).toBe(true);
-    });
+    await screen.findByText('Engineer tier updated.');
 
     fireEvent.change(screen.getByLabelText('Reassignment reason'), { target: { value: 'Two check-in windows were missed.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Reassign task' }));
-    await waitFor(() => {
-      expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Task reassigned and inactivity review created.'))).toBe(true);
-    });
+    await screen.findByText('Task reassigned and inactivity review created.');
 
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/retier'))).toBe(true);
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/reassignment'))).toBe(true);
+  });
+
+  it('renders orchestration visibility counts and work-item reasons from the detail payload', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        orchestration: {
+          planner: {
+            summary: {
+              total: 3,
+              readyCount: 1,
+              blockedCount: 1,
+              inProgressCount: 0,
+              doneCount: 1,
+              invalidCount: 0,
+            },
+            readyWork: [
+              {
+                id: 'TSK-CHILD-2',
+                title: 'Ready work item',
+                taskType: 'qa',
+                dependsOn: [],
+              },
+            ],
+            items: [],
+          },
+          run: {
+            runId: 'run-1',
+            state: 'active',
+            summary: {
+              total: 3,
+              readyCount: 1,
+              runningCount: 0,
+              blockedCount: 1,
+              failedCount: 0,
+              completedCount: 1,
+            },
+            items: [
+              {
+                id: 'TSK-CHILD-1',
+                title: 'Completed child',
+                taskType: 'engineer',
+                state: 'completed',
+                dependencyState: 'done',
+                dependsOn: [],
+                blockers: [],
+                specialist: 'engineer',
+                actualAgent: 'engineer',
+              },
+              {
+                id: 'TSK-CHILD-2',
+                title: 'Ready work item',
+                taskType: 'qa',
+                state: 'ready',
+                dependencyState: 'ready',
+                dependsOn: [],
+                blockers: [],
+                specialist: null,
+                actualAgent: null,
+              },
+              {
+                id: 'TSK-CHILD-3',
+                title: 'Blocked child',
+                taskType: 'qa',
+                state: 'blocked',
+                dependencyState: 'blocked',
+                dependsOn: [{ id: 'TSK-CHILD-1', title: 'Completed child' }],
+                blockers: [{ reason: 'Blocked by child task TSK-CHILD-1.' }],
+                specialist: null,
+                actualAgent: null,
+              },
+            ],
+          },
+        },
+        meta: {
+          permissions: {
+            canViewOrchestration: true,
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('heading', { name: 'Orchestration visibility' })).toBeInTheDocument();
+    expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
+    expect(screen.getByText('Completed child')).toBeInTheDocument();
+    expect(screen.getByText('Blocked by child task TSK-CHILD-1.')).toBeInTheDocument();
+    expect(screen.getByText('Depends on TSK-CHILD-1')).toBeInTheDocument();
+  });
+
+  it('renders the restricted orchestration empty state when orchestration details are omitted server-side', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        orchestration: null,
+        meta: {
+          permissions: {
+            canViewOrchestration: false,
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByText('Dependency planning and orchestration details are hidden for this session.')).toBeInTheDocument();
   });
 
   it('renders a dedicated governance reviews surface and keeps governance tasks out of the delivery list', async () => {

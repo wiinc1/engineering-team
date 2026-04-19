@@ -1,0 +1,9 @@
+alerts:
+  - name: orchestration-visibility-p1-render-failures
+    severity: P1
+    condition: task_detail_orchestration_render_failures_gt_threshold
+    route: pagerduty
+  - name: orchestration-visibility-p2-permission-mismatch
+    severity: P2
+    condition: orchestration_permission_omission_mismatch_gt_baseline_10m
+    route: slack:#incidents

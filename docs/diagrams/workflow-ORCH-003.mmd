@@ -1,0 +1,7 @@
+flowchart TD
+  A[Task detail opened] --> B[Fetch detail or orchestration view]
+  B --> C[Render summary counts]
+  C --> D[Render work-item table]
+  D --> E[Show blockers, fallback reasons, and dependency status]
+  B --> F{Permission to view?}
+  F -->|No| G[Render hidden-state message]
