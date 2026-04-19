@@ -23,6 +23,7 @@ test('integration: runtime-backed delegation persists a success artifact that ma
 
   const result = await coordinator.handleRequest('Please implement this fix', { coordinatorAgent: 'main' });
   const artifact = readArtifacts(baseDir).at(-1);
+  const metrics = JSON.parse(fs.readFileSync(path.join(baseDir, 'observability', 'specialist-delegation-metrics.json'), 'utf8'));
 
   assert.equal(result.mode, 'delegated');
   assert.equal(artifact.event, 'specialist.delegation.completed');
@@ -30,6 +31,7 @@ test('integration: runtime-backed delegation persists a success artifact that ma
   assert.equal(artifact.actual_agent, result.agentId);
   assert.equal(artifact.session_id, result.metadata.sessionId);
   assert.deepEqual(artifact.ownership, result.metadata.ownership);
+  assert.equal(metrics.prometheus.real_specialist_delegation_live_success_total, 1);
 });
 
 test('integration: malformed runtime output is rejected and recorded as delegation_unverified', async () => {
@@ -44,6 +46,7 @@ test('integration: malformed runtime output is rejected and recorded as delegati
 
   const result = await coordinator.handleRequest('Please implement this fix', { coordinatorAgent: 'main' });
   const artifact = readArtifacts(baseDir).at(-1);
+  const metrics = JSON.parse(fs.readFileSync(path.join(baseDir, 'observability', 'specialist-delegation-metrics.json'), 'utf8'));
 
   assert.equal(result.mode, 'fallback');
   assert.equal(result.metadata.fallbackReason, 'invalid_json');
@@ -54,6 +57,7 @@ test('integration: malformed runtime output is rejected and recorded as delegati
   assert.equal(artifact.fallback_reason, 'invalid_json');
   assert.equal(artifact.user_facing_reason_category, 'delegation_unverified');
   assert.equal(result.attribution.delegated, false);
+  assert.equal(metrics.prometheus.real_specialist_delegation_failure_reason_invalid_json_total, 1);
 });
 
 test('integration: unsupported task types fail closed without specialist ownership claims', async () => {

@@ -25,3 +25,18 @@ test('delegation fallback messages stay sanitized when runtime execution fails',
   assert.equal(result.metadata.fallbackReason, 'runtime_exec_failed');
   assert.equal(result.metadata.userFacingReasonCategory, 'runtime_execution_failed');
 });
+
+test('canonical specialist delegation disablement does not leak the legacy flag identifier', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-security-disabled-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    ffSpecialistDelegation: 'false',
+  });
+
+  const result = await coordinator.handleRequest('Please implement this feature', { coordinatorAgent: 'main' });
+
+  assert.equal(result.mode, 'coordinator');
+  assert.equal(result.metadata.fallbackReason, 'feature_disabled');
+  assert.match(result.message, /ff_real_specialist_delegation/i);
+  assert.doesNotMatch(result.message, /ff_specialist_delegation/i);
+});

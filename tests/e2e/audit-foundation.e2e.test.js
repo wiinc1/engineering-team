@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit');
 const { createProjectionWorker } = require('../../lib/audit/workers');
+const { assertSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
 
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -215,6 +216,18 @@ test('must-have: workflow history remains separate from observability telemetry 
     assert.equal(Array.isArray(summary.correlation.approved_correlation_ids), true);
     assert.equal(Object.hasOwn(summary, 'metrics'), false);
   });
+});
+
+test('must-have: canonical specialist delegation disablement produces the stable rollout error contract', () => {
+  assert.throws(
+    () => assertSpecialistDelegationEnabled({ ffRealSpecialistDelegation: 'false' }),
+    (error) => {
+      assert.equal(error.code, 'feature_disabled');
+      assert.equal(error.statusCode, 503);
+      assert.equal(error.details.feature, 'ff_real_specialist_delegation');
+      return true;
+    },
+  );
 });
 
 test('must-have: projection freshness is immediate on the default file-backed sync projection path', async () => {

@@ -41,6 +41,23 @@ test('e2e: runtime misconfiguration falls back truthfully without specialist own
   assert.equal(result.attribution.delegated, false);
 });
 
+test('e2e: canonical specialist delegation kill switch disables runtime routing before execution starts', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-e2e-disabled-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    ffRealSpecialistDelegation: 'false',
+    delegationRunnerCommand: `node ${runtimeRunnerPath}`,
+  });
+
+  const result = await coordinator.handleRequest('Please implement this bug fix', { coordinatorAgent: 'main' });
+
+  assert.equal(result.mode, 'coordinator');
+  assert.equal(result.metadata.fallbackReason, 'feature_disabled');
+  assert.equal(result.metadata.userFacingReasonCategory, 'delegation_disabled');
+  assert.match(result.message, /ff_real_specialist_delegation/i);
+  assert.equal(result.attribution.delegated, false);
+});
+
 test('e2e: malformed runtime output is rejected and failure artifacts record the verification outcome', async () => {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-e2e-invalid-json-'));
   const coordinator = createSpecialistCoordinator({

@@ -109,6 +109,7 @@ See `lib/audit/event-types.js`. The store handles the declared workflow event ty
 
 ## Runtime configuration
 - `FF_AUDIT_FOUNDATION=false` — hard-disable the slice at runtime
+- Shared feature-flag parsing in `lib/audit/feature-flags.js` also backs specialist delegation rollout control; prefer `FF_REAL_SPECIALIST_DELEGATION` as the canonical operator-facing name, while `FF_SPECIALIST_DELEGATION` remains a legacy-compatible alias.
 - `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; if omitted, runtime prefers `postgres` when `DATABASE_URL` is present and otherwise falls back to `file`
 - `ALLOW_LEGACY_HEADERS=true` — permit legacy non-JWT auth fallback
 - `DATABASE_URL=postgres://...` — required for PostgreSQL backend; in production this should be the Supabase Postgres connection string

@@ -16,6 +16,22 @@ Behavior:
 - The same routes return `503 feature_disabled` when `FF_ASSIGN_AI_AGENT_TO_TASK_KILLSWITCH` is enabled.
 - `GET /health/task-assignment` and `GET /api/internal/smoke-test/task-assignment` expose operational readiness for the assignment surface.
 
+## Specialist Delegation
+
+- `FF_REAL_SPECIALIST_DELEGATION`
+  Preferred rollout flag for runtime-backed specialist delegation.
+  Default: enabled when unset.
+
+- `FF_SPECIALIST_DELEGATION`
+  Legacy compatibility alias for specialist delegation rollout.
+  Default: enabled when unset.
+
+Behavior:
+
+- The runtime-backed specialist delegation path treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical flag and still honors `FF_SPECIALIST_DELEGATION` for compatibility.
+- Disabling the flag fails closed to coordinator handling and does not claim specialist ownership.
+- `SPECIALIST_DELEGATION_RUNNER` must resolve to the real runtime bridge command before delegated ownership can be emitted.
+
 ## Orchestration
 
 - `FF_DEPENDENCY_PLANNER`

@@ -8,6 +8,7 @@ const { spawnSync } = require('child_process');
 const repoRoot = path.join(__dirname, '..', '..');
 const scriptPath = path.join(repoRoot, 'scripts', 'validate-specialist-runtime.js');
 const runtimeRunnerPath = path.join(repoRoot, 'tests', 'fixtures', 'specialist-runtime-runner.js');
+const slowRunnerPath = path.join(repoRoot, 'tests', 'fixtures', 'specialist-runtime-slow-runner.js');
 
 function runValidator(baseDir, env = {}, args = ['Please implement this fix']) {
   return spawnSync('node', [scriptPath, ...args], {
@@ -54,6 +55,23 @@ test('validate-specialist-runtime fails when the runtime output is malformed', (
   assert.equal(report.mode, 'fallback');
   assert.equal(report.metadata.errorCode, 'SPECIALIST_RUNTIME_INVALID_JSON');
   assert.equal(report.metadata.fallbackReason, 'invalid_json');
+});
+
+test('validate-specialist-runtime fails when the runtime bridge times out', () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-runtime-smoke-timeout-'));
+  const result = runValidator(baseDir, {
+    SPECIALIST_DELEGATION_RUNNER: `node ${slowRunnerPath}`,
+    SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS: '25',
+    FIXTURE_RUNTIME_DELAY_MS: '250',
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Live runtime delegation was not confirmed/i);
+
+  const report = readSmokeReport(baseDir);
+  assert.equal(report.mode, 'fallback');
+  assert.equal(report.metadata.errorCode, 'SPECIALIST_RUNTIME_TIMEOUT');
+  assert.equal(report.metadata.fallbackReason, 'runtime_exec_failed');
 });
 
 test('validate-specialist-runtime passes only when delegated runtime evidence is present', () => {
