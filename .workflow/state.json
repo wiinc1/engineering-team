@@ -1,7 +1,7 @@
 {
-  "storyId": "SF-010",
-  "issueNumber": 15,
-  "branch": "feature/SF-010-reassignment-ghosting-workflow",
+  "storyId": "SF-045",
+  "issueNumber": 46,
+  "branch": "feature/SF-043-specific-delegation-fallback-reasons",
   "status": {
     "phase0": "completed",
     "design": "completed",
@@ -9,36 +9,23 @@
     "testing": "completed",
     "security": "completed",
     "customerReview": "completed",
-    "closeout": "blocked"
+    "closeout": "completed"
   },
   "artifacts": {
-    "implementation": {
-      "files": [
-        "lib/audit/http.js",
-        "lib/audit/core.js",
-        "lib/audit/event-types.js",
-        "lib/audit/feature-flags.js",
-        "lib/audit/store.js",
-        "lib/audit/postgres.js",
-        "src/app/task-owner.mjs",
-        "src/features/task-detail/adapter.js",
-        "src/features/task-detail/adapter.browser.js",
-        "src/app/App.jsx",
-        "tests/unit/audit-api.test.js",
-        "tests/unit/task-detail-adapter.test.js",
-        "tests/unit/role-inbox-routing.test.js"
-      ]
-    },
-    "design": "docs/design/SF-010-design.md",
-    "verification": "docs/reports/SF-010-verification.md",
-    "testReport": "docs/reports/test_report_SF-010.md",
-    "securityAudit": "docs/reports/security_audit_SF-010.md",
-    "customerReview": "docs/reports/customer_review_SF-010.md",
-    "closeoutReview": "docs/reports/SF-010-review.md",
-    "fullSuiteReport": "docs/test-reports/test-suite-report-SF-010.md"
+    "design": "docs/design/SF-045-design.md",
+    "verification": "docs/reports/SF-045-verification.md",
+    "testReport": "docs/reports/test_report_SF-045.md",
+    "securityAudit": "docs/reports/security_audit_SF-045.md",
+    "customerReview": "docs/reports/customer_review_SF-045.md",
+    "closeoutReview": "docs/reports/SF-045-review.md",
+    "fullSuiteReport": "docs/test-reports/test-suite-report-SF-045.md",
+    "smokeArtifact": "observability/specialist-delegation-smoke.json"
   },
   "notes": [
-    "Requested workflow scripts were absent from the repository and were executed manually where possible.",
-    "Status-column movement, scripted closeout validation, preview DB reset, finish-task automation, and deployment verification scripts are not present in this checkout."
+    "The requested workflow wrappers are absent from this checkout: npm run task:pull, npm run ag:workflow ..., npm run workflow:discover ..., .agent/skills/test-coverage-gap-analysis/..., and ./scripts/move-task-column.sh were executed manually or could not be run.",
+    "Issue #46 was assigned via GitHub CLI and assessed on top of the active feature/SF-043-specific-delegation-fallback-reasons branch because prior story work remains uncommitted in the working tree.",
+    "Repository-local OpenClaw bridge wiring now exists at scripts/openclaw-specialist-runner.js and maps specialist ids onto the configured host agents.",
+    "Live smoke validation succeeded on 2026-04-19 via SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js', producing delegated runtime evidence with runtimeAgentId sr-engineer and sessionId 0b7c8563-1734-4f1d-be46-bdca216ed2b7.",
+    "The environment prerequisite is now satisfied through the repo-local bridge command rather than a pre-exported shell variable, and observability artifacts capture the successful delegated run."
   ]
 }

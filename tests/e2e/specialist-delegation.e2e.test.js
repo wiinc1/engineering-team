@@ -40,3 +40,29 @@ test('e2e: runtime misconfiguration falls back truthfully without specialist own
   assert.match(result.message, /not configured or not available/i);
   assert.equal(result.attribution.delegated, false);
 });
+
+test('e2e: malformed runtime output is rejected and failure artifacts record the verification outcome', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-e2e-invalid-json-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegationRunnerCommand: `node ${runtimeRunnerPath}`,
+    runnerEnv: {
+      FIXTURE_RUNTIME_MODE: 'invalid-json',
+    },
+  });
+
+  const result = await coordinator.handleRequest('Please implement this bug fix', { coordinatorAgent: 'main' });
+
+  assert.equal(result.mode, 'fallback');
+  assert.equal(result.metadata.fallbackReason, 'invalid_json');
+  assert.equal(result.metadata.userFacingReasonCategory, 'delegation_unverified');
+  assert.match(result.message, /could not be verified/i);
+  assert.equal(result.attribution.delegated, false);
+
+  const artifactPath = path.join(baseDir, 'observability', 'specialist-delegation.jsonl');
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8').trim().split('\n').at(-1));
+  assert.equal(artifact.event, 'specialist.delegation.failed');
+  assert.equal(artifact.error_code, 'SPECIALIST_RUNTIME_INVALID_JSON');
+  assert.equal(artifact.fallback_reason, 'invalid_json');
+  assert.equal(artifact.user_facing_reason_category, 'delegation_unverified');
+});

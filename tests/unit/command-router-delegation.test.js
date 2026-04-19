@@ -57,7 +57,7 @@ test('taskMove does not claim runtime ownership for unsupported task types', asy
   });
 
   assert.match(reply, /Runtime delegation not confirmed/);
-  assert.match(reply, /does not map to a supported runtime specialist/);
+  assert.match(reply, /unsupported for runtime delegation/i);
 });
 
 test('taskMove reports unverifiable runtime output without leaking raw runtime details', async () => {

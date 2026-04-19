@@ -23,4 +23,5 @@ test('delegation fallback messages stay sanitized when runtime execution fails',
   assert.doesNotMatch(result.message, /secret token/i);
   assert.doesNotMatch(result.message, /\/usr\/local\/bin\/runtime/i);
   assert.equal(result.metadata.fallbackReason, 'runtime_exec_failed');
+  assert.equal(result.metadata.userFacingReasonCategory, 'runtime_execution_failed');
 });
