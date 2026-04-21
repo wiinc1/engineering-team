@@ -1,0 +1,147 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`auth sign-in visual states > matches the configured enterprise OIDC state 1`] = `
+<section
+  aria-label="Sign-in screen"
+  class="auth-card"
+>
+  <div
+    class="auth-card__intro"
+  >
+    <p
+      class="eyebrow"
+    >
+      Authenticated browser shell for US-002
+    </p>
+    <h1>
+      Sign in to the workflow app
+    </h1>
+    <p
+      class="lede"
+    >
+      Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.
+    </p>
+  </div>
+  <div
+    class="session-form__actions"
+  >
+    <button
+      type="button"
+    >
+      Continue with enterprise sign-in
+    </button>
+  </div>
+</section>
+`;
+
+exports[`auth sign-in visual states > matches the local internal fallback state 1`] = `
+<section
+  aria-label="Sign-in screen"
+  class="auth-card"
+>
+  <div
+    class="auth-card__intro"
+  >
+    <p
+      class="eyebrow"
+    >
+      Authenticated browser shell for US-002
+    </p>
+    <h1>
+      Sign in to the workflow app
+    </h1>
+    <p
+      class="lede"
+    >
+      Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.
+    </p>
+  </div>
+  <div
+    class="session-form__actions"
+  >
+    <button
+      disabled=""
+      type="button"
+    >
+      Continue with enterprise sign-in
+    </button>
+  </div>
+  <p
+    class="auth-status auth-status--error"
+    role="alert"
+  >
+    This deployment is missing enterprise auth configuration. Contact the operator responsible for production identity-provider settings.
+  </p>
+  <form
+    class="session-form auth-form"
+  >
+    <label>
+      Trusted auth code
+      <input
+        name="authCode"
+        placeholder="Paste the signed browser auth code"
+        value=""
+      />
+    </label>
+    <label>
+      API base URL
+      <input
+        name="apiBaseUrl"
+        placeholder="same-origin"
+        value=""
+      />
+    </label>
+    <div
+      class="session-form__actions"
+    >
+      <button
+        class="button-secondary"
+        type="submit"
+      >
+        Use internal bootstrap fallback
+      </button>
+    </div>
+  </form>
+</section>
+`;
+
+exports[`auth sign-in visual states > matches the no-login-path configuration error state 1`] = `
+<section
+  aria-label="Sign-in screen"
+  class="auth-card"
+>
+  <div
+    class="auth-card__intro"
+  >
+    <p
+      class="eyebrow"
+    >
+      Authenticated browser shell for US-002
+    </p>
+    <h1>
+      Sign in to the workflow app
+    </h1>
+    <p
+      class="lede"
+    >
+      Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.
+    </p>
+  </div>
+  <div
+    class="session-form__actions"
+  >
+    <button
+      disabled=""
+      type="button"
+    >
+      Continue with enterprise sign-in
+    </button>
+  </div>
+  <p
+    class="auth-status auth-status--error"
+    role="alert"
+  >
+    This deployment is missing enterprise auth configuration. Contact the operator responsible for production identity-provider settings.
+  </p>
+</section>
+`;

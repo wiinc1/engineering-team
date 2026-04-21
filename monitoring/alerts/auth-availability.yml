@@ -1,0 +1,19 @@
+alerts:
+  - name: auth-no-login-path-after-deploy
+    severity: P0
+    condition: auth_login_path_available == 0
+    threshold: immediate_after_deploy
+    route: pagerduty
+    redaction: deployment_state_only_no_sensitive_material
+  - name: auth-callback-failure-burst
+    severity: P1
+    condition: auth_callback_failures_10m >= 5
+    threshold: 5_failures_in_10m
+    route: slack:#incidents
+    redaction: counts_and_error_classifications_only
+  - name: auth-callback-failure-rate
+    severity: P1
+    condition: auth_callback_failure_rate_10m > 0.25 AND auth_callback_attempts_10m >= 10
+    threshold: gt_25_percent_over_10m_min_10_attempts
+    route: slack:#incidents
+    redaction: counts_and_error_classifications_only

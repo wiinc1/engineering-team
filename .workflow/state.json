@@ -1,7 +1,7 @@
 {
-  "storyId": "SF-045",
-  "issueNumber": 46,
-  "branch": "feature/SF-043-specific-delegation-fallback-reasons",
+  "storyId": "ISSUE-89",
+  "issueNumber": 89,
+  "branch": "feature/ISSUE-89-login-auth-config-validation",
   "status": {
     "phase0": "completed",
     "design": "completed",
@@ -9,23 +9,26 @@
     "testing": "completed",
     "security": "completed",
     "customerReview": "completed",
-    "closeout": "completed"
+    "closeout": "completed",
+    "productionRemediation": "pending"
   },
   "artifacts": {
-    "design": "docs/design/SF-045-design.md",
-    "verification": "docs/reports/SF-045-verification.md",
-    "testReport": "docs/reports/test_report_SF-045.md",
-    "securityAudit": "docs/reports/security_audit_SF-045.md",
-    "customerReview": "docs/reports/customer_review_SF-045.md",
-    "closeoutReview": "docs/reports/SF-045-review.md",
-    "fullSuiteReport": "docs/test-reports/test-suite-report-SF-045.md",
-    "smokeArtifact": "observability/specialist-delegation-smoke.json"
+    "design": "docs/design/ISSUE-89-design.md",
+    "verification": "docs/reports/ISSUE-89-verification.md",
+    "testReport": "docs/reports/test_report_ISSUE-89.md",
+    "securityAudit": "docs/reports/security_audit_ISSUE-89.md",
+    "customerReview": "docs/reports/customer_review_ISSUE-89.md",
+    "closeoutReview": "docs/reports/ISSUE-89-review.md",
+    "workflowDiagram": "docs/diagrams/workflow-ISSUE-89-login-auth-config.mmd",
+    "diagnosticsArtifact": "observability/auth-config-diagnostics.json"
   },
   "notes": [
-    "The requested workflow wrappers are absent from this checkout: npm run task:pull, npm run ag:workflow ..., npm run workflow:discover ..., .agent/skills/test-coverage-gap-analysis/..., and ./scripts/move-task-column.sh were executed manually or could not be run.",
-    "Issue #46 was assigned via GitHub CLI and assessed on top of the active feature/SF-043-specific-delegation-fallback-reasons branch because prior story work remains uncommitted in the working tree.",
-    "Repository-local OpenClaw bridge wiring now exists at scripts/openclaw-specialist-runner.js and maps specialist ids onto the configured host agents.",
-    "Live smoke validation succeeded on 2026-04-19 via SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js', producing delegated runtime evidence with runtimeAgentId sr-engineer and sessionId 0b7c8563-1734-4f1d-be46-bdca216ed2b7.",
-    "The environment prerequisite is now satisfied through the repo-local bridge command rather than a pre-exported shell variable, and observability artifacts capture the successful delegated run."
+    "Requested workflow prompt .agent/workflows/development/00-development-workflow.md is absent in this checkout.",
+    "Canonical workflow scripts workflow:start, workflow:execute, workflow:ship, workflow:status, workflow:watch-pr, task:pull, ag:workflow, and workflow:discover are absent in package.json, so equivalent evidence is recorded manually.",
+    "Issue #89 was assigned via GitHub CLI and branch feature/ISSUE-89-login-auth-config-validation was created from main.",
+    "Issue #89 already has production-remediation-pending, auth, and bug labels; no project items were returned by GitHub CLI.",
+    "External production remediation evidence remains pending: Vercel env names, IdP redirect allowlist, redeploy inspection, production OIDC smoke, post-login data check, monitoring evidence, and rollback evidence.",
+    "Local verification passed on 2026-04-21: node --test tests/unit/auth-config-check.test.js, npm run test:unit, npm run test:security, node scripts/run-playwright.js tests/browser/auth-shell.browser.spec.ts, npm run lint, npm run typecheck, and npm run build with production OIDC/JWKS env vars.",
+    "The requested full-test-suite runner .agent/skills/full-test-suite-runner/scripts/run-all-tests.mjs is absent; the available equivalent npm test scripts were run instead."
   ]
 }

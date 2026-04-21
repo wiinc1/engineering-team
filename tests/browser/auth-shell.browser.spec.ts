@@ -148,6 +148,21 @@ test.describe('authenticated browser app shell', () => {
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
   });
 
+  test('shows a safe no-login-path configuration state when preview auth is unavailable', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        internalAuthBootstrapEnabled: false,
+      };
+    });
+
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: 'Sign in to the workflow app' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeDisabled();
+    await expect(page.getByRole('alert')).toContainText('This deployment is missing enterprise auth configuration.');
+    await expect(page.getByLabel('Trusted auth code')).toHaveCount(0);
+  });
+
   test('routes an expired session back to sign-in with recovery copy', async ({ page }) => {
     await page.addInitScript(() => {
       const claims = {

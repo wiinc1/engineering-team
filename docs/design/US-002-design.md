@@ -82,3 +82,4 @@
 - `/inbox/human` is a protected route in the authenticated shell and now renders governed close-review decision cards for cancellation recommendations and exceptional-dispute escalations
 - `/inbox/human` is intentionally limited to decision-ready close-governance items; task detail may still show governed close review context while stakeholder actions remain hidden until backend readiness is explicit
 - protected `/tasks/{taskId}` sessions can now surface the SRE-only anomaly-child-task form on task detail, so browser-shell auth coverage must continue to protect that route restoration path as detail capabilities expand
+- ISSUE-89 extends this shell with production auth configuration validation and a safe no-login-path state for preview or failed-validation deployments where no enterprise OIDC path is available.

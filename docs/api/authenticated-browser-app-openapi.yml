@@ -9,6 +9,7 @@ info:
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
     Production sign-in uses a hosted OIDC Authorization Code + PKCE flow with the callback handled at `/auth/callback`.
     The internal browser bootstrap endpoint remains a compatibility fallback for local/internal environments only.
+    Preview environments without an approved auth strategy may render a no-login-path configuration state, while production remains OIDC-only.
 paths:
   /sign-in:
     get:
@@ -16,6 +17,7 @@ paths:
       description: |
         The SPA renders the sign-in screen and starts hosted OIDC Authorization Code + PKCE when the user selects the enterprise sign-in action.
         The route also accepts `next` and `reason` query parameters for protected-route restore and recovery messaging.
+        When no configured login path is available, the SPA renders a safe deployment-configuration error without raw env values, provider URLs, client IDs, tokens, authorization codes, or secrets.
       parameters:
         - in: query
           name: next

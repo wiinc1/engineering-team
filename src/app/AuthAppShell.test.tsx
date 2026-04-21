@@ -160,6 +160,21 @@ describe('Authenticated browser app shell', () => {
     expect(axeResults.violations).toEqual([]);
   });
 
+  it('renders safe deployment auth configuration copy when no login path is available', async () => {
+    installAuthFetchMock();
+    (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+      internalAuthBootstrapEnabled: false,
+    };
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(screen.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeDisabled();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('This deployment is missing enterprise auth configuration.');
+    expect(alert.textContent || '').not.toMatch(/VITE_|AUTH_|https?:\/\/|client/i);
+    expect(screen.queryByLabelText('Trusted auth code')).not.toBeInTheDocument();
+  });
+
   it('signs in and restores a deep-linked board route', async () => {
     installAuthFetchMock();
     window.history.pushState({}, '', '/sign-in?next=%2Ftasks%3Fview%3Dboard');

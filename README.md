@@ -105,6 +105,7 @@ Run it locally:
 - `npm run dev`
 - open `http://127.0.0.1:5173/`
 - configure `VITE_OIDC_DISCOVERY_URL` and `VITE_OIDC_CLIENT_ID` for enterprise sign-in, or keep `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true` to use the internal bootstrap fallback in local/internal environments
+- validate production auth before release with `npm run auth:config:check`; for local fallback validation use `node scripts/check-auth-config.js --target development`
 
 Point the browser app at the API:
 - same-origin default: leave `VITE_TASK_API_BASE_URL` empty
@@ -126,6 +127,9 @@ Point the browser app at the API:
 - `vercel.json` rewrites `/backend/*` to the Vercel API functions and falls back non-API browser routes to `index.html`.
 - Required backend env vars in Vercel: `DATABASE_URL`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`.
 - Keep `AUTH_JWT_SECRET` and `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false` only if you still need compatibility tokens for a non-production fallback path; the default production browser flow should use provider-issued tokens directly.
+- Production `npm run build` runs the auth gate before Vite emits deployable assets and writes `observability/auth-config-diagnostics.json` with boolean presence status only.
+- Validate Vercel production env names with `npm run auth:config:check:vercel`; the script uses name-only `vercel env ls production --format json` output and never pulls or prints values.
+- After Vercel or IdP changes, trigger a new production deployment and attach deployment URL or ID, commit, Ready status, build timestamp, redirect URI allowlist evidence, production OIDC smoke result, post-login data check, monitoring evidence, and rollback evidence to the issue or PR.
 
 Build/package the thin browser app:
 - `npm run build:browser`

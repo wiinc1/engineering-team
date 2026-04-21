@@ -1831,7 +1831,7 @@ export function App() {
 
               {!authRuntimeConfig.isOidcConfigured ? (
                 <p className="auth-status auth-status--error" role="alert">
-                  Enterprise sign-in is not configured for this environment.
+                  This deployment is missing enterprise auth configuration. Contact the operator responsible for production identity-provider settings.
                 </p>
               ) : null}
 
