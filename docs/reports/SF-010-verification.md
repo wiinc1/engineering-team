@@ -2,10 +2,11 @@
 
 ## E2E Results
 - `node --test tests/e2e/*.test.js` passed with 14/14 tests.
-- `npm run test:browser` passed with 24 browser tests passing and 3 expected skips.
+- `npm run test:browser` passed on 2026-04-21 with 51 browser tests passing and 3 expected skips.
 - Browser evidence includes task detail layout, mobile interaction, keyboard navigation, and visual capture flows across supported engines.
 
 ## Regression Results
+- `npm run test:ui:vitest` passed on 2026-04-21 with 92/92 tests across UI, visual snapshot, accessibility, integration, and local render-budget coverage.
 - `npm test` passed end to end.
 - The full suite covered unit, contract, integration, end-to-end, property, performance, chaos, security, UI Vitest, and browser Playwright validation.
 - Story-specific regression evidence is recorded in [docs/reports/test_report_SF-010.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/reports/test_report_SF-010.md).
