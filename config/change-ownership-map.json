@@ -134,6 +134,8 @@
         "^src/app/main\\.jsx$",
         "^src/app/styles\\.css$",
         "^src/app/session(\\.browser)?\\.js$",
+        "^lib/auth/config-check\\.js$",
+        "^scripts/check-auth-config\\.js$",
         "^scripts/serve-browser-dist\\.js$"
       ],
       "test_requirements": [
@@ -142,7 +144,8 @@
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
-            "^tests/unit/task-browser-session\\.test\\.js$"
+            "^tests/unit/task-browser-session\\.test\\.js$",
+            "^tests/unit/auth-config-check\\.test\\.js$"
           ]
         },
         {
@@ -164,14 +167,20 @@
           "patterns": [
             "^docs/api/authenticated-browser-app-openapi\\.yml$"
           ]
+        },
+        {
+          "name": "runbook-or-design",
+          "patterns": [
+            "^docs/runbooks/production-identity-provider\\.md$",
+            "^docs/design/ISSUE-89-design\\.md$"
+          ]
         }
       ]
     },
     {
       "name": "task-detail-ui",
       "runtime_patterns": [
-        "^src/features/task-detail/",
-        "^src/app/App\\.jsx$"
+        "^src/features/task-detail/"
       ],
       "test_requirements": [
         {
@@ -249,7 +258,6 @@
     {
       "name": "task-assignment",
       "runtime_patterns": [
-        "^src/app/App\\.jsx$",
         "^lib/audit/http\\.js$",
         "^scripts/check-task-assignment-smoke\\.js$"
       ],

@@ -104,13 +104,68 @@ Operational guidance:
 - local/internal compatibility mode: keep `AUTH_JWT_SECRET`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`, and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
 - production IdP-only mode: configure OIDC + JWKS settings, set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`, and set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
 - mixed rollout mode: keep `AUTH_JWT_SECRET`, leave the server fallback enabled only where needed, and move production browser traffic to the hosted OIDC path first
+- preview mode: either configure a preview-specific OIDC redirect URI/strategy approved by the production auth owner, or allow the app to show the no-login-path configuration state. Preview-only fallback behavior must not be used as the production remediation path.
+
+## Build and release gates
+
+Run the deterministic production gate before release:
+
+```bash
+npm run auth:config:check
+```
+
+Production `npm run build` runs the same gate before Vite emits deployable assets and writes `observability/auth-config-diagnostics.json`. The artifact contains boolean status and missing variable names only. It must not contain raw environment values, tokens, provider URLs, client IDs, authorization codes, or secrets.
+
+Vercel production env-name validation is name-only:
+
+```bash
+npm run auth:config:check:vercel
+```
+
+The script inspects `vercel env ls production --format json` output. It must not use `vercel env pull`, write `.env` files, or print values. Confirm that these names exist in production: `VITE_OIDC_DISCOVERY_URL`, `VITE_OIDC_CLIENT_ID`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_JWT_JWKS_URL`.
+
+## Production remediation evidence
+
+Environment changes alone do not complete remediation. The production configuration owner must trigger and inspect a new production deployment after Vercel and IdP settings change. Attach:
+
+- deployment URL or ID
+- build commit
+- Ready status
+- build timestamp
+- effective production redirect URI ending in `/auth/callback`
+- IdP allowlist confirmation for that redirect URI
+- production OIDC login smoke result from an approved test/operator account
+- post-login protected-view data check showing usable data or an intentional empty state
+- monitoring evidence for login-path availability and callback-failure alerting
+- rollback evidence identifying the last known-good production OIDC deployment/config
+
+Rollback means restoring the last known-good production OIDC deployment/config. Do not enable internal bootstrap as the production rollback path unless a separate emergency exception is approved outside issue 89.
+
+## Ownership
+
+| Area | Owner |
+| --- | --- |
+| Code implementation and deterministic tests | Engineering implementation owner |
+| Vercel env vars | Production configuration owner |
+| IdP client settings and redirect URI allowlist | Production configuration owner |
+| JWKS verifier settings | Production configuration owner |
+| Production smoke execution | Release operator |
+| Rollback approval | Production auth approver |
+| Monitoring and alert thresholds | Operations owner |
+
+## Monitoring
+
+Use `monitoring/alerts/auth-availability.yml` for the initial auth availability rules. A no-login-path deploy signal alerts immediately. Callback failures alert at 5 failures in 10 minutes or when the callback failure rate is greater than 25% over 10 minutes with at least 10 attempts. Telemetry and evidence must contain only deployment identifiers, counts, thresholds, and non-secret error classifications.
 
 ## Verification
 
 Minimum validation commands:
 
 ```bash
+npm run auth:config:check
+npm run auth:config:check:vercel
 node --test tests/unit/audit-jwt-auth.test.js
+node --test tests/unit/auth-config-check.test.js
 node --test tests/security/audit-api.security.test.js
 node --test tests/unit/audit-api.test.js
 node --test tests/unit/task-browser-session.test.js

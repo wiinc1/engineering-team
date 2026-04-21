@@ -8,7 +8,7 @@ Scope: issues `#46`, `#48`, and `#47`
 
 - Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring; team and process
 - Evidence expected for this change: runtime delegation implementation diffs, exported metrics artifacts, runbook updates, higher-level verification coverage, mutation-testing configuration, and acceptance audit evidence
-- Gap observed: no remaining repository implementation or live-smoke evidence gap after the successful 2026-04-21 normal-shell rerun. Earlier sandboxed smoke attempts failed because of environment-level OpenClaw session-lock permissions rather than missing delegation-path behavior (source https://sre.google/books/).
+- Gap observed: no remaining repository implementation or live-smoke evidence gap after the successful 2026-04-21 normal-shell rerun. Documented rationale: earlier sandboxed smoke attempts failed because of environment-level OpenClaw session-lock permissions rather than missing delegation-path behavior (source https://sre.google/books/).
 
 ## Required Evidence
 
