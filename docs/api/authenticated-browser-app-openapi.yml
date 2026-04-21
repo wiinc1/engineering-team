@@ -9,7 +9,8 @@ info:
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
     Production sign-in uses a hosted OIDC Authorization Code + PKCE flow with the callback handled at `/auth/callback`.
     The internal browser bootstrap endpoint remains a compatibility fallback for local/internal environments only.
-    Preview environments without an approved auth strategy may render a no-login-path configuration state, while production remains OIDC-only.
+    Preview environments without an approved auth strategy may render a no-login-path configuration state.
+    Production supports either OIDC or the explicitly selected internal-bootstrap strategy when no IdP exists.
 paths:
   /sign-in:
     get:

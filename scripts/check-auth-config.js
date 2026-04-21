@@ -78,12 +78,18 @@ function runVercelCheck() {
     console.log('Vercel production env-name validation passed.');
   } else {
     console.error('Vercel production env-name validation failed.');
-    console.error(`Missing required production env names: ${result.missing.join(', ')}`);
+    console.error(`Missing OIDC env names: ${result.oidcMissing.join(', ')}`);
+    console.error(`Missing internal-bootstrap env names: ${result.internalBootstrapMissing.join(', ')}`);
   }
   for (const warning of result.warnings) {
     console.warn(`Warning: ${warning}`);
   }
-  console.log(JSON.stringify({ ok: result.ok, present: result.present, internalBootstrapVarsDeclared: result.internalBootstrapVarsDeclared }, null, 2));
+  console.log(JSON.stringify({
+    ok: result.ok,
+    oidcPresent: result.present,
+    internalBootstrapPresent: result.internalBootstrapPresent,
+    internalBootstrapVarsDeclared: result.internalBootstrapVarsDeclared,
+  }, null, 2));
   process.exitCode = result.ok ? 0 : 1;
 }
 

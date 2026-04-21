@@ -4,22 +4,30 @@
   "missing": [],
   "errors": [],
   "diagnostics": {
-    "generatedAt": "2026-04-21T17:58:15.040Z",
-    "browserOidcConfigured": true,
-    "providerJwtVerifierConfigured": true,
-    "internalBootstrapEnabled": false,
+    "generatedAt": "2026-04-21T18:29:20.038Z",
+    "productionAuthStrategy": "internal-bootstrap",
+    "browserOidcConfigured": false,
+    "providerJwtVerifierConfigured": false,
+    "internalBootstrapEnabled": true,
+    "internalBootstrapConfigured": true,
     "requiredBrowserOidcVarsPresent": {
-      "VITE_OIDC_DISCOVERY_URL": true,
-      "VITE_OIDC_CLIENT_ID": true
+      "VITE_OIDC_DISCOVERY_URL": false,
+      "VITE_OIDC_CLIENT_ID": false
     },
     "requiredProviderJwtVarsPresent": {
-      "AUTH_JWT_ISSUER": true,
-      "AUTH_JWT_AUDIENCE": true,
-      "AUTH_JWT_JWKS_URL": true
+      "AUTH_JWT_ISSUER": false,
+      "AUTH_JWT_AUDIENCE": false,
+      "AUTH_JWT_JWKS_URL": false
     },
     "internalBootstrapVarsEnabled": {
-      "VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED": false,
-      "AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP": false
+      "VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED": true,
+      "AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP": true
+    },
+    "requiredInternalBootstrapVarsPresent": {
+      "AUTH_PRODUCTION_AUTH_STRATEGY": true,
+      "AUTH_JWT_SECRET": true,
+      "VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED": true,
+      "AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP": true
     }
   }
 }

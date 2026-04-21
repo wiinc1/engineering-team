@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This runbook documents the provider-backed JWT validation path and browser cutover path added for `SF-018` / `TSK-004`.
+This runbook documents the provider-backed JWT validation path and the explicit no-IdP internal-bootstrap production path.
 
 The audit and workflow APIs can now validate bearer tokens using either:
 
@@ -14,7 +14,7 @@ The browser app now supports:
 
 - production hosted OIDC Authorization Code + PKCE sign-in
 - direct use of provider-issued bearer tokens against the existing API verifier
-- internal/local `POST /auth/session` fallback only when explicitly enabled
+- internal `POST /auth/session` bootstrap when explicitly selected as the production strategy because no external IdP exists
 
 ## Configuration
 
@@ -56,6 +56,9 @@ Optional browser settings:
 
 ### Compatibility mode
 
+- `AUTH_PRODUCTION_AUTH_STRATEGY`
+  - `oidc`: require external OIDC browser config and provider JWT verifier settings
+  - `internal-bootstrap`: allow signed internal browser bootstrap in production when no external IdP exists
 - `AUTH_JWT_SECRET`
   - when present, HS256 compatibility tokens remain valid
 - `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP`
@@ -63,7 +66,7 @@ Optional browser settings:
   - disable it in production to turn off `POST /auth/session`
 - `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`
   - controls whether the browser sign-in screen renders the internal fallback form
-  - leave enabled only for local/internal environments
+  - required for the explicit `internal-bootstrap` production strategy
 
 ## Validation rules
 
@@ -86,7 +89,7 @@ If claim mapping is overridden, the request principal is derived from the config
 
 ## Browser behavior
 
-Production/default path:
+Production OIDC path:
 
 - `/sign-in` starts hosted enterprise sign-in
 - the SPA stores PKCE transaction state in `sessionStorage`
@@ -99,12 +102,20 @@ Internal/local fallback:
 - that path requires `AUTH_JWT_SECRET`
 - it should be disabled in production by setting `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`
 
+Production no-IdP path:
+
+- select `AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap`
+- configure a production `AUTH_JWT_SECRET`
+- set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`
+- set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
+- smoke `/sign-in` with an approved operator auth code and verify a protected view loads data or an intentional empty state
+
 Operational guidance:
 
 - local/internal compatibility mode: keep `AUTH_JWT_SECRET`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`, and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
-- production IdP-only mode: configure OIDC + JWKS settings, set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`, and set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
-- mixed rollout mode: keep `AUTH_JWT_SECRET`, leave the server fallback enabled only where needed, and move production browser traffic to the hosted OIDC path first
-- preview mode: either configure a preview-specific OIDC redirect URI/strategy approved by the production auth owner, or allow the app to show the no-login-path configuration state. Preview-only fallback behavior must not be used as the production remediation path.
+- production OIDC mode: configure OIDC + JWKS settings, set `AUTH_PRODUCTION_AUTH_STRATEGY=oidc`, set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`, and set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
+- production no-IdP mode: configure `AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap`, `AUTH_JWT_SECRET`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`, and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
+- preview mode: either configure a preview-specific OIDC redirect URI/strategy, use the same approved internal-bootstrap strategy, or allow the app to show the no-login-path configuration state.
 
 ## Build and release gates
 
@@ -122,24 +133,25 @@ Vercel production env-name validation is name-only:
 npm run auth:config:check:vercel
 ```
 
-The script inspects `vercel env ls production --format json` output. It must not use `vercel env pull`, write `.env` files, or print values. Confirm that these names exist in production: `VITE_OIDC_DISCOVERY_URL`, `VITE_OIDC_CLIENT_ID`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_JWT_JWKS_URL`.
+The script inspects `vercel env ls production --format json` output. It must not use `vercel env pull`, write `.env` files, or print values. Confirm that production has either the OIDC names (`VITE_OIDC_DISCOVERY_URL`, `VITE_OIDC_CLIENT_ID`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`) or the internal-bootstrap names (`AUTH_PRODUCTION_AUTH_STRATEGY`, `AUTH_JWT_SECRET`, `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP`).
 
 ## Production remediation evidence
 
-Environment changes alone do not complete remediation. The production configuration owner must trigger and inspect a new production deployment after Vercel and IdP settings change. Attach:
+Environment changes alone do not complete remediation. The production configuration owner must trigger and inspect a new production deployment after auth settings change. Attach:
 
 - deployment URL or ID
 - build commit
 - Ready status
 - build timestamp
-- effective production redirect URI ending in `/auth/callback`
-- IdP allowlist confirmation for that redirect URI
-- production OIDC login smoke result from an approved test/operator account
+- selected production auth strategy
+- effective production redirect URI ending in `/auth/callback` when OIDC is selected
+- IdP allowlist confirmation when OIDC is selected
+- production sign-in smoke result from an approved test/operator account or auth-code holder
 - post-login protected-view data check showing usable data or an intentional empty state
 - monitoring evidence for login-path availability and callback-failure alerting
 - rollback evidence identifying the last known-good production OIDC deployment/config
 
-Rollback means restoring the last known-good production OIDC deployment/config. Do not enable internal bootstrap as the production rollback path unless a separate emergency exception is approved outside issue 89.
+Rollback means restoring the last known-good working production auth deployment/config for the selected strategy. Do not switch strategies during rollback unless a separate emergency exception is approved.
 
 ## Ownership
 
@@ -147,8 +159,9 @@ Rollback means restoring the last known-good production OIDC deployment/config. 
 | --- | --- |
 | Code implementation and deterministic tests | Engineering implementation owner |
 | Vercel env vars | Production configuration owner |
-| IdP client settings and redirect URI allowlist | Production configuration owner |
-| JWKS verifier settings | Production configuration owner |
+| IdP client settings and redirect URI allowlist | Production configuration owner when OIDC exists |
+| JWKS verifier settings | Production configuration owner when OIDC exists |
+| Internal bootstrap auth-code issuance and secret rotation | Production configuration owner when no IdP exists |
 | Production smoke execution | Release operator |
 | Rollback approval | Production auth approver |
 | Monitoring and alert thresholds | Operations owner |

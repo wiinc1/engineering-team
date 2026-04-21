@@ -3,8 +3,8 @@
 ## Standards Alignment
 
 - Applicable standards areas: testing and quality assurance; deployment and release; security; observability and monitoring
-- Evidence expected for this change: deterministic auth validation commands, UI and visual sign-in coverage, browser callback coverage, security validation, and production-remediation evidence tracking
-- Gap observed: live Vercel production env-name validation, IdP allowlist confirmation, redeploy inspection, production OIDC smoke, and post-login data checks were not run locally. Documented rationale: those checks require production credentials and operator access, so issue 89 remains `production-remediation-pending` until that release evidence is attached (source https://github.com/wiinc1/engineering-team/issues/89).
+- Evidence expected for this change: deterministic auth strategy validation commands, UI and visual sign-in coverage, browser callback coverage, security validation, and production-remediation evidence tracking
+- Gap observed: live Vercel production env-name validation, redeploy inspection, production sign-in smoke, and post-login data checks were not run locally. Documented rationale: those checks require production credentials and operator access, so issue 89 remains `production-remediation-pending` until that release evidence is attached (source https://github.com/wiinc1/engineering-team/issues/89).
 
 ## Required Evidence
 

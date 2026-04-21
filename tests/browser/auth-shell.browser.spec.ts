@@ -112,7 +112,7 @@ async function installApiMocks(page) {
   });
 }
 
-// Governance note: browser-shell route or session changes should keep browser coverage updated in the same change set.
+// Governance note: browser-shell route, session, or auth-strategy changes should keep browser coverage updated in the same change set.
 
 test.describe('authenticated browser app shell', () => {
   test.beforeEach(async ({ page }) => {
