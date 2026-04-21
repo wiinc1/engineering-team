@@ -1,16 +1,20 @@
 flowchart TD
   A[Engineer prepares production release] --> B[npm run auth:config:check]
-  B -->|missing OIDC or JWKS config| C[Fail before deployable build]
-  B -->|production fallback enabled| C
+  B -->|no complete auth strategy| C[Fail before deployable build]
+  B -->|OIDC selected and missing OIDC/JWKS config| C
+  B -->|internal-bootstrap selected and missing secret or flags| C
   B -->|valid| D[Write non-secret auth diagnostics artifact]
   D --> E[npm run build]
   E --> F[npm run auth:config:check:vercel]
-  F -->|missing env names| G[Block release and notify production config owner]
-  F -->|names present| H[Trigger new production deployment]
+  F -->|missing env names for both strategies| G[Block release and notify production config owner]
+  F -->|OIDC or internal-bootstrap names present| H[Trigger new production deployment]
   H --> I[Inspect Ready deployment, commit, timestamp]
-  I --> J[Verify /auth/callback redirect URI in IdP allowlist]
-  J --> K[Operator runs production OIDC smoke]
-  K --> L[Protected view loads data or intentional empty state]
-  L --> M[Auth availability alerts monitor login path and callback failures]
-  M --> N[Issue remains production-remediation-pending until evidence is attached]
+  I --> J{Selected strategy}
+  J -->|oidc| K[Verify /auth/callback redirect URI in IdP allowlist]
+  J -->|internal-bootstrap| L[Verify approved auth-code issuance and secret rotation owner]
+  K --> M[Operator runs production sign-in smoke]
+  L --> M
+  M --> N[Protected view loads data or intentional empty state]
+  N --> P[Auth availability alerts monitor login path and callback failures]
+  P --> Q[Issue remains production-remediation-pending until evidence is attached]
   C --> O[/sign-in shows no-login-path configuration state]

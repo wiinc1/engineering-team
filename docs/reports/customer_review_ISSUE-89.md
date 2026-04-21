@@ -3,8 +3,8 @@
 ## Standards Alignment
 
 - Applicable standards areas: deployment and release; team and process; security
-- Evidence expected for this change: code-complete evidence, production-remediation pending state, operator evidence requirements, and rollback ownership
-- Gap observed: customer-facing production availability cannot be declared remediated from code changes alone. Documented rationale: issue 89 explicitly requires production env/IdP remediation, redeploy, smoke, monitoring, and rollback evidence before closure (source https://github.com/wiinc1/engineering-team/issues/89).
+- Evidence expected for this change: code-complete evidence, production-remediation pending state, selected auth strategy evidence, operator evidence requirements, and rollback ownership
+- Gap observed: customer-facing production availability cannot be declared remediated from code changes alone. Documented rationale: issue 89 requires production env remediation, redeploy, smoke, monitoring, and rollback evidence before closure (source https://github.com/wiinc1/engineering-team/issues/89).
 
 ## Required Evidence
 

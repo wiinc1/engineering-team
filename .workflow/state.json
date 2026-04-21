@@ -1,7 +1,7 @@
 {
   "storyId": "ISSUE-89",
   "issueNumber": 89,
-  "branch": "feature/ISSUE-89-login-auth-config-validation",
+  "branch": "feature/ISSUE-89-internal-auth-pivot",
   "status": {
     "phase0": "completed",
     "design": "completed",
@@ -27,8 +27,9 @@
     "Canonical workflow scripts workflow:start, workflow:execute, workflow:ship, workflow:status, workflow:watch-pr, task:pull, ag:workflow, and workflow:discover are absent in package.json, so equivalent evidence is recorded manually.",
     "Issue #89 was assigned via GitHub CLI and branch feature/ISSUE-89-login-auth-config-validation was created from main.",
     "Issue #89 already has production-remediation-pending, auth, and bug labels; no project items were returned by GitHub CLI.",
-    "External production remediation evidence remains pending: Vercel env names, IdP redirect allowlist, redeploy inspection, production OIDC smoke, post-login data check, monitoring evidence, and rollback evidence.",
-    "Local verification passed on 2026-04-21: node --test tests/unit/auth-config-check.test.js, npm run test:unit, npm run test:security, node scripts/run-playwright.js tests/browser/auth-shell.browser.spec.ts, npm run lint, npm run typecheck, and npm run build with production OIDC/JWKS env vars.",
+    "Requirements pivot on 2026-04-21: no production IdP exists, so production remediation may use explicit AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap with AUTH_JWT_SECRET and both internal bootstrap flags enabled.",
+    "External production remediation evidence remains pending: Vercel env names for the selected strategy, redeploy inspection, production sign-in smoke, post-login data check, monitoring evidence, and rollback evidence.",
+    "Local verification passed on 2026-04-21: node --test tests/unit/auth-config-check.test.js, npm run test:unit, npm run test:security, node scripts/run-playwright.js tests/browser/auth-shell.browser.spec.ts, npm run lint, npm run typecheck, npm run build with production internal-bootstrap env vars, npm run standards:check, npm run ownership:lint, and npm run change:check.",
     "The requested full-test-suite runner .agent/skills/full-test-suite-runner/scripts/run-all-tests.mjs is absent; the available equivalent npm test scripts were run instead."
   ]
 }

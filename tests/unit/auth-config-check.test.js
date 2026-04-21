@@ -37,6 +37,36 @@ test('production auth config check rejects internal bootstrap fallback', () => {
   assert.match(result.errors.join('\n'), /VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED must be false/);
 });
 
+test('production auth config check allows explicit internal bootstrap strategy without an external IdP', () => {
+  const env = {
+    AUTH_PRODUCTION_AUTH_STRATEGY: 'internal-bootstrap',
+    AUTH_JWT_SECRET: 'signed-production-bootstrap-secret',
+    VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED: 'true',
+    AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP: 'true',
+  };
+
+  const result = validateAuthConfig({ env, target: 'production' });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.diagnostics.productionAuthStrategy, 'internal-bootstrap');
+  assert.equal(result.diagnostics.internalBootstrapConfigured, true);
+  assert.equal(JSON.stringify(result.diagnostics).includes('signed-production-bootstrap-secret'), false);
+});
+
+test('production internal bootstrap strategy requires both browser and server flags plus signing secret', () => {
+  const result = validateAuthConfig({
+    env: { AUTH_PRODUCTION_AUTH_STRATEGY: 'internal-bootstrap' },
+    target: 'production',
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.missing, [
+    'AUTH_JWT_SECRET',
+    'VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED',
+    'AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP',
+  ]);
+});
+
 test('development auth config passes with explicitly enabled internal fallback', () => {
   const result = validateAuthConfig({
     env: { VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED: 'true' },
@@ -56,6 +86,7 @@ test('diagnostics artifact model contains booleans and missing names only', () =
 
   assert.equal(diagnostics.browserOidcConfigured, true);
   assert.equal(diagnostics.providerJwtVerifierConfigured, false);
+  assert.equal(diagnostics.productionAuthStrategy, 'oidc');
   assert.equal(serialized.includes('https://idp.example'), false);
   assert.equal(serialized.includes('browser-client'), false);
 });
@@ -79,12 +110,31 @@ test('Vercel env-name validation reports missing names only', () => {
   const result = validateVercelEnvNames(new Set(['VITE_OIDC_DISCOVERY_URL']));
 
   assert.equal(result.ok, false);
-  assert.deepEqual(result.missing, [
+  assert.deepEqual(result.oidcMissing, [
     'VITE_OIDC_CLIENT_ID',
     'AUTH_JWT_ISSUER',
     'AUTH_JWT_AUDIENCE',
     'AUTH_JWT_JWKS_URL',
   ]);
+  assert.deepEqual(result.internalBootstrapMissing, [
+    'AUTH_PRODUCTION_AUTH_STRATEGY',
+    'AUTH_JWT_SECRET',
+    'VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED',
+    'AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP',
+  ]);
+});
+
+test('Vercel env-name validation accepts the explicit internal bootstrap production strategy names', () => {
+  const result = validateVercelEnvNames(new Set([
+    'AUTH_PRODUCTION_AUTH_STRATEGY',
+    'AUTH_JWT_SECRET',
+    'VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED',
+    'AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP',
+  ]));
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.missing, []);
+  assert.equal(result.internalBootstrapPresent.AUTH_JWT_SECRET, true);
 });
 
 test('auth availability alert thresholds are documented without secret-bearing fields', () => {
