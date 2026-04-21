@@ -6,7 +6,7 @@
 - Reviewer-visible acceptance evidence:
 - repo-local runtime bridge command: `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'`
 - [observability/specialist-delegation-smoke.json](/Users/wiinc2/.openclaw/workspace/engineering-team/observability/specialist-delegation-smoke.json:1) shows delegated runtime ownership with `agentId` `sr-engineer` and `sessionId` `0b7c8563-1734-4f1d-be46-bdca216ed2b7`
-- `observability/specialist-delegation.jsonl` and `observability/workflow-audit.log` contain the matching delegated run artifacts for delegation id `f18e6d8c-c39e-44c1-a8df-02293b483098`
+- `observability/specialist-delegation.jsonl` and `observability/workflow-audit.log` contain the matching delegated run artifacts for delegation id `cf2d0b63-0094-4cea-bb33-9793f4b416ea`
 - Current user-visible behavior remains safe:
 - logical specialist ownership is still recorded as `engineer` while the actual runtime agent is preserved as `sr-engineer`
 - no fallback or false ownership claim was required for the accepted smoke run

@@ -1,0 +1,37 @@
+{
+  "updatedAt": "2026-04-21T15:01:26.476Z",
+  "snapshot": {
+    "runtimeBridgeInvocationCount": 1,
+    "liveDelegationSuccessCount": 1,
+    "delegationAttemptsByAgent": {
+      "engineer": 1
+    },
+    "delegationSuccessByAgent": {
+      "engineer": 1
+    },
+    "delegationFailureByAgent": {},
+    "delegationFailureByReason": {},
+    "delegationFailureByCategory": {},
+    "fallbackToCoordinatorCount": 0,
+    "attributionMismatchCount": 0,
+    "delegationLatencyHistogram": {
+      "count": 1,
+      "min_ms": 19307,
+      "p50_ms": 19307,
+      "p95_ms": 19307,
+      "max_ms": 19307
+    }
+  },
+  "prometheus": {
+    "real_specialist_delegation_runtime_bridge_invocation_total": 1,
+    "real_specialist_delegation_live_success_total": 1,
+    "real_specialist_delegation_fallback_total": 0,
+    "real_specialist_delegation_attribution_mismatch_total": 0,
+    "real_specialist_delegation_latency_count": 1,
+    "real_specialist_delegation_latency_p50_ms": 19307,
+    "real_specialist_delegation_latency_p95_ms": 19307,
+    "real_specialist_delegation_latency_max_ms": 19307,
+    "real_specialist_delegation_attempts_engineer_total": 1,
+    "real_specialist_delegation_success_engineer_total": 1
+  }
+}

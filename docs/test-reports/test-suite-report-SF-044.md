@@ -2,12 +2,12 @@
 
 ## Summary
 - Command: `npm run test:delegation:verification`
-- Result: 23 specialist-delegation verification tests passed, 0 failed.
+- Result: 37 specialist-delegation verification tests passed, 0 failed.
 - Scope covered:
 - unit fallback classification and command-router attribution behavior
 - runtime contract validation
 - integration artifact persistence and unsupported task-type fail-closed behavior
-- end-to-end success, truthful fallback, and malformed-runtime rejection
+- end-to-end success, truthful fallback, runtime execution failure, unsupported-routing fallback, attribution mismatch rejection, and malformed-runtime rejection
 - performance budget and security sanitization
 
 ## Commands

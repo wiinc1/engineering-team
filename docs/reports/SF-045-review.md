@@ -6,7 +6,7 @@
 - verified the repo-local runtime bridge command `node scripts/openclaw-specialist-runner.js`
 - ran the direct OpenClaw engineer agent and confirmed a real runtime `sessionId` is returned
 - ran the smoke validator through the bridge and captured delegated runtime evidence with runtime agent `sr-engineer`
-- confirmed matching observability artifacts for delegation id `f18e6d8c-c39e-44c1-a8df-02293b483098`
+- confirmed matching observability artifacts for delegation id `cf2d0b63-0094-4cea-bb33-9793f4b416ea`
 - Acceptance decision: approved.
 
 ## Standards Alignment

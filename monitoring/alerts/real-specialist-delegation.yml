@@ -1,9 +1,18 @@
 alerts:
-  - name: RealSpecialistDelegationFallbackSpike
+  - name: RealSpecialistDelegationOverallFallbackSpike
+    expr: real_specialist_delegation_fallback_total > 10
+    for: 10m
+  - name: RealSpecialistDelegationRuntimeExecutionFailureSpike
     expr: real_specialist_delegation_failure_reason_runtime_exec_failed_total > 5
+    for: 10m
+  - name: RealSpecialistDelegationRuntimeUnavailableSpike
+    expr: real_specialist_delegation_failure_category_runtime_not_available_total > 3
     for: 10m
   - name: RealSpecialistDelegationInvalidEvidenceSpike
     expr: real_specialist_delegation_failure_category_delegation_unverified_total > 3
+    for: 10m
+  - name: RealSpecialistDelegationUnsupportedRouteSpike
+    expr: real_specialist_delegation_failure_category_unsupported_runtime_specialist_total > 3
     for: 10m
   - name: RealSpecialistDelegationNoLiveSuccess
     expr: real_specialist_delegation_live_success_total == 0
