@@ -2,7 +2,7 @@
 
 ## E2E Results
 - `node --test tests/e2e/*.test.js` passed with 14/14 tests.
-- `npm run test:browser` passed on 2026-04-21 with 51 browser tests passing and 3 expected skips.
+- `npm run test:browser` passed on 2026-04-21 with 54/54 browser tests and no skips.
 - Browser evidence includes task detail layout, mobile interaction, keyboard navigation, and visual capture flows across supported engines.
 
 ## Regression Results

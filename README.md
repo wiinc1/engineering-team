@@ -156,7 +156,7 @@ Current default browser matrix:
 
 Latest local browser verification evidence from 2026-04-21:
 - `npm run test:ui:vitest` passed with 92/92 tests across UI, visual snapshot, accessibility, integration, and local render-budget coverage.
-- `npm run test:browser` passed with 51 browser tests and 3 expected skips across Chromium, Firefox, and mobile Chrome projects.
+- `npm run test:browser` passed with 54/54 browser tests and no skips across Chromium, Firefox, and mobile Chrome projects.
 
 ### Specialist delegation and truthful attribution
 - A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
