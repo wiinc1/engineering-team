@@ -13,6 +13,10 @@
       "destination": "/api/:path*"
     },
     {
+      "source": "/auth/:path*",
+      "destination": "/api/auth/:path*"
+    },
+    {
       "source": "/:path((?!api/|backend/|assets/|favicon.ico|robots.txt).*)",
       "destination": "/index.html"
     }
