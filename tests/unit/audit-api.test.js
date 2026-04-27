@@ -36,17 +36,35 @@ function githubSignature(secret, body) {
 async function withServer(run, options = {}) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-api-'));
   const secret = 'test-secret';
-  const { server, store } = createAuditApiServer({ baseDir, jwtSecret: secret, ...options });
+  const { server, store, authService } = createAuditApiServer({ baseDir, jwtSecret: secret, ...options });
 
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
   try {
-    await run({ baseDir, baseUrl, secret, store });
+    await run({ baseDir, baseUrl, secret, store, authService });
   } finally {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
+}
+
+function getSetCookies(response) {
+  if (typeof response.headers.getSetCookie === 'function') return response.headers.getSetCookie();
+  const combined = response.headers.get('set-cookie') || '';
+  return combined
+    .split(/,(?=\s*engineering_team_(?:session|csrf)=)/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function cookieHeaderFromSetCookies(setCookies) {
+  return setCookies.map((cookie) => cookie.split(';')[0]).join('; ');
+}
+
+function readCookieValue(cookieHeader, name) {
+  const prefix = `${name}=`;
+  return String(cookieHeader || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || '';
 }
 
 test('enforces bearer-token auth context and isolates reads by tenant claim', async () => {
@@ -162,6 +180,128 @@ test('disables internal browser auth bootstrap outside local mode when explicitl
   }, {
     runtimeEnv: 'production',
     enableInternalBrowserAuthBootstrap: false,
+  });
+});
+
+test('magic-link HTTP routes create cookie sessions, protect admin APIs, and revoke logout', async () => {
+  const emailTransport = { provider: 'test', sent: [], async sendMagicLinkEmail(message) { this.sent.push(message); } };
+  await withServer(async ({ baseUrl, authService }) => {
+    await authService.upsertUser({
+      email: 'admin@example.com',
+      tenantId: 'tenant-a',
+      actorId: 'admin-1',
+      roles: ['admin', 'reader'],
+      status: 'active',
+    }, { actorId: 'system', tenantId: 'tenant-a' });
+    await authService.upsertUser({
+      email: 'reader@example.com',
+      tenantId: 'tenant-a',
+      actorId: 'reader-1',
+      roles: ['reader'],
+      status: 'active',
+    }, { actorId: 'system', tenantId: 'tenant-a' });
+
+    let response = await fetch(`${baseUrl}/auth/magic-link/request`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'ADMIN@example.com', next: '/admin/users' }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).message, 'If the email is eligible, a sign-in link has been sent.');
+    assert.equal(emailTransport.sent.length, 1);
+
+    const token = new URL(emailTransport.sent[0].link).searchParams.get('token');
+    response = await fetch(`${baseUrl}/auth/magic-link/consume?token=${encodeURIComponent(token)}&next=%2Fadmin%2Fusers`, {
+      redirect: 'manual',
+    });
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), '/admin/users');
+    const setCookies = getSetCookies(response);
+    assert.ok(setCookies.some((cookie) => cookie.startsWith('engineering_team_session=') && cookie.includes('HttpOnly') && cookie.includes('SameSite=Lax')));
+    assert.ok(setCookies.some((cookie) => cookie.startsWith('engineering_team_csrf=') && cookie.includes('SameSite=Lax')));
+    const cookie = cookieHeaderFromSetCookies(setCookies);
+    const csrf = decodeURIComponent(readCookieValue(cookie, 'engineering_team_csrf'));
+    assert.ok(csrf);
+
+    response = await fetch(`${baseUrl}/auth/me`, { headers: { cookie } });
+    assert.equal(response.status, 200);
+    const me = await response.json();
+    assert.equal(me.data.actorId, 'admin-1');
+    assert.equal(me.data.tenantId, 'tenant-a');
+    assert.deepEqual(me.data.roles, ['admin', 'reader']);
+
+    response = await fetch(`${baseUrl}/auth/users`, { headers: { cookie } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.length, 2);
+
+    response = await fetch(`${baseUrl}/auth/users`, {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'pm@example.com', tenantId: 'tenant-a', actorId: 'pm-1', roles: ['pm', 'reader'], status: 'active' }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'csrf_required');
+
+    response = await fetch(`${baseUrl}/auth/users`, {
+      method: 'POST',
+      headers: { cookie, 'x-csrf-token': csrf, 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'pm@example.com', tenantId: 'tenant-a', actorId: 'pm-1', roles: ['pm', 'reader'], status: 'active' }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.actorId, 'pm-1');
+
+    const adminUser = (await authService.listUsers()).find((user) => user.email === 'admin@example.com');
+    response = await fetch(`${baseUrl}/auth/users/${adminUser.userId}`, {
+      method: 'PATCH',
+      headers: { cookie, 'x-csrf-token': csrf, 'content-type': 'application/json' },
+      body: JSON.stringify({ roles: ['reader'], status: 'active' }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'self_admin_protection');
+
+    response = await fetch(`${baseUrl}/auth/logout`, {
+      method: 'POST',
+      headers: { cookie, 'x-csrf-token': csrf },
+    });
+    assert.equal(response.status, 200);
+    assert.ok(getSetCookies(response).some((clearCookie) => clearCookie.includes('Max-Age=0')));
+
+    response = await fetch(`${baseUrl}/auth/me`, { headers: { cookie } });
+    assert.equal(response.status, 401);
+  }, {
+    publicAppUrl: 'https://app.example',
+    sessionSecret: 'route-secret',
+    emailTransport,
+  });
+});
+
+test('magic-link admin APIs return 403 for non-admin cookie sessions', async () => {
+  const emailTransport = { provider: 'test', sent: [], async sendMagicLinkEmail(message) { this.sent.push(message); } };
+  await withServer(async ({ baseUrl, authService }) => {
+    await authService.upsertUser({
+      email: 'reader@example.com',
+      tenantId: 'tenant-a',
+      actorId: 'reader-1',
+      roles: ['reader'],
+      status: 'active',
+    }, { actorId: 'system', tenantId: 'tenant-a' });
+
+    await fetch(`${baseUrl}/auth/magic-link/request`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'reader@example.com' }),
+    });
+    const token = new URL(emailTransport.sent[0].link).searchParams.get('token');
+    const consume = await fetch(`${baseUrl}/auth/magic-link/consume?token=${encodeURIComponent(token)}`, { redirect: 'manual' });
+    const cookie = cookieHeaderFromSetCookies(getSetCookies(consume));
+
+    const response = await fetch(`${baseUrl}/auth/users`, { headers: { cookie } });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, 'forbidden');
+  }, {
+    publicAppUrl: 'https://app.example',
+    sessionSecret: 'route-secret',
+    emailTransport,
   });
 });
 

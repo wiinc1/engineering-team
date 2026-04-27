@@ -30,16 +30,30 @@ function readRuntimeAuthConfig() {
   return globalThis.__ENGINEERING_TEAM_RUNTIME_CONFIG__ || {};
 }
 
+function readConfigValue(config = {}, ...names) {
+  for (const name of names) {
+    const value = config?.[name];
+    const normalized = String(value ?? '').trim();
+    if (normalized) return normalized;
+  }
+  return '';
+}
+
 function readBrowserSessionConfig(storage = getSessionStorage()) {
   try {
     const raw = storage?.getItem(STORAGE_KEY);
     if (!raw) return { bearerToken: '', apiBaseUrl: '', expiresAt: '' };
     const parsed = JSON.parse(raw);
-    return {
+    const next = {
       bearerToken: typeof parsed?.bearerToken === 'string' ? parsed.bearerToken : '',
       apiBaseUrl: typeof parsed?.apiBaseUrl === 'string' ? parsed.apiBaseUrl : '',
       expiresAt: typeof parsed?.expiresAt === 'string' ? parsed.expiresAt : '',
     };
+    if (typeof parsed?.actorId === 'string') next.actorId = parsed.actorId;
+    if (typeof parsed?.tenantId === 'string') next.tenantId = parsed.tenantId;
+    if (Array.isArray(parsed?.roles)) next.roles = parsed.roles;
+    if (typeof parsed?.authType === 'string') next.authType = parsed.authType;
+    return next;
   } catch {
     return { bearerToken: '', apiBaseUrl: '', expiresAt: '' };
   }
@@ -51,6 +65,10 @@ function writeBrowserSessionConfig(config, storage = getSessionStorage()) {
     apiBaseUrl: typeof config?.apiBaseUrl === 'string' ? config.apiBaseUrl.trim().replace(/\/+$/, '') : '',
     expiresAt: typeof config?.expiresAt === 'string' ? config.expiresAt.trim() : '',
   };
+  if (typeof config?.actorId === 'string') next.actorId = config.actorId.trim();
+  if (typeof config?.tenantId === 'string') next.tenantId = config.tenantId.trim();
+  if (Array.isArray(config?.roles)) next.roles = config.roles.map((role) => String(role || '').trim()).filter(Boolean);
+  if (typeof config?.authType === 'string') next.authType = config.authType.trim();
 
   storage?.setItem(STORAGE_KEY, JSON.stringify(next));
   return next;
@@ -59,6 +77,11 @@ function writeBrowserSessionConfig(config, storage = getSessionStorage()) {
 function clearBrowserSessionConfig(storage = getSessionStorage()) {
   storage?.removeItem(STORAGE_KEY);
   return { bearerToken: '', apiBaseUrl: '', expiresAt: '' };
+}
+
+function readCookie(name, cookie = globalThis.document?.cookie || '') {
+  const prefix = `${name}=`;
+  return String(cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || '';
 }
 
 function readOidcTransaction(storage = getSessionStorage()) {
@@ -98,6 +121,10 @@ function buildAuthHeaders(config = {}) {
   const headers = {};
   const token = typeof config?.bearerToken === 'string' ? config.bearerToken.trim() : '';
   if (token) headers.authorization = `Bearer ${token}`;
+  if (!token) {
+    const csrf = decodeURIComponent(readCookie('engineering_team_csrf') || '');
+    if (csrf) headers['x-csrf-token'] = csrf;
+  }
   return headers;
 }
 
@@ -110,18 +137,21 @@ function readAuthRuntimeConfig(env = {}, runtimeConfig = readRuntimeAuthConfig()
   const logoutRedirectDefault = location?.origin ? `${location.origin}/sign-in?reason=signed_out` : '/sign-in?reason=signed_out';
   const internalFallbackDefault = Boolean(env?.DEV || env?.MODE === 'test');
 
-  const oidcDiscoveryUrl = String(runtimeConfig.oidcDiscoveryUrl || env?.VITE_OIDC_DISCOVERY_URL || '').trim();
-  const oidcClientId = String(runtimeConfig.oidcClientId || env?.VITE_OIDC_CLIENT_ID || '').trim();
-  const oidcRedirectUri = String(runtimeConfig.oidcRedirectUri || env?.VITE_OIDC_REDIRECT_URI || redirectUriDefault).trim();
-  const oidcScope = String(runtimeConfig.oidcScope || env?.VITE_OIDC_SCOPE || 'openid profile email').trim();
-  const oidcLogoutUrl = String(runtimeConfig.oidcLogoutUrl || env?.VITE_OIDC_LOGOUT_URL || '').trim();
-  const oidcLogoutRedirectUri = String(runtimeConfig.oidcLogoutRedirectUri || env?.VITE_OIDC_LOGOUT_REDIRECT_URI || logoutRedirectDefault).trim();
+  const oidcDiscoveryUrl = String(readConfigValue(runtimeConfig, 'oidcDiscoveryUrl', 'VITE_OIDC_DISCOVERY_URL') || env?.VITE_OIDC_DISCOVERY_URL || '').trim();
+  const oidcClientId = String(readConfigValue(runtimeConfig, 'oidcClientId', 'VITE_OIDC_CLIENT_ID') || env?.VITE_OIDC_CLIENT_ID || '').trim();
+  const oidcRedirectUri = String(readConfigValue(runtimeConfig, 'oidcRedirectUri', 'VITE_OIDC_REDIRECT_URI') || env?.VITE_OIDC_REDIRECT_URI || redirectUriDefault).trim();
+  const oidcScope = String(readConfigValue(runtimeConfig, 'oidcScope', 'VITE_OIDC_SCOPE') || env?.VITE_OIDC_SCOPE || 'openid profile email').trim();
+  const oidcLogoutUrl = String(readConfigValue(runtimeConfig, 'oidcLogoutUrl', 'VITE_OIDC_LOGOUT_URL') || env?.VITE_OIDC_LOGOUT_URL || '').trim();
+  const oidcLogoutRedirectUri = String(readConfigValue(runtimeConfig, 'oidcLogoutRedirectUri', 'VITE_OIDC_LOGOUT_REDIRECT_URI') || env?.VITE_OIDC_LOGOUT_REDIRECT_URI || logoutRedirectDefault).trim();
   const internalAuthBootstrapEnabled = parseBoolean(
-    runtimeConfig.internalAuthBootstrapEnabled ?? env?.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED,
+    readConfigValue(runtimeConfig, 'internalAuthBootstrapEnabled', 'VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED') || env?.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED,
     internalFallbackDefault,
   );
+  const productionAuthStrategy = String(readConfigValue(runtimeConfig, 'productionAuthStrategy', 'VITE_AUTH_PRODUCTION_AUTH_STRATEGY', 'AUTH_PRODUCTION_AUTH_STRATEGY') || env?.VITE_AUTH_PRODUCTION_AUTH_STRATEGY || env?.AUTH_PRODUCTION_AUTH_STRATEGY || '').trim().toLowerCase()
+    || (oidcDiscoveryUrl && oidcClientId ? 'oidc' : internalAuthBootstrapEnabled ? 'internal-bootstrap' : '');
 
   return {
+    productionAuthStrategy,
     oidcDiscoveryUrl,
     oidcClientId,
     oidcRedirectUri,
@@ -130,6 +160,7 @@ function readAuthRuntimeConfig(env = {}, runtimeConfig = readRuntimeAuthConfig()
     oidcLogoutRedirectUri,
     internalAuthBootstrapEnabled,
     isOidcConfigured: Boolean(oidcDiscoveryUrl && oidcClientId),
+    isMagicLinkConfigured: productionAuthStrategy === 'magic-link',
   };
 }
 
@@ -148,6 +179,14 @@ function decodeJwtPayload(token = '') {
 }
 
 function readSessionClaims(config = {}) {
+  if (config?.actorId && config?.tenantId) {
+    return {
+      sub: config.actorId,
+      tenant_id: config.tenantId,
+      roles: config.roles || [],
+      exp: Number.isFinite(Date.parse(config.expiresAt)) ? Math.floor(Date.parse(config.expiresAt) / 1000) : undefined,
+    };
+  }
   return decodeJwtPayload(config?.bearerToken || '') || null;
 }
 
@@ -168,7 +207,7 @@ function hasSessionExpired(config = {}, now = new Date()) {
 function isAuthenticatedSession(config = {}, now = new Date()) {
   const claims = readSessionClaims(config);
   if (!claims?.sub || !claims?.tenant_id) return false;
-  if (!String(config?.bearerToken || '').trim()) return false;
+  if (!String(config?.bearerToken || '').trim() && config.authType !== 'cookie-session') return false;
   return !hasSessionExpired(config, now);
 }
 
@@ -347,6 +386,51 @@ async function completeOidcSignIn({
   };
 }
 
+async function requestMagicLinkSignIn({ apiBaseUrl = '', email, next = DEFAULT_POST_SIGN_IN_ROUTE, fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  const response = await fetchImpl(`${apiBaseUrl}/auth/magic-link/request`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify({ email, next: sanitizeNextRoute(next) }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error?.message || 'Magic-link request failed.');
+  return payload;
+}
+
+async function fetchCurrentSession({ apiBaseUrl = '', fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  const response = await fetchImpl(`${apiBaseUrl}/auth/me`, {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { accept: 'application/json' },
+  });
+  if (!response.ok) return null;
+  const payload = await response.json();
+  const data = payload?.data;
+  if (!data?.actorId || !data?.tenantId) return null;
+  return writeBrowserSessionConfig({
+    apiBaseUrl,
+    actorId: data.actorId,
+    tenantId: data.tenantId,
+    roles: data.roles || [],
+    authType: data.authType || 'cookie-session',
+    expiresAt: data.expiresAt || '',
+  });
+}
+
+async function logoutSession({ apiBaseUrl = '', fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  const response = await fetchImpl(`${apiBaseUrl}/auth/logout`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: buildAuthHeaders({ authType: 'cookie-session' }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.error?.message || 'Sign-out failed.');
+  }
+  return true;
+}
+
 function buildOidcLogoutUrl(config) {
   const logoutUrl = String(config?.oidcLogoutUrl || '').trim();
   if (!logoutUrl) return '';
@@ -372,15 +456,18 @@ module.exports = {
   clearOidcTransaction,
   completeOidcSignIn,
   decodeJwtPayload,
+  fetchCurrentSession,
   hasSessionExpired,
   isAuthenticatedSession,
   readAuthRuntimeConfig,
   readOidcTransaction,
   readSessionClaims,
+  requestMagicLinkSignIn,
   readBrowserSessionConfig,
   resolveApiBaseUrl,
   sanitizeNextRoute,
   splitRouteTarget,
+  logoutSession,
   writeOidcTransaction,
   writeBrowserSessionConfig,
 };

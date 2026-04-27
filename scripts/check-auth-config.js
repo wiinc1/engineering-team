@@ -36,6 +36,19 @@ function printResult(result) {
   }
 }
 
+function readVercelEnvOutput() {
+  const args = ['env', 'ls', 'production', '--format', 'json'];
+  const direct = spawnSync('vercel', args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (!direct.error || direct.error.code !== 'ENOENT') return direct;
+  return spawnSync('npx', ['vercel', ...args], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
 function runLocalCheck() {
   const target = readArg('--target', process.env.AUTH_CONFIG_TARGET || process.env.VERCEL_ENV || 'production');
   const artifactPath = readArg('--artifact', 'observability/auth-config-diagnostics.json');
@@ -60,10 +73,7 @@ function runVercelCheck() {
   const fixturePath = readArg('--vercel-json', '');
   const json = fixturePath
     ? fs.readFileSync(fixturePath, 'utf8')
-    : spawnSync('vercel', ['env', 'ls', 'production', '--format', 'json'], {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
+    : readVercelEnvOutput();
 
   if (typeof json !== 'string' && json.status !== 0) {
     console.error('Vercel production env-name validation failed to read name-only env output.');
@@ -80,6 +90,7 @@ function runVercelCheck() {
     console.error('Vercel production env-name validation failed.');
     console.error(`Missing OIDC env names: ${result.oidcMissing.join(', ')}`);
     console.error(`Missing internal-bootstrap env names: ${result.internalBootstrapMissing.join(', ')}`);
+    console.error(`Missing magic-link env names: ${result.magicLinkMissing.join(', ')}`);
   }
   for (const warning of result.warnings) {
     console.warn(`Warning: ${warning}`);
@@ -89,6 +100,8 @@ function runVercelCheck() {
     oidcPresent: result.present,
     internalBootstrapPresent: result.internalBootstrapPresent,
     internalBootstrapVarsDeclared: result.internalBootstrapVarsDeclared,
+    magicLinkPresent: result.magicLinkPresent,
+    browserMagicLinkStrategyPresent: result.browserMagicLinkStrategyPresent,
   }, null, 2));
   process.exitCode = result.ok ? 0 : 1;
 }

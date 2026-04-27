@@ -10,11 +10,14 @@ import {
   buildOidcLogoutUrl,
   buildAuthHeaders,
   completeOidcSignIn,
+  fetchCurrentSession,
   hasSessionExpired,
   isAuthenticatedSession,
+  logoutSession,
   readAuthRuntimeConfig,
   readBrowserSessionConfig,
   readSessionClaims,
+  requestMagicLinkSignIn,
   resolveApiBaseUrl,
   sanitizeNextRoute,
   splitRouteTarget,
@@ -65,6 +68,7 @@ const WORKFLOW_NOTIFICATION_TARGET_LABELS = {
 };
 const SIGN_IN_PATH = '/sign-in';
 const AUTH_CALLBACK_PATH = '/auth/callback';
+const ADMIN_USERS_PATH = '/admin/users';
 const SIGN_IN_TIMEOUT_MS = 5000;
 
 function matchSignInRoute(pathname = '') {
@@ -75,12 +79,17 @@ function matchAuthCallbackRoute(pathname = '') {
   return ((pathname || '').replace(/\/+$/, '') || '/') === AUTH_CALLBACK_PATH;
 }
 
+function matchAdminUsersRoute(pathname = '') {
+  return ((pathname || '').replace(/\/+$/, '') || '/') === ADMIN_USERS_PATH;
+}
+
 function isProtectedRoute(pathname = '') {
   const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
   return normalizedPath === '/'
     || matchTaskListRoute(normalizedPath)
     || matchCreateTaskRoute(normalizedPath)
     || Boolean(matchRoleInboxRoute(normalizedPath))
+    || matchAdminUsersRoute(normalizedPath)
     || Boolean(matchPmOverviewRoute(normalizedPath))
     || Boolean(matchGovernanceOverviewRoute(normalizedPath))
     || Boolean(readRouteTask(normalizedPath));
@@ -107,6 +116,7 @@ function defaultSignInDraft(apiBaseUrl = '') {
   return {
     apiBaseUrl,
     authCode: '',
+    email: '',
   };
 }
 
@@ -116,6 +126,11 @@ function getSignInReasonMessage(reason = '') {
       return 'Your session expired. Sign in again to continue.';
     case 'signed_out':
       return 'You signed out of the workflow app.';
+    case 'expired_magic_link':
+    case 'invalid_magic_link':
+    case 'replayed_magic_link':
+    case 'magic_link_failed':
+      return 'That sign-in link could not be used. Request a new link to continue.';
     default:
       return '';
   }
@@ -717,6 +732,27 @@ function hasAnyRole(tokenClaims, expectedRoles) {
   return normalizedExpected.some((role) => roles.includes(role));
 }
 
+function normalizeAdminRoles(value) {
+  const roles = Array.isArray(value) ? value : String(value || '').split(',');
+  return roles.map((role) => String(role || '').trim()).filter(Boolean);
+}
+
+function toAdminUserDraft(user = {}) {
+  return {
+    tenantId: user.tenantId || '',
+    actorId: user.actorId || '',
+    roles: normalizeAdminRoles(user.roles).join(', '),
+    status: String(user.status || 'active').trim().toLowerCase() === 'disabled' ? 'disabled' : 'active',
+  };
+}
+
+function toAdminUserDrafts(users = []) {
+  return users.reduce((drafts, user) => {
+    if (user?.userId) drafts[user.userId] = toAdminUserDraft(user);
+    return drafts;
+  }, {});
+}
+
 function canAskReviewQuestion(tokenClaims) {
   return hasAnyRole(tokenClaims, ['architect', 'admin']);
 }
@@ -821,6 +857,7 @@ function useLocationState() {
 export function App() {
   const [{ pathname, search }, navigate] = useLocationState();
   const [sessionConfig, setSessionConfig] = React.useState(() => readBrowserSessionConfig());
+  const [, setSessionProbeDone] = React.useState(() => Boolean(readBrowserSessionConfig().bearerToken || readBrowserSessionConfig().actorId));
   const [signInDraft, setSignInDraft] = React.useState(() => defaultSignInDraft(readBrowserSessionConfig().apiBaseUrl || envApiBaseUrl));
   const [signInStatus, setSignInStatus] = React.useState({ kind: 'idle', message: '' });
   const [authNotice, setAuthNotice] = React.useState('');
@@ -878,6 +915,10 @@ export function App() {
   const [lifecycleStatus, setLifecycleStatus] = React.useState({ kind: 'idle', message: '', taskId: null });
   const [sreFindingDraft, setSreFindingDraft] = React.useState('');
   const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
+  const [adminUsers, setAdminUsers] = React.useState([]);
+  const [adminUsersState, setAdminUsersState] = React.useState({ kind: 'idle', message: '' });
+  const [adminUserDraft, setAdminUserDraft] = React.useState({ email: '', tenantId: 'engineering-team', actorId: '', roles: 'reader', status: 'active' });
+  const [adminUserDrafts, setAdminUserDrafts] = React.useState({});
   const signInState = React.useMemo(() => readSignInState(search), [search]);
   const authRuntimeConfig = React.useMemo(() => readAuthRuntimeConfig(), []);
   const tokenClaims = React.useMemo(() => readSessionClaims(sessionConfig), [sessionConfig]);
@@ -887,6 +928,9 @@ export function App() {
   const authCallbackHandledRef = React.useRef(false);
   const authCallbackPromiseRef = React.useRef(null);
   const visibleAuthNotice = authNotice || getSignInReasonMessage(signInState.reason);
+  const isMagicLinkMode = authRuntimeConfig.productionAuthStrategy === 'magic-link';
+  const isOidcMode = !isMagicLinkMode;
+  const canUseInternalBootstrap = authRuntimeConfig.internalAuthBootstrapEnabled && authRuntimeConfig.productionAuthStrategy !== 'magic-link';
 
   const clearSessionForSignIn = React.useCallback((message, reason = 'expired') => {
     const preserved = writeBrowserSessionConfig({
@@ -920,6 +964,28 @@ export function App() {
       apiBaseUrl: resolvedApiBaseUrl || current.apiBaseUrl,
     }));
   }, [resolvedApiBaseUrl]);
+
+  React.useEffect(() => {
+    if (String(sessionConfig.bearerToken || '').trim() || sessionConfig.authType === 'cookie-session') {
+      setSessionProbeDone(true);
+      return undefined;
+    }
+
+    let cancelled = false;
+    fetchCurrentSession({
+      apiBaseUrl: resolvedApiBaseUrl,
+      fetchImpl: (...args) => window.fetch(...args),
+    }).then((nextConfig) => {
+      if (cancelled) return;
+      if (nextConfig) setSessionConfig(nextConfig);
+      setSessionProbeDone(true);
+    }).catch(() => {
+      if (!cancelled) setSessionProbeDone(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedApiBaseUrl, sessionConfig.authType, sessionConfig.bearerToken]);
 
   React.useEffect(() => {
     if (hasSessionExpired(sessionConfig) && String(sessionConfig.bearerToken || '').trim()) {
@@ -1052,6 +1118,13 @@ export function App() {
     let cancelled = false;
 
     if (!isAuthenticated) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (matchAdminUsersRoute(pathname)) {
+      setModel(buildRouteMissModel(pathname));
       return () => {
         cancelled = true;
       };
@@ -1710,8 +1783,37 @@ export function App() {
     }
   }, [authRuntimeConfig, resolvedApiBaseUrl, signInDraft.apiBaseUrl, signInState.next]);
 
-  const handleSignOut = React.useCallback(() => {
+  const handleMagicLinkSignIn = React.useCallback(async (event) => {
+    event.preventDefault();
+    setSignInStatus({ kind: 'loading', message: 'Sending sign-in link...' });
+    try {
+      const apiBaseUrl = String(signInDraft.apiBaseUrl || resolvedApiBaseUrl || '').trim().replace(/\/+$/, '');
+      const result = await requestMagicLinkSignIn({
+        apiBaseUrl,
+        email: signInDraft.email,
+        next: signInState.next,
+        fetchImpl: (...args) => window.fetch(...args),
+      });
+      setSignInStatus({ kind: 'success', message: result.message || 'If the email is eligible, a sign-in link has been sent.' });
+    } catch (error) {
+      setSignInStatus({ kind: 'error', message: error?.message || 'Magic-link sign-in failed.' });
+    }
+  }, [resolvedApiBaseUrl, signInDraft.apiBaseUrl, signInDraft.email, signInState.next]);
+
+  const handleSignOut = React.useCallback(async () => {
     const logoutUrl = buildOidcLogoutUrl(authRuntimeConfig);
+    if (sessionConfig.authType === 'cookie-session') {
+      try {
+        await logoutSession({
+          apiBaseUrl: resolvedApiBaseUrl,
+          fetchImpl: (...args) => window.fetch(...args),
+        });
+      } catch (error) {
+        setAuthNotice(error?.message || 'Sign-out failed.');
+        setSignInStatus({ kind: 'error', message: error?.message || 'Sign-out failed.' });
+        return;
+      }
+    }
     const preserved = writeBrowserSessionConfig({
       apiBaseUrl: resolvedApiBaseUrl,
     });
@@ -1730,11 +1832,106 @@ export function App() {
     }
 
     navigate(SIGN_IN_PATH, buildSignInSearch('/tasks', 'signed_out'), { replace: true });
-  }, [authRuntimeConfig, navigate, resolvedApiBaseUrl]);
+  }, [authRuntimeConfig, navigate, resolvedApiBaseUrl, sessionConfig.authType]);
 
   const handleTaskCreated = React.useCallback(() => {
     navigate('/tasks');
   }, [navigate]);
+
+  const loadAdminUsers = React.useCallback(async () => {
+    setAdminUsersState({ kind: 'loading', message: 'Loading users.' });
+    try {
+      const response = await window.fetch(`${resolvedApiBaseUrl}/auth/users`, {
+        credentials: 'same-origin',
+        headers: buildAuthHeaders(sessionConfig),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message || 'User load failed.');
+      const users = payload.data || [];
+      setAdminUsers(users);
+      setAdminUserDrafts(toAdminUserDrafts(users));
+      setAdminUsersState({ kind: 'ready', message: '' });
+    } catch (error) {
+      setAdminUsers([]);
+      setAdminUserDrafts({});
+      setAdminUsersState({ kind: 'error', message: error?.message || 'User load failed.' });
+    }
+  }, [resolvedApiBaseUrl, sessionConfig]);
+
+  const submitAdminUser = React.useCallback(async (event) => {
+    event.preventDefault();
+    setAdminUsersState({ kind: 'loading', message: 'Saving user.' });
+    try {
+      const response = await window.fetch(`${resolvedApiBaseUrl}/auth/users`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { ...buildAuthHeaders(sessionConfig), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: adminUserDraft.email,
+          tenantId: adminUserDraft.tenantId,
+          actorId: adminUserDraft.actorId,
+          roles: normalizeAdminRoles(adminUserDraft.roles),
+          status: adminUserDraft.status,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message || 'User save failed.');
+      setAdminUserDraft({ email: '', tenantId: adminUserDraft.tenantId || 'engineering-team', actorId: '', roles: 'reader', status: 'active' });
+      await loadAdminUsers();
+    } catch (error) {
+      setAdminUsersState({ kind: 'error', message: error?.message || 'User save failed.' });
+    }
+  }, [adminUserDraft, loadAdminUsers, resolvedApiBaseUrl, sessionConfig]);
+
+  const updateAdminUserDraft = React.useCallback((userId, updates) => {
+    setAdminUserDrafts((current) => ({
+      ...current,
+      [userId]: {
+        ...current[userId],
+        ...updates,
+      },
+    }));
+  }, []);
+
+  const patchAdminUser = React.useCallback(async (user, updates = {}, successMessage = 'User updated.') => {
+    if (!user?.userId) return;
+    const draft = {
+      ...toAdminUserDraft(user),
+      ...(adminUserDrafts[user.userId] || {}),
+      ...updates,
+    };
+    setAdminUsersState({ kind: 'loading', message: 'Saving user.' });
+    try {
+      const response = await window.fetch(`${resolvedApiBaseUrl}/auth/users/${encodeURIComponent(user.userId)}`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: { ...buildAuthHeaders(sessionConfig), 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: draft.tenantId,
+          actorId: draft.actorId,
+          roles: normalizeAdminRoles(draft.roles),
+          status: draft.status,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error?.message || 'User update failed.');
+      await loadAdminUsers();
+      setAdminUsersState({ kind: 'success', message: successMessage });
+    } catch (error) {
+      setAdminUsersState({ kind: 'error', message: error?.message || 'User update failed.' });
+    }
+  }, [adminUserDrafts, loadAdminUsers, resolvedApiBaseUrl, sessionConfig]);
+
+  const submitAdminUserEdit = React.useCallback(async (event, user) => {
+    event.preventDefault();
+    await patchAdminUser(user, {}, 'User updated.');
+  }, [patchAdminUser]);
+
+  React.useEffect(() => {
+    if (isAuthenticated && matchAdminUsersRoute(pathname) && hasAnyRole(tokenClaims, ['admin'])) {
+      loadAdminUsers();
+    }
+  }, [isAuthenticated, loadAdminUsers, pathname, tokenClaims]);
 
   const listFilters = model.kind === 'list' ? model.list.filters : {
     owner: '',
@@ -1807,7 +2004,9 @@ export function App() {
             <p className="lede">
               {matchAuthCallbackRoute(pathname)
                 ? 'Completing the enterprise sign-in callback for the task list, board, PM overview, inboxes, and task detail routes.'
-                : 'Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.'}
+                : isMagicLinkMode
+                  ? 'Enter your invited email address to receive a secure sign-in link for the workflow app.'
+                  : 'Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.'}
             </p>
           </div>
 
@@ -1823,19 +2022,43 @@ export function App() {
             </p>
           ) : (
             <>
-              <div className="session-form__actions">
-                <button type="button" onClick={handleEnterpriseSignIn} disabled={signInStatus.kind === 'loading' || !authRuntimeConfig.isOidcConfigured}>
-                  {signInStatus.kind === 'loading' ? signInStatus.message : 'Continue with enterprise sign-in'}
-                </button>
-              </div>
+              {isMagicLinkMode ? (
+                <form className="session-form auth-form" onSubmit={handleMagicLinkSignIn}>
+                  <label>
+                    Email address
+                    <input
+                      name="email"
+                      type="email"
+                      value={signInDraft.email}
+                      onChange={(event) => setSignInDraft((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </label>
 
-              {!authRuntimeConfig.isOidcConfigured ? (
+                  <div className="session-form__actions">
+                    <button type="submit" disabled={signInStatus.kind === 'loading'}>
+                      {signInStatus.kind === 'loading' ? signInStatus.message : 'Send sign-in link'}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {isOidcMode ? (
+                <div className="session-form__actions">
+                  <button type="button" onClick={handleEnterpriseSignIn} disabled={signInStatus.kind === 'loading' || !authRuntimeConfig.isOidcConfigured}>
+                    {signInStatus.kind === 'loading' ? signInStatus.message : 'Continue with enterprise sign-in'}
+                  </button>
+                </div>
+              ) : null}
+
+              {!isMagicLinkMode && !authRuntimeConfig.isOidcConfigured ? (
                 <p className="auth-status auth-status--error" role="alert">
                   This deployment is missing enterprise auth configuration. Contact the operator responsible for production identity-provider settings.
                 </p>
               ) : null}
 
-              {authRuntimeConfig.internalAuthBootstrapEnabled ? (
+              {canUseInternalBootstrap ? (
                 <form className="session-form auth-form" onSubmit={handleSignIn}>
                   <label>
                     Trusted auth code
@@ -1868,9 +2091,142 @@ export function App() {
               {signInStatus.kind === 'error' ? (
                 <p className="auth-status auth-status--error" role="alert">{signInStatus.message}</p>
               ) : null}
+              {signInStatus.kind === 'success' ? (
+                <p className="auth-status auth-status--notice" role="status">{signInStatus.message}</p>
+              ) : null}
             </>
           )}
         </section>
+      </main>
+    );
+  }
+
+  if (matchAdminUsersRoute(pathname)) {
+    const isAdmin = hasAnyRole(tokenClaims, ['admin']);
+    return (
+      <main className="app-shell">
+        <nav className="app-nav" aria-label="Primary navigation">
+          <div className="app-nav__links">
+            <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
+            <button type="button" className={isAdmin ? '' : 'button-secondary'} onClick={() => navigate('/admin/users')}>User admin</button>
+          </div>
+          <div className="app-nav__session">
+            <span>{tokenClaims?.sub || 'unknown actor'} · {tokenClaims?.tenant_id || 'unknown tenant'}</span>
+            <button type="button" className="button-secondary" onClick={handleSignOut}>Sign out</button>
+          </div>
+        </nav>
+        {authNotice ? <p className="auth-status auth-status--error" role="alert">{authNotice}</p> : null}
+        <header className="page-header">
+          <div>
+            <p className="eyebrow">Authentication administration</p>
+            <h1>User admin</h1>
+            <p className="lede">Manage invited users for magic-link sign-in.</p>
+          </div>
+        </header>
+        {!isAdmin ? (
+          <section className="empty-state" role="alert">
+            <h2>Access denied</h2>
+            <p>Admin role is required to manage users.</p>
+          </section>
+        ) : (
+          <section className="detail-panel">
+            <form className="session-form auth-form" onSubmit={submitAdminUser}>
+              <label>
+                Email
+                <input value={adminUserDraft.email} onChange={(event) => setAdminUserDraft((current) => ({ ...current, email: event.target.value }))} type="email" />
+              </label>
+              <label>
+                Tenant ID
+                <input value={adminUserDraft.tenantId} onChange={(event) => setAdminUserDraft((current) => ({ ...current, tenantId: event.target.value }))} />
+              </label>
+              <label>
+                Actor ID
+                <input value={adminUserDraft.actorId} onChange={(event) => setAdminUserDraft((current) => ({ ...current, actorId: event.target.value }))} />
+              </label>
+              <label>
+                Roles
+                <input value={adminUserDraft.roles} onChange={(event) => setAdminUserDraft((current) => ({ ...current, roles: event.target.value }))} placeholder="reader,pm,admin" />
+              </label>
+              <label>
+                Status
+                <select value={adminUserDraft.status} onChange={(event) => setAdminUserDraft((current) => ({ ...current, status: event.target.value }))}>
+                  <option value="active">active</option>
+                  <option value="disabled">disabled</option>
+                </select>
+              </label>
+              <div className="session-form__actions">
+                <button type="submit" disabled={adminUsersState.kind === 'loading'}>Save user</button>
+                <button type="button" className="button-secondary" onClick={loadAdminUsers}>Refresh</button>
+              </div>
+            </form>
+            {adminUsersState.kind === 'error' ? <p className="auth-status auth-status--error" role="alert">{adminUsersState.message}</p> : null}
+            {adminUsersState.kind === 'success' || adminUsersState.kind === 'loading' ? <p className="auth-status auth-status--notice" role="status">{adminUsersState.message}</p> : null}
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Email</th><th>Actor</th><th>Tenant</th><th>Roles</th><th>Status</th><th>Last sign-in</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {adminUsers.map((user) => {
+                    const draft = adminUserDrafts[user.userId] || toAdminUserDraft(user);
+                    const nextStatus = user.status === 'disabled' ? 'active' : 'disabled';
+                    return (
+                      <tr key={user.userId}>
+                        <td>{user.email}</td>
+                        <td>
+                          <input
+                            value={draft.actorId}
+                            onChange={(event) => updateAdminUserDraft(user.userId, { actorId: event.target.value })}
+                            aria-label={`Actor ID for ${user.email}`}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={draft.tenantId}
+                            onChange={(event) => updateAdminUserDraft(user.userId, { tenantId: event.target.value })}
+                            aria-label={`Tenant ID for ${user.email}`}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={draft.roles}
+                            onChange={(event) => updateAdminUserDraft(user.userId, { roles: event.target.value })}
+                            aria-label={`Roles for ${user.email}`}
+                            placeholder="reader,pm,admin"
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={draft.status}
+                            onChange={(event) => updateAdminUserDraft(user.userId, { status: event.target.value })}
+                            aria-label={`Status for ${user.email}`}
+                          >
+                            <option value="active">active</option>
+                            <option value="disabled">disabled</option>
+                          </select>
+                        </td>
+                        <td>{user.lastSignInAt || 'Never'}</td>
+                        <td>
+                          <form className="session-form__actions" onSubmit={(event) => submitAdminUserEdit(event, user)}>
+                            <button type="submit" disabled={adminUsersState.kind === 'loading'}>Save</button>
+                            <button
+                              type="button"
+                              className="button-secondary"
+                              disabled={adminUsersState.kind === 'loading'}
+                              onClick={() => patchAdminUser(user, { status: nextStatus }, nextStatus === 'active' ? 'User reactivated.' : 'User disabled.')}
+                            >
+                              {nextStatus === 'active' ? 'Reactivate' : 'Disable'}
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </main>
     );
   }
@@ -1883,6 +2239,9 @@ export function App() {
           <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
           <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
           <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
+          {hasAnyRole(tokenClaims, ['admin']) ? (
+            <button type="button" className="button-secondary" onClick={() => navigate('/admin/users')}>User admin</button>
+          ) : null}
           {ROLE_INBOXES.map((role) => (
             <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
               {getRoleInboxLabel(role)} inbox
@@ -1894,6 +2253,7 @@ export function App() {
           <button type="button" className="button-secondary" onClick={handleSignOut}>Sign out</button>
         </div>
       </nav>
+      {authNotice ? <p className="auth-status auth-status--error" role="alert">{authNotice}</p> : null}
       <header className="page-header">
         <div>
           <p className="eyebrow">Authenticated browser shell for US-002</p>

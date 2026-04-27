@@ -200,6 +200,7 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
   const request = async (path, init = {}) => {
     const response = await fetchImpl(`${baseUrl}${path}`, {
       method: init.method || 'GET',
+      credentials: 'same-origin',
       headers: { ...(typeof getHeaders === 'function' ? await getHeaders() : undefined), ...(init.headers || {}) },
       body: init.body,
     });

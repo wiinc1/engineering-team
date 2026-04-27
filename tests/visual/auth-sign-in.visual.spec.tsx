@@ -31,6 +31,26 @@ describe('auth sign-in visual states', () => {
     expect(container.querySelector('.auth-card')).toMatchSnapshot();
   });
 
+  it('matches the magic-link state', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { code: 'missing_auth_context', message: 'A browser session is required.' } }),
+    })));
+    const { container } = renderSignIn({
+      productionAuthStrategy: 'magic-link',
+      internalAuthBootstrapEnabled: true,
+      oidcDiscoveryUrl: 'https://idp.example/.well-known/openid-configuration',
+      oidcClientId: 'browser-client',
+    });
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with enterprise sign-in' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Trusted auth code')).not.toBeInTheDocument();
+    expect(container.querySelector('.auth-card')).toMatchSnapshot();
+  });
+
   it('matches the no-login-path configuration error state', async () => {
     const { container } = renderSignIn({
       internalAuthBootstrapEnabled: false,

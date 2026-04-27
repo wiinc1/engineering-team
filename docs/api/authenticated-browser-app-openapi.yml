@@ -7,10 +7,13 @@ info:
     Governance note: browser-shell session and route changes should update this spec in the same pull request.
     Protected browser-shell routes in the current client include `/tasks`, `/tasks?view=board`,
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
-    Production sign-in uses a hosted OIDC Authorization Code + PKCE flow with the callback handled at `/auth/callback`.
+    Production sign-in supports hosted OIDC Authorization Code + PKCE or first-party invite-only magic-link sessions.
     The internal browser bootstrap endpoint remains a compatibility fallback for local/internal environments only.
     Preview environments without an approved auth strategy may render a no-login-path configuration state.
-    Production supports either OIDC or the explicitly selected internal-bootstrap strategy when no IdP exists.
+    Production supports OIDC, durable magic-link auth when no IdP exists, or the explicitly selected temporary internal-bootstrap strategy.
+    Production magic-link requires the browser-visible strategy to be `magic-link` through `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
+    or injected runtime config `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy`.
+    Its public app URL must be HTTPS, magic-link TTL must be 15 minutes, and session TTL must be 8 hours.
 paths:
   /sign-in:
     get:
@@ -60,6 +63,57 @@ paths:
       responses:
         '200':
           description: Callback route rendered by the browser app.
+  /auth/magic-link/request:
+    post:
+      summary: Request an invite-only magic sign-in link
+      description: Returns generic success for eligible, unknown, inactive, and throttled identities where safe.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                next:
+                  type: string
+                  description: Sanitized same-origin route to restore after sign-in.
+      responses:
+        '200':
+          description: Generic magic-link request response.
+  /auth/magic-link/consume:
+    get:
+      summary: Consume a single-use magic-link token
+      description: Creates an httpOnly cookie session, sets a readable CSRF cookie, and redirects to the sanitized next route.
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+        - in: query
+          name: next
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects to the restored browser route or back to sign-in on failure.
+  /auth/me:
+    get:
+      summary: Return the current browser auth principal
+      responses:
+        '200':
+          description: Current actor, tenant, roles, auth type, and expiry.
+        '401':
+          description: No valid browser session.
+  /auth/logout:
+    post:
+      summary: Revoke the current cookie session and clear auth cookies
+      responses:
+        '200':
+          description: Session revoked or already absent.
   /auth/session:
     post:
       summary: Exchange a trusted internal browser auth code for a browser JWT session

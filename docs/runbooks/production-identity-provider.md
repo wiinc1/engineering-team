@@ -58,7 +58,21 @@ Optional browser settings:
 
 - `AUTH_PRODUCTION_AUTH_STRATEGY`
   - `oidc`: require external OIDC browser config and provider JWT verifier settings
+  - `magic-link`: require invite-only first-party email auth, DB sessions, CSRF, and Resend delivery
   - `internal-bootstrap`: allow signed internal browser bootstrap in production when no external IdP exists
+- `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
+  - browser-visible strategy used by the SPA; set to `magic-link` for production magic-link builds
+- `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY`
+  - name-only production gate evidence for deployments that inject `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy = "magic-link"` at runtime instead of baking `VITE_AUTH_PRODUCTION_AUTH_STRATEGY` into the bundle
+- `AUTH_SESSION_SECRET`
+  - required for `magic-link`; used to hash session, CSRF, and magic-link tokens before persistence
+- `AUTH_EMAIL_PROVIDER`
+  - production value: `resend`
+- `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `AUTH_PUBLIC_APP_URL`
+  - required to deliver production magic-link email without exposing token material outside the link
+  - `AUTH_PUBLIC_APP_URL` must be an `https://` URL in production
+- `AUTH_MAGIC_LINK_TTL_MINUTES`, `AUTH_SESSION_TTL_HOURS`
+  - production values must be exactly `15` minutes and `8` hours
 - `AUTH_JWT_SECRET`
   - when present, HS256 compatibility tokens remain valid
 - `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP`
@@ -104,17 +118,20 @@ Internal/local fallback:
 
 Production no-IdP path:
 
-- select `AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap`
-- configure a production `AUTH_JWT_SECRET`
-- set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`
-- set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
-- smoke `/sign-in` with an approved operator auth code and verify a protected view loads data or an intentional empty state
+- durable path: select `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`
+- configure `DATABASE_URL`, `AUTH_SESSION_SECRET`, `AUTH_EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `AUTH_PUBLIC_APP_URL=https://...`, `AUTH_MAGIC_LINK_TTL_MINUTES=15`, and `AUTH_SESSION_TTL_HOURS=8`
+- expose the browser strategy with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`; if the deployment injects runtime config instead, set `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy = "magic-link"` and declare `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY=magic-link` for the production gate
+- set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false` and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
+- provision invited users at `/admin/users` with email, tenant ID, actor ID, roles, and status
+- smoke `/sign-in` by requesting a link for an invited user, consuming it, verifying `/auth/me`, loading protected views, and signing out
+- run `npm run auth:magic-link:production-smoke` to write redacted machine-check evidence to `observability/magic-link-production-smoke.json`
+- temporary path: `internal-bootstrap` remains only for explicitly approved emergency remediation while #92 is incomplete
 
 Operational guidance:
 
 - local/internal compatibility mode: keep `AUTH_JWT_SECRET`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`, and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
 - production OIDC mode: configure OIDC + JWKS settings, set `AUTH_PRODUCTION_AUTH_STRATEGY=oidc`, set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`, and set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
-- production no-IdP mode: configure `AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap`, `AUTH_JWT_SECRET`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`, and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`
+- production no-IdP mode: configure `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, expose browser strategy `magic-link`, and keep internal bootstrap disabled
 - preview mode: either configure a preview-specific OIDC redirect URI/strategy, use the same approved internal-bootstrap strategy, or allow the app to show the no-login-path configuration state.
 
 ## Build and release gates
@@ -133,7 +150,9 @@ Vercel production env-name validation is name-only:
 npm run auth:config:check:vercel
 ```
 
-The script inspects `vercel env ls production --format json` output. It must not use `vercel env pull`, write `.env` files, or print values. Confirm that production has either the OIDC names (`VITE_OIDC_DISCOVERY_URL`, `VITE_OIDC_CLIENT_ID`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`) or the internal-bootstrap names (`AUTH_PRODUCTION_AUTH_STRATEGY`, `AUTH_JWT_SECRET`, `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP`).
+The script inspects `vercel env ls production --format json` output. It must not use `vercel env pull`, write `.env` files, or print values. Confirm that production has either the OIDC names (`VITE_OIDC_DISCOVERY_URL`, `VITE_OIDC_CLIENT_ID`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`), the magic-link names (`DATABASE_URL`, `AUTH_PRODUCTION_AUTH_STRATEGY`, `AUTH_SESSION_SECRET`, `AUTH_EMAIL_PROVIDER`, `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `AUTH_PUBLIC_APP_URL`, `AUTH_MAGIC_LINK_TTL_MINUTES`, `AUTH_SESSION_TTL_HOURS`, plus either `VITE_AUTH_PRODUCTION_AUTH_STRATEGY` or `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY`), or the temporary internal-bootstrap names (`AUTH_PRODUCTION_AUTH_STRATEGY`, `AUTH_JWT_SECRET`, `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP`).
+
+Name-only Vercel validation cannot inspect values. The local production gate enforces `AUTH_PUBLIC_APP_URL` as HTTPS, `AUTH_MAGIC_LINK_TTL_MINUTES=15`, `AUTH_SESSION_TTL_HOURS=8`, and browser strategy `magic-link` through either `VITE_AUTH_PRODUCTION_AUTH_STRATEGY` or the documented runtime-config evidence variable.
 
 ## Production remediation evidence
 
@@ -152,6 +171,31 @@ Environment changes alone do not complete remediation. The production configurat
 - rollback evidence identifying the last known-good production OIDC deployment/config
 
 Rollback means restoring the last known-good working production auth deployment/config for the selected strategy. Do not switch strategies during rollback unless a separate emergency exception is approved.
+
+For magic-link production remediation, run the smoke in two phases because the sign-in link arrives through Resend:
+
+```bash
+AUTH_PROD_BASE_URL=https://app.example \
+AUTH_PROD_INVITED_EMAIL=approved-test-admin@example.com \
+AUTH_PROD_UNKNOWN_EMAIL=unknown-smoke@example.com \
+AUTH_PROD_TASK_DETAIL_PATH=/tasks/TSK-123 \
+npm run auth:magic-link:production-smoke
+```
+
+After the invited user receives the Resend email, rerun with the received link:
+
+```bash
+AUTH_PROD_BASE_URL=https://app.example \
+AUTH_PROD_INVITED_EMAIL=approved-test-admin@example.com \
+AUTH_PROD_UNKNOWN_EMAIL=unknown-smoke@example.com \
+AUTH_PROD_MAGIC_LINK_URL='https://app.example/auth/magic-link/consume?token=...' \
+AUTH_PROD_TASK_DETAIL_PATH=/tasks/TSK-123 \
+npm run auth:magic-link:production-smoke -- --require-complete
+```
+
+The smoke artifact stores hashes of email addresses and magic-link token material, never raw email bodies, tokens, cookies, CSRF values, or Resend API keys. It verifies generic request responses, cookie and CSRF cookie issuance, `/auth/me`, protected routes, replay rejection, logout revocation, and post-logout auth rejection. Operators still need to attach Vercel Ready status, Resend delivery evidence, production invited-user evidence, monitoring counts/rates, and rollback evidence.
+
+Use `--dry-run` only to validate command wiring and redacted artifact shape. Dry-run mode skips network calls and does not count as production smoke evidence.
 
 ## Ownership
 

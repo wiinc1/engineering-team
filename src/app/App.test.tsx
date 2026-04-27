@@ -794,6 +794,132 @@ describe('Task browser runtime coverage', () => {
     expect(window.location.pathname).toBe('/sign-in');
   });
 
+  it('renders magic-link sign-in without OIDC or trusted-code controls and requests a link', async () => {
+    clearBrowserSessionConfig();
+    (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+      productionAuthStrategy: 'magic-link',
+      internalAuthBootstrapEnabled: true,
+      oidcDiscoveryUrl: OIDC_DISCOVERY_URL,
+      oidcClientId: 'browser-client',
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse({ error: { code: 'missing_auth_context', message: 'A browser session is required.' } }, 401);
+      }
+      if (url.endsWith('/auth/magic-link/request') && init?.method === 'POST') {
+        return createJsonResponse({ ok: true, message: 'If the email is eligible, a sign-in link has been sent.' });
+      }
+      throw new Error(`Unhandled fetch URL in magic-link sign-in test: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.pushState({}, '', '/sign-in?next=/tasks/TSK-42');
+
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
+    expect(screen.getByLabelText('Email address')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with enterprise sign-in' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Trusted auth code')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'pm@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }));
+
+    await screen.findByText('If the email is eligible, a sign-in link has been sent.');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/magic-link/request'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'pm@example.com', next: '/tasks/TSK-42' }),
+      }),
+    );
+  });
+
+  it('manages invited users from the admin route', async () => {
+    clearBrowserSessionConfig();
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      actorId: 'admin-1',
+      tenantId: 'tenant-a',
+      roles: ['admin', 'reader'],
+      authType: 'cookie-session',
+      expiresAt: makeFutureExpiry(),
+    });
+    let users = [
+      { userId: 'user-1', email: 'admin@example.com', tenantId: 'tenant-a', actorId: 'admin-1', roles: ['admin', 'reader'], status: 'active', lastSignInAt: '2026-04-01T12:00:00.000Z' },
+      { userId: 'user-2', email: 'reader@example.com', tenantId: 'tenant-a', actorId: 'reader-1', roles: ['reader'], status: 'active', lastSignInAt: null },
+    ];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/users') && (!init?.method || init.method === 'GET')) {
+        return createJsonResponse({ data: users });
+      }
+      if (url.endsWith('/auth/users') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body || '{}'));
+        const created = { userId: 'user-3', email: body.email, tenantId: body.tenantId, actorId: body.actorId, roles: body.roles, status: body.status, lastSignInAt: null };
+        users = [...users, created];
+        return createJsonResponse({ data: created });
+      }
+      if (url.endsWith('/auth/users/user-2') && init?.method === 'PATCH') {
+        const body = JSON.parse(String(init.body || '{}'));
+        users = users.map((user) => user.userId === 'user-2' ? { ...user, ...body } : user);
+        return createJsonResponse({ data: users.find((user) => user.userId === 'user-2') });
+      }
+      throw new Error(`Unhandled fetch URL in admin users test: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.pushState({}, '', '/admin/users');
+
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'User admin' });
+    await screen.findByText('reader@example.com');
+    const readerRow = screen.getByText('reader@example.com').closest('tr') as HTMLElement;
+    fireEvent.change(within(readerRow).getByLabelText('Roles for reader@example.com'), { target: { value: 'reader,pm' } });
+    fireEvent.click(within(readerRow).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/users/user-2'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ tenantId: 'tenant-a', actorId: 'reader-1', roles: ['reader', 'pm'], status: 'active' }),
+      }),
+    ));
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'pm@example.com' } });
+    fireEvent.change(screen.getByLabelText('Actor ID'), { target: { value: 'pm-1' } });
+    fireEvent.change(screen.getByLabelText('Roles'), { target: { value: 'pm,reader' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save user' }));
+
+    await screen.findByText('pm@example.com');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/users'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'pm@example.com', tenantId: 'engineering-team', actorId: 'pm-1', roles: ['pm', 'reader'], status: 'active' }),
+      }),
+    );
+  });
+
+  it('renders the admin route as access denied for non-admin sessions', async () => {
+    clearBrowserSessionConfig();
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      actorId: 'reader-1',
+      tenantId: 'tenant-a',
+      roles: ['reader'],
+      authType: 'cookie-session',
+      expiresAt: makeFutureExpiry(),
+    });
+    vi.stubGlobal('fetch', vi.fn());
+    window.history.pushState({}, '', '/admin/users');
+
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'User admin' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Admin role is required to manage users.');
+  });
+
   it('renders linked PR, child task, and spec detail from the dedicated detail model', async () => {
     installTaskFetchMock();
     render(<App />);
