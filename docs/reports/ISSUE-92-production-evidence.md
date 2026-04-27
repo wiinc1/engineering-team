@@ -2,7 +2,7 @@
 
 - Date: 2026-04-27
 - Issue: #92 Replace internal auth bootstrap with magic-link session auth
-- Status: Pending production execution
+- Status: Pending invited-user production smoke
 - Applicable standards areas: security, deployment and release, observability and monitoring, testing and quality assurance
 - Evidence expected for this change: Vercel production deployment status, production auth config gate, Resend delivery event, invited-user smoke, protected-route smoke, logout/replay/unknown-email smoke, monitoring counts/rates, rollback target
 - Gap observed: repository implementation and automated local verification are complete, but production remediation cannot be closed until the release operator runs the production smoke against the deployed app and attaches external Vercel/Resend/monitoring evidence. Documented rationale: production authentication changes require direct operational verification because local tests cannot prove deployed env values, provider delivery, cookie behavior on the production origin, or rollback readiness.
@@ -11,20 +11,22 @@
 
 ## Workspace Evidence Captured
 
-- Vercel production alias currently resolves to the last Ready `engineering-team` deployment: `https://engineering-team-gyfe6rk6d-wiinc1-hotmailcoms-projects.vercel.app`
+- Vercel production alias currently resolves to Ready deployment `https://engineering-team-4r64trogs-wiinc1-hotmailcoms-projects.vercel.app` (`dpl_DNd9rxVj6oXRzBjiohizTtj2oGQx`), built from commit `2ad228b`.
+- Production aliases include `https://engineering-team-zeta.vercel.app` and `https://engineering-team-wiinc1-hotmailcoms-projects.vercel.app`.
 - `npm run auth:config:check:vercel` now executes against the linked `engineering-team` Vercel project.
 - Vercel env-name validation now passes through the complete magic-link env-name set.
-- Latest attempted production redeploy `https://engineering-team-k0gvhp1pw-wiinc1-hotmailcoms-projects.vercel.app` failed because it rebuilt the old committed source, whose production config gate does not yet accept `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`.
-- Required release action before production smoke: commit and push the local magic-link implementation, then redeploy production from that commit.
+- Vercel build log for `https://engineering-team-4r64trogs-wiinc1-hotmailcoms-projects.vercel.app` includes `Auth config check passed for production.`
+- Earlier attempted production redeploy `https://engineering-team-k0gvhp1pw-wiinc1-hotmailcoms-projects.vercel.app` failed because it rebuilt the old committed source, whose production config gate did not accept `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`; the pushed `2ad228b` deployment resolved that failure.
+- Basic unauthenticated production reachability checks returned `401` for `/` and `/auth/me`, confirming production auth enforcement.
 - Production smoke execution is blocked in this workspace because `AUTH_PROD_BASE_URL`, `AUTH_PROD_INVITED_EMAIL`, and the out-of-band `AUTH_PROD_MAGIC_LINK_URL` are not available.
-- GitHub issue status comment: `https://github.com/wiinc1/engineering-team/issues/92#issuecomment-4323417076`
+- GitHub issue status comment: `https://github.com/wiinc1/engineering-team/issues/92#issuecomment-4329401583`
 
 ## Required Production Evidence
 
 | Requirement | Evidence source | Status |
 | --- | --- | --- |
-| Vercel production deployment is Ready | Vercel deployment URL/ID and status | Blocked: latest redeploy failed; alias remains on prior Ready deployment |
-| Build/config gates pass with `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link` | `npm run auth:config:check:vercel` plus production build log | Partial: Vercel env-name check passes; production build needs pushed implementation |
+| Vercel production deployment is Ready | Vercel deployment URL/ID and status | Done: `dpl_DNd9rxVj6oXRzBjiohizTtj2oGQx` Ready |
+| Build/config gates pass with `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link` | `npm run auth:config:check:vercel` plus production build log | Done: Vercel env-name check passes and Vercel build log reports config check passed |
 | Internal bootstrap flags are disabled in production | Vercel env-name/value review by production config owner | Partial: names present; operator set values to false |
 | Admin-created invited user exists in production | Redacted admin `/admin/users` confirmation | Pending |
 | Resend sends to invited production test/admin/PM account | Resend event ID or redacted delivery screenshot | Pending |
