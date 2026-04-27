@@ -210,6 +210,15 @@ test('magic-link HTTP routes create cookie sessions, protect admin APIs, and rev
     assert.equal((await response.json()).message, 'If the email is eligible, a sign-in link has been sent.');
     assert.equal(emailTransport.sent.length, 1);
 
+    response = await fetch(`${baseUrl}/backend/auth/magic-link/request`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'unknown@example.com', next: '/tasks' }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).message, 'If the email is eligible, a sign-in link has been sent.');
+    assert.equal(emailTransport.sent.length, 1);
+
     const token = new URL(emailTransport.sent[0].link).searchParams.get('token');
     response = await fetch(`${baseUrl}/auth/magic-link/consume?token=${encodeURIComponent(token)}&next=%2Fadmin%2Fusers`, {
       redirect: 'manual',
