@@ -16,6 +16,8 @@ Represent Intake Draft as the first stage of the same Task, not as a separate In
 
 The same Task ID, task detail surface, and audit trail carry work from Intake Draft through refinement, approval, implementation, QA verification, SRE verification, and operator closeout.
 
+Until PM refinement creates a non-intake execution contract, Intake Drafts remain in `DRAFT` and generic workflow stage advancement is blocked.
+
 ## Rationale
 
 Keeping intake and delivery on the same Task preserves continuity for the operator and avoids forcing users to reconcile a pre-task intake record with a later delivery task.
@@ -36,6 +38,7 @@ It also matches the existing repo direction: `/tasks` creation already records `
 - Task schemas and views must distinguish raw intake fields from refined execution-contract fields.
 - Task lists and board views need clear filtering or labeling so Intake Drafts are not confused with implementation-ready work.
 - Future analytics must avoid treating every created Task as approved delivery demand.
+- Partial creation failures need compensating audit markers such as `task.intake_creation_failed` because the audit trail is immutable.
 
 ### Neutral
 
@@ -49,18 +52,19 @@ It also matches the existing repo direction: `/tasks` creation already records `
 ## Related Artifacts
 
 - [CONTEXT.md](/Users/wiinc1/repos/engineering-team/CONTEXT.md)
+- [docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements.md](/Users/wiinc1/repos/engineering-team/docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements.md)
 - [src/features/task-creation/TaskCreationForm.tsx](/Users/wiinc1/repos/engineering-team/src/features/task-creation/TaskCreationForm.tsx)
 - [lib/audit/http.js](/Users/wiinc1/repos/engineering-team/lib/audit/http.js)
 
 ## Standards Alignment
 
 - Applicable standards areas: architecture and design, team and process
-- Evidence in this decision: existing `/tasks` creation already writes a `DRAFT` initial stage, while the product glossary defines initial requirements as intake rather than execution-ready work.
-- Gap observed: the current task-creation UI still requires execution-contract fields up front. Documented rationale: this ADR establishes the target domain model before implementation changes align the UI and API behavior (source https://github.com/wiinc1/engineering-team/issues/95).
+- Evidence in this decision: `/tasks` creation writes a `DRAFT` initial stage, and the product glossary defines initial requirements as intake rather than execution-ready work.
+- Gap observed: this ADR covers the initial raw-intake-to-PM-refinement slice only. Documented rationale: later refinement generation, dispatch, QA, SRE, release, decomposition, and intake revision behavior remain separate product decisions (source https://github.com/wiinc1/engineering-team/issues/95).
 
 ## Required Evidence
 
-- Commands run: `git diff --cached --check`
-- Tests added or updated: Documentation-only decision; implementation test coverage is specified in `docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements.md`
-- Rollout or rollback notes: implementation should remain additive by allowing Intake Draft tasks before changing delivery dispatch behavior
-- Docs updated: `CONTEXT.md`, this ADR
+- Commands run: see `docs/reports/US-003-verification.md`
+- Tests added or updated: implementation test coverage is specified in `docs/reports/test_report_US-003.md`
+- Rollout or rollback notes: raw intake creation is controlled by `FF_INTAKE_DRAFT_CREATION`
+- Docs updated: `CONTEXT.md`, this ADR, US-003 design/story/report artifacts

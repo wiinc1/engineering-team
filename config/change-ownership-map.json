@@ -151,7 +151,8 @@
         {
           "name": "browser",
           "patterns": [
-            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$"
+            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
         }
       ],
@@ -159,7 +160,8 @@
         {
           "name": "design",
           "patterns": [
-            "^docs/design/US-002-design\\.md$"
+            "^docs/design/US-002-design\\.md$",
+            "^docs/design/US-003-design\\.md$"
           ]
         },
         {
@@ -172,7 +174,8 @@
           "name": "runbook-or-design",
           "patterns": [
             "^docs/runbooks/production-identity-provider\\.md$",
-            "^docs/design/ISSUE-89-design\\.md$"
+            "^docs/design/ISSUE-89-design\\.md$",
+            "^docs/design/US-003-design\\.md$"
           ]
         }
       ]
@@ -281,6 +284,7 @@
         {
           "name": "security-or-accessibility-or-visual",
           "patterns": [
+            "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/task-assignment-security\\.test\\.js$",
             "^tests/accessibility/task-assignment\\.a11y\\.spec\\.ts$",
             "^tests/visual/task-assignment\\.visual\\.spec\\.ts$"
@@ -291,12 +295,14 @@
         {
           "name": "api",
           "patterns": [
+            "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/task-assignment-openapi\\.yml$"
           ]
         },
         {
           "name": "runbook",
           "patterns": [
+            "^docs/runbooks/audit-foundation\\.md$",
             "^docs/runbooks/task-assignment\\.md$",
             "^docs/runbooks/task-assignment-emergency\\.md$"
           ]
@@ -405,7 +411,9 @@
         {
           "name": "story",
           "patterns": [
-            "^docs/user-stories/US-001-kanban-board-ui\\.md$"
+            "^docs/user-stories/US-001-kanban-board-ui\\.md$",
+            "^docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements\\.md$",
+            "^docs/design/US-003-design\\.md$"
           ]
         }
       ]

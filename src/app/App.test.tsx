@@ -183,6 +183,33 @@ function installTaskFetchMock({
       });
     }
 
+    if (url.endsWith('/tasks') && init?.method === 'POST') {
+      const body = JSON.parse(String(init.body || '{}'));
+      taskItems.push({
+        task_id: 'TSK-INTAKE',
+        tenant_id: 'tenant-a',
+        title: body.title || 'Untitled intake draft',
+        priority: null,
+        current_stage: 'DRAFT',
+        current_owner: 'pm',
+        owner: { actor_id: 'pm', display_name: 'pm' },
+        blocked: false,
+        closed: false,
+        intake_draft: true,
+        operator_intake_requirements: body.raw_requirements,
+        waiting_state: 'task_refinement',
+        next_required_action: 'PM refinement required',
+        queue_entered_at: '2026-04-01T15:04:00.000Z',
+        freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:04:00.000Z' },
+      });
+      return createJsonResponse({
+        taskId: 'TSK-INTAKE',
+        status: 'DRAFT',
+        intakeDraft: true,
+        nextRequiredAction: 'PM refinement required',
+      }, 201);
+    }
+
     if (/\/tasks\/[^/]+\/events$/.test(url) && init?.method === 'POST') {
       const taskId = url.match(/\/tasks\/([^/]+)\/events$/)?.[1];
       const body = JSON.parse(String(init.body || '{}'));
@@ -292,6 +319,51 @@ function installTaskFetchMock({
           recordedAt: '2026-04-01T19:07:00.000Z',
         },
       }, 201);
+    }
+
+    if (url.includes('/tasks/TSK-INTAKE/detail')) {
+      return createJsonResponse({
+        task: { id: 'TSK-INTAKE', title: 'Untitled intake draft', priority: null, stage: 'DRAFT', status: 'waiting' },
+        summary: {
+          owner: { id: 'pm', label: 'pm', kind: 'assigned' },
+          workflowStage: { value: 'DRAFT', label: 'Draft' },
+          nextAction: { label: 'PM refinement required', source: 'system', overdue: false, waitingOn: 'Task refinement' },
+          prStatus: { label: 'No linked PRs', state: 'empty', total: 0, openCount: 0, mergedCount: 0, draftCount: 0 },
+          childStatus: { label: 'No child tasks', state: 'empty', total: 0, blockedCount: 0 },
+          timers: { queueAgeLabel: 'Just now', lastUpdatedAt: '2026-04-01T15:04:00.000Z', freshness: 'fresh' },
+          blockedState: { isBlocked: false, label: 'Waiting', waitingOn: 'Task refinement' },
+        },
+        blockers: [],
+        context: {
+          intakeDraft: true,
+          operatorIntakeRequirements: 'Raw operator request from the test.',
+          businessContext: null,
+          acceptanceCriteria: [],
+          definitionOfDone: [],
+          technicalSpec: null,
+          monitoringSpec: null,
+        },
+        relations: { linkedPrs: [], childTasks: [] },
+        activity: {
+          comments: [],
+          auditLog: [
+            { id: 'evt-intake-2', type: 'task.refinement_requested', summary: 'PM refinement requested', actor: { id: 'pm-1', label: 'PM 1' }, occurredAt: '2026-04-01T15:04:01.000Z' },
+            { id: 'evt-intake-1', type: 'task.created', summary: 'Task created', actor: { id: 'pm-1', label: 'PM 1' }, occurredAt: '2026-04-01T15:04:00.000Z' },
+          ],
+          auditLogPageInfo: { limit: 25, next_cursor: null, has_more: false },
+        },
+        telemetry: { availability: 'empty', lastUpdatedAt: null, summary: {}, emptyStateReason: 'No telemetry signals are linked to this task yet.', access: { restricted: false, omission_applied: false, omitted_fields: [] } },
+        meta: {
+          permissions: {
+            canViewComments: true,
+            canViewAuditLog: true,
+            canViewTelemetry: true,
+            canViewChildTasks: true,
+            canViewLinkedPrMetadata: true,
+          },
+          freshness: { status: 'fresh', lastUpdatedAt: '2026-04-01T15:04:00.000Z' },
+        },
+      });
     }
 
     if (url.includes('/tasks/TSK-42/detail')) {
@@ -619,6 +691,7 @@ describe('Task browser runtime coverage', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    document.cookie = 'engineering_team_csrf=; Max-Age=0; path=/';
     delete (globalThis as any).__ENGINEERING_TEAM_RUNTIME_CONFIG__;
   });
 
@@ -629,6 +702,7 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     expect(screen.getByLabelText('Task summary')).toBeInTheDocument();
     expect(screen.getByText('Assignment controls are available to PM/admin bearer tokens.')).toBeInTheDocument();
+    expect(screen.getByText('Workflow Transition')).toBeInTheDocument();
   });
 
   it('redirects protected routes to sign-in when no browser session exists', async () => {
@@ -662,6 +736,78 @@ describe('Task browser runtime coverage', () => {
     );
     expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
+
+  it('creates an intake draft from raw requirements and opens the draft detail', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const fetchMock = installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks/create');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Create Intake Draft' });
+    expect(screen.getByLabelText(/raw requirements/i)).toBeRequired();
+    expect(screen.getByLabelText(/title/i)).not.toBeRequired();
+
+    fireEvent.change(screen.getByLabelText(/raw requirements/i), {
+      target: { value: 'Raw operator request from the test.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Intake Draft' }));
+
+    await screen.findByRole('heading', { name: 'Untitled intake draft' });
+    expect(screen.getAllByText('Intake Draft').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('PM refinement required').length).toBeGreaterThan(0);
+    expect(screen.getByText('Operator intake requirements')).toBeInTheDocument();
+    expect(screen.getByText('Raw operator request from the test.')).toBeInTheDocument();
+    expect(screen.queryByText('Workflow Transition')).not.toBeInTheDocument();
+    expect(screen.queryByText('Assign AI agent owner')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/tasks'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          title: '',
+          raw_requirements: 'Raw operator request from the test.',
+        }),
+      }),
+    );
+  });
+
+  it('creates an intake draft from a cookie session with the CSRF token header', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      actorId: 'pm-cookie',
+      tenantId: 'tenant-a',
+      roles: ['pm', 'reader'],
+      authType: 'cookie-session',
+      expiresAt: makeFutureExpiry(),
+    });
+    document.cookie = 'engineering_team_csrf=csrf-token; path=/';
+    const fetchMock = installTaskFetchMock();
+    window.history.pushState({}, '', '/tasks/create');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Create Intake Draft' });
+    fireEvent.change(screen.getByLabelText(/raw requirements/i), {
+      target: { value: 'Cookie session raw operator request.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create Intake Draft' }));
+
+    await screen.findByRole('heading', { name: 'Untitled intake draft' });
+    const postCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks') && init?.method === 'POST');
+    expect(postCall?.[1]?.headers).toEqual(expect.objectContaining({
+      'content-type': 'application/json',
+      'x-csrf-token': 'csrf-token',
+    }));
+    expect(postCall?.[1]?.headers).not.toHaveProperty('authorization');
   });
 
   it('completes an enterprise callback and restores the queued board route', async () => {
@@ -2706,6 +2852,58 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
     expect(screen.getByText('PM triage required')).toBeInTheDocument();
     expect(screen.getByText(/Routed to PM because the task is explicitly waiting on PM action/i)).toBeInTheDocument();
+  });
+
+  it('routes Intake Drafts to PM inbox and excludes them from Engineer inbox', async () => {
+    const tasks = [
+      {
+        task_id: 'TSK-INTAKE',
+        tenant_id: 'tenant-a',
+        title: 'Untitled intake draft',
+        priority: null,
+        current_stage: 'DRAFT',
+        current_owner: 'pm',
+        owner: { actor_id: 'pm', display_name: 'Product Manager' },
+        blocked: false,
+        closed: false,
+        intake_draft: true,
+        waiting_state: 'task_refinement',
+        next_required_action: 'PM refinement required',
+        queue_entered_at: '2026-04-01T15:04:00.000Z',
+        freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:04:00.000Z' },
+      },
+      {
+        task_id: 'TSK-ENGINEER',
+        tenant_id: 'tenant-a',
+        title: 'Implementation task',
+        priority: 'P1',
+        current_stage: 'IMPLEMENT',
+        current_owner: 'engineer',
+        owner: { actor_id: 'engineer', display_name: 'Engineer' },
+        blocked: false,
+        closed: false,
+        waiting_state: null,
+        next_required_action: null,
+        queue_entered_at: '2026-04-01T15:00:00.000Z',
+        freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
+      },
+    ];
+    installTaskFetchMock({ tasksOverride: tasks });
+    window.history.pushState({}, '', '/inbox/pm');
+    const { unmount } = render(<App />);
+
+    await screen.findByRole('heading', { name: 'PM Inbox' });
+    expect(screen.getByText('Untitled intake draft')).toBeInTheDocument();
+    expect(screen.getByText('PM refinement required')).toBeInTheDocument();
+    expect(screen.queryByText('Implementation task')).not.toBeInTheDocument();
+
+    unmount();
+    window.history.pushState({}, '', '/inbox/engineer');
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Engineer Inbox' });
+    expect(screen.getByText('Implementation task')).toBeInTheDocument();
+    expect(screen.queryByText('Untitled intake draft')).not.toBeInTheDocument();
   });
 
   it('renders a Human Stakeholder inbox route for approval-driven work and records decisions inline', async () => {

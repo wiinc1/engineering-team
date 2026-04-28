@@ -10,6 +10,7 @@ info:
     SRE monitoring runtime accepts both `ff_sre_monitoring` and `ff-sre-monitoring` as equivalent feature-flag names.
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
+    `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
 components:
   securitySchemes:
     BearerAuth:
@@ -52,6 +53,10 @@ components:
         queue_entered_at: { type: [string, 'null'], format: date-time }
         wip_owner: { type: [string, 'null'] }
         wip_started_at: { type: [string, 'null'], format: date-time }
+        intake_draft: { type: boolean }
+        operator_intake_requirements: { type: [string, 'null'] }
+        waiting_state: { type: [string, 'null'] }
+        next_required_action: { type: [string, 'null'] }
         freshness:
           type: object
           properties:
@@ -69,6 +74,40 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TaskSummaryResponse'
+    IntakeDraftCreateRequest:
+      type: object
+      required: [raw_requirements]
+      properties:
+        raw_requirements:
+          type: string
+          minLength: 1
+          description: Raw operator-authored initial requirements. This is the only required field for an Intake Draft.
+        title:
+          type: string
+          maxLength: 120
+          description: Optional title. Omit or leave blank to use `Untitled intake draft`.
+        idempotencyKey: { type: string }
+    LegacyTaskCreateRequest:
+      type: object
+      required: [title, business_context, acceptance_criteria, definition_of_done, priority, task_type]
+      properties:
+        title: { type: string }
+        business_context: { type: string }
+        acceptance_criteria: { type: string }
+        definition_of_done: { type: string }
+        priority: { type: string }
+        task_type: { type: string }
+        idempotencyKey: { type: string }
+    TaskCreateResponse:
+      type: object
+      required: [taskId, status, intakeDraft, nextRequiredAction, createdAt]
+      properties:
+        taskId: { type: string }
+        status: { type: string, enum: [DRAFT] }
+        intakeDraft: { type: boolean }
+        nextRequiredAction: { type: [string, 'null'] }
+        refinementEventId: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
     PaginatedTaskHistoryResponse:
       type: object
       required: [items, page_info]
@@ -100,6 +139,12 @@ components:
               type: object
               additionalProperties: true
   responses:
+    BadRequest:
+      description: Request body failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
     Unauthorized:
       description: Missing or invalid bearer token / auth context
       content:
@@ -114,6 +159,12 @@ components:
             $ref: '#/components/schemas/StandardErrorResponse'
     FeatureDisabled:
       description: Audit foundation is disabled by runtime feature flag
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+    InternalError:
+      description: The request could not complete. Task creation failures use `task_creation_failed` with `details.failed_step`.
       content:
         application/json:
           schema:
@@ -139,6 +190,36 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+    post:
+      summary: Create an Intake Draft task from raw operator requirements
+      description: |
+        Creates a Task in `DRAFT` from raw operator requirements, stores the raw intake text, routes the task to Product Manager refinement with `current_owner=pm`, and appends `task.refinement_requested`.
+        Intake `title` is optional but must be 120 characters or fewer when provided; invalid intake titles return `invalid_intake_title`. The legacy refined-field request body remains accepted for compatibility while browser intake uses `raw_requirements`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/IntakeDraftCreateRequest'
+                - $ref: '#/components/schemas/LegacyTaskCreateRequest'
+      responses:
+        '201':
+          description: Task created in DRAFT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/events:

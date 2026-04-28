@@ -548,6 +548,50 @@ test('browser bootstrap tokens stay usable when the API enforces issuer and audi
   }, { jwtIssuer: 'expected-issuer', jwtAudience: 'expected-audience' });
 });
 
+test('protects intake draft creation with auth, permission, and feature flag checks', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ raw_requirements: 'Unauthorized intake request.' }),
+    });
+    assert.equal(response.status, 401);
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ raw_requirements: 'Reader cannot create intake.' }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ raw_requirements: '   ' }),
+    });
+    assert.equal(response.status, 400);
+  });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ raw_requirements: 'Feature-flagged intake request.' }),
+    });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.details.feature, 'ff_intake_draft_creation');
+  }, { intakeDraftCreationEnabled: false });
+});
+
 test('accepts production-style JWKS tokens with explicit claim mapping', async () => {
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
   await withServer(async ({ baseUrl }) => {

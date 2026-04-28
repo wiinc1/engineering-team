@@ -71,6 +71,29 @@ test('createTask generates task ID and sends request', async () => {
   assert.equal(result.taskId, 'TSK-001');
 });
 
+test('createTask sends raw intake requirements without refined fields', async () => {
+  const mockFetch = createMockFetch([{ ok: true, body: { taskId: 'TSK-001', status: 'DRAFT' } }]);
+  const client = createTaskCreationApiClient({
+    baseUrl: 'https://api.example.com',
+    fetchImpl: mockFetch,
+  });
+
+  const result = await client.createTask(
+    {
+      raw_requirements: 'Create a report from these raw operator notes.',
+    },
+    1
+  );
+
+  assert.equal(mockFetch.calls.length, 1);
+  const body = JSON.parse(mockFetch.calls[0].init.body);
+  assert.equal(body.raw_requirements, 'Create a report from these raw operator notes.');
+  assert.equal(body.title, undefined);
+  assert.equal(body.priority, undefined);
+  assert.equal(body.task_type, undefined);
+  assert.equal(result.status, 'DRAFT');
+});
+
 test('createTask propagates API errors', async () => {
   const mockFetch = createMockFetch([
     {

@@ -298,6 +298,33 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByLabel('Task history timeline')).toBeVisible();
   });
 
+  test('labels intake draft details with PM refinement context', async ({ page }) => {
+    await installApiMocks(page, {
+      detailPayload: {
+        ...taskDetailPayload,
+        task: { ...taskDetailPayload.task, stage: 'DRAFT', status: 'waiting' },
+        summary: {
+          ...taskDetailPayload.summary,
+          workflowStage: { value: 'DRAFT', label: 'Draft' },
+          nextAction: { label: 'PM refinement required', source: 'pm', overdue: false, waitingOn: 'PM refinement' },
+        },
+        context: {
+          ...taskDetailPayload.context,
+          intakeDraft: true,
+          operatorIntakeRequirements: 'Operator notes that still need PM shaping before implementation.',
+        },
+      },
+    });
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openRoute(page, '/tasks/TSK-42');
+
+    await expect(page.locator('.routing-badge', { hasText: 'Intake Draft' }).first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Task summary' })).toContainText('PM refinement required');
+    await expect(page.getByRole('heading', { name: 'Operator intake requirements' })).toBeVisible();
+    await expect(page.getByText('Operator notes that still need PM shaping before implementation.')).toBeVisible();
+  });
+
   test('renders governed close-review escalation content without collapsing the task detail layout', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await openRoute(page, '/tasks/TSK-42');

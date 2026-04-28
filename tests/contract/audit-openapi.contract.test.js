@@ -85,6 +85,13 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'current_owner',
     'task.pm_business_context_completed',
     'List projected task summaries with additive owner metadata',
+    'raw_requirements',
+    'task.refinement_requested',
+    'task.intake_creation_failed',
+    'task_creation_failed',
+    'invalid_intake_title',
+    'maxLength: 120',
+    'Intake Draft',
   ]) {
     assert.match(spec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -145,6 +152,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'OrchestrationViewResponse',
     'dependencyState',
     'fallbackReason',
+    'operatorIntakeRequirements',
   ]) {
     assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }

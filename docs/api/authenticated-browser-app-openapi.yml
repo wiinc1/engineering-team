@@ -5,7 +5,7 @@ info:
   description: |
     Browser auth contract for the authenticated app shell.
     Governance note: browser-shell session and route changes should update this spec in the same pull request.
-    Protected browser-shell routes in the current client include `/tasks`, `/tasks?view=board`,
+    Protected browser-shell routes in the current client include `/tasks`, `/tasks?view=board`, `/tasks/create`,
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
     Production sign-in supports hosted OIDC Authorization Code + PKCE or first-party invite-only magic-link sessions.
     The internal browser bootstrap endpoint remains a compatibility fallback for local/internal environments only.
@@ -100,6 +100,13 @@ paths:
       responses:
         '302':
           description: Redirects to the restored browser route or back to sign-in on failure.
+  /tasks/create:
+    get:
+      summary: Browser route for creating an intake draft
+      description: Renders the protected raw-requirements form. Successful submission posts to the audit task API and restores the created task detail route.
+      responses:
+        '200':
+          description: Intake draft creation screen rendered by the browser app for authenticated users.
   /auth/me:
     get:
       summary: Return the current browser auth principal
