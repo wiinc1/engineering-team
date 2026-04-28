@@ -1,0 +1,117 @@
+{
+  "generatedAt": "2026-04-28T01:26:34.197Z",
+  "baseUrl": "https://engineering-team-wiinc1-hotmailcoms-projects.vercel.app",
+  "deployment": {
+    "id": "dpl_9FezJZWNtNzMzDK2rfPvJNZKzo6w",
+    "url": "https://engineering-team-mzxvjwuzr-wiinc1-hotmailcoms-projects.vercel.app",
+    "status": "Ready"
+  },
+  "invitedEmailHash": "fd91593c16b13ca8abdc6598eb16e017a15a23775a902628ff02e3477e62723b",
+  "unknownEmailHash": "caa2d48c1fe406222dbdc6f38980cc7ed70e8dab2fbde8dab73399346eabd013",
+  "taskDetailPath": "/tasks/TSK-PG-CLOSE",
+  "request": {
+    "status": 200,
+    "genericResponse": true,
+    "auditEvent": "auth.magic_link.sent",
+    "auditCreatedAt": "2026-04-28T01:19:47.003Z"
+  },
+  "consume": {
+    "status": 302,
+    "location": "/tasks?view=board",
+    "tokenHash": "e00689bfc5584c976b4f8f9a453852ce93b24b541ba4e9f79d21998320630db1",
+    "sessionCookieSet": true,
+    "csrfCookieSet": true,
+    "auditEvent": "auth.magic_link.consumed",
+    "auditCreatedAt": "2026-04-28T01:23:03.040Z"
+  },
+  "session": {
+    "status": 200,
+    "actorId": "brian-issue-92-smoke",
+    "tenantId": "tenant-int",
+    "roles": [
+      "admin",
+      "pm"
+    ],
+    "authType": "cookie-session",
+    "expiresAtPresent": true,
+    "auditEvent": "auth.session.created",
+    "auditCreatedAt": "2026-04-28T01:23:03.059Z"
+  },
+  "protectedRoutes": [
+    {
+      "route": "/tasks",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    },
+    {
+      "route": "/tasks?view=board",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    },
+    {
+      "route": "/overview/pm",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    },
+    {
+      "route": "/inbox/pm",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    },
+    {
+      "route": "/tasks/TSK-PG-CLOSE",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    }
+  ],
+  "logout": {
+    "status": 200,
+    "ok": true,
+    "clearsSessionCookie": true,
+    "auditEvent": "auth.session.revoked",
+    "auditCreatedAt": "2026-04-28T01:24:46.819Z"
+  },
+  "afterLogout": {
+    "status": 401,
+    "authRejected": true,
+    "errorCode": "missing_auth_context"
+  },
+  "unknownEmail": {
+    "status": 200,
+    "genericResponse": true,
+    "auditEvent": "auth.magic_link.request_suppressed",
+    "auditCreatedAt": "2026-04-28T01:04:40.839Z"
+  },
+  "replay": {
+    "status": 302,
+    "rejected": true,
+    "locationClassification": "replayed_magic_link",
+    "auditEvent": "auth.magic_link.replay_rejected",
+    "auditCreatedAt": "2026-04-28T01:25:30.688Z"
+  },
+  "manualEvidenceRequired": [
+    "Vercel production deployment READY",
+    "Resend delivery event for invited email",
+    "Admin-created invited user exists in production",
+    "Monitoring evidence contains counts/rates only and no tokens or secrets",
+    "Rollback evidence identifies last known-good deployment/config"
+  ],
+  "summary": {
+    "requestGeneric": true,
+    "consumeRedirected": true,
+    "sessionCookieSet": true,
+    "csrfCookieSet": true,
+    "meReturnedIdentity": true,
+    "protectedRoutesLoaded": true,
+    "logoutRevoked": true,
+    "unknownEmailGeneric": true,
+    "replayRejected": true,
+    "passed": true,
+    "evidenceRedacted": true
+  }
+}
