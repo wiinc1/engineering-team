@@ -1,5 +1,5 @@
 const { createTaskCreationApiClient, VALID_PRIORITIES, VALID_TASK_TYPES } = require('./adapter');
-const { validateTaskCreatePayload } = require('./schema');
+const { validateTaskCreatePayload, UNTITLED_INTAKE_DRAFT_TITLE, INTAKE_DRAFT_TITLE_MAX_LENGTH } = require('./schema');
 const { generateTaskId, parseTaskId, isValidTaskId, TASK_ID_PREFIX, TASK_ID_PATTERN } = require('./types');
 
 function createTaskCreationModule({ client = createTaskCreationApiClient() } = {}) {
@@ -33,4 +33,6 @@ module.exports = {
   TASK_ID_PATTERN,
   VALID_PRIORITIES,
   VALID_TASK_TYPES,
+  UNTITLED_INTAKE_DRAFT_TITLE,
+  INTAKE_DRAFT_TITLE_MAX_LENGTH,
 };

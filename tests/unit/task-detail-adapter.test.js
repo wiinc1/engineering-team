@@ -57,6 +57,33 @@ test('task detail client prefers dedicated detail view model endpoint when avail
   assert.equal(model.shell.historyItems[0].title, 'Stage changed');
 });
 
+test('task detail screen model carries intake draft context', () => {
+  const model = toTaskDetailScreenModel({
+    summary: {
+      task_id: 'TSK-INTAKE',
+      tenant_id: 'tenant-a',
+      title: 'Untitled intake draft',
+      priority: null,
+      current_stage: 'DRAFT',
+      current_owner: 'pm',
+      blocked: false,
+      waiting_state: 'task_refinement',
+      next_required_action: 'PM refinement required',
+      freshness: { status: 'fresh', last_updated_at: '2026-04-01T10:00:00.000Z' },
+      status_indicator: 'waiting',
+      closed: false,
+      intake_draft: true,
+      operator_intake_requirements: 'Raw operator requirements.',
+    },
+    history: { items: [], page_info: { next_cursor: null } },
+    telemetry: { status: 'ok', event_count: 0, freshness: { status: 'fresh' }, correlation: {}, access: { restricted: false } },
+  });
+
+  assert.equal(model.summary.intakeDraft, true);
+  assert.equal(model.summary.operatorIntakeRequirements, 'Raw operator requirements.');
+  assert.equal(model.summary.nextRequiredAction, 'PM refinement required');
+});
+
 test('task detail client surfaces auth failures through the shared auth callback', async () => {
   let authFailure = null;
   const client = createTaskDetailApiClient({

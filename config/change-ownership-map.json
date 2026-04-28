@@ -151,7 +151,8 @@
         {
           "name": "browser",
           "patterns": [
-            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$"
+            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
         }
       ],
@@ -159,7 +160,8 @@
         {
           "name": "design",
           "patterns": [
-            "^docs/design/US-002-design\\.md$"
+            "^docs/design/US-002-design\\.md$",
+            "^docs/design/US-003-design\\.md$"
           ]
         },
         {
@@ -172,7 +174,8 @@
           "name": "runbook-or-design",
           "patterns": [
             "^docs/runbooks/production-identity-provider\\.md$",
-            "^docs/design/ISSUE-89-design\\.md$"
+            "^docs/design/ISSUE-89-design\\.md$",
+            "^docs/design/US-003-design\\.md$"
           ]
         }
       ]
@@ -281,6 +284,7 @@
         {
           "name": "security-or-accessibility-or-visual",
           "patterns": [
+            "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/task-assignment-security\\.test\\.js$",
             "^tests/accessibility/task-assignment\\.a11y\\.spec\\.ts$",
             "^tests/visual/task-assignment\\.visual\\.spec\\.ts$"
@@ -291,12 +295,14 @@
         {
           "name": "api",
           "patterns": [
+            "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/task-assignment-openapi\\.yml$"
           ]
         },
         {
           "name": "runbook",
           "patterns": [
+            "^docs/runbooks/audit-foundation\\.md$",
             "^docs/runbooks/task-assignment\\.md$",
             "^docs/runbooks/task-assignment-emergency\\.md$"
           ]
@@ -384,6 +390,46 @@
       ]
     },
     {
+      "name": "magic-link-auth",
+      "runtime_patterns": [
+        "^lib/auth/magic-link\\.js$",
+        "^db/migrations/009_magic_link_auth\\.sql$",
+        "^scripts/verify-magic-link-production\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/magic-link-auth\\.test\\.js$",
+            "^tests/unit/magic-link-production-smoke\\.test\\.js$",
+            "^tests/unit/auth-config-check\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "browser-or-visual",
+          "patterns": [
+            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^tests/visual/auth-sign-in\\.visual\\.spec\\.tsx$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/authenticated-browser-app-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook-or-evidence",
+          "patterns": [
+            "^docs/runbooks/production-identity-provider\\.md$",
+            "^docs/reports/ISSUE-92-production-evidence\\.md$"
+          ]
+        }
+      ]
+    },
+    {
       "name": "task-creation",
       "runtime_patterns": [
         "^src/features/task-creation/",
@@ -405,7 +451,9 @@
         {
           "name": "story",
           "patterns": [
-            "^docs/user-stories/US-001-kanban-board-ui\\.md$"
+            "^docs/user-stories/US-001-kanban-board-ui\\.md$",
+            "^docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements\\.md$",
+            "^docs/design/US-003-design\\.md$"
           ]
         }
       ]

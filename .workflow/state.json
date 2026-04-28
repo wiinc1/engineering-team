@@ -1,7 +1,7 @@
 {
-  "storyId": "ISSUE-89",
-  "issueNumber": 89,
-  "branch": "feature/ISSUE-89-internal-auth-pivot",
+  "storyId": "US-003",
+  "issueNumber": 95,
+  "branch": "docs/refinement-execution-contract",
   "status": {
     "phase0": "completed",
     "design": "completed",
@@ -9,27 +9,23 @@
     "testing": "completed",
     "security": "completed",
     "customerReview": "completed",
-    "closeout": "completed",
-    "productionRemediation": "pending"
+    "closeout": "completed"
   },
   "artifacts": {
-    "design": "docs/design/ISSUE-89-design.md",
-    "verification": "docs/reports/ISSUE-89-verification.md",
-    "testReport": "docs/reports/test_report_ISSUE-89.md",
-    "securityAudit": "docs/reports/security_audit_ISSUE-89.md",
-    "customerReview": "docs/reports/customer_review_ISSUE-89.md",
-    "closeoutReview": "docs/reports/ISSUE-89-review.md",
-    "workflowDiagram": "docs/diagrams/workflow-ISSUE-89-login-auth-config.mmd",
-    "diagnosticsArtifact": "observability/auth-config-diagnostics.json"
+    "story": "docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements.md",
+    "design": "docs/design/US-003-design.md",
+    "workflowDiagram": "docs/diagrams/workflow-US-003.mmd",
+    "architectureDiagram": "docs/diagrams/architecture-US-003.mmd",
+    "adr": "docs/adr/ADD-2026-04-28-intake-draft-as-task-stage.md",
+    "verification": "docs/reports/US-003-verification.md",
+    "testReport": "docs/reports/test_report_US-003.md",
+    "securityAudit": "docs/reports/security_audit_US-003.md",
+    "customerReview": "docs/reports/customer_review_US-003.md",
+    "closeoutReview": "docs/reports/US-003-review.md"
   },
   "notes": [
-    "Requested workflow prompt .agent/workflows/development/00-development-workflow.md is absent in this checkout.",
-    "Canonical workflow scripts workflow:start, workflow:execute, workflow:ship, workflow:status, workflow:watch-pr, task:pull, ag:workflow, and workflow:discover are absent in package.json, so equivalent evidence is recorded manually.",
-    "Issue #89 was assigned via GitHub CLI and branch feature/ISSUE-89-login-auth-config-validation was created from main.",
-    "Issue #89 already has production-remediation-pending, auth, and bug labels; no project items were returned by GitHub CLI.",
-    "Requirements pivot on 2026-04-21: no production IdP exists, so production remediation may use explicit AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap with AUTH_JWT_SECRET and both internal bootstrap flags enabled.",
-    "External production remediation evidence remains pending: Vercel env names for the selected strategy, redeploy inspection, production sign-in smoke, post-login data check, monitoring evidence, and rollback evidence.",
-    "Local verification passed on 2026-04-21: node --test tests/unit/auth-config-check.test.js, npm run test:unit, npm run test:security, node scripts/run-playwright.js tests/browser/auth-shell.browser.spec.ts, npm run lint, npm run typecheck, npm run build with production internal-bootstrap env vars, npm run standards:check, npm run ownership:lint, and npm run change:check.",
-    "The requested full-test-suite runner .agent/skills/full-test-suite-runner/scripts/run-all-tests.mjs is absent; the available equivalent npm test scripts were run instead."
+    "Requested workflow wrappers such as task:pull, ag:workflow, workflow:execute, and workflow:ship are absent in package.json, so the issue workflow is executed directly against the repo scripts and evidence artifacts.",
+    "Existing uncommitted CONTEXT.md execution-contract addition was preserved and not reverted.",
+    "Issue #95 acceptance requires raw requirements intake, DRAFT task persistence, PM refinement routing, task list/detail visibility, and audit history without implementation-start claims."
   ]
 }

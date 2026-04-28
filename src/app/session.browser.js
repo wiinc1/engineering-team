@@ -445,7 +445,7 @@ function buildOidcLogoutUrl(config) {
   return nextUrl.toString();
 }
 
-module.exports = {
+export {
   DEFAULT_POST_SIGN_IN_ROUTE,
   OIDC_TRANSACTION_STORAGE_KEY,
   beginOidcSignIn,

@@ -381,6 +381,10 @@ function formatStatusIcon(status) {
   }
 }
 
+function isIntakeDraftTask(item = {}) {
+  return Boolean(item.intake_draft || item.intakeDraft || item.context?.intakeDraft);
+}
+
 function formatCloseGovernanceChecklistLabel(status) {
   switch (status) {
     case 'ready':
@@ -1344,6 +1348,7 @@ export function App() {
         owner: model.detail?.summary?.owner ? { actor_id: model.detail.summary.owner.id, display_name: model.detail.summary.owner.label } : null,
       }
     : null;
+  const detailIsIntakeDraft = model.kind === 'detail' && isIntakeDraftTask(model.detail || model.summary);
   const detailAssignedToActor = detailLifecycleItem ? isTaskAssignedToCurrentActor(detailLifecycleItem, tokenClaims, agentLookup) : false;
 
   const reloadTask = React.useCallback(async () => {
@@ -1834,8 +1839,9 @@ export function App() {
     navigate(SIGN_IN_PATH, buildSignInSearch('/tasks', 'signed_out'), { replace: true });
   }, [authRuntimeConfig, navigate, resolvedApiBaseUrl, sessionConfig.authType]);
 
-  const handleTaskCreated = React.useCallback(() => {
-    navigate('/tasks');
+  const handleTaskCreated = React.useCallback((created) => {
+    const taskId = created?.taskId || created?.data?.taskId || null;
+    navigate(taskId ? `/tasks/${encodeURIComponent(taskId)}` : '/tasks');
   }, [navigate]);
 
   const loadAdminUsers = React.useCallback(async () => {
@@ -2101,6 +2107,29 @@ export function App() {
     );
   }
 
+  if (matchCreateTaskRoute(pathname)) {
+    return (
+      <main className="app-shell">
+        <nav className="app-nav" aria-label="Primary navigation">
+          <div className="app-nav__links">
+            <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
+            <button type="button" className="button-secondary" onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
+            <button type="button" className="button-secondary" onClick={() => navigate('/overview/pm')}>PM overview</button>
+          </div>
+          <div className="app-nav__session">
+            <span>{tokenClaims?.sub || 'unknown actor'} · {tokenClaims?.tenant_id || 'unknown tenant'}</span>
+            <button type="button" className="button-secondary" onClick={handleSignOut}>Sign out</button>
+          </div>
+        </nav>
+        <TaskCreationPage
+          sessionConfig={sessionConfig}
+          envApiBaseUrl={envApiBaseUrl}
+          onTaskCreated={handleTaskCreated}
+        />
+      </main>
+    );
+  }
+
   if (matchAdminUsersRoute(pathname)) {
     const isAdmin = hasAnyRole(tokenClaims, ['admin']);
     return (
@@ -2237,6 +2266,7 @@ export function App() {
         <div className="app-nav__links">
           <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view !== 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks')}>Task list</button>
           <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
+          <button type="button" className="button-secondary" onClick={() => navigate('/tasks/create')}>Create intake</button>
           <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
           <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
           {hasAnyRole(tokenClaims, ['admin']) ? (
@@ -2292,6 +2322,7 @@ export function App() {
             <div className="route-form__actions">
               <button type="submit">Open</button>
               <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Task list</button>
+              <button type="button" className="button-secondary" onClick={() => navigate('/tasks/create')}>Create intake</button>
               <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
               <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
               {ROLE_INBOXES.map((role) => (
@@ -2731,6 +2762,7 @@ export function App() {
                           <strong>{item.title || item.task_id}</strong>
                         </a>
                         <div className="task-list-meta">{item.task_id}</div>
+                        {isIntakeDraftTask(item) ? <div className="task-list-meta"><span className="routing-badge">Intake Draft</span></div> : null}
                       </td>
                       <td>{item.current_stage || '—'}</td>
                       <td>{item.priority || '—'}</td>
@@ -2772,6 +2804,7 @@ export function App() {
                           <strong>{item.title || item.task_id}</strong>
                         </a>
                         <div className="task-list-meta">{item.task_id}</div>
+                        {isIntakeDraftTask(item) ? <div className="task-list-meta"><span className="routing-badge">Intake Draft</span></div> : null}
                       </td>
                       <td>{item.current_stage || '—'}</td>
                       <td>{item.priority || '—'}</td>
@@ -2809,6 +2842,7 @@ export function App() {
                             <strong>{item.title || item.task_id}</strong>
                           </a>
                           <div className="task-list-meta">{item.task_id}</div>
+                          {isIntakeDraftTask(item) ? <div className="task-list-meta"><span className="routing-badge">Intake Draft</span> {item.next_required_action || 'PM refinement required'}</div> : null}
                           {assignedToActor ? <div className="task-list-meta"><span className="routing-badge">Assigned to me</span></div> : null}
                         </td>
                         <td>{item.current_stage || '—'}</td>
@@ -2882,6 +2916,7 @@ export function App() {
                               <strong>{item.title || item.task_id}</strong>
                             </a>
                             <div className="task-list-meta">{item.task_id}</div>
+                            {isIntakeDraftTask(item) ? <div className="task-list-meta"><span className="routing-badge">Intake Draft</span> {item.next_required_action || 'PM refinement required'}</div> : null}
                             {column.stage === 'VERIFY' ? <div className="task-list-meta"><span className="routing-badge">SRE review pending</span></div> : null}
                             {assignedToActor ? <div className="task-list-meta"><span className="routing-badge">Assigned to me</span></div> : null}
                             <div className="task-board__card-meta">
@@ -3003,6 +3038,7 @@ export function App() {
                 <span>{formatStatusLabel(model.detail?.task?.status)}</span>
               </div>
               <div className="priority-pill">{model.summary.priority || 'No priority'}</div>
+              {detailIsIntakeDraft ? <div className="routing-badge">Intake Draft</div> : null}
               {detailAssignedToActor ? <div className="routing-badge">Assigned to me</div> : null}
             </div>
             <div className="summary-grid summary-grid--hero">
@@ -3448,7 +3484,7 @@ export function App() {
             </section>
           ) : null}
 
-          {detailLifecycleItem && isLifecycleStage(detailLifecycleItem.current_stage) ? (
+          {detailLifecycleItem && !detailIsIntakeDraft && isLifecycleStage(detailLifecycleItem.current_stage) ? (
             <section className="detail-card detail-card--full" aria-label="Lifecycle controls">
               <h2>Lifecycle controls</h2>
               <p>Valid transitions follow the US-004 lifecycle state machine. Invalid moves are blocked before the stage event is sent.</p>
@@ -3565,6 +3601,12 @@ export function App() {
           <section className="detail-sections" aria-label="Task detail sections">
             <section className="detail-card">
               <h2>Overview</h2>
+              {model.detail?.context?.operatorIntakeRequirements ? (
+                <>
+                  <h3>Operator intake requirements</h3>
+                  <p>{model.detail.context.operatorIntakeRequirements}</p>
+                </>
+              ) : null}
               <p>{model.detail?.context?.businessContext || model.summary.businessContext || 'Business context is missing.'}</p>
               {pmBusinessContextRequired ? (
                 <form className="architect-handoff-form" onSubmit={submitPmBusinessContext}>
@@ -5065,69 +5107,73 @@ export function App() {
             </section>
           </section>
 
-          <StageTransition 
-            currentStage={model.summary.currentStage || 'BACKLOG'} 
-            taskId={routeTaskId} 
-            onTransition={async (toStage, payload) => {
-              try {
-                await taskClient.changeTaskStage(routeTaskId, toStage, payload);
-                await reloadTask();
-              } catch (error) {
-                throw error;
-              }
-            }}
-          />
-          <section className="assignment-panel" aria-label="Task assignment">
-            <div className="assignment-panel__header">
-              <div>
-                <p className="eyebrow">Assignment</p>
-                <h2>Assign AI agent owner</h2>
-                <p className="lede">Writes to the task assignment endpoint and refreshes the projected owner after success.</p>
-              </div>
-            </div>
-
-            {assignmentEnabled ? (
-              <form
-                className="assignment-form"
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  if (!model.route?.taskId) return;
-                  try {
-                    setAssignmentStatus({ kind: 'loading', message: 'Saving assignment…' });
-                    await taskClient.assignTaskOwner(model.route.taskId, assignmentDraft || null);
-                    await reloadTask();
-                    setAssignmentStatus({ kind: 'success', message: assignmentDraft ? `Assigned to ${assignmentDraft}.` : 'Assignment cleared.' });
-                  } catch (error) {
-                    setAssignmentStatus({ kind: 'error', message: error.message || 'Assignment update failed.' });
-                  }
-                }}
-              >
-                <label>
-                  Owner
-                  <select value={assignmentDraft} onChange={(event) => setAssignmentDraft(event.target.value)}>
-                    <option value="">Unassigned</option>
-                    {agentOptions.map((agent) => (
-                      <option key={agent.id} value={agent.id}>{agent.display_name}{agent.role ? ` · ${agent.role}` : ''}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="assignment-form__actions">
-                  <button type="submit" disabled={assignmentStatus.kind === 'loading'}>
-                    {assignmentStatus.kind === 'loading' ? 'Saving…' : 'Save owner'}
-                  </button>
+          {!detailIsIntakeDraft ? (
+            <StageTransition
+              currentStage={model.summary.currentStage || 'BACKLOG'}
+              taskId={routeTaskId}
+              onTransition={async (toStage, payload) => {
+                try {
+                  await taskClient.changeTaskStage(routeTaskId, toStage, payload);
+                  await reloadTask();
+                } catch (error) {
+                  throw error;
+                }
+              }}
+            />
+          ) : null}
+          {!detailIsIntakeDraft ? (
+            <section className="assignment-panel" aria-label="Task assignment">
+              <div className="assignment-panel__header">
+                <div>
+                  <p className="eyebrow">Assignment</p>
+                  <h2>Assign AI agent owner</h2>
+                  <p className="lede">Writes to the task assignment endpoint and refreshes the projected owner after success.</p>
                 </div>
-                {assignmentStatus.kind !== 'idle' ? (
-                  <p className={`assignment-status assignment-status--${assignmentStatus.kind}`} role={assignmentStatus.kind === 'error' ? 'alert' : 'status'}>
-                    {assignmentStatus.message}
-                  </p>
-                ) : null}
-              </form>
-            ) : (
-              <p className="assignment-status" role="status">
-                {model.route?.taskId ? 'Assignment controls are available to PM/admin bearer tokens.' : 'Open a task route to manage assignment.'}
-              </p>
-            )}
-          </section>
+              </div>
+
+              {assignmentEnabled ? (
+                <form
+                  className="assignment-form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (!model.route?.taskId) return;
+                    try {
+                      setAssignmentStatus({ kind: 'loading', message: 'Saving assignment…' });
+                      await taskClient.assignTaskOwner(model.route.taskId, assignmentDraft || null);
+                      await reloadTask();
+                      setAssignmentStatus({ kind: 'success', message: assignmentDraft ? `Assigned to ${assignmentDraft}.` : 'Assignment cleared.' });
+                    } catch (error) {
+                      setAssignmentStatus({ kind: 'error', message: error.message || 'Assignment update failed.' });
+                    }
+                  }}
+                >
+                  <label>
+                    Owner
+                    <select value={assignmentDraft} onChange={(event) => setAssignmentDraft(event.target.value)}>
+                      <option value="">Unassigned</option>
+                      {agentOptions.map((agent) => (
+                        <option key={agent.id} value={agent.id}>{agent.display_name}{agent.role ? ` · ${agent.role}` : ''}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="assignment-form__actions">
+                    <button type="submit" disabled={assignmentStatus.kind === 'loading'}>
+                      {assignmentStatus.kind === 'loading' ? 'Saving…' : 'Save owner'}
+                    </button>
+                  </div>
+                  {assignmentStatus.kind !== 'idle' ? (
+                    <p className={`assignment-status assignment-status--${assignmentStatus.kind}`} role={assignmentStatus.kind === 'error' ? 'alert' : 'status'}>
+                      {assignmentStatus.message}
+                    </p>
+                  ) : null}
+                </form>
+              ) : (
+                <p className="assignment-status" role="status">
+                  {model.route?.taskId ? 'Assignment controls are available to PM/admin bearer tokens.' : 'Open a task route to manage assignment.'}
+                </p>
+              )}
+            </section>
+          ) : null}
         </>
       )}
     </main>

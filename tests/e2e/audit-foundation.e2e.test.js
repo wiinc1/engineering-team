@@ -120,6 +120,45 @@ test('must-have: duplicate retries stay idempotent and do not create extra audit
   });
 });
 
+test('e2e: raw operator requirements create a draft routed only to PM refinement', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['contributor']),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Operator notes that still need PM shaping before implementation.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    assert.equal(created.status, 'DRAFT');
+    assert.equal(created.intakeDraft, true);
+    assert.equal(created.nextRequiredAction, 'PM refinement required');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.current_stage, 'DRAFT');
+    assert.equal(state.assignee, 'pm');
+    assert.equal(state.waiting_state, 'task_refinement');
+    assert.equal(state.next_required_action, 'PM refinement required');
+    assert.equal(state.wip_started_at, null);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.deepEqual(history.items.map((event) => event.event_type), ['task.refinement_requested', 'task.created']);
+    assert.ok(!history.items.some((event) => event.event_type === 'task.stage_changed'));
+  });
+});
+
 test('must-have: task history is queryable chronologically and supports event, actor, and date filtering', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const headers = {

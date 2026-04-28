@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { createAuditApiServer } = require('../../lib/audit/http');
+const { createFileAuditStore } = require('../../lib/audit/store');
 const { signBrowserAuthCode } = require('../../lib/auth/jwt');
 
 function sign(payload, secret) {
@@ -163,6 +164,367 @@ test('rejects malformed browser auth bootstrap requests', async () => {
     });
     assert.equal(response.status, 401);
     assert.equal((await response.json()).error.code, 'invalid_auth_code');
+  });
+});
+
+test('creates intake draft tasks from raw requirements and routes them to PM refinement', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Build a lightweight intake path from raw operator notes.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    assert.equal(created.status, 'DRAFT');
+    assert.equal(created.intakeDraft, true);
+    assert.equal(created.nextRequiredAction, 'PM refinement required');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.current_stage, 'DRAFT');
+    assert.equal(state.assignee, 'pm');
+    assert.equal(state.waiting_state, 'task_refinement');
+    assert.equal(state.next_required_action, 'PM refinement required');
+    assert.equal(state.wip_started_at, null);
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const listItem = list.items.find((item) => item.task_id === created.taskId);
+    assert.equal(listItem.title, 'Untitled intake draft');
+    assert.equal(listItem.intake_draft, true);
+    assert.equal(listItem.current_owner, 'pm');
+    assert.equal(listItem.next_required_action, 'PM refinement required');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.intakeDraft, true);
+    assert.equal(detail.context.operatorIntakeRequirements, 'Build a lightweight intake path from raw operator notes.');
+    assert.equal(detail.summary.nextAction.label, 'PM refinement required');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.deepEqual(history.items.map((item) => item.event_type), ['task.refinement_requested', 'task.created']);
+    assert.ok(!history.items.some((item) => ['task.stage_changed', 'task.engineer_submission_recorded'].includes(item.event_type)));
+  });
+});
+
+test('rejects non-string raw intake requirements', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const invalidPayloads = [
+      { raw_requirements: { text: 'not plain text' } },
+      { raw_requirements: ['not plain text'] },
+      { raw_requirements: 123 },
+      { rawRequirements: false },
+      { raw_requirements: null },
+    ];
+
+    for (const payload of invalidPayloads) {
+      const response = await fetch(`${baseUrl}/tasks`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...authHeaders(secret, { roles: ['contributor'] }),
+        },
+        body: JSON.stringify(payload),
+      });
+      assert.equal(response.status, 400);
+      assert.equal((await response.json()).error.code, 'invalid_raw_requirements');
+    }
+  });
+});
+
+test('rejects overlong intake titles', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Operator notes with an excessively long title.',
+        title: 'x'.repeat(121),
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'invalid_intake_title');
+  });
+});
+
+test('blocks Intake Draft stage advancement before PM refinement completes', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Do not let this raw intake advance without PM refinement.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: `move:${created.taskId}:BACKLOG`,
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    const failure = await response.json();
+    assert.equal(failure.error.code, 'workflow_violation');
+    assert.match(failure.error.message, /PM refinement/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.current_stage, 'DRAFT');
+    assert.equal(state.waiting_state, 'task_refinement');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.ok(!history.items.some((item) => item.event_type === 'task.stage_changed'));
+  });
+});
+
+test('blocks Intake Draft assignment changes before PM refinement completes', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Keep this draft with PM until refinement creates an execution contract.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['pm'] }),
+      },
+      body: JSON.stringify({ agentId: 'engineer' }),
+    });
+    assert.equal(response.status, 400);
+    let failure = await response.json();
+    assert.equal(failure.error.code, 'workflow_violation');
+    assert.match(failure.error.message, /remain assigned to PM/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.assigned',
+        actorType: 'user',
+        idempotencyKey: `assign:${created.taskId}:engineer`,
+        payload: { assignee: 'engineer' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    failure = await response.json();
+    assert.equal(failure.error.code, 'workflow_violation');
+    assert.match(failure.error.message, /remain assigned to PM/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.current_stage, 'DRAFT');
+    assert.equal(state.assignee, 'pm');
+    assert.equal(state.waiting_state, 'task_refinement');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.ok(!history.items.some((item) => ['task.assigned', 'task.reassigned', 'task.unassigned'].includes(item.event_type)));
+  });
+});
+
+test('does not report intake creation success when PM refinement routing persistence fails', async () => {
+  const store = createFileAuditStore({ baseDir: fs.mkdtempSync(path.join(os.tmpdir(), 'audit-api-refinement-fail-')) });
+  const appendEvent = store.appendEvent.bind(store);
+  store.appendEvent = (input) => {
+    if (input.eventType === 'task.refinement_requested') {
+      throw new Error('routing store down');
+    }
+    return appendEvent(input);
+  };
+
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Create an intake draft that cannot route to PM refinement.',
+      }),
+    });
+    assert.equal(response.status, 500);
+    const failure = await response.json();
+    assert.equal(failure.error.code, 'task_creation_failed');
+    assert.equal(failure.error.details.failed_step, 'task.refinement_requested');
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const failedTask = list.items.find((item) => item.waiting_state === 'intake_creation_failed');
+    assert.ok(failedTask);
+    assert.equal(failedTask.blocked, true);
+    assert.equal(failedTask.next_required_action, 'Review failed intake creation before retrying PM refinement routing');
+
+    response = await fetch(`${baseUrl}/tasks/${failedTask.task_id}/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.deepEqual(history.items.map((item) => item.event_type), ['task.intake_creation_failed', 'task.created']);
+    assert.equal(history.items[0].payload.failed_step, 'task.refinement_requested');
+  }, { store });
+});
+
+test('does not report intake creation success when canonical task persistence fails', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Create an intake draft when the canonical task platform is unavailable.',
+      }),
+    });
+    assert.equal(response.status, 500);
+    const failure = await response.json();
+    assert.equal(failure.error.code, 'task_creation_failed');
+    assert.equal(failure.error.details.failed_step, 'task_platform.create');
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const failedTask = list.items.find((item) => item.waiting_state === 'intake_creation_failed');
+    assert.ok(failedTask);
+    assert.equal(failedTask.blocked, true);
+
+    response = await fetch(`${baseUrl}/tasks/${failedTask.task_id}/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.deepEqual(history.items.map((item) => item.event_type), ['task.intake_creation_failed', 'task.refinement_requested', 'task.created']);
+    assert.equal(history.items[0].payload.failed_step, 'task_platform.create');
+  }, {
+    taskPlatform: {
+      createTask() {
+        throw new Error('canonical persistence down');
+      },
+    },
+  });
+});
+
+test('keeps legacy refined-field task creation payload compatible', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        title: 'Legacy creation task',
+        business_context: 'Existing clients send refined context.',
+        acceptance_criteria: 'Given old clients, when they submit, then task creation still succeeds.',
+        definition_of_done: 'Task is created in DRAFT.',
+        priority: 'High',
+        task_type: 'Feature',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    assert.equal(created.status, 'DRAFT');
+    assert.equal(created.intakeDraft, false);
+    assert.equal(created.nextRequiredAction, null);
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const list = await response.json();
+    const listItem = list.items.find((item) => item.task_id === created.taskId);
+    assert.equal(listItem.intake_draft, false);
+    assert.equal(listItem.next_required_action, null);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.intakeDraft, false);
+    assert.equal(detail.context.operatorIntakeRequirements, null);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: `move:${created.taskId}:BACKLOG`,
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
   });
 });
 

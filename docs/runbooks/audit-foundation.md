@@ -105,10 +105,16 @@ When `limit` and/or `cursor` is present, the route returns:
 `cursor` is an exclusive sequence-number cursor.
 
 ## Supported event types in this slice
-See `lib/audit/event-types.js`. The store handles the declared workflow event types used by Issue #22: task creation, assignment changes, stage transitions, child links, escalation/decision records, and closure.
+See `lib/audit/event-types.js`. The store handles the declared workflow event types used by Issue #22: task creation, assignment changes, stage transitions, child links, escalation/decision records, and closure. Intake Draft creation also records `task.refinement_requested` after `task.created` so task history shows PM refinement routing without any implementation-start event. Incomplete Intake Draft creation may record `task.intake_creation_failed` as a compensating audit marker.
+
+## Intake Draft creation
+Use `POST /tasks` with `raw_requirements` to create a Task in `DRAFT` from raw operator requirements. `title` is optional, capped at 120 characters, and blank or omitted titles are stored as `Untitled intake draft`. Created Intake Drafts are routed to `current_owner=pm`, set `waiting_state=task_refinement`, and expose `next_required_action=PM refinement required` in list/detail projections. Intake Draft stage changes are blocked until PM refinement creates a non-intake execution contract.
+
+The legacy refined-field task creation body remains accepted for compatibility, but the browser task creation route should submit raw intake requirements only.
 
 ## Runtime configuration
 - `FF_AUDIT_FOUNDATION=false` — hard-disable the slice at runtime
+- `FF_INTAKE_DRAFT_CREATION=false` — disables raw Intake Draft creation while preserving legacy task creation behavior
 - Shared feature-flag parsing in `lib/audit/feature-flags.js` also backs specialist delegation rollout control; prefer `FF_REAL_SPECIALIST_DELEGATION` as the canonical operator-facing name, while `FF_SPECIALIST_DELEGATION` remains a legacy-compatible alias.
 - `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; if omitted, runtime prefers `postgres` when `DATABASE_URL` is present and otherwise falls back to `file`
 - `ALLOW_LEGACY_HEADERS=true` — permit legacy non-JWT auth fallback

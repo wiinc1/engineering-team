@@ -431,8 +431,14 @@ components:
                   waitingState: { type: [string, 'null'] }
         context:
           type: object
-          required: [businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec, pmBusinessContextReview]
+          required: [intakeDraft, operatorIntakeRequirements, businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec, pmBusinessContextReview]
           properties:
+            intakeDraft:
+              type: boolean
+              description: True when the task is an Intake Draft created from raw operator requirements.
+            operatorIntakeRequirements:
+              type: [string, 'null']
+              description: Raw operator requirements captured at intake and shown above refined execution-contract sections.
             businessContext: { type: [string, 'null'] }
             acceptanceCriteria:
               type: array
