@@ -1,0 +1,13 @@
+flowchart TD
+  A[Software Factory operator opens task creation] --> B[Enter raw requirements text]
+  B --> C{Optional title provided?}
+  C -->|Yes| D[Use operator-provided title]
+  C -->|No| E[Use placeholder title Untitled intake draft]
+  D --> F[Submit intake]
+  E --> F
+  F --> G[Create Task in DRAFT]
+  G --> H[Record operator intake requirements]
+  H --> I[Record PM refinement routing]
+  I --> J[Append task.refinement_requested audit event]
+  J --> K[Show Intake Draft in task list and detail]
+  K --> L[Next required action: PM refinement required]

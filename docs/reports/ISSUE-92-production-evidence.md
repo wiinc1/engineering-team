@@ -3,11 +3,19 @@
 - Date: 2026-04-27
 - Issue: #92 Replace internal auth bootstrap with magic-link session auth
 - Status: Complete
-- Applicable standards areas: security, deployment and release, observability and monitoring, testing and quality assurance
-- Evidence expected for this change: Vercel production deployment status, production auth config gate, Resend delivery event, invited-user smoke, protected-route smoke, logout/replay/unknown-email smoke, monitoring counts/rates, rollback target
-- Gap observed: repository implementation and automated local verification are complete, but production remediation cannot be closed until the release operator runs the production smoke against the deployed app and attaches external Vercel/Resend/monitoring evidence. Documented rationale: production authentication changes require direct operational verification because local tests cannot prove deployed env values, provider delivery, cookie behavior on the production origin, or rollback readiness.
-- Commands run: local verification commands are recorded in the PR or issue closeout; production operator must run `npm run auth:config:check:vercel` and `npm run auth:magic-link:production-smoke`
+
+## Standards Alignment
+
+- Applicable standards areas: deployment and release, observability and monitoring, testing and quality assurance
+- Evidence in this report: Vercel production deployment status, production auth config gate, Resend delivery event, invited-user smoke, protected-route smoke, logout/replay/unknown-email smoke, monitoring counts/rates, and rollback target
+- Gap observed: repository implementation and automated local verification were not sufficient to close production remediation alone. Documented rationale: production authentication changes require direct operational verification because local tests cannot prove deployed env values, provider delivery, cookie behavior on the production origin, or rollback readiness (source https://github.com/wiinc1/engineering-team/issues/92).
+
+## Required Evidence
+
+- Commands run: `npm run auth:config:check:vercel`; `npm run auth:magic-link:production-smoke`; `npm run auth:magic-link:production-smoke -- --require-complete`
+- Tests added or updated: production smoke artifact `observability/magic-link-production-smoke.json` captures invited-user, protected-route, logout, replay, and unknown-email checks with redacted evidence only
 - Rollout or rollback notes: rollback restores the last known-good production deployment and auth config for the selected strategy; do not switch strategies during rollback unless a separate emergency exception is approved
+- Docs updated: `docs/reports/ISSUE-92-production-evidence.md`
 
 ## Workspace Evidence Captured
 
