@@ -1,0 +1,14 @@
+flowchart LR
+  Operator[Software Factory operator] --> Browser[Browser task creation UI]
+  Browser --> Adapter[Task creation adapter]
+  Adapter --> Api[Task API POST /tasks]
+  Api --> Audit[Workflow audit store]
+  Api --> Platform[Task platform service]
+  Audit --> History[Task history/detail read model]
+  Platform --> List[Task list/read surfaces]
+  History --> Detail[Task detail]
+  List --> Browser
+  Detail --> Browser
+
+  Api --> Event[task.refinement_requested]
+  Event --> History
