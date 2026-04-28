@@ -390,6 +390,46 @@
       ]
     },
     {
+      "name": "magic-link-auth",
+      "runtime_patterns": [
+        "^lib/auth/magic-link\\.js$",
+        "^db/migrations/009_magic_link_auth\\.sql$",
+        "^scripts/verify-magic-link-production\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/magic-link-auth\\.test\\.js$",
+            "^tests/unit/magic-link-production-smoke\\.test\\.js$",
+            "^tests/unit/auth-config-check\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "browser-or-visual",
+          "patterns": [
+            "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^tests/visual/auth-sign-in\\.visual\\.spec\\.tsx$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "api",
+          "patterns": [
+            "^docs/api/authenticated-browser-app-openapi\\.yml$"
+          ]
+        },
+        {
+          "name": "runbook-or-evidence",
+          "patterns": [
+            "^docs/runbooks/production-identity-provider\\.md$",
+            "^docs/reports/ISSUE-92-production-evidence\\.md$"
+          ]
+        }
+      ]
+    },
+    {
       "name": "task-creation",
       "runtime_patterns": [
         "^src/features/task-creation/",
