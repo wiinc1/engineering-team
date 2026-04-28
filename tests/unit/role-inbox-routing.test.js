@@ -73,6 +73,40 @@ describe('role inbox routing', () => {
     expect(summarizeRoleInboxResults(2, 'qa')).toBe('2 tasks routed to QA.');
   });
 
+  it('routes Intake Drafts to PM and excludes them from the engineer inbox', () => {
+    const items = [
+      {
+        task_id: 'TSK-INTAKE',
+        title: 'Untitled intake draft',
+        current_stage: 'DRAFT',
+        current_owner: 'pm',
+        priority: null,
+        intake_draft: true,
+        waiting_state: 'task_refinement',
+        next_required_action: 'PM refinement required',
+        freshness: { last_updated_at: '2026-04-01T00:00:01.000Z' },
+        owner: { actor_id: 'pm', display_name: 'Product Manager' },
+      },
+      {
+        task_id: 'TSK-ENGINEER',
+        title: 'Delivery work',
+        current_stage: 'IMPLEMENT',
+        current_owner: 'engineer',
+        priority: 'P1',
+        freshness: { last_updated_at: '2026-04-01T00:00:02.000Z' },
+        owner: { actor_id: 'engineer', display_name: 'Engineer' },
+      },
+    ];
+
+    const pmItems = buildRoleInboxItems(items, 'pm', agentLookup);
+    const engineerItems = buildRoleInboxItems(items, 'engineer', agentLookup);
+
+    expect(pmItems.map((item) => item.task_id)).toEqual(['TSK-INTAKE']);
+    expect(pmItems[0].routing).toMatchObject({ inboxRole: 'pm', reason: 'waiting-pm' });
+    expect(pmItems[0].queueReason.label).toBe('PM refinement required');
+    expect(engineerItems.map((item) => item.task_id)).toEqual(['TSK-ENGINEER']);
+  });
+
   it('builds human inbox rows from close-governance decision previews', () => {
     const items = [
       {

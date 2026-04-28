@@ -1,4 +1,4 @@
-const { validateTaskCreatePayload, VALID_PRIORITIES, VALID_TASK_TYPES } = require('./schema');
+const { validateTaskCreatePayload, VALID_PRIORITIES, VALID_TASK_TYPES, UNTITLED_INTAKE_DRAFT_TITLE, INTAKE_DRAFT_TITLE_MAX_LENGTH } = require('./schema');
 const { generateTaskId, isValidTaskId } = require('./types');
 
 function parseJsonResponse(response) {
@@ -40,14 +40,16 @@ function createTaskCreationApiClient({ baseUrl = '', fetchImpl = fetch, getHeade
         throw error;
       }
 
-      const taskId = generateTaskId(sequenceNumber);
+      const taskId = sequenceNumber === undefined || sequenceNumber === null
+        ? null
+        : generateTaskId(sequenceNumber);
 
       return request('/tasks', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({ ...taskData, taskId }),
+        body: JSON.stringify(taskId ? { ...taskData, taskId } : taskData),
       });
     },
     
@@ -97,4 +99,6 @@ module.exports = {
   createTaskCreationApiClient,
   VALID_PRIORITIES,
   VALID_TASK_TYPES,
+  UNTITLED_INTAKE_DRAFT_TITLE,
+  INTAKE_DRAFT_TITLE_MAX_LENGTH,
 };

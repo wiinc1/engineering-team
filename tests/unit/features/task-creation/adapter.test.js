@@ -13,7 +13,7 @@ test('task creation API client creates tasks', async () => {
     fetchImpl: () => Promise.resolve(mockResponse),
   });
 
-  const result = await client.createTask({ title: 'Test Task' });
+  const result = await client.createTask({ raw_requirements: 'Raw operator request', title: 'Test Task' });
   
   assert.equal(result.taskId, 'TSK-001');
   assert.equal(result.title, 'Test Task');
@@ -35,9 +35,12 @@ test('task creation API client handles errors correctly', async () => {
     fetchImpl: () => Promise.resolve(mockResponse),
   });
 
-  await assert.rejects(() => client.createTask({}), {
-    message: 'Invalid task data',
-    status: 400,
-    code: 'invalid_data'
-  });
+  await assert.rejects(
+    () => client.createTask({ raw_requirements: 'Raw operator request' }),
+    {
+      message: 'Invalid task data',
+      status: 400,
+      code: 'invalid_data'
+    }
+  );
 });

@@ -1,12 +1,6 @@
 import React from 'react';
 import { TaskCreationForm } from './TaskCreationForm';
-
-function buildAuthHeaders(config: { bearerToken?: string } = {}) {
-  const headers: Record<string, string> = {};
-  const token = typeof config?.bearerToken === 'string' ? config.bearerToken.trim() : '';
-  if (token) headers.authorization = `Bearer ${token}`;
-  return headers;
-}
+import { buildAuthHeaders } from '../../app/session.browser';
 
 function resolveApiBaseUrl(config: { apiBaseUrl?: string } = {}, envApiBaseUrl = '') {
   return (typeof config?.apiBaseUrl === 'string' && config.apiBaseUrl.trim()) || envApiBaseUrl.trim() || '';
@@ -43,8 +37,8 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
     setLoading(true);
     setError(null);
     try {
-      await client.createTask(data);
-      if (onTaskCreated) onTaskCreated();
+      const result = await client.createTask(data);
+      if (onTaskCreated) onTaskCreated(result);
     } catch (err) {
       setError(err.message || 'Failed to create task');
     } finally {
@@ -54,7 +48,7 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Create New Task</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Create Intake Draft</h1>
       <TaskCreationForm onSubmit={handleSubmit} loading={loading} error={error} />
     </div>
   );

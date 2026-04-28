@@ -23,6 +23,43 @@ test('validateTaskCreatePayload returns valid for correct payload', () => {
   assert.deepEqual(result.errors, []);
 });
 
+test('validateTaskCreatePayload returns valid for raw intake requirements only', () => {
+  const result = validateTaskCreatePayload({
+    raw_requirements: 'Operator pasted unrefined requirements.',
+  });
+
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.errors, []);
+});
+
+test('validateTaskCreatePayload allows optional intake title', () => {
+  const result = validateTaskCreatePayload({
+    raw_requirements: 'Operator pasted unrefined requirements.',
+    title: 'Optional intake title',
+  });
+
+  assert.equal(result.valid, true);
+});
+
+test('validateTaskCreatePayload rejects overlong intake title', () => {
+  const result = validateTaskCreatePayload({
+    raw_requirements: 'Operator pasted unrefined requirements.',
+    title: 'x'.repeat(121),
+  });
+
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some(e => e.includes('120 characters or fewer')));
+});
+
+test('validateTaskCreatePayload rejects blank raw intake requirements', () => {
+  const result = validateTaskCreatePayload({
+    raw_requirements: '   ',
+  });
+
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.some(e => e.includes('raw_requirements')));
+});
+
 test('validateTaskCreatePayload rejects null payload', () => {
   const result = validateTaskCreatePayload(null);
   assert.equal(result.valid, false);
@@ -177,7 +214,7 @@ test('VALID_TASK_TYPES contains expected values', () => {
 });
 
 test('VALID_STAGES contains expected values', () => {
-  assert.deepEqual(VALID_STAGES, ['BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']);
+  assert.deepEqual(VALID_STAGES, ['DRAFT', 'BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']);
 });
 
 test('validateTaskCreatePayload accepts all valid priorities', () => {
