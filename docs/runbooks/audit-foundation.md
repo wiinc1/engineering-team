@@ -249,6 +249,17 @@ Immediate action:
 4. Use `POST /tasks/{childId}/pm-business-context` to finalize the machine-generated business context before architect work begins.
 5. Confirm the parent task is automatically unblocked when the linked child reaches its normal resolved terminal state.
 
+### Execution Contract refinement from Intake Draft
+Symptom: PM needs to turn a raw Intake Draft into an approval-ready structured contract without dispatching implementation.
+Immediate action:
+1. Confirm the task is an Intake Draft in `DRAFT` and is assigned to `pm`.
+2. Use `POST /tasks/{id}/execution-contract` with the selected template tier and any completed section bodies.
+3. Use `POST /tasks/{id}/execution-contract/validate` to enforce the tier-required sections.
+4. If validation is valid, use `POST /tasks/{id}/execution-contract/markdown` to generate a non-authoritative review story.
+5. Confirm task history includes `task.execution_contract_version_recorded`, `task.execution_contract_validated`, and `task.execution_contract_markdown_generated`.
+6. Confirm implementation dispatch is still blocked until a future approval/dispatch workflow is implemented.
+Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract reads and mutations while preserving historical audit events.
+
 ## Observability hooks
 Structured log fields emitted in this slice:
 - `feature`

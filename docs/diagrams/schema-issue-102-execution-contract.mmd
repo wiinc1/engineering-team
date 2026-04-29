@@ -1,0 +1,41 @@
+erDiagram
+  TASK ||--o{ AUDIT_EVENT : records
+  TASK ||--o{ EXECUTION_CONTRACT_VERSION : derives
+  EXECUTION_CONTRACT_VERSION ||--o{ EXECUTION_CONTRACT_SECTION : contains
+  EXECUTION_CONTRACT_VERSION ||--o{ CONTRACT_REVIEWER : tracks
+  EXECUTION_CONTRACT_VERSION ||--o{ GENERATED_MARKDOWN_VIEW : renders
+
+  TASK {
+    string task_id
+    string current_stage
+    string assignee
+    string execution_contract_version
+  }
+
+  EXECUTION_CONTRACT_VERSION {
+    string task_id
+    integer version
+    string template_tier
+    string owner
+    string material_hash
+    boolean authoritative
+  }
+
+  EXECUTION_CONTRACT_SECTION {
+    string id
+    string title
+    string body
+    boolean required
+  }
+
+  CONTRACT_REVIEWER {
+    string role
+    boolean required
+    string status
+  }
+
+  GENERATED_MARKDOWN_VIEW {
+    integer version
+    string markdown
+    boolean authoritative
+  }

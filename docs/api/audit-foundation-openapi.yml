@@ -11,6 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view.
 components:
   securitySchemes:
     BearerAuth:
@@ -55,6 +56,8 @@ components:
         wip_started_at: { type: [string, 'null'], format: date-time }
         intake_draft: { type: boolean }
         operator_intake_requirements: { type: [string, 'null'] }
+        execution_contract:
+          $ref: '#/components/schemas/ExecutionContractProjection'
         waiting_state: { type: [string, 'null'] }
         next_required_action: { type: [string, 'null'] }
         freshness:
@@ -108,6 +111,126 @@ components:
         nextRequiredAction: { type: [string, 'null'] }
         refinementEventId: { type: [string, 'null'] }
         createdAt: { type: string, format: date-time }
+    ExecutionContractSection:
+      type: object
+      required: [id, title, body, owner, required]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        owner: { type: string, enum: [pm] }
+        contributors:
+          type: array
+          items: { type: string }
+        approvals:
+          type: array
+          items: { type: string }
+        required: { type: boolean }
+    ExecutionContractValidation:
+      type: object
+      required: [status, requiredSections, missingFields, missingSections, completeSections]
+      properties:
+        status: { type: string, enum: [valid, invalid] }
+        templateTier: { type: [string, 'null'], enum: [Simple, Standard, Complex, Epic, null] }
+        requiredSections:
+          type: array
+          items: { type: string }
+        missingFields:
+          type: array
+          items: { type: string }
+        missingSections:
+          type: array
+          items: { type: string }
+        completeSections:
+          type: array
+          items: { type: string }
+    ExecutionContract:
+      type: object
+      required: [task_id, version, status, template_tier, template_source, owner, authoritative, required_sections, sections, validation]
+      properties:
+        task_id: { type: string }
+        version: { type: integer, minimum: 1 }
+        status: { type: string }
+        template_tier: { type: string, enum: [Simple, Standard, Complex, Epic] }
+        template_source: { type: string, enum: [docs/templates/USER_STORY_TEMPLATE.md] }
+        owner: { type: string, enum: [pm] }
+        authoritative: { type: boolean, enum: [true] }
+        generated_from:
+          type: object
+          additionalProperties: true
+        required_sections:
+          type: array
+          items: { type: string }
+        sections:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ExecutionContractSection'
+        reviewers:
+          type: object
+          additionalProperties: true
+        validation:
+          $ref: '#/components/schemas/ExecutionContractValidation'
+        material_hash: { type: string }
+    ExecutionContractProjection:
+      type: object
+      required: [active, latest, latestVersion, versions, validation, markdown]
+      properties:
+        active: { type: boolean }
+        latest:
+          oneOf:
+            - $ref: '#/components/schemas/ExecutionContract'
+            - type: 'null'
+        latestVersion: { type: [integer, 'null'] }
+        versions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        validation:
+          oneOf:
+            - $ref: '#/components/schemas/ExecutionContractValidation'
+            - type: 'null'
+        markdown:
+          type: [object, 'null']
+          properties:
+            version: { type: integer }
+            generatedAt: { type: [string, 'null'], format: date-time }
+            generatedBy: { type: [string, 'null'] }
+            markdown: { type: string }
+            authoritative: { type: boolean, enum: [false] }
+    ExecutionContractUpsertRequest:
+      type: object
+      required: [templateTier]
+      properties:
+        templateTier: { type: string, enum: [Simple, Standard, Complex, Epic] }
+        sections:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - $ref: '#/components/schemas/ExecutionContractSection'
+        materialChangeSummary: { type: string }
+        idempotencyKey: { type: string }
+    ExecutionContractUpsertResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          required: [taskId, version, materialChange, templateTier, status, validation, contract]
+          properties:
+            taskId: { type: string }
+            version: { type: integer }
+            previousVersion: { type: [integer, 'null'] }
+            materialChange: { type: boolean }
+            templateTier: { type: string }
+            status: { type: string }
+            validation:
+              $ref: '#/components/schemas/ExecutionContractValidation'
+            contract:
+              $ref: '#/components/schemas/ExecutionContract'
+            recordedAt: { type: string, format: date-time }
     PaginatedTaskHistoryResponse:
       type: object
       required: [items, page_info]
@@ -252,6 +375,123 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/execution-contract:
+    get:
+      summary: Read the latest structured Execution Contract projection
+      description: |
+        Returns the authoritative structured Execution Contract Task data and version history for the selected Intake Draft task. The Markdown story, when present, is a generated view and is not authoritative.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Latest Execution Contract projection
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/ExecutionContractProjection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: No Execution Contract exists for this task.
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+    post:
+      summary: Create or version a structured Execution Contract from an Intake Draft
+      description: |
+        PM/admin-only mutation. Creates the first draft contract version from the selected `USER_STORY_TEMPLATE.md` tier or records a new version when material contract sections change. The contract remains PM-owned and does not dispatch implementation.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionContractUpsertRequest'
+      responses:
+        '201':
+          description: Execution Contract version recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionContractUpsertResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: The task is not an Intake Draft source or is not in a valid refinement state.
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/execution-contract/validate:
+    post:
+      summary: Validate the latest Execution Contract against tier-required sections
+      description: |
+        Records `task.execution_contract_validated` with the Simple, Standard, Complex, or Epic required-section result. Valid contracts become ready for Markdown generation and operator review, but implementation dispatch remains out of scope.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Validation result recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: No Execution Contract exists for this task.
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/execution-contract/markdown:
+    get:
+      summary: Read the latest generated Execution Contract Markdown view
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Non-authoritative generated Markdown view
+        '404':
+          description: Markdown has not been generated for the latest version.
+    post:
+      summary: Generate Markdown user story from structured Execution Contract data
+      description: |
+        Generates a human-readable story for review, repo artifacts, GitHub issues, PRs, and docs. The structured Execution Contract remains authoritative.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Markdown view generated from structured data
+        '409':
+          description: Required sections are missing, so Markdown cannot be generated.
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}:

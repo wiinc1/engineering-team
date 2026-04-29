@@ -68,6 +68,20 @@ function readCookieValue(cookieHeader, name) {
   return String(cookieHeader || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || '';
 }
 
+const EXECUTION_CONTRACT_REQUIRED_SECTIONS = {
+  Simple: ['1', '2', '4', '11', '12', '15', '16', '17'],
+  Standard: ['1', '2', '3', '4', '6', '7', '10', '11', '12', '15', '16', '17'],
+  Complex: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '15', '16', '17'],
+  Epic: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17'],
+};
+
+function executionContractSections(tier, suffix = '') {
+  return Object.fromEntries(EXECUTION_CONTRACT_REQUIRED_SECTIONS[tier].map((sectionId) => [
+    sectionId,
+    `Completed section ${sectionId}${suffix}.`,
+  ]));
+}
+
 test('enforces bearer-token auth context and isolates reads by tenant claim', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const unauthorized = await fetch(`${baseUrl}/tasks/TSK-200/history`);
@@ -223,6 +237,120 @@ test('creates intake draft tasks from raw requirements and routes them to PM ref
     const history = await response.json();
     assert.deepEqual(history.items.map((item) => item.event_type), ['task.refinement_requested', 'task.created']);
     assert.ok(!history.items.some((item) => ['task.stage_changed', 'task.engineer_submission_recorded'].includes(item.event_type)));
+  });
+});
+
+test('creates, validates, versions, and renders Execution Contracts from Intake Drafts', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Generate a structured versioned execution contract from this operator request.',
+        title: 'Execution Contract intake',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ templateTier: 'Complex' }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.version, 1);
+    assert.equal(body.data.contract.owner, 'pm');
+    assert.equal(body.data.contract.template_tier, 'Complex');
+    assert.equal(body.data.validation.status, 'invalid');
+    assert.ok(body.data.validation.missingSections.includes('2'));
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/validate`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.validation.status, 'invalid');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Complex',
+        sections: executionContractSections('Complex', ' for initial refinement'),
+        materialChangeSummary: 'PM completed the required Complex-tier sections.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.version, 2);
+    assert.equal(body.data.materialChange, true);
+    assert.equal(body.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/validate`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.version, 2);
+    assert.equal(body.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/markdown`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.authoritative, false);
+    assert.match(body.data.markdown, /Execution Contract Version: v2/);
+    assert.match(body.data.markdown, /not the authoritative source/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.executionContract.latest.version, 2);
+    assert.equal(detail.context.executionContract.validation.status, 'valid');
+    assert.equal(detail.context.executionContract.markdown.version, 2);
+    assert.equal(detail.summary.nextAction.label, 'Execution Contract is ready for operator review.');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.assignee, 'pm');
+    assert.equal(state.current_stage, 'DRAFT');
+    assert.equal(state.execution_contract_version, 2);
+    assert.equal(state.execution_contract_validation_status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.deepEqual(history.items.slice(0, 5).map((item) => item.event_type), [
+      'task.execution_contract_markdown_generated',
+      'task.execution_contract_validated',
+      'task.execution_contract_version_recorded',
+      'task.execution_contract_validated',
+      'task.execution_contract_version_recorded',
+    ]);
+    assert.ok(!history.items.some((item) => item.event_type === 'task.engineer_submission_recorded'));
   });
 });
 

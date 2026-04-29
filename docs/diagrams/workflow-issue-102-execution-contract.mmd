@@ -1,0 +1,8 @@
+flowchart TD
+  A[Intake Draft Task in DRAFT] --> B[PM starts refinement]
+  B --> C[Generate structured Execution Contract draft]
+  C --> D[Validate selected template tier sections]
+  D -->|Missing required sections| E[Remain in contract refinement]
+  D -->|Valid| F[Generate Markdown review view]
+  F --> G[Operator review ready]
+  G -. out of scope .-> H[Implementation dispatch remains blocked]

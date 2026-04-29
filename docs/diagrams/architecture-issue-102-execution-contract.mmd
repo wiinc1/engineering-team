@@ -1,0 +1,8 @@
+flowchart LR
+  Client[PM/API Client] --> HTTP[Audit HTTP API]
+  HTTP --> Domain[Execution Contract Domain Module]
+  Domain --> Store[Audit Store]
+  Store --> Events[Workflow Audit Events]
+  Events --> Projection[Current State and Detail Projections]
+  Projection --> Detail[Task Detail/List API]
+  Domain --> Markdown[Generated Markdown View]

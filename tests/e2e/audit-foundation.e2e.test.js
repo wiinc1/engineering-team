@@ -21,6 +21,15 @@ function authHeaders(secret, roles, overrides = {}) {
   };
 }
 
+const EXECUTION_CONTRACT_COMPLEX_SECTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '15', '16', '17'];
+
+function complexExecutionContractSections() {
+  return Object.fromEntries(EXECUTION_CONTRACT_COMPLEX_SECTIONS.map((sectionId) => [
+    sectionId,
+    `E2E completed Complex-tier section ${sectionId}.`,
+  ]));
+}
+
 async function withServer(run, options = {}) {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-e2e-'));
   const secret = 'e2e-secret';
@@ -156,6 +165,75 @@ test('e2e: raw operator requirements create a draft routed only to PM refinement
     const history = await response.json();
     assert.deepEqual(history.items.map((event) => event.event_type), ['task.refinement_requested', 'task.created']);
     assert.ok(!history.items.some((event) => event.event_type === 'task.stage_changed'));
+  });
+});
+
+test('e2e: PM generates a versioned Execution Contract and Markdown without dispatching implementation', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['contributor']),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Turn this intake into a structured execution contract before any engineer dispatch.',
+        title: 'Contract before dispatch',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['pm', 'reader'], { sub: 'pm-e2e' }),
+    };
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Complex',
+        sections: complexExecutionContractSections(),
+      }),
+    });
+    assert.equal(response.status, 201);
+    const contract = await response.json();
+    assert.equal(contract.data.version, 1);
+    assert.equal(contract.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/markdown`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    const markdown = await response.json();
+    assert.match(markdown.data.markdown, /Authoritative Source: structured Task execution_contract data/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['contributor'], { sub: 'engineer-dispatcher' }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: `dispatch-attempt:${created.taskId}`,
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'workflow_violation');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_version_recorded'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_markdown_generated'));
+    assert.ok(!history.items.some((event) => event.event_type === 'task.engineer_submission_recorded'));
   });
 });
 
