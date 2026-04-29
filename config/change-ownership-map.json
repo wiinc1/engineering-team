@@ -94,7 +94,8 @@
         {
           "name": "unit",
           "patterns": [
-            "^tests/unit/audit-.*\\.test\\.js$"
+            "^tests/unit/audit-.*\\.test\\.js$",
+            "^tests/unit/execution-contracts\\.test\\.js$"
           ]
         },
         {
@@ -116,7 +117,8 @@
         {
           "name": "api",
           "patterns": [
-            "^docs/api/audit-foundation-openapi\\.yml$"
+            "^docs/api/audit-foundation-openapi\\.yml$",
+            "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
         },
         {

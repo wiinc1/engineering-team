@@ -431,7 +431,7 @@ components:
                   waitingState: { type: [string, 'null'] }
         context:
           type: object
-          required: [intakeDraft, operatorIntakeRequirements, businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec, pmBusinessContextReview]
+          required: [intakeDraft, operatorIntakeRequirements, executionContract, businessContext, acceptanceCriteria, definitionOfDone, technicalSpec, monitoringSpec, pmBusinessContextReview]
           properties:
             intakeDraft:
               type: boolean
@@ -439,6 +439,10 @@ components:
             operatorIntakeRequirements:
               type: [string, 'null']
               description: Raw operator requirements captured at intake and shown above refined execution-contract sections.
+            executionContract:
+              type: object
+              additionalProperties: true
+              description: Latest structured, versioned Execution Contract projection. Markdown views are generated from this data and are not authoritative.
             businessContext: { type: [string, 'null'] }
             acceptanceCriteria:
               type: array

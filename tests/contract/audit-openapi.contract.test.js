@@ -43,6 +43,15 @@ function browserAuthCode(secret, payload = {}, options = {}) {
   }, secret, options);
 }
 
+const EXECUTION_CONTRACT_STANDARD_SECTIONS = ['1', '2', '3', '4', '6', '7', '10', '11', '12', '15', '16', '17'];
+
+function standardExecutionContractSections() {
+  return Object.fromEntries(EXECUTION_CONTRACT_STANDARD_SECTIONS.map((sectionId) => [
+    sectionId,
+    `Contract test completed section ${sectionId}.`,
+  ]));
+}
+
 // Governance note: audit-facing route changes should keep contract coverage updated in the same change set.
 
 test('openapi contract documents the live audit routes and auth model', () => {
@@ -64,6 +73,9 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/sre-monitoring/approve:',
     '/tasks/{id}/sre-monitoring/anomaly-child-task:',
     '/tasks/{id}/pm-business-context:',
+    '/tasks/{id}/execution-contract:',
+    '/tasks/{id}/execution-contract/validate:',
+    '/tasks/{id}/execution-contract/markdown:',
     '/tasks/{id}/close-review/exceptional-dispute:',
     '/metrics:',
     '/projections/process:',
@@ -92,6 +104,9 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'invalid_intake_title',
     'maxLength: 120',
     'Intake Draft',
+    'ExecutionContract',
+    'task.execution_contract_version_recorded',
+    'ff_execution_contracts',
   ]) {
     assert.match(spec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -153,6 +168,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'dependencyState',
     'fallbackReason',
     'operatorIntakeRequirements',
+    'executionContract',
   ]) {
     assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -261,6 +277,44 @@ test('documented endpoints satisfy the runtime contract', async () => {
     assert.equal(response.status, 202);
     const started = await response.json();
     assert.ok(started.run.runId);
+
+    response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        raw_requirements: 'Create a documented contract endpoint from this intake.',
+        title: 'Documented Execution Contract intake',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const intake = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+      },
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        sections: standardExecutionContractSections(),
+      }),
+    });
+    assert.equal(response.status, 201);
+    const executionContract = await response.json();
+    assert.equal(executionContract.data.version, 1);
+    assert.equal(executionContract.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract/markdown`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    assert.match((await response.json()).data.markdown, /Generated from structured Execution Contract data/);
 
     response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-ANOM/events`, {
       method: 'POST',

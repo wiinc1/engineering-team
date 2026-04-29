@@ -21,6 +21,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - If SRE creates a monitoring-anomaly child task from task detail, the new child is intentionally assigned to `pm`; that route is distinct from `PATCH /tasks/{taskId}/assignment`.
 - Governed close-review cancellation recommendations and exceptional-dispute escalations are also distinct workflow routes; they may affect routing into `/inbox/human` without mutating canonical assignment state.
 - Human close decisions and two-step close-review backtrack approvals are also distinct workflow routes; they may affect `/inbox/human` visibility and task stage progression without mutating canonical assignment state directly.
+- Execution Contract refinement keeps Intake Draft ownership with `pm`; `POST /tasks/{taskId}/execution-contract` and related validation/Markdown routes are distinct from `PATCH /tasks/{taskId}/assignment`.
 
 ## Responsible escalation and current-owner enforcement
 - Delivery-loop actions reserved for engineers now validate the task's current canonical assignee before mutating state.
@@ -54,6 +55,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - **400 Invalid agent** → verify selected agent exists and is active in the roster source.
 - **404 Task not found** → verify task id and tenant/workspace scope.
 - **No queue/list update visible** → this repo projects assignee into task state, but does not yet include a dedicated board/inbox UI. Downstream consumers should read `current_owner`/`assignee` from the projection.
+- **Intake Draft assignment rejected after contract generation** → expected until a future approval/dispatch workflow is implemented; Execution Contract generation does not make assignment mutable or dispatch-ready.
 
 ## Dashboards + alert links
 - Dashboard: `/monitoring/dashboards/task-assignment.json`
@@ -63,6 +65,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Changes to the assignment mutation path in `lib/audit/http.js` or the assignment controls in `src/app/App.jsx` should update this runbook or the matching assignment API contract in the same PR.
 - SRE anomaly child-task creation should continue to bypass assignment mutation and remain on its dedicated monitoring workflow endpoint.
 - Close-governance human decisions and backtrack approvals should continue to bypass assignment mutation and remain on their dedicated workflow endpoints.
+- Execution Contract versioning, validation, and Markdown generation should continue to bypass assignment mutation and preserve PM ownership until a future approval/dispatch story changes the lifecycle.
 - Nearest verification artifacts for that surface are:
 - `tests/unit/task-assignment.test.js`
 - `tests/unit/audit-api.test.js`

@@ -85,3 +85,41 @@ test('e2e: assignment endpoint honors feature readiness, assignment, and smoke c
     assert.match(metrics, /feature_task_assignment_business_metric 1/);
   });
 });
+
+test('e2e: Execution Contract generation does not make Intake Draft assignment mutable', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['contributor']),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Keep ownership with PM while contract refinement is in progress.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['pm', 'reader']),
+      },
+      body: JSON.stringify({ templateTier: 'Simple' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['pm']),
+      },
+      body: JSON.stringify({ agentId: 'engineer' }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'workflow_violation');
+  });
+});

@@ -592,6 +592,77 @@ test('protects intake draft creation with auth, permission, and feature flag che
   }, { intakeDraftCreationEnabled: false });
 });
 
+test('protects Execution Contract generation with role, source, and feature-flag checks', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'operator', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ raw_requirements: 'Secure the Execution Contract route.' }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateTier: 'Standard' }),
+    });
+    assert.equal(response.status, 401);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ templateTier: 'Standard' }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-NON-INTAKE/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'admin', tenant_id: 'tenant-sec', roles: ['admin'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SEC-NON-INTAKE',
+        payload: { title: 'Not an intake', initial_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-NON-INTAKE/execution-contract`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ templateTier: 'Standard' }),
+    });
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).error.code, 'execution_contract_requires_intake_draft');
+  });
+
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/tasks/TSK-SEC-FLAG/execution-contract`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({ templateTier: 'Standard' }),
+    });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.details.feature, 'ff_execution_contracts');
+  }, { executionContractsEnabled: false });
+});
+
 test('accepts production-style JWKS tokens with explicit claim mapping', async () => {
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
   await withServer(async ({ baseUrl }) => {

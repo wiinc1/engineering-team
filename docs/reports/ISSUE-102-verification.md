@@ -1,0 +1,40 @@
+# Issue 102 Verification
+
+## Results
+
+- `POST /tasks/{id}/execution-contract` creates a PM-owned structured draft version from an Intake Draft.
+- Simple, Standard, Complex, and Epic required-section validation is covered in unit tests.
+- Material section changes record a new version.
+- Markdown generation reflects structured contract data and marks the view as non-authoritative.
+- Generic implementation dispatch remains blocked while the Task is still an Intake Draft.
+- `FF_EXECUTION_CONTRACTS=false` returns the canonical feature-disabled response.
+
+## Commands
+
+- `node --test tests/unit/execution-contracts.test.js tests/unit/audit-api.test.js` - passed, 61 tests.
+- `node --test tests/contract/audit-openapi.contract.test.js` - passed, 3 tests.
+- `node --test tests/security/audit-api.security.test.js` - passed, 17 tests.
+- `node --test tests/e2e/audit-foundation.e2e.test.js` - passed, 12 tests.
+- `node --test tests/e2e/task-assignment.test.js` - passed, 2 tests.
+- `npm run lint` - passed.
+- `npm run typecheck` - passed.
+- `npm run standards:check` - passed.
+- `npm run ownership:lint` - passed.
+- `npm run change:check` - passed.
+- `npm run test` - passed, including 60 browser tests.
+- `npm run test:ui:vitest` - passed after the lockfile security refresh.
+- `env VITE_OIDC_DISCOVERY_URL=https://idp.example/.well-known/openid-configuration VITE_OIDC_CLIENT_ID=engineering-team-browser AUTH_JWT_ISSUER=https://idp.example AUTH_JWT_AUDIENCE=engineering-team AUTH_JWT_JWKS_URL=https://idp.example/.well-known/jwks.json npm run build` - passed.
+- `npm audit --audit-level=high` - passed after `npm audit fix` refreshed `package-lock.json`.
+
+## Required Evidence
+
+- Commands run: listed above.
+- Tests added or updated: unit, e2e, contract, and security tests for Execution Contracts.
+- Docs updated: API, task detail contract, design, diagrams, generated story, and reports.
+- Rollout or rollback notes: controlled by `FF_EXECUTION_CONTRACTS`; disable it to stop contract reads and mutations while preserving audit history.
+
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance, architecture and design, security, observability and monitoring.
+- Evidence in this report: focused automated commands plus API, e2e, contract, and security coverage.
+- Gap observed: full production telemetry validation is not run in this repository workflow. Documented rationale: this change is pre-dispatch workflow behavior and should be validated in production by API smoke checks after deployment (source https://github.com/wiinc1/engineering-team/issues/102).
