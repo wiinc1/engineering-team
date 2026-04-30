@@ -254,13 +254,16 @@ Symptom: PM needs to turn a raw Intake Draft into an approval-ready structured c
 Immediate action:
 1. Confirm the task is an Intake Draft in `DRAFT` and is assigned to `pm`.
 2. Use `POST /tasks/{id}/execution-contract` with the selected template tier and any completed section bodies.
-3. Save another contract version when section body, payload JSON, payload schema version, owner/approval metadata, or provenance references change materially.
-4. Use `POST /tasks/{id}/execution-contract/validate` to enforce the tier-required sections.
-5. If validation is valid, use `POST /tasks/{id}/execution-contract/markdown` to generate a non-authoritative review story.
-6. Use `POST /tasks/{id}/execution-contract/approve` only when the structured contract is approved; this records committed implementation scope without dispatching engineering work.
-7. Confirm task history includes `task.execution_contract_version_recorded`, `task.execution_contract_validated`, `task.execution_contract_markdown_generated`, and `task.execution_contract_approved`.
-8. Confirm `committed_scope.committed_requirements` contains only approved implementation scope, while `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain excluded.
-9. Confirm implementation dispatch is still blocked until a future dispatch workflow is implemented.
+3. Include `riskFlags` so deterministic reviewer routing can select Architect, UX, QA, SRE, and Principal Engineer reviewers with explainable reasons. QA approval is required for Standard, Complex, and Epic contracts. SRE is required for deployment, observability, reliability, authentication, data, or production-behavior risk. Principal Engineer is required for high-risk engineering triggers.
+4. If model judgment requests a stricter reviewer than deterministic rules, leave that reviewer required or include an operator-visible downgrade rationale in the reviewer entry. Deterministic hard requirements still win when the supplied judgment is less strict.
+5. Save another contract version when section body, payload JSON, payload schema version, owner/approval metadata, reviewer routing, risk flags, review feedback, or provenance references change materially.
+6. Use `POST /tasks/{id}/execution-contract/validate` to enforce the tier-required sections.
+7. If validation is valid, use `POST /tasks/{id}/execution-contract/markdown` to generate a non-authoritative review story.
+8. Use `POST /tasks/{id}/execution-contract/approve` only after all `reviewer_routing.required_role_approvals` have `status=approved` and all blocking questions in contract feedback, workflow threads, or review questions are resolved.
+9. If approval returns `execution_contract_approval_blocked`, clear `missing_required_approvals` and `unresolved_blocking_questions`. Review `approval_summary.nonBlockingComments`, but do not treat those comments as blocking.
+10. Confirm task history includes `task.execution_contract_version_recorded`, `task.execution_contract_validated`, `task.execution_contract_markdown_generated`, and `task.execution_contract_approved`.
+11. Confirm `committed_scope.committed_requirements` contains only approved implementation scope, while `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain excluded.
+12. Confirm implementation dispatch is still blocked until a future dispatch workflow is implemented.
 Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract reads and mutations while preserving historical audit events.
 
 ## Observability hooks

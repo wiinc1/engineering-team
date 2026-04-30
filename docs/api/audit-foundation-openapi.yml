@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` and commits only the structured `committed_scope.committed_requirements`.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`.
 components:
   securitySchemes:
     BearerAuth:
@@ -161,9 +161,102 @@ components:
         completeSections:
           type: array
           items: { type: string }
+    ExecutionContractReviewer:
+      type: object
+      required: [role, label, required, approvalRequired, status, approved, ruleRequired, modelRequired, downgraded, reasons]
+      properties:
+        role: { type: string, enum: [pm, architect, ux, qa, sre, principalEngineer] }
+        label: { type: string }
+        required: { type: boolean }
+        approvalRequired: { type: boolean }
+        status: { type: string }
+        approved: { type: boolean }
+        actorId: { type: [string, 'null'] }
+        ruleRequired: { type: boolean }
+        modelRequired: { type: boolean }
+        downgraded: { type: boolean }
+        downgradeRationale: { type: [string, 'null'] }
+        reasons:
+          type: array
+          items:
+            type: object
+            required: [source, code, detail, risk_flags]
+            properties:
+              source: { type: string }
+              code: { type: string }
+              detail: { type: string }
+              risk_flags:
+                type: array
+                items: { type: string }
+    ExecutionContractReviewerRouting:
+      type: object
+      required: [policy_version, template_tier, risk_flags, resolution_order, required_reviewers, required_role_approvals, downgrade_rationales, reviewers]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-reviewer-routing.v1] }
+        template_tier: { type: string, enum: [Simple, Standard, Complex, Epic] }
+        risk_flags:
+          type: array
+          items:
+            type: object
+            required: [id, label, source]
+            properties:
+              id: { type: string }
+              label: { type: string }
+              source: { type: string }
+        resolution_order:
+          type: array
+          items: { type: string, enum: [deterministic_rules, model_judgment, pm_downgrade_rationale] }
+        required_reviewers:
+          type: array
+          items: { type: string }
+        required_role_approvals:
+          type: array
+          items: { type: string }
+        downgrade_rationales:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        reviewers:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ExecutionContractReviewer'
+    ExecutionContractApprovalSummary:
+      type: object
+      required: [policy_version, status, canApprove, requiredReviewers, requiredRoleApprovals, missingRequiredApprovals, unresolvedBlockingQuestions, nonBlockingComments, downgradeRationales]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-approval-gates.v1] }
+        status: { type: string, enum: [ready, blocked] }
+        canApprove: { type: boolean }
+        requiredReviewers:
+          type: array
+          items: { type: string }
+        requiredRoleApprovals:
+          type: array
+          items: { type: string }
+        missingRequiredApprovals:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        unresolvedBlockingQuestions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        nonBlockingComments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        downgradeRationales:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
     ExecutionContract:
       type: object
-      required: [contract_id, task_id, version, tier, status, template_tier, template_source, owner, authoritative, source_intake_revision, required_sections, sections, committed_scope, validation]
+      required: [contract_id, task_id, version, tier, status, template_tier, template_source, owner, authoritative, source_intake_revision, required_sections, sections, risk_flags, reviewer_routing, reviewers, review_feedback, committed_scope, validation]
       properties:
         contract_id: { type: string }
         task_id: { type: string }
@@ -190,9 +283,32 @@ components:
           type: object
           additionalProperties:
             $ref: '#/components/schemas/ExecutionContractSection'
+        risk_flags:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        reviewer_routing:
+          $ref: '#/components/schemas/ExecutionContractReviewerRouting'
         reviewers:
           type: object
-          additionalProperties: true
+          additionalProperties:
+            $ref: '#/components/schemas/ExecutionContractReviewer'
+        review_feedback:
+          type: object
+          required: [policy_version, questions, comments]
+          properties:
+            policy_version: { type: string }
+            questions:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            comments:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
         committed_scope:
           type: object
           required: [commitment_status, committed_requirements, out_of_scope, deferred_considerations, follow_up_tasks, exclusion_policy]
@@ -243,7 +359,15 @@ components:
             - type: 'null'
         approval:
           type: [object, 'null']
-          additionalProperties: true
+          properties:
+            version: { type: integer }
+            approvedAt: { type: [string, 'null'], format: date-time }
+            approvedBy: { type: [string, 'null'] }
+            committedScope:
+              type: object
+              additionalProperties: true
+            approvalSummary:
+              $ref: '#/components/schemas/ExecutionContractApprovalSummary'
         markdown:
           type: [object, 'null']
           properties:
@@ -265,6 +389,24 @@ components:
               - $ref: '#/components/schemas/ExecutionContractSection'
         materialChangeSummary: { type: string }
         materialChangeReason: { type: string }
+        riskFlags:
+          type: array
+          description: Deterministic reviewer-routing risk flags such as deployment, observability, reliability, auth, data, production_behavior, security, api, feasibility, human_workflow, and high_risk_engineering.
+          items:
+            oneOf:
+              - type: string
+              - type: object
+                additionalProperties: true
+        reviewers:
+          type: object
+          description: Reviewer status and optional model judgment. Deterministic rules are applied first; stricter model-required reviewers remain required unless PM provides an operator-visible downgrade rationale.
+          additionalProperties:
+            type: object
+            additionalProperties: true
+        reviewFeedback:
+          type: object
+          description: Blocking questions and non-blocking comments used by the approval gate summary.
+          additionalProperties: true
         scopeBoundaries:
           type: object
           additionalProperties: true
@@ -556,7 +698,7 @@ paths:
     post:
       summary: Approve the latest valid Execution Contract without dispatching implementation
       description: |
-        Records `task.execution_contract_approved`, marks the latest valid contract as approved, and freezes its `committed_scope.committed_requirements` as future implementation scope. `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain explicitly excluded unless promoted through a new approved contract version or a new Intake Draft.
+        Records `task.execution_contract_approved`, marks the latest valid contract as approved, and freezes its `committed_scope.committed_requirements` as future implementation scope. Approval is blocked unless deterministic reviewer routing has all required role approvals recorded and all blocking questions are resolved. Non-blocking comments are returned in `approvalSummary.nonBlockingComments` without blocking approval. `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain explicitly excluded unless promoted through a new approved contract version or a new Intake Draft.
       parameters:
         - name: id
           in: path
@@ -574,12 +716,35 @@ paths:
       responses:
         '201':
           description: Execution Contract approved and committed scope recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    required: [taskId, version, status, validation, committedScope, approvalSummary, approvedAt, approvedBy]
+                    properties:
+                      taskId: { type: string }
+                      version: { type: integer }
+                      status: { type: string, enum: [approved] }
+                      validation:
+                        $ref: '#/components/schemas/ExecutionContractValidation'
+                      committedScope:
+                        type: object
+                        additionalProperties: true
+                      approvalSummary:
+                        $ref: '#/components/schemas/ExecutionContractApprovalSummary'
+                      approvedAt: { type: string, format: date-time }
+                      approvedBy: { type: string }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          description: Latest contract is missing required sections and cannot be approved.
+          description: Latest contract is missing required sections, required reviewer approvals are missing, or unresolved blocking questions remain. Approval-gate failures use `execution_contract_approval_blocked` and include `approval_summary`, `missing_required_approvals`, and `unresolved_blocking_questions`.
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}:

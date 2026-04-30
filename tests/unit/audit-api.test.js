@@ -308,6 +308,11 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
           deferredConsiderations: ['Deferred Considerations workflow remains tracked by issue #110.'],
           followUpTasks: ['Contract Coverage Audit remains tracked by issue #108.'],
         },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-lead' },
+          ux: { status: 'approved', actorId: 'ux-lead' },
+          qa: { status: 'approved', actorId: 'qa-lead' },
+        },
         materialChangeSummary: 'PM completed the required Complex-tier sections.',
       }),
     });
@@ -347,6 +352,8 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
     body = await response.json();
     assert.equal(body.data.status, 'approved');
     assert.equal(body.data.committedScope.commitment_status, 'committed');
+    assert.equal(body.data.approvalSummary.canApprove, true);
+    assert.deepEqual(body.data.approvalSummary.requiredRoleApprovals, ['architect', 'ux', 'qa']);
     assert.deepEqual(body.data.committedScope.committed_requirements.map((item) => item.text), [
       'Implementation later runs against the approved structured contract.',
     ]);
@@ -372,6 +379,7 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
     assert.equal(detail.context.executionContract.validation.status, 'valid');
     assert.equal(detail.context.executionContract.markdown.version, 2);
     assert.equal(detail.context.executionContract.approval.committedScope.commitment_status, 'committed');
+    assert.equal(detail.context.executionContract.approval.approvalSummary.canApprove, true);
     assert.equal(detail.summary.nextAction.label, 'Approved Execution Contract is ready for future implementation dispatch.');
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
@@ -399,6 +407,98 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
       'task.execution_contract_version_recorded',
     ]);
     assert.ok(!history.items.some((item) => item.event_type === 'task.engineer_submission_recorded'));
+  });
+});
+
+test('blocks Execution Contract approval on missing required approvals and unresolved blocking questions', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Route reviewers and block premature operator approval.',
+        title: 'Reviewer-gated contract',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-103', roles: ['pm', 'reader'] }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        riskFlags: ['deployment'],
+        sections: executionContractSections('Standard', ' for gated approval'),
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-103' },
+          ux: { status: 'approved', actorId: 'ux-103' },
+          qa: { status: 'pending' },
+          sre: { status: 'pending' },
+        },
+        reviewFeedback: {
+          questions: [{ id: 'q-103', body: 'Confirm the production rollback owner.', blocking: true, state: 'open' }],
+          comments: [{ id: 'c-103', body: 'Non-blocking dashboard copy can be improved later.', blocking: false, state: 'open' }],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.validation.status, 'valid');
+    assert.deepEqual(body.data.contract.reviewer_routing.required_role_approvals, ['architect', 'ux', 'qa', 'sre']);
+    assert.ok(body.data.contract.reviewers.sre.reasons.some((reason) => reason.code === 'sre_operational_risk'));
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Attempt before all gates clear.' }),
+    });
+    assert.equal(response.status, 409);
+    body = await response.json();
+    assert.equal(body.error.code, 'execution_contract_approval_blocked');
+    assert.deepEqual(body.error.details.missing_required_approvals.map((item) => item.role), ['qa', 'sre']);
+    assert.deepEqual(body.error.details.unresolved_blocking_questions.map((item) => item.id), ['q-103']);
+    assert.deepEqual(body.error.details.approval_summary.nonBlockingComments.map((item) => item.id), ['c-103']);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        riskFlags: ['deployment'],
+        sections: executionContractSections('Standard', ' for gated approval'),
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-103' },
+          ux: { status: 'approved', actorId: 'ux-103' },
+          qa: { status: 'approved', actorId: 'qa-103' },
+          sre: { status: 'approved', actorId: 'sre-103' },
+        },
+        reviewFeedback: {
+          questions: [{ id: 'q-103', body: 'Confirm the production rollback owner.', blocking: true, state: 'resolved' }],
+          comments: [{ id: 'c-103', body: 'Non-blocking dashboard copy can be improved later.', blocking: false, state: 'open' }],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'All required reviewers approved; only non-blocking comments remain.' }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'approved');
+    assert.deepEqual(body.data.approvalSummary.missingRequiredApprovals, []);
+    assert.deepEqual(body.data.approvalSummary.unresolvedBlockingQuestions, []);
+    assert.deepEqual(body.data.approvalSummary.nonBlockingComments.map((item) => item.id), ['c-103']);
   });
 });
 

@@ -108,6 +108,13 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'ExecutionContract',
     'task.execution_contract_version_recorded',
     'task.execution_contract_approved',
+    'ExecutionContractReviewerRouting',
+    'ExecutionContractApprovalSummary',
+    'riskFlags',
+    'approvalSummary',
+    'execution_contract_approval_blocked',
+    'required_role_approvals',
+    'nonBlockingComments',
     'ff_execution_contracts',
   ]) {
     assert.match(spec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -300,6 +307,11 @@ test('documented endpoints satisfy the runtime contract', async () => {
       body: JSON.stringify({
         templateTier: 'Standard',
         sections: standardExecutionContractSections(),
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-contract' },
+          ux: { status: 'approved', actorId: 'ux-contract' },
+          qa: { status: 'approved', actorId: 'qa-contract' },
+        },
       }),
     });
     assert.equal(response.status, 201);
