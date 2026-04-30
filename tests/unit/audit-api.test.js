@@ -502,6 +502,137 @@ test('blocks Execution Contract approval on missing required approvals and unres
   });
 });
 
+test('generates and approves Execution Contract repo artifact bundles before commit readiness', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-104/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-104',
+        payload: {
+          title: 'Refinement artifact generation',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Generate user story and refinement decision log artifacts after contract approval.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-104', roles: ['pm', 'reader'] }),
+    };
+    response = await fetch(`${baseUrl}/tasks/TSK-104/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        riskFlags: ['deployment'],
+        sections: {
+          ...executionContractSections('Standard', ' for repo artifacts'),
+          4: { body: 'QA owns artifact verification expectations.', ownerRole: 'qa', approvalStatus: 'approved' },
+          6: { body: 'Architect owns artifact generation integration.', ownerRole: 'architect', approvalStatus: 'approved' },
+          10: { body: 'UX owns task detail artifact-link visibility.', ownerRole: 'ux', approvalStatus: 'approved' },
+          11: { body: 'SRE owns rollout and rollback notes for generated artifacts.', ownerRole: 'sre', approvalStatus: 'approved' },
+        },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-104' },
+          ux: { status: 'approved', actorId: 'ux-104' },
+          qa: { status: 'approved', actorId: 'qa-104' },
+          sre: { status: 'approved', actorId: 'sre-104' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-104/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Approved for artifact generation.' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-104/execution-contract/artifacts`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        title: 'Implement Refinement Decision Logs and Task-ID Artifact Generation',
+      }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.displayId, 'TSK-104');
+    assert.equal(body.data.generatedArtifacts.user_story.path, 'docs/user-stories/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md');
+    assert.equal(body.data.generatedArtifacts.refinement_decision_log.path, 'docs/refinement/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md');
+    assert.equal(body.data.commitPolicy.commit_allowed, false);
+    assert.equal(body.data.commitPolicy.github_issue_creation.requested, false);
+    assert.deepEqual(body.data.approvalRouting.required_roles, ['pm', 'architect', 'ux', 'qa', 'sre']);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-104/execution-contract/artifacts/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        approvals: {
+          pm: { status: 'approved', actorId: 'pm-104' },
+        },
+      }),
+    });
+    assert.equal(response.status, 409);
+    body = await response.json();
+    assert.equal(body.error.code, 'artifact_bundle_approval_blocked');
+    assert.deepEqual(body.error.details.missing_required_approvals.map((item) => item.role), ['architect', 'ux', 'qa', 'sre']);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-104/execution-contract/artifacts/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        approvals: {
+          pm: { status: 'approved', actorId: 'pm-104' },
+          architect: { status: 'approved', actorId: 'architect-104' },
+          ux: { status: 'approved', actorId: 'ux-104' },
+          qa: { status: 'approved', actorId: 'qa-104' },
+          sre: { status: 'approved', actorId: 'sre-104' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'approved_for_commit');
+    assert.equal(body.data.commitPolicy.commit_allowed, true);
+    assert.equal(body.data.prGuidance.title, '[TSK-104] Implement Refinement Decision Logs and Task-ID Artifact Generation');
+    assert.ok(body.data.prGuidance.required_links.every((link) => !String(link.target).includes('opaque')));
+
+    response = await fetch(`${baseUrl}/tasks/TSK-104/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.executionContract.artifacts.status, 'approved_for_commit');
+    assert.deepEqual(detail.context.executionContract.artifacts.links.map((link) => link.path), [
+      'docs/user-stories/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md',
+      'docs/refinement/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md',
+    ]);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-104/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_generated'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
+    assert.ok(!history.items.some((event) => /github_issue/i.test(event.event_type)));
+  });
+});
+
 test('rejects non-string raw intake requirements', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const invalidPayloads = [

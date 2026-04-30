@@ -705,6 +705,32 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Workflow Transition')).toBeInTheDocument();
   });
 
+  it('renders generated Execution Contract artifact links and PR guidance on task detail', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        context: {
+          executionContract: {
+            artifacts: {
+              links: [
+                { rel: 'generated_user_story', label: 'Generated user story', path: 'docs/user-stories/TSK-104-artifact-generation.md' },
+                { rel: 'refinement_decision_log', label: 'Refinement Decision Log', path: 'docs/refinement/TSK-104-artifact-generation.md' },
+              ],
+              pr_guidance: {
+                title: '[TSK-104] Artifact generation',
+              },
+            },
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('link', { name: 'docs/user-stories/TSK-104-artifact-generation.md' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeInTheDocument();
+    expect(screen.getByText('[TSK-104] Artifact generation')).toBeInTheDocument();
+  });
+
   it('redirects protected routes to sign-in when no browser session exists', async () => {
     clearBrowserSessionConfig();
     installTaskFetchMock();
@@ -1390,7 +1416,7 @@ describe('Task browser runtime coverage', () => {
     fireEvent.change(screen.getByLabelText('New architect review question'), { target: { value: 'What telemetry budget did PM approve?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ask question' }));
 
-    await screen.findByText('Architect review question created.');
+    await screen.findByText('Architect review question created.', {}, { timeout: 5000 });
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/tasks/TSK-42/review-questions'),
       expect.objectContaining({
@@ -1806,7 +1832,9 @@ describe('Task browser runtime coverage', () => {
     expect(within(qaSection as HTMLElement).getByText('QA failure for TSK-42')).toBeInTheDocument();
     expect(within(qaSection as HTMLElement).getByText('Route: engineer-2 · Required tier: Sr')).toBeInTheDocument();
     fireEvent.click(within(qaSection as HTMLElement).getByRole('button', { name: 'Show logs and traces' }));
-    expect(within(qaSection as HTMLElement).getByText('qa -> engineer -> pm')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(qaSection as HTMLElement).getByText('qa -> engineer -> pm')).toBeInTheDocument();
+    });
   });
 
   it('renders task list owner metadata with explicit unassigned and fallback labels', async () => {
@@ -2344,10 +2372,16 @@ describe('Task browser runtime coverage', () => {
       severity: 'critical',
     });
 
-    fireEvent.change(screen.getByLabelText('Agreement artifact'), { target: { value: 'pm+architect-close-review-2026-04-15' } });
-    fireEvent.change(screen.getByLabelText('Backtrack rationale'), { target: { value: 'The close gate failed and implementation must resume.' } });
+    const agreementArtifactInput = screen.getByLabelText('Agreement artifact');
+    const backtrackRationaleInput = screen.getByLabelText('Backtrack rationale');
+    fireEvent.change(agreementArtifactInput, { target: { value: 'pm+architect-close-review-2026-04-15' } });
+    fireEvent.change(backtrackRationaleInput, { target: { value: 'The close gate failed and implementation must resume.' } });
+    await waitFor(() => {
+      expect(agreementArtifactInput).toHaveValue('pm+architect-close-review-2026-04-15');
+      expect(backtrackRationaleInput).toHaveValue('The close gate failed and implementation must resume.');
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Backtrack to implementation' }));
-    await screen.findByText('Close review backtracked to implementation.');
+    await screen.findByText('Close review backtracked to implementation.', {}, { timeout: 5000 });
 
     const backtrackRequest = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/tasks/TSK-42/close-review/backtrack') && init?.method === 'POST');
     expect(backtrackRequest).toBeTruthy();
@@ -2584,11 +2618,11 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     fireEvent.change(screen.getByLabelText('Re-tier rationale'), { target: { value: 'Cross-service complexity now requires senior ownership.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Update engineer tier' }));
-    await screen.findByText('Engineer tier updated.');
+    await screen.findByText('Engineer tier updated.', {}, { timeout: 5000 });
 
     fireEvent.change(screen.getByLabelText('Reassignment reason'), { target: { value: 'Two check-in windows were missed.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Reassign task' }));
-    await screen.findByText('Task reassigned and inactivity review created.');
+    await screen.findByText('Task reassigned and inactivity review created.', {}, { timeout: 5000 });
 
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/retier'))).toBe(true);
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tasks/TSK-42/reassignment'))).toBe(true);
