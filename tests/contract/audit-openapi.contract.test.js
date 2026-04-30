@@ -76,6 +76,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/execution-contract:',
     '/tasks/{id}/execution-contract/validate:',
     '/tasks/{id}/execution-contract/markdown:',
+    '/tasks/{id}/execution-contract/approve:',
     '/tasks/{id}/close-review/exceptional-dispute:',
     '/metrics:',
     '/projections/process:',
@@ -106,6 +107,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'Intake Draft',
     'ExecutionContract',
     'task.execution_contract_version_recorded',
+    'task.execution_contract_approved',
     'ff_execution_contracts',
   ]) {
     assert.match(spec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -315,6 +317,17 @@ test('documented endpoints satisfy the runtime contract', async () => {
     });
     assert.equal(response.status, 201);
     assert.match((await response.json()).data.markdown, /Generated from structured Execution Contract data/);
+
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).data.committedScope.commitment_status, 'committed');
 
     response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-ANOM/events`, {
       method: 'POST',

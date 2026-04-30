@@ -622,6 +622,16 @@ test('protects Execution Contract generation with role, source, and feature-flag
     });
     assert.equal(response.status, 403);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 403);
+
     response = await fetch(`${baseUrl}/tasks/TSK-SEC-NON-INTAKE/events`, {
       method: 'POST',
       headers: {

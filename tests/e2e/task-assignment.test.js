@@ -107,9 +107,29 @@ test('e2e: Execution Contract generation does not make Intake Draft assignment m
         'content-type': 'application/json',
         ...authHeaders(secret, ['pm', 'reader']),
       },
-      body: JSON.stringify({ templateTier: 'Simple' }),
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: Object.fromEntries(['1', '2', '4', '11', '12', '15', '16', '17'].map((sectionId) => [
+          sectionId,
+          `Simple contract section ${sectionId} keeps assignment with PM.`,
+        ])),
+        scopeBoundaries: {
+          committedRequirements: ['Approved contract scope remains PM-owned until a dispatch workflow exists.'],
+        },
+      }),
     });
     assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['pm', 'reader']),
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).data.committedScope.commitment_status, 'committed');
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
       method: 'PATCH',

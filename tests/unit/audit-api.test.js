@@ -287,7 +287,27 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
       headers: pmHeaders,
       body: JSON.stringify({
         templateTier: 'Complex',
-        sections: executionContractSections('Complex', ' for initial refinement'),
+        sections: {
+          ...executionContractSections('Complex', ' for initial refinement'),
+          6: {
+            body: 'Architecture requirement for approved implementation scope.',
+            ownerRole: 'architect',
+            contributor: 'architect-1',
+            approvalStatus: 'approved',
+            approver: 'architect-lead',
+            payloadSchemaVersion: 2,
+            payloadJson: { components: ['audit-http', 'execution-contracts'] },
+            provenanceReferences: ['CONTEXT.md'],
+          },
+        },
+        scopeBoundaries: {
+          committedRequirements: [
+            { id: 'REQ-102-1', text: 'Implementation later runs against the approved structured contract.', sourceSectionId: '2' },
+          ],
+          outOfScope: ['Engineer implementation dispatch is excluded from this issue.'],
+          deferredConsiderations: ['Deferred Considerations workflow remains tracked by issue #110.'],
+          followUpTasks: ['Contract Coverage Audit remains tracked by issue #108.'],
+        },
         materialChangeSummary: 'PM completed the required Complex-tier sections.',
       }),
     });
@@ -318,15 +338,41 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
     assert.match(body.data.markdown, /Execution Contract Version: v2/);
     assert.match(body.data.markdown, /not the authoritative source/);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Operator-visible contract approved without dispatching implementation.' }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'approved');
+    assert.equal(body.data.committedScope.commitment_status, 'committed');
+    assert.deepEqual(body.data.committedScope.committed_requirements.map((item) => item.text), [
+      'Implementation later runs against the approved structured contract.',
+    ]);
+    assert.deepEqual(body.data.committedScope.out_of_scope.map((item) => item.text), [
+      'Engineer implementation dispatch is excluded from this issue.',
+    ]);
+    assert.deepEqual(body.data.committedScope.deferred_considerations.map((item) => item.text), [
+      'Deferred Considerations workflow remains tracked by issue #110.',
+    ]);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
       headers: authHeaders(secret, { roles: ['reader'] }),
     });
     assert.equal(response.status, 200);
     const detail = await response.json();
     assert.equal(detail.context.executionContract.latest.version, 2);
+    assert.equal(detail.context.executionContract.latest.status, 'approved');
+    assert.equal(detail.context.executionContract.latest.sections['6'].owner_role, 'architect');
+    assert.equal(detail.context.executionContract.latest.sections['6'].contributor, 'architect-1');
+    assert.equal(detail.context.executionContract.latest.sections['6'].approval_status, 'approved');
+    assert.equal(detail.context.executionContract.latest.sections['6'].payload_schema_version, 2);
+    assert.deepEqual(detail.context.executionContract.latest.sections['6'].provenance_references, ['CONTEXT.md']);
     assert.equal(detail.context.executionContract.validation.status, 'valid');
     assert.equal(detail.context.executionContract.markdown.version, 2);
-    assert.equal(detail.summary.nextAction.label, 'Execution Contract is ready for operator review.');
+    assert.equal(detail.context.executionContract.approval.committedScope.commitment_status, 'committed');
+    assert.equal(detail.summary.nextAction.label, 'Approved Execution Contract is ready for future implementation dispatch.');
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
       headers: authHeaders(secret, { roles: ['reader'] }),
@@ -336,6 +382,7 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
     assert.equal(state.assignee, 'pm');
     assert.equal(state.current_stage, 'DRAFT');
     assert.equal(state.execution_contract_version, 2);
+    assert.equal(state.execution_contract_status, 'approved');
     assert.equal(state.execution_contract_validation_status, 'valid');
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
@@ -343,7 +390,8 @@ test('creates, validates, versions, and renders Execution Contracts from Intake 
     });
     assert.equal(response.status, 200);
     const history = await response.json();
-    assert.deepEqual(history.items.slice(0, 5).map((item) => item.event_type), [
+    assert.deepEqual(history.items.slice(0, 6).map((item) => item.event_type), [
+      'task.execution_contract_approved',
       'task.execution_contract_markdown_generated',
       'task.execution_contract_validated',
       'task.execution_contract_version_recorded',

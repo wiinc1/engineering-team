@@ -6,8 +6,23 @@
 - Simple, Standard, Complex, and Epic required-section validation is covered in unit tests.
 - Material section changes record a new version.
 - Markdown generation reflects structured contract data and marks the view as non-authoritative.
+- Approval records `task.execution_contract_approved` and commits only `committed_scope.committed_requirements` for future implementation.
+- Out-of-scope, Deferred Consideration, and follow-up Task items remain outside committed requirements unless promoted through a new approved version or new Intake Draft.
+- Role-specific sections expose owner role, contributor, approval status, payload schema version, payload JSON, and provenance references as structured data.
 - Generic implementation dispatch remains blocked while the Task is still an Intake Draft.
 - `FF_EXECUTION_CONTRACTS=false` returns the canonical feature-disabled response.
+
+## Requirement Audit
+
+| Requirement | Audit result |
+| --- | --- |
+| Intake Draft creates same-Task draft Execution Contract | Passed: `task.execution_contract_version_recorded` is recorded for the original Task ID. |
+| Selected tier enforces required sections | Passed: Simple, Standard, Complex, and Epic required-section validation is covered. |
+| Material section changes create a new version | Passed: material hash changes increment the contract version. |
+| Markdown reflects structured contract and is non-authoritative | Passed: generated Markdown is marked `authoritative: false`. |
+| Approved requirements become committed implementation scope | Passed: approval records `committed_scope.committed_requirements` with `commitment_status=committed`. |
+| Excluded ideas stay out of committed scope | Passed: `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain separate from committed requirements. |
+| Role-specific section metadata is structured | Passed: sections expose owner role, contributor, approval status, payload schema version, payload JSON, and provenance references. |
 
 ## Commands
 

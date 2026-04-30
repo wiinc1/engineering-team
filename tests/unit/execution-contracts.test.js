@@ -83,13 +83,44 @@ test('creates a PM-owned structured draft from Intake Draft history and versions
     previousContract: initial.contract,
     body: {
       templateTier: 'Complex',
-      sections: sectionBodiesFor('Complex', ' material update'),
+      sections: {
+        ...sectionBodiesFor('Complex', ' material update'),
+        6: {
+          title: 'Architecture & Integration',
+          body: 'Completed section 6 material update.',
+          ownerRole: 'architect',
+          contributor: 'architect-1',
+          approvalStatus: 'approved',
+          approver: 'architect-lead',
+          payloadSchemaVersion: 2,
+          payloadJson: { architecture_decision: 'Use audit-backed contract projection.' },
+          provenanceReferences: ['CONTEXT.md#execution-contract'],
+        },
+      },
+      scopeBoundaries: {
+        committedRequirements: ['Implementation must use the approved structured contract.'],
+        outOfScope: ['Runtime engineer dispatch remains out of scope.'],
+        deferredConsiderations: ['Deferred Considerations workflow is issue #110.'],
+        followUpTasks: ['Contract Coverage Audit is issue #108.'],
+      },
     },
   });
   assert.equal(updated.materialChange, true);
   assert.equal(updated.previousVersion, 1);
   assert.equal(updated.contract.version, 2);
+  assert.equal(updated.contract.contract_id, 'EC-TSK-102-v2');
+  assert.equal(updated.contract.source_intake_revision.refinement_event_id, 'evt-refine');
+  assert.equal(updated.contract.policy_versions_used.committed_scope_policy, 'execution-contract-committed-scope.v1');
   assert.equal(updated.contract.validation.status, 'valid');
+  assert.equal(updated.contract.sections['6'].owner_role, 'architect');
+  assert.equal(updated.contract.sections['6'].contributor, 'architect-1');
+  assert.equal(updated.contract.sections['6'].approval_status, 'approved');
+  assert.equal(updated.contract.sections['6'].payload_schema_version, 2);
+  assert.deepEqual(updated.contract.sections['6'].payload_json, { architecture_decision: 'Use audit-backed contract projection.' });
+  assert.deepEqual(updated.contract.sections['6'].provenance_references, ['CONTEXT.md#execution-contract']);
+  assert.deepEqual(updated.contract.committed_scope.committed_requirements.map((item) => item.text), ['Implementation must use the approved structured contract.']);
+  assert.deepEqual(updated.contract.committed_scope.out_of_scope.map((item) => item.text), ['Runtime engineer dispatch remains out of scope.']);
+  assert.deepEqual(updated.contract.committed_scope.deferred_considerations.map((item) => item.text), ['Deferred Considerations workflow is issue #110.']);
 });
 
 test('generates Markdown from structured data without making Markdown authoritative', () => {

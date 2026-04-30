@@ -11,10 +11,10 @@ The accepted domain context in `CONTEXT.md` and `docs/refinement/CONTEXT-2026-04
 Existing US-003 behavior created Intake Draft tasks with raw operator requirements and PM refinement routing. It did not model the refined contract as structured data, enforce template-tier sections, track material contract versions, or generate Markdown from structured contract state.
 
 Implemented gap closure:
-- Added `lib/audit/execution-contracts.js` for tier rules, structured contract generation, validation, material-change detection, and Markdown rendering.
-- Added audit events for `task.execution_contract_version_recorded`, `task.execution_contract_validated`, and `task.execution_contract_markdown_generated`.
+- Added `lib/audit/execution-contracts.js` for tier rules, structured contract generation, validation, material-change detection, committed scope boundaries, section provenance metadata, and Markdown rendering.
+- Added audit events for `task.execution_contract_version_recorded`, `task.execution_contract_validated`, `task.execution_contract_markdown_generated`, and `task.execution_contract_approved`.
 - Projected latest contract version, validation status, and Markdown metadata into task state and detail/list summaries.
-- Added `POST /tasks/{id}/execution-contract`, `POST /tasks/{id}/execution-contract/validate`, and `POST|GET /tasks/{id}/execution-contract/markdown`.
+- Added `POST /tasks/{id}/execution-contract`, `POST /tasks/{id}/execution-contract/validate`, `POST|GET /tasks/{id}/execution-contract/markdown`, and `POST /tasks/{id}/execution-contract/approve`.
 - Preserved PM ownership through `owner=pm`, current-state assignment, and PM/admin-only mutation checks.
 - Kept implementation dispatch blocked by the existing Intake Draft workflow guard.
 
@@ -30,6 +30,9 @@ so that operator requirements can become approval-ready delivery instructions wi
 2. Tier validation: `validateExecutionContract` enforces Simple, Standard, Complex, and Epic required sections.
 3. Material changes: material section/tier/reviewer changes produce a new version with a new material hash.
 4. Markdown view: `POST /tasks/{id}/execution-contract/markdown` generates non-authoritative Markdown from the structured latest version.
+5. Committed scope: `POST /tasks/{id}/execution-contract/approve` records `task.execution_contract_approved` and marks only `committed_scope.committed_requirements` as future implementation scope.
+6. Deferred ideas: `committed_scope.out_of_scope`, `committed_scope.deferred_considerations`, and `committed_scope.follow_up_tasks` remain excluded unless promoted through a new approved contract version or new Intake Draft.
+7. Role-specific section metadata: each section exposes `owner_role`, `contributor`, `approval_status`, `payload_schema_version`, `payload_json`, and `provenance_references`.
 
 ## Architecture
 

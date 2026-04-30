@@ -18,10 +18,13 @@ As a Product Manager, I want to generate a structured, versioned Execution Contr
 - Given a template tier is selected, when the contract is validated, then required sections for that tier are enforced.
 - Given a material section changes, when the contract is saved, then a new contract version is recorded.
 - Given a contract is ready for review, when Markdown is generated, then the generated story reflects structured contract data without becoming the authoritative source.
+- Given a requirement appears in the approved Execution Contract, when implementation later runs, then it is exposed as committed scope.
+- Given an idea is not intended for current implementation, when the contract is approved, then it remains excluded as out-of-scope, a Deferred Consideration, or a follow-up Task.
+- Given a role-specific section exists, when inspected, then owner role, contributor, approval status, payload schema version, and provenance references are structured data.
 
 ## 3. Workflow & User Journey
 
-PM opens an Intake Draft, creates or updates the structured Execution Contract, validates required sections, and generates Markdown for operator review. Implementation dispatch remains blocked.
+PM opens an Intake Draft, creates or updates the structured Execution Contract, validates required sections, generates Markdown for operator review, and records approval when the contract is accepted. Implementation dispatch remains blocked.
 
 ## 4. Automated Test Deliverables
 
@@ -29,7 +32,7 @@ Coverage includes unit validation, HTTP unit workflow, e2e dispatch blocking, co
 
 ## 5. Data Model & Schema
 
-The contract is audit-backed Task data. Each material version is recorded as `task.execution_contract_version_recorded` with sections, tier, owner, reviewers, validation result, and material hash.
+The contract is audit-backed Task data. Each material version is recorded as `task.execution_contract_version_recorded` with typed header fields, sections, tier, owner, reviewers, validation result, material hash, committed scope, exclusion boundaries, and section provenance metadata.
 
 ## 6. Architecture & Integration
 
@@ -43,6 +46,7 @@ New endpoints:
 - `POST /tasks/{id}/execution-contract/validate`
 - `POST /tasks/{id}/execution-contract/markdown`
 - `GET /tasks/{id}/execution-contract/markdown`
+- `POST /tasks/{id}/execution-contract/approve`
 
 ## 8. Security & Compliance
 
@@ -63,6 +67,7 @@ Release behind the default-on `FF_EXECUTION_CONTRACTS` feature flag.
 ## 12. Monitoring & Observability
 
 Audit history records every contract version, validation, and Markdown generation event.
+Approval records committed requirements separately from out-of-scope, deferred, and follow-up items.
 
 ## 14. Dependencies & Risks
 
