@@ -113,6 +113,7 @@ components:
         createdAt: { type: string, format: date-time }
     ExecutionContractSection:
       type: object
+      description: Structured section record. Material changes include body, owner/approval metadata, payload schema version, payload JSON, and provenance references.
       required: [id, title, body, owner, owner_role, section_status, approval_status, payload_schema_version, payload_json, provenance_references, required]
       properties:
         id: { type: string }
@@ -467,7 +468,7 @@ paths:
     post:
       summary: Create or version a structured Execution Contract from an Intake Draft
       description: |
-        PM/admin-only mutation. Creates the first draft contract version from the selected `USER_STORY_TEMPLATE.md` tier or records a new version when material contract sections change. The contract remains PM-owned and does not dispatch implementation.
+        PM/admin-only mutation. Creates the first draft contract version from the selected `USER_STORY_TEMPLATE.md` tier or records a new version when material contract sections change, including structured payload or section metadata updates. The contract remains PM-owned and does not dispatch implementation.
       parameters:
         - name: id
           in: path

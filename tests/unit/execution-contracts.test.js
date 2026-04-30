@@ -123,6 +123,73 @@ test('creates a PM-owned structured draft from Intake Draft history and versions
   assert.deepEqual(updated.contract.committed_scope.deferred_considerations.map((item) => item.text), ['Deferred Considerations workflow is issue #110.']);
 });
 
+test('versions material changes to structured section payload and metadata', () => {
+  const history = [
+    {
+      event_type: 'task.created',
+      event_id: 'evt-create',
+      payload: { intake_draft: true, title: 'Structured metadata', raw_requirements: 'Capture structured metadata changes.' },
+    },
+  ];
+  const summary = {
+    task_id: 'TSK-102-META',
+    title: 'Structured metadata',
+    intake_draft: true,
+    operator_intake_requirements: 'Capture structured metadata changes.',
+  };
+  const initial = createExecutionContractDraft({
+    taskId: 'TSK-102-META',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Standard',
+      sections: {
+        ...sectionBodiesFor('Standard'),
+        6: {
+          title: 'Architecture & Integration',
+          body: 'Completed section 6.',
+          ownerRole: 'architect',
+          contributor: 'architect-1',
+          approvalStatus: 'pending',
+          payloadSchemaVersion: 1,
+          payloadJson: { integration: { mode: 'draft' } },
+          provenanceReferences: ['CONTEXT.md'],
+        },
+      },
+    },
+  });
+
+  const updated = createExecutionContractDraft({
+    taskId: 'TSK-102-META',
+    summary,
+    history,
+    actorId: 'pm-1',
+    previousContract: initial.contract,
+    body: {
+      templateTier: 'Standard',
+      sections: {
+        ...sectionBodiesFor('Standard'),
+        6: {
+          title: 'Architecture & Integration',
+          body: 'Completed section 6.',
+          ownerRole: 'architect',
+          contributor: 'architect-1',
+          approvalStatus: 'approved',
+          approver: 'architect-lead',
+          payloadSchemaVersion: 2,
+          payloadJson: { integration: { mode: 'approved' } },
+          provenanceReferences: ['CONTEXT.md', 'docs/adr/ADD-2026-04-29-committed-requirements-and-contract-coverage.md'],
+        },
+      },
+    },
+  });
+
+  assert.equal(updated.materialChange, true);
+  assert.equal(updated.previousVersion, 1);
+  assert.equal(updated.contract.version, 2);
+});
+
 test('generates Markdown from structured data without making Markdown authoritative', () => {
   const contract = {
     task_id: 'TSK-102',

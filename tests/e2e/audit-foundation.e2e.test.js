@@ -202,9 +202,40 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
       }),
     });
     assert.equal(response.status, 201);
-    const contract = await response.json();
+    let contract = await response.json();
     assert.equal(contract.data.version, 1);
     assert.equal(contract.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Complex',
+        sections: {
+          ...complexExecutionContractSections(),
+          6: {
+            title: 'Architecture & Integration',
+            body: 'E2E completed Complex-tier section 6.',
+            ownerRole: 'architect',
+            contributor: 'architect-e2e',
+            approvalStatus: 'approved',
+            payloadSchemaVersion: 2,
+            payloadJson: { architecture_decision: 'Metadata-only material change is versioned.' },
+            provenanceReferences: ['CONTEXT.md#execution-contract'],
+          },
+        },
+        scopeBoundaries: {
+          committedRequirements: ['Future implementation must satisfy the approved contract sections.'],
+          outOfScope: ['Runtime engineer dispatch is not performed by this workflow.'],
+          deferredConsiderations: ['Deferred Considerations promotion is tracked separately.'],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+    contract = await response.json();
+    assert.equal(contract.data.version, 2);
+    assert.equal(contract.data.materialChange, true);
+    assert.equal(contract.data.contract.sections['6'].payload_schema_version, 2);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/markdown`, {
       method: 'POST',
