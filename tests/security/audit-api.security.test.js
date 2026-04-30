@@ -738,6 +738,13 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     assert.equal(response.status, 403);
     assert.match(JSON.stringify(await response.json()), /artifact-bundle approval must use the dedicated approval endpoint/i);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: pmAuth,
+    });
+    assert.equal(response.status, 200);
+    const historyAfterRejectedArtifactBypass = await response.json();
+    assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...pmAuth },

@@ -19,7 +19,7 @@ Ship only after the full verification command set in the verification report pas
 
 - Applicable standards areas: team and process, deployment and release, testing and quality assurance.
 - Evidence in this report: closeout review points to requirement audit, security review, test report, and customer/operator review notes.
-- Gap observed: final branch protection checks are not recorded in this local review. Documented rationale: those checks run after the ship step creates the pull request; this review requires the local verification gate first (source https://github.com/wiinc1/engineering-team/issues/104).
+- Gap observed: no remaining local closeout-review gap after this follow-up. Documented rationale: PR #121 recorded passing branch protection checks before merge, and the residual source-artifact and mutation-testing gaps are resolved by the follow-up PR tied to Issue #104 (source https://github.com/wiinc1/engineering-team/issues/104).
 
 ## Required Evidence
 

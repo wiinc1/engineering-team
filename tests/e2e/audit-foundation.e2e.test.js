@@ -272,19 +272,22 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
       body: JSON.stringify({
         displayId: 'TSK-104',
         title: 'Implement Refinement Decision Logs and Task-ID Artifact Generation',
+        approvals: {
+          pm: { status: 'approved', actorId: 'pm-e2e' },
+        },
       }),
     });
     assert.equal(response.status, 201);
     const artifacts = await response.json();
     assert.equal(artifacts.data.generatedArtifacts.user_story.path, 'docs/user-stories/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md');
     assert.equal(artifacts.data.commitPolicy.commit_allowed, false);
+    assert.deepEqual(artifacts.data.approvalSummary.missingRequiredApprovals.map((item) => item.role), ['architect']);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/artifacts/approve`, {
       method: 'POST',
       headers: pmHeaders,
       body: JSON.stringify({
         approvals: {
-          pm: { status: 'approved', actorId: 'pm-e2e' },
           architect: { status: 'approved', actorId: 'architect-e2e' },
         },
       }),
@@ -292,6 +295,8 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     assert.equal(response.status, 201);
     const artifactApproval = await response.json();
     assert.equal(artifactApproval.data.commitPolicy.commit_allowed, true);
+    assert.equal(artifactApproval.data.artifactBundle.approvals.pm.status, 'approved');
+    assert.equal(artifactApproval.data.artifactBundle.approvals.architect.status, 'approved');
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
       method: 'POST',
