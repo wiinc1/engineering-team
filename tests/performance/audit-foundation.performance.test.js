@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const { performance } = require('perf_hooks');
 const { createFileAuditStore } = require('../../lib/audit/store');
+const { createExecutionContractDraft, REQUIRED_SECTIONS_BY_TIER } = require('../../lib/audit/execution-contracts');
 
 function makeTempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'audit-perf-'));
@@ -112,4 +113,69 @@ test('close-review escalation and projection stay within baseline budget', () =>
   assert.equal(history.length, 2);
   assert.ok(appendDuration < 250, `close escalation append budget exceeded: ${appendDuration}ms`);
   assert.ok(readDuration < 150, `close escalation read budget exceeded: ${readDuration}ms`);
+});
+
+test('execution contract structured metadata versioning stays within baseline budget', () => {
+  const sections = Object.fromEntries(REQUIRED_SECTIONS_BY_TIER.Complex.map((sectionId) => [
+    sectionId,
+    `Perf completed Complex section ${sectionId}.`,
+  ]));
+  const history = [{
+    event_type: 'task.created',
+    event_id: 'evt-perf-contract',
+    payload: {
+      intake_draft: true,
+      title: 'Metadata hash performance',
+      raw_requirements: 'Version structured metadata changes without slowing contract saves.',
+    },
+  }];
+  const summary = {
+    task_id: 'TSK-PERF-CONTRACT',
+    title: 'Metadata hash performance',
+    intake_draft: true,
+    operator_intake_requirements: 'Version structured metadata changes without slowing contract saves.',
+  };
+
+  const initial = createExecutionContractDraft({
+    taskId: 'TSK-PERF-CONTRACT',
+    summary,
+    history,
+    actorId: 'pm-perf',
+    body: { templateTier: 'Complex', sections },
+  });
+
+  const started = performance.now();
+  const updated = createExecutionContractDraft({
+    taskId: 'TSK-PERF-CONTRACT',
+    summary,
+    history,
+    actorId: 'pm-perf',
+    previousContract: initial.contract,
+    body: {
+      templateTier: 'Complex',
+      sections: {
+        ...sections,
+        6: {
+          title: 'Architecture & Integration',
+          body: 'Perf completed Complex section 6.',
+          ownerRole: 'architect',
+          contributor: 'architect-perf',
+          approvalStatus: 'approved',
+          payloadSchemaVersion: 2,
+          payloadJson: {
+            integration: {
+              mode: 'approved',
+              dependencies: Array.from({ length: 20 }, (_, index) => `dependency-${index}`),
+            },
+          },
+          provenanceReferences: ['CONTEXT.md', 'docs/templates/USER_STORY_TEMPLATE.md'],
+        },
+      },
+    },
+  });
+  const duration = performance.now() - started;
+
+  assert.equal(updated.materialChange, true);
+  assert.equal(updated.contract.version, 2);
+  assert.ok(duration < 250, `execution contract metadata versioning budget exceeded: ${duration}ms`);
 });
