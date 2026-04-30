@@ -199,6 +199,11 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
           outOfScope: ['Runtime engineer dispatch is not performed by this workflow.'],
           deferredConsiderations: ['Deferred Considerations promotion is tracked separately.'],
         },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-e2e' },
+          ux: { status: 'approved', actorId: 'ux-e2e' },
+          qa: { status: 'approved', actorId: 'qa-e2e' },
+        },
       }),
     });
     assert.equal(response.status, 201);
@@ -228,6 +233,11 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
           committedRequirements: ['Future implementation must satisfy the approved contract sections.'],
           outOfScope: ['Runtime engineer dispatch is not performed by this workflow.'],
           deferredConsiderations: ['Deferred Considerations promotion is tracked separately.'],
+        },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-e2e' },
+          ux: { status: 'approved', actorId: 'ux-e2e' },
+          qa: { status: 'approved', actorId: 'qa-e2e' },
         },
       }),
     });

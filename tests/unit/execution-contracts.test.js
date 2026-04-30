@@ -4,6 +4,7 @@ const {
   REQUIRED_SECTIONS_BY_TIER,
   contractMarkdown,
   createExecutionContractDraft,
+  evaluateExecutionContractApprovalReadiness,
   validateExecutionContract,
 } = require('../../lib/audit/execution-contracts');
 
@@ -121,6 +122,178 @@ test('creates a PM-owned structured draft from Intake Draft history and versions
   assert.deepEqual(updated.contract.committed_scope.committed_requirements.map((item) => item.text), ['Implementation must use the approved structured contract.']);
   assert.deepEqual(updated.contract.committed_scope.out_of_scope.map((item) => item.text), ['Runtime engineer dispatch remains out of scope.']);
   assert.deepEqual(updated.contract.committed_scope.deferred_considerations.map((item) => item.text), ['Deferred Considerations workflow is issue #110.']);
+});
+
+test('routes required reviewers deterministically from tier and risk flags with explainable reasons', () => {
+  const history = [{
+    event_type: 'task.created',
+    event_id: 'evt-create',
+    payload: { intake_draft: true, title: 'Reviewer routing', raw_requirements: 'Route reviewer approvals.' },
+  }];
+  const summary = {
+    task_id: 'TSK-103',
+    title: 'Reviewer routing',
+    intake_draft: true,
+    operator_intake_requirements: 'Route reviewer approvals.',
+  };
+
+  const { contract } = createExecutionContractDraft({
+    taskId: 'TSK-103',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Standard',
+      riskFlags: ['deployment', 'security', 'human_workflow'],
+      sections: sectionBodiesFor('Standard'),
+      reviewers: {
+        qa: { status: 'approved', actorId: 'qa-1' },
+        architect: { status: 'approved', actorId: 'architect-1' },
+        ux: { status: 'approved', actorId: 'ux-1' },
+        sre: { status: 'approved', actorId: 'sre-1' },
+        principalEngineer: { status: 'approved', actorId: 'principal-1' },
+      },
+    },
+  });
+
+  assert.deepEqual(contract.reviewer_routing.required_role_approvals, ['architect', 'ux', 'qa', 'sre', 'principalEngineer']);
+  assert.equal(contract.reviewers.qa.reasons[0].code, 'qa_standard_plus');
+  assert.ok(contract.reviewers.sre.reasons.some((reason) => reason.code === 'sre_operational_risk'));
+  assert.ok(contract.reviewers.principalEngineer.reasons.some((reason) => reason.code === 'principal_high_risk_engineering'));
+  assert.deepEqual(contract.risk_flags.map((flag) => flag.id), ['deployment', 'security', 'human_workflow']);
+});
+
+test('uses stricter reviewer routing unless PM records an operator-visible downgrade rationale', () => {
+  const history = [{
+    event_type: 'task.created',
+    event_id: 'evt-create',
+    payload: { intake_draft: true, title: 'Strict reviewer routing', raw_requirements: 'Resolve model disagreement.' },
+  }];
+  const summary = {
+    task_id: 'TSK-103-STRICT',
+    title: 'Strict reviewer routing',
+    intake_draft: true,
+    operator_intake_requirements: 'Resolve model disagreement.',
+  };
+
+  const strictModel = createExecutionContractDraft({
+    taskId: 'TSK-103-STRICT',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Simple',
+      sections: sectionBodiesFor('Simple'),
+      reviewers: {
+        principalEngineer: { required: true, status: 'pending' },
+      },
+    },
+  });
+  assert.equal(strictModel.contract.reviewers.principalEngineer.required, true);
+  assert.ok(strictModel.contract.reviewers.principalEngineer.reasons.some((reason) => reason.code === 'stricter_model_wins'));
+
+  const downgraded = createExecutionContractDraft({
+    taskId: 'TSK-103-STRICT',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Simple',
+      sections: sectionBodiesFor('Simple'),
+      reviewers: {
+        principalEngineer: {
+          required: true,
+          status: 'not_required',
+          downgradeRationale: 'No production, security, data, or ambiguity trigger exists for this constrained fixture-only change.',
+        },
+      },
+    },
+  });
+  assert.equal(downgraded.contract.reviewers.principalEngineer.required, false);
+  assert.equal(downgraded.contract.reviewers.principalEngineer.downgraded, true);
+  assert.match(downgraded.contract.reviewer_routing.downgrade_rationales[0].rationale, /fixture-only/);
+
+  const deterministicWins = createExecutionContractDraft({
+    taskId: 'TSK-103-STRICT',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Simple',
+      riskFlags: ['security'],
+      sections: sectionBodiesFor('Simple'),
+      reviewers: {
+        principalEngineer: {
+          required: false,
+          status: 'not_required',
+          downgradeRationale: 'PM believes principal review is unnecessary.',
+        },
+      },
+    },
+  });
+  assert.equal(deterministicWins.contract.reviewers.principalEngineer.required, true);
+  assert.ok(deterministicWins.contract.reviewers.principalEngineer.reasons.some((reason) => reason.code === 'stricter_rules_win'));
+});
+
+test('approval readiness blocks missing role approvals and unresolved blocking questions while surfacing non-blocking comments', () => {
+  const history = [{
+    event_type: 'task.created',
+    event_id: 'evt-create',
+    payload: { intake_draft: true, title: 'Approval gates', raw_requirements: 'Gate operator approval.' },
+  }];
+  const summary = {
+    task_id: 'TSK-103-GATES',
+    title: 'Approval gates',
+    intake_draft: true,
+    operator_intake_requirements: 'Gate operator approval.',
+  };
+  const { contract } = createExecutionContractDraft({
+    taskId: 'TSK-103-GATES',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Standard',
+      sections: sectionBodiesFor('Standard'),
+      reviewers: {
+        architect: { status: 'approved' },
+        ux: { status: 'approved' },
+        qa: { status: 'pending' },
+      },
+      reviewFeedback: {
+        questions: [{ id: 'q-1', body: 'Which rollback path should be used?', blocking: true, state: 'open' }],
+        comments: [{ id: 'c-1', body: 'Consider adding a dashboard after this slice.', blocking: false, state: 'open' }],
+      },
+    },
+  });
+
+  let readiness = evaluateExecutionContractApprovalReadiness(contract);
+  assert.equal(readiness.canApprove, false);
+  assert.deepEqual(readiness.missingRequiredApprovals.map((item) => item.role), ['qa']);
+  assert.deepEqual(readiness.unresolvedBlockingQuestions.map((item) => item.id), ['q-1']);
+  assert.deepEqual(readiness.nonBlockingComments.map((item) => item.id), ['c-1']);
+
+  const ready = {
+    ...contract,
+    reviewers: {
+      ...contract.reviewers,
+      qa: { ...contract.reviewers.qa, status: 'approved', approved: true },
+    },
+    reviewer_routing: {
+      ...contract.reviewer_routing,
+      reviewers: {
+        ...contract.reviewer_routing.reviewers,
+        qa: { ...contract.reviewer_routing.reviewers.qa, status: 'approved', approved: true },
+      },
+    },
+    review_feedback: {
+      ...contract.review_feedback,
+      questions: [{ id: 'q-1', body: 'Which rollback path should be used?', blocking: true, state: 'resolved' }],
+    },
+  };
+  readiness = evaluateExecutionContractApprovalReadiness(ready);
+  assert.equal(readiness.canApprove, true);
+  assert.deepEqual(readiness.nonBlockingComments.map((item) => item.id), ['c-1']);
 });
 
 test('versions material changes to structured section payload and metadata', () => {

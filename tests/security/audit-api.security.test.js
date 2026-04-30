@@ -49,6 +49,15 @@ function githubSignature(secret, body) {
   return `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
 }
 
+const EXECUTION_CONTRACT_STANDARD_SECTIONS = ['1', '2', '3', '4', '6', '7', '10', '11', '12', '15', '16', '17'];
+
+function standardExecutionContractSections() {
+  return Object.fromEntries(EXECUTION_CONTRACT_STANDARD_SECTIONS.map((sectionId) => [
+    sectionId,
+    `Security completed Standard section ${sectionId}.`,
+  ]));
+}
+
 // Governance note: audit-facing route changes should keep security coverage updated in the same change set.
 
 test('specialist delegation disablement exposes only the canonical feature flag identifier', () => {
@@ -671,6 +680,61 @@ test('protects Execution Contract generation with role, source, and feature-flag
     assert.equal(response.status, 503);
     assert.equal((await response.json()).error.details.feature, 'ff_execution_contracts');
   }, { executionContractsEnabled: false });
+});
+
+test('rejects direct Execution Contract approval event bypasses and enforces approval gates', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'operator', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm', 'reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({ raw_requirements: 'Do not let generic events bypass contract approval gates.' }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        riskFlags: ['deployment'],
+        sections: standardExecutionContractSections(),
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-sec' },
+          ux: { status: 'approved', actorId: 'ux-sec' },
+          qa: { status: 'pending' },
+          sre: { status: 'pending' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.execution_contract_approved',
+        actorType: 'user',
+        idempotencyKey: `forbidden-contract-approval:${created.taskId}`,
+        payload: { version: 1, validation: { status: 'valid' } },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /dedicated approval endpoint/i);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({ approvalNote: 'Attempt with missing QA and SRE approvals.' }),
+    });
+    assert.equal(response.status, 409);
+    const body = await response.json();
+    assert.equal(body.error.code, 'execution_contract_approval_blocked');
+    assert.deepEqual(body.error.details.missing_required_approvals.map((item) => item.role), ['qa', 'sre']);
+  });
 });
 
 test('accepts production-style JWKS tokens with explicit claim mapping', async () => {

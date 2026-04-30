@@ -108,17 +108,26 @@ test('e2e: Execution Contract generation does not make Intake Draft assignment m
         ...authHeaders(secret, ['pm', 'reader']),
       },
       body: JSON.stringify({
-        templateTier: 'Simple',
-        sections: Object.fromEntries(['1', '2', '4', '11', '12', '15', '16', '17'].map((sectionId) => [
+        templateTier: 'Standard',
+        riskFlags: ['deployment'],
+        sections: Object.fromEntries(['1', '2', '3', '4', '6', '7', '10', '11', '12', '15', '16', '17'].map((sectionId) => [
           sectionId,
-          `Simple contract section ${sectionId} keeps assignment with PM.`,
+          `Standard contract section ${sectionId} keeps assignment with PM.`,
         ])),
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-assignment-e2e' },
+          ux: { status: 'approved', actorId: 'ux-assignment-e2e' },
+          qa: { status: 'approved', actorId: 'qa-assignment-e2e' },
+          sre: { status: 'approved', actorId: 'sre-assignment-e2e' },
+        },
         scopeBoundaries: {
           committedRequirements: ['Approved contract scope remains PM-owned until a dispatch workflow exists.'],
         },
       }),
     });
     assert.equal(response.status, 201);
+    let payload = await response.json();
+    assert.deepEqual(payload.data.contract.reviewer_routing.required_role_approvals, ['architect', 'ux', 'qa', 'sre']);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
       method: 'POST',
@@ -129,7 +138,9 @@ test('e2e: Execution Contract generation does not make Intake Draft assignment m
       body: JSON.stringify({}),
     });
     assert.equal(response.status, 201);
-    assert.equal((await response.json()).data.committedScope.commitment_status, 'committed');
+    payload = await response.json();
+    assert.equal(payload.data.committedScope.commitment_status, 'committed');
+    assert.equal(payload.data.approvalSummary.canApprove, true);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
       method: 'PATCH',

@@ -14,6 +14,7 @@ function makeTempDir() {
 test('file-backed audit store stays within baseline append/query budgets', () => {
   const store = createFileAuditStore({ baseDir: makeTempDir(), projectionMode: 'sync' });
   const totalEvents = 250;
+  const appendBudgetMs = process.env.CI ? 5000 : 2500;
 
   const appendStart = performance.now();
   for (let index = 0; index < totalEvents; index += 1) {
@@ -41,7 +42,7 @@ test('file-backed audit store stays within baseline append/query budgets', () =>
 
   assert.equal(history.length > 0, true);
   assert.ok(state);
-  assert.ok(appendDuration < 2500, `append budget exceeded: ${appendDuration}ms`);
+  assert.ok(appendDuration < appendBudgetMs, `append budget exceeded: ${appendDuration}ms`);
   assert.ok(historyDuration < 150, `history query budget exceeded: ${historyDuration}ms`);
   assert.ok(stateDuration < 150, `state query budget exceeded: ${stateDuration}ms`);
 });
