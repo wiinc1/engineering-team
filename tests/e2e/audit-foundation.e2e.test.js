@@ -194,6 +194,11 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
       body: JSON.stringify({
         templateTier: 'Complex',
         sections: complexExecutionContractSections(),
+        scopeBoundaries: {
+          committedRequirements: ['Future implementation must satisfy the approved contract sections.'],
+          outOfScope: ['Runtime engineer dispatch is not performed by this workflow.'],
+          deferredConsiderations: ['Deferred Considerations promotion is tracked separately.'],
+        },
       }),
     });
     assert.equal(response.status, 201);
@@ -209,6 +214,16 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     assert.equal(response.status, 201);
     const markdown = await response.json();
     assert.match(markdown.data.markdown, /Authoritative Source: structured Task execution_contract data/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    const approval = await response.json();
+    assert.equal(approval.data.committedScope.commitment_status, 'committed');
+    assert.equal(approval.data.committedScope.committed_requirements[0].text, 'Future implementation must satisfy the approved contract sections.');
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
       method: 'POST',
@@ -233,6 +248,7 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     const history = await response.json();
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_version_recorded'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_markdown_generated'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_approved'));
     assert.ok(!history.items.some((event) => event.event_type === 'task.engineer_submission_recorded'));
   });
 });

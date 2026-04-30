@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` and commits only the structured `committed_scope.committed_requirements`.
 components:
   securitySchemes:
     BearerAuth:
@@ -113,18 +113,34 @@ components:
         createdAt: { type: string, format: date-time }
     ExecutionContractSection:
       type: object
-      required: [id, title, body, owner, required]
+      required: [id, title, body, owner, owner_role, section_status, approval_status, payload_schema_version, payload_json, provenance_references, required]
       properties:
         id: { type: string }
         title: { type: string }
         body: { type: string }
         owner: { type: string, enum: [pm] }
+        owner_role: { type: string }
+        section_status: { type: string }
+        contributor: { type: [string, 'null'] }
         contributors:
           type: array
           items: { type: string }
+        approver: { type: [string, 'null'] }
         approvals:
           type: array
           items: { type: string }
+        approval_status: { type: string }
+        payload_schema_version: { type: integer }
+        payload_json:
+          type: object
+          additionalProperties: true
+        provenance_references:
+          type: array
+          items:
+            oneOf:
+              - type: string
+              - type: object
+                additionalProperties: true
         required: { type: boolean }
     ExecutionContractValidation:
       type: object
@@ -146,15 +162,23 @@ components:
           items: { type: string }
     ExecutionContract:
       type: object
-      required: [task_id, version, status, template_tier, template_source, owner, authoritative, required_sections, sections, validation]
+      required: [contract_id, task_id, version, tier, status, template_tier, template_source, owner, authoritative, source_intake_revision, required_sections, sections, committed_scope, validation]
       properties:
+        contract_id: { type: string }
         task_id: { type: string }
         version: { type: integer, minimum: 1 }
+        tier: { type: string, enum: [Simple, Standard, Complex, Epic] }
         status: { type: string }
         template_tier: { type: string, enum: [Simple, Standard, Complex, Epic] }
         template_source: { type: string, enum: [docs/templates/USER_STORY_TEMPLATE.md] }
         owner: { type: string, enum: [pm] }
         authoritative: { type: boolean, enum: [true] }
+        creator: { type: [string, 'null'] }
+        approver: { type: [string, 'null'] }
+        approval_timestamp: { type: [string, 'null'], format: date-time }
+        source_intake_revision:
+          type: object
+          additionalProperties: true
         generated_from:
           type: object
           additionalProperties: true
@@ -168,12 +192,38 @@ components:
         reviewers:
           type: object
           additionalProperties: true
+        committed_scope:
+          type: object
+          required: [commitment_status, committed_requirements, out_of_scope, deferred_considerations, follow_up_tasks, exclusion_policy]
+          properties:
+            commitment_status: { type: string, enum: [pending_approval, committed] }
+            committed_requirements:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            out_of_scope:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            deferred_considerations:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            follow_up_tasks:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+            exclusion_policy: { type: string }
         validation:
           $ref: '#/components/schemas/ExecutionContractValidation'
         material_hash: { type: string }
     ExecutionContractProjection:
       type: object
-      required: [active, latest, latestVersion, versions, validation, markdown]
+      required: [active, latest, latestVersion, versions, validation, approval, markdown]
       properties:
         active: { type: boolean }
         latest:
@@ -190,6 +240,9 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ExecutionContractValidation'
             - type: 'null'
+        approval:
+          type: [object, 'null']
+          additionalProperties: true
         markdown:
           type: [object, 'null']
           properties:
@@ -210,6 +263,10 @@ components:
               - type: string
               - $ref: '#/components/schemas/ExecutionContractSection'
         materialChangeSummary: { type: string }
+        materialChangeReason: { type: string }
+        scopeBoundaries:
+          type: object
+          additionalProperties: true
         idempotencyKey: { type: string }
     ExecutionContractUpsertResponse:
       type: object
@@ -492,6 +549,36 @@ paths:
           description: Markdown view generated from structured data
         '409':
           description: Required sections are missing, so Markdown cannot be generated.
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/execution-contract/approve:
+    post:
+      summary: Approve the latest valid Execution Contract without dispatching implementation
+      description: |
+        Records `task.execution_contract_approved`, marks the latest valid contract as approved, and freezes its `committed_scope.committed_requirements` as future implementation scope. `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain explicitly excluded unless promoted through a new approved contract version or a new Intake Draft.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvalNote: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        '201':
+          description: Execution Contract approved and committed scope recorded
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Latest contract is missing required sections and cannot be approved.
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}:

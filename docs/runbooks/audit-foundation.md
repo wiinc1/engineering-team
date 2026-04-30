@@ -256,8 +256,10 @@ Immediate action:
 2. Use `POST /tasks/{id}/execution-contract` with the selected template tier and any completed section bodies.
 3. Use `POST /tasks/{id}/execution-contract/validate` to enforce the tier-required sections.
 4. If validation is valid, use `POST /tasks/{id}/execution-contract/markdown` to generate a non-authoritative review story.
-5. Confirm task history includes `task.execution_contract_version_recorded`, `task.execution_contract_validated`, and `task.execution_contract_markdown_generated`.
-6. Confirm implementation dispatch is still blocked until a future approval/dispatch workflow is implemented.
+5. Use `POST /tasks/{id}/execution-contract/approve` only when the structured contract is approved; this records committed implementation scope without dispatching engineering work.
+6. Confirm task history includes `task.execution_contract_version_recorded`, `task.execution_contract_validated`, `task.execution_contract_markdown_generated`, and `task.execution_contract_approved`.
+7. Confirm `committed_scope.committed_requirements` contains only approved implementation scope, while `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain excluded.
+8. Confirm implementation dispatch is still blocked until a future dispatch workflow is implemented.
 Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract reads and mutations while preserving historical audit events.
 
 ## Observability hooks
