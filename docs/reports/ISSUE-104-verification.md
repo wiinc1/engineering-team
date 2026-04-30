@@ -40,12 +40,14 @@
 - `npm run lint` - passed.
 - `npm run typecheck` - passed.
 - `npm run test` - passed; Node unit, Vitest UI, contract/integration/e2e/property/performance/security/chaos, and Playwright browser suites completed.
+- `npm run test:unit` - passed after the CI-mode review-question assertion timeout stabilization.
+- `env CI=true npx vitest run src/app/*.test.tsx tests/unit/board-owner-card-rendering.test.js tests/unit/role-inbox-routing.test.js tests/unit/pm-overview-routing.test.js tests/integration/board-owner-filtering.integration.test.js tests/accessibility/task-assignment.a11y.spec.ts tests/accessibility/orchestration-visibility.a11y.spec.ts tests/visual/task-assignment.visual.spec.ts tests/visual/orchestration-visibility.visual.spec.ts tests/visual/auth-sign-in.visual.spec.tsx tests/performance/lighthouse-task-detail.spec.ts` - passed, 105 tests.
 - `npm run build` - expected local failure without production auth env; missing `VITE_OIDC_DISCOVERY_URL`, `VITE_OIDC_CLIENT_ID`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, and `AUTH_JWT_JWKS_URL`.
 - `env VITE_OIDC_DISCOVERY_URL=https://idp.example/.well-known/openid-configuration VITE_OIDC_CLIENT_ID=engineering-team-browser AUTH_JWT_ISSUER=https://idp.example AUTH_JWT_AUDIENCE=engineering-team AUTH_JWT_JWKS_URL=https://idp.example/.well-known/jwks.json npm run build` - passed.
 
 ## Required Evidence
 
-- Commands run: focused Node/Vitest suites, `npm run standards:check`, `npm run ownership:lint`, `npm run change:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build` without local auth env, and `env ... npm run build` with placeholder production auth env.
+- Commands run: focused Node/Vitest suites, `npm run standards:check`, `npm run ownership:lint`, `npm run change:check`, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:unit`, CI-mode Vitest UI rerun, `npm run build` without local auth env, and `env ... npm run build` with placeholder production auth env.
 - Tests added or updated: `tests/unit/execution-contracts.test.js`, `tests/unit/audit-api.test.js`, `tests/e2e/audit-foundation.e2e.test.js`, `tests/security/audit-api.security.test.js`, `tests/contract/audit-openapi.contract.test.js`, `src/app/App.test.tsx`, `tests/browser/task-detail.browser.spec.ts`.
 - Docs updated: API contract, task detail API notes, audit runbook, design note, generated story, Refinement Decision Log, verification report, test report, security audit, and customer review notes.
 - Rollout or rollback notes: controlled by `FF_EXECUTION_CONTRACTS`; disable it to stop artifact reads and mutations while preserving audit history.

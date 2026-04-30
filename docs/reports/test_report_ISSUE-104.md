@@ -31,6 +31,8 @@
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
+- `npm run test:unit`
+- `env CI=true npx vitest run src/app/*.test.tsx tests/unit/board-owner-card-rendering.test.js tests/unit/role-inbox-routing.test.js tests/unit/pm-overview-routing.test.js tests/integration/board-owner-filtering.integration.test.js tests/accessibility/task-assignment.a11y.spec.ts tests/accessibility/orchestration-visibility.a11y.spec.ts tests/visual/task-assignment.visual.spec.ts tests/visual/orchestration-visibility.visual.spec.ts tests/visual/auth-sign-in.visual.spec.tsx tests/performance/lighthouse-task-detail.spec.ts`
 - `npm run build` without local production auth env, then `env ... npm run build` with placeholder auth env
 
 ## Standards Alignment
@@ -41,7 +43,7 @@
 
 ## Required Evidence
 
-- Commands run: focused Node/Vitest suites, `npm run lint`, `npm run typecheck`, `npm run test`, and production build verification with placeholder auth env after the expected missing-env local failure.
+- Commands run: focused Node/Vitest suites, `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:unit`, CI-mode Vitest UI rerun, and production build verification with placeholder auth env after the expected missing-env local failure.
 - Tests added or updated: `tests/unit/execution-contracts.test.js`, `tests/unit/audit-api.test.js`, `tests/e2e/audit-foundation.e2e.test.js`, `tests/security/audit-api.security.test.js`, `tests/contract/audit-openapi.contract.test.js`, `src/app/App.test.tsx`, `tests/browser/task-detail.browser.spec.ts`.
 - Rollout or rollback notes: `FF_EXECUTION_CONTRACTS`.
 - Docs updated: test report for Issue #104.
