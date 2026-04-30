@@ -4316,6 +4316,22 @@ export function App() {
                   ))}
                 </ul>
               ) : <p>No linked PRs yet.</p>}
+              {model.detail?.context?.executionContract?.artifacts?.links?.length ? (
+                <ul className="detail-bullets">
+                  {model.detail.context.executionContract.artifacts.links.map((artifactLink) => (
+                    <li key={artifactLink.rel || artifactLink.path}>
+                      <strong>{artifactLink.label}</strong>
+                      <a href={`/${artifactLink.path}`}>{artifactLink.path}</a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {model.detail?.context?.executionContract?.artifacts?.pr_guidance ? (
+                <div className="review-question-note">
+                  <span>PR guidance</span>
+                  <p>{model.detail.context.executionContract.artifacts.pr_guidance.title}</p>
+                </div>
+              ) : null}
               {model.detail?.relations?.parentTask ? (
                 <>
                   <h3>Linked parent task</h3>

@@ -2,9 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   REQUIRED_SECTIONS_BY_TIER,
+  approveExecutionContractArtifactBundle,
   contractMarkdown,
   createExecutionContractDraft,
+  createExecutionContractArtifactBundle,
   evaluateExecutionContractApprovalReadiness,
+  normalizeArtifactIdentity,
   validateExecutionContract,
 } = require('../../lib/audit/execution-contracts');
 
@@ -379,4 +382,167 @@ test('generates Markdown from structured data without making Markdown authoritat
   assert.match(markdown, /Authoritative Source: structured Task execution_contract data/);
   assert.match(markdown, /not the authoritative source/);
   assert.match(markdown, /## 1\. User Story/);
+});
+
+test('generates a reviewable repo artifact bundle with display-ID paths, approval routing, and PR guidance', () => {
+  const history = [{
+    event_type: 'task.created',
+    event_id: 'evt-create',
+    payload: { intake_draft: true, title: 'Repo artifacts', raw_requirements: 'Generate durable repo artifacts.' },
+  }];
+  const summary = {
+    task_id: 'opaque-internal-104',
+    title: 'Repo artifacts',
+    intake_draft: true,
+    operator_intake_requirements: 'Generate durable repo artifacts.',
+  };
+  const { contract } = createExecutionContractDraft({
+    taskId: 'opaque-internal-104',
+    summary,
+    history,
+    actorId: 'pm-1',
+    body: {
+      templateTier: 'Standard',
+      sections: {
+        ...sectionBodiesFor('Standard'),
+        4: { body: 'QA owns verification expectations.', ownerRole: 'qa', approvalStatus: 'approved' },
+        6: { body: 'Architect owns integration details.', ownerRole: 'architect', approvalStatus: 'approved' },
+        10: { body: 'UX owns task detail links.', ownerRole: 'ux', approvalStatus: 'approved' },
+        11: { body: 'SRE owns rollout notes.', ownerRole: 'sre', approvalStatus: 'approved' },
+      },
+      reviewers: {
+        architect: { status: 'approved' },
+        ux: { status: 'approved' },
+        qa: { status: 'approved' },
+      },
+    },
+  });
+  const approvedHistory = [
+    { event_type: 'task.execution_contract_version_recorded', sequence_number: 1, payload: { version: 1, contract } },
+    { event_type: 'task.execution_contract_approved', sequence_number: 2, payload: { version: 1, approval_summary: { nonBlockingComments: [] } } },
+  ];
+
+  const bundle = createExecutionContractArtifactBundle({
+    taskId: 'opaque-internal-104',
+    contract,
+    history: approvedHistory,
+    actorId: 'pm-1',
+    approvalSummary: { nonBlockingComments: [] },
+    body: {
+      displayId: 'TSK-104',
+      title: 'Implement Refinement Decision Logs and Task-ID Artifact Generation',
+    },
+  });
+
+  assert.equal(bundle.display_id, 'TSK-104');
+  assert.equal(bundle.generated_artifacts.user_story.path, 'docs/user-stories/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md');
+  assert.equal(bundle.generated_artifacts.refinement_decision_log.path, 'docs/refinement/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md');
+  assert.deepEqual(bundle.approval_routing.required_roles, ['pm', 'architect', 'ux', 'qa', 'sre']);
+  assert.equal(bundle.approval_summary.canCommit, false);
+  assert.equal(bundle.commit_policy.github_issue_creation.default_off, true);
+  assert.equal(bundle.commit_policy.github_issue_creation.requested, false);
+  assert.equal(bundle.pr_guidance.title, '[TSK-104] Implement Refinement Decision Logs and Task-ID Artifact Generation');
+  assert.ok(bundle.pr_guidance.required_links.every((link) => !String(link.target).includes('opaque-internal-104')));
+
+  const approved = approveExecutionContractArtifactBundle({
+    bundle,
+    actorId: 'pm-1',
+    body: {
+      approvals: {
+        pm: { status: 'approved', actorId: 'pm-1' },
+        architect: { status: 'approved', actorId: 'architect-1' },
+        ux: { status: 'approved', actorId: 'ux-1' },
+        qa: { status: 'approved', actorId: 'qa-1' },
+        sre: { status: 'approved', actorId: 'sre-1' },
+      },
+    },
+  });
+  assert.equal(approved.status, 'approved_for_commit');
+  assert.equal(approved.commit_policy.commit_allowed, true);
+});
+
+test('keeps non-production artifact names collision-safe and requires operator approval for exception triggers', () => {
+  const identity = normalizeArtifactIdentity({
+    taskId: 'TSK-123',
+    body: { environment: 'staging' },
+  });
+  assert.equal(identity.display_id, 'STG-123');
+  assert.equal(identity.collision_safe, true);
+
+  const contract = {
+    task_id: 'TSK-123',
+    version: 1,
+    contract_id: 'EC-TSK-123-v1',
+    template_tier: 'Simple',
+    template_source: 'docs/templates/USER_STORY_TEMPLATE.md',
+    sections: {
+      1: { title: 'User Story', body: 'As a PM, I want generated artifacts.', owner_role: 'pm' },
+      2: { title: 'Acceptance Criteria', body: 'Given non-blocking comments, operator approval is required.', owner_role: 'pm' },
+    },
+    committed_scope: { committed_requirements: [{ id: 'REQ-1', text: 'Generate artifacts.' }] },
+  };
+  const bundle = createExecutionContractArtifactBundle({
+    taskId: 'TSK-123',
+    contract,
+    history: [{ event_type: 'task.execution_contract_approved', payload: { version: 1 } }],
+    approvalSummary: {
+      nonBlockingComments: [{ id: 'c-1', body: 'Accepted as non-blocking.', state: 'open' }],
+    },
+    body: {
+      environment: 'staging',
+      title: 'Generated Artifacts',
+      approvals: {
+        pm: { status: 'approved', actorId: 'pm-1' },
+      },
+    },
+  });
+
+  assert.equal(bundle.display_id, 'STG-123');
+  assert.equal(bundle.approval_routing.operator_approval_required, true);
+  assert.deepEqual(bundle.approval_routing.required_roles, ['pm', 'operator']);
+  assert.deepEqual(bundle.approval_summary.missingRequiredApprovals.map((item) => item.role), ['operator']);
+});
+
+test('uses a versioned artifact path instead of silently editing an approved generated story', () => {
+  const previous = {
+    task_id: 'TSK-104',
+    version: 1,
+    contract_id: 'EC-TSK-104-v1',
+    template_tier: 'Simple',
+    template_source: 'docs/templates/USER_STORY_TEMPLATE.md',
+    sections: {
+      1: { title: 'User Story', body: 'As a PM, I want the first approved story.', owner_role: 'pm' },
+      2: { title: 'Acceptance Criteria', body: 'Given v1, then preserve it.', owner_role: 'pm' },
+    },
+    committed_scope: { committed_requirements: [{ id: 'REQ-1', text: 'Preserve v1.' }] },
+  };
+  const next = {
+    ...previous,
+    version: 2,
+    contract_id: 'EC-TSK-104-v2',
+    sections: {
+      ...previous.sections,
+      2: { title: 'Acceptance Criteria', body: 'Given v2, then generate a versioned artifact.', owner_role: 'pm' },
+    },
+    committed_scope: { committed_requirements: [{ id: 'REQ-1', text: 'Generate v2 with an amendment path.' }] },
+  };
+  const bundle = createExecutionContractArtifactBundle({
+    taskId: 'TSK-104',
+    contract: next,
+    history: [
+      { event_type: 'task.execution_contract_version_recorded', sequence_number: 1, payload: { version: 1, contract: previous } },
+      { event_type: 'task.execution_contract_approved', sequence_number: 2, payload: { version: 1 } },
+      { event_type: 'task.execution_contract_version_recorded', sequence_number: 3, payload: { version: 2, contract: next } },
+      { event_type: 'task.execution_contract_approved', sequence_number: 4, payload: { version: 2 } },
+    ],
+    body: {
+      displayId: 'TSK-104',
+      title: 'Generated Artifacts',
+    },
+  });
+
+  assert.equal(bundle.generated_artifacts.user_story.path, 'docs/user-stories/TSK-104-generated-artifacts-v2.md');
+  assert.equal(bundle.amendment.previousApprovedVersion, 1);
+  assert.match(bundle.generated_artifacts.user_story.content, /previous generated story remains immutable/i);
+  assert.ok(bundle.approval_routing.operator_approval_reasons.some((reason) => reason.code === 'changes_committed_requirement'));
 });

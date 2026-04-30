@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested.
 components:
   securitySchemes:
     BearerAuth:
@@ -338,9 +338,62 @@ components:
         validation:
           $ref: '#/components/schemas/ExecutionContractValidation'
         material_hash: { type: string }
+    ExecutionContractArtifactBundle:
+      type: object
+      required: [policy_version, bundle_id, display_id, environment, slug, contract_version, status, generated_artifacts, links, pr_guidance, approval_routing, approval_summary, commit_policy]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-artifact-bundle.v1] }
+        bundle_id: { type: string }
+        display_id:
+          type: string
+          description: Production bundles use `TSK-123`; staging/local bundles use aliases such as `STG-123` or `LOCAL-123` to avoid collision.
+        environment: { type: string, enum: [production, staging, local] }
+        slug: { type: string }
+        contract_version: { type: integer }
+        status: { type: string, enum: [pending_approval, approved_for_commit] }
+        generated_artifacts:
+          type: object
+          required: [user_story, refinement_decision_log]
+          properties:
+            user_story:
+              type: object
+              required: [path, content, immutable_after_approval]
+              properties:
+                path: { type: string }
+                content: { type: string }
+                immutable_after_approval: { type: boolean }
+            refinement_decision_log:
+              type: object
+              required: [path, content, immutable_after_approval]
+              properties:
+                path: { type: string }
+                content: { type: string }
+                immutable_after_approval: { type: boolean }
+        links:
+          type: array
+          items:
+            type: object
+            required: [rel, label, path]
+            properties:
+              rel: { type: string }
+              label: { type: string }
+              path: { type: string }
+        pr_guidance:
+          type: object
+          additionalProperties: true
+          description: PR title and body-link guidance that uses display ID plus slug paths rather than opaque internal IDs.
+        approval_routing:
+          type: object
+          additionalProperties: true
+        approval_summary:
+          type: object
+          additionalProperties: true
+        commit_policy:
+          type: object
+          additionalProperties: true
     ExecutionContractProjection:
       type: object
-      required: [active, latest, latestVersion, versions, validation, approval, markdown]
+      required: [active, latest, latestVersion, versions, validation, approval, markdown, artifacts]
       properties:
         active: { type: boolean }
         latest:
@@ -376,6 +429,10 @@ components:
             generatedBy: { type: [string, 'null'] }
             markdown: { type: string }
             authoritative: { type: boolean, enum: [false] }
+        artifacts:
+          oneOf:
+            - $ref: '#/components/schemas/ExecutionContractArtifactBundle'
+            - type: 'null'
     ExecutionContractUpsertRequest:
       type: object
       required: [templateTier]
@@ -747,6 +804,87 @@ paths:
           description: Latest contract is missing required sections, required reviewer approvals are missing, or unresolved blocking questions remain. Approval-gate failures use `execution_contract_approval_blocked` and include `approval_summary`, `missing_required_approvals`, and `unresolved_blocking_questions`.
         '503':
           $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/execution-contract/artifacts:
+    get:
+      summary: Read the latest generated repo artifact bundle
+      description: |
+        Returns the latest reviewable artifact bundle for the approved Execution Contract version. The bundle includes generated Markdown user-story content, Refinement Decision Log content, task-detail links, and PR guidance using display ID plus slug paths.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Generated artifact bundle
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/ExecutionContractArtifactBundle'
+        '404':
+          description: No artifact bundle exists for the latest version.
+    post:
+      summary: Generate reviewable repo artifacts from the approved Execution Contract
+      description: |
+        PM/admin-only mutation. Records `task.execution_contract_artifact_bundle_generated` after the latest Execution Contract is approved. Production bundles require `TSK-123` display IDs and generate `docs/user-stories/{display-id}-{slug}.md` plus `docs/refinement/{display-id}-{slug}.md`. Staging/local bundles use non-production aliases such as `STG-123` or `LOCAL-123`. The bundle is not commit-ready until artifact-bundle approval records the PM and required section-owner approvals.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayId: { type: string }
+                environment: { type: string, enum: [production, staging, local] }
+                title: { type: string }
+                createGithubIssue:
+                  type: boolean
+                  default: false
+                  description: GitHub issue creation is optional and default-off.
+      responses:
+        '201':
+          description: Artifact bundle generated for review
+        '409':
+          description: Latest contract is not approved or the display ID would collide with production artifact naming rules.
+  /tasks/{id}/execution-contract/artifacts/approve:
+    post:
+      summary: Approve a generated repo artifact bundle for commit
+      description: |
+        Records `task.execution_contract_artifact_bundle_approved` only when PM approval, section-owner approvals for section-owned generated content, and exception-triggered operator approval are present. If content reveals scope mismatch, promotes Deferred Considerations, changes committed requirements, accepts unresolved non-blocking comments, or is bundled with Operator Approval or Closeout, operator approval is required. Missing approvals return `artifact_bundle_approval_blocked`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvals:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      status: { type: string }
+                      actorId: { type: string }
+      responses:
+        '201':
+          description: Artifact bundle approved for commit
+        '409':
+          description: Artifact bundle approval is blocked by missing PM, section-owner, or operator approvals.
   /tasks/{id}:
     get:
       summary: Canonical task detail summary response

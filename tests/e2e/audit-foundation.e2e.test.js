@@ -266,6 +266,33 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     assert.equal(approval.data.committedScope.commitment_status, 'committed');
     assert.equal(approval.data.committedScope.committed_requirements[0].text, 'Future implementation must satisfy the approved contract sections.');
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/artifacts`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        displayId: 'TSK-104',
+        title: 'Implement Refinement Decision Logs and Task-ID Artifact Generation',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const artifacts = await response.json();
+    assert.equal(artifacts.data.generatedArtifacts.user_story.path, 'docs/user-stories/TSK-104-implement-refinement-decision-logs-and-task-id-artifact-generation.md');
+    assert.equal(artifacts.data.commitPolicy.commit_allowed, false);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/artifacts/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        approvals: {
+          pm: { status: 'approved', actorId: 'pm-e2e' },
+          architect: { status: 'approved', actorId: 'architect-e2e' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+    const artifactApproval = await response.json();
+    assert.equal(artifactApproval.data.commitPolicy.commit_allowed, true);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
       method: 'POST',
       headers: {
@@ -290,6 +317,8 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_version_recorded'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_markdown_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_approved'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_generated'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
     assert.ok(!history.items.some((event) => event.event_type === 'task.engineer_submission_recorded'));
   });
 });

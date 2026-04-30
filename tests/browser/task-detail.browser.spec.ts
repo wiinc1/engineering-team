@@ -29,6 +29,17 @@ const taskDetailPayload = {
     definitionOfDone: ['Task detail page shipped with browser verification.'],
     technicalSpec: 'Server-rendered technical spec',
     monitoringSpec: 'Server-rendered monitoring spec',
+    executionContract: {
+      artifacts: {
+        links: [
+          { rel: 'generated_user_story', label: 'Generated user story', path: 'docs/user-stories/TSK-104-artifact-generation.md' },
+          { rel: 'refinement_decision_log', label: 'Refinement Decision Log', path: 'docs/refinement/TSK-104-artifact-generation.md' },
+        ],
+        pr_guidance: {
+          title: '[TSK-104] Artifact generation',
+        },
+      },
+    },
     closeGovernance: {
       active: true,
       readiness: {
@@ -209,6 +220,14 @@ test.describe('task detail browser verification', () => {
     expect(summaryLayout.scrollWidth).toBeLessThanOrEqual(Math.ceil(summaryLayout.width) + 1);
     expect(summaryLayout.left).toBeGreaterThanOrEqual(0);
     expect(summaryLayout.right).toBeLessThanOrEqual((viewport?.width ?? 834) + 1);
+  });
+
+  test('shows generated Execution Contract artifact links and PR guidance in task detail', async ({ page }) => {
+    await openRoute(page, '/tasks/TSK-42');
+
+    await expect(page.getByRole('link', { name: 'docs/user-stories/TSK-104-artifact-generation.md' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeVisible();
+    await expect(page.getByText('[TSK-104] Artifact generation')).toBeVisible();
   });
 
   test('switches task activity tabs into the mobile two-column pattern and preserves usable controls', async ({ page }) => {

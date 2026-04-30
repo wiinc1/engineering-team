@@ -725,6 +725,19 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     assert.equal(response.status, 403);
     assert.match(JSON.stringify(await response.json()), /dedicated approval endpoint/i);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.execution_contract_artifact_bundle_approved',
+        actorType: 'user',
+        idempotencyKey: `forbidden-artifact-approval:${created.taskId}`,
+        payload: { version: 1, bundle_id: 'ART-TSK-1-v1', artifact_bundle: { status: 'approved_for_commit' } },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /artifact-bundle approval must use the dedicated approval endpoint/i);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...pmAuth },

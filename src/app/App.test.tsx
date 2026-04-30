@@ -705,6 +705,32 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Workflow Transition')).toBeInTheDocument();
   });
 
+  it('renders generated Execution Contract artifact links and PR guidance on task detail', async () => {
+    installTaskFetchMock({
+      detailOverride: {
+        context: {
+          executionContract: {
+            artifacts: {
+              links: [
+                { rel: 'generated_user_story', label: 'Generated user story', path: 'docs/user-stories/TSK-104-artifact-generation.md' },
+                { rel: 'refinement_decision_log', label: 'Refinement Decision Log', path: 'docs/refinement/TSK-104-artifact-generation.md' },
+              ],
+              pr_guidance: {
+                title: '[TSK-104] Artifact generation',
+              },
+            },
+          },
+        },
+      },
+    });
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Wire task detail' });
+    expect(screen.getByRole('link', { name: 'docs/user-stories/TSK-104-artifact-generation.md' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeInTheDocument();
+    expect(screen.getByText('[TSK-104] Artifact generation')).toBeInTheDocument();
+  });
+
   it('redirects protected routes to sign-in when no browser session exists', async () => {
     clearBrowserSessionConfig();
     installTaskFetchMock();

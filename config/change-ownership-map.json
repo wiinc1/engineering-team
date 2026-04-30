@@ -14,7 +14,7 @@
     ],
     "doc_patterns": [
       "^tasks/.+\\.md$",
-      "^docs/(adr|reports|api|runbooks|design|diagrams|user-stories)/.+",
+      "^docs/(adr|reports|api|runbooks|design|diagrams|refinement|user-stories)/.+",
       "^README\\.md$",
       "^agents/README\\.md$"
     ],
@@ -163,13 +163,15 @@
           "name": "design",
           "patterns": [
             "^docs/design/US-002-design\\.md$",
-            "^docs/design/US-003-design\\.md$"
+            "^docs/design/US-003-design\\.md$",
+            "^docs/design/ISSUE-104-design\\.md$"
           ]
         },
         {
           "name": "api",
           "patterns": [
-            "^docs/api/authenticated-browser-app-openapi\\.yml$"
+            "^docs/api/authenticated-browser-app-openapi\\.yml$",
+            "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
         },
         {
@@ -177,7 +179,8 @@
           "patterns": [
             "^docs/runbooks/production-identity-provider\\.md$",
             "^docs/design/ISSUE-89-design\\.md$",
-            "^docs/design/US-003-design\\.md$"
+            "^docs/design/US-003-design\\.md$",
+            "^docs/design/ISSUE-104-design\\.md$"
           ]
         }
       ]
