@@ -448,6 +448,53 @@ test('task detail client submits close-review workflow actions to dedicated endp
   assert.ok(calls.every((entry) => entry.init.method === 'POST'));
 });
 
+test('task detail client submits Deferred Consideration actions to dedicated endpoints', async () => {
+  const calls = [];
+  const client = createTaskDetailApiClient({
+    baseUrl: 'http://audit.local',
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url, init });
+      return { ok: true, json: async () => ({ success: true }) };
+    },
+  });
+
+  await client.fetchDeferredConsiderationQueue();
+  await client.captureDeferredConsideration('TSK-110', {
+    title: 'Future shortcut',
+    knownContext: 'Operator requested a shortcut.',
+    rationale: 'Outside current approved scope.',
+    sourceSection: 'Refinement',
+    sourceAgent: 'pm',
+    owner: 'pm',
+    revisitTrigger: 'After baseline workflow adoption.',
+  });
+  await client.reviewDeferredConsideration('TSK-110', 'DC-1', {
+    action: 'leave_deferred',
+    reviewNote: 'Still deferred.',
+  });
+  await client.promoteDeferredConsideration('TSK-110', 'DC-1', {
+    title: 'Shortcut intake',
+  });
+  await client.closeDeferredConsideration('TSK-110', 'DC-2', {
+    rationale: 'No longer useful.',
+  });
+
+  assert.deepEqual(calls.map((entry) => entry.url), [
+    'http://audit.local/deferred-considerations',
+    'http://audit.local/tasks/TSK-110/deferred-considerations',
+    'http://audit.local/tasks/TSK-110/deferred-considerations/DC-1/review',
+    'http://audit.local/tasks/TSK-110/deferred-considerations/DC-1/promote',
+    'http://audit.local/tasks/TSK-110/deferred-considerations/DC-2/close',
+  ]);
+  assert.deepEqual(calls.map((entry) => entry.init.method || 'GET'), [
+    'GET',
+    'POST',
+    'POST',
+    'POST',
+    'POST',
+  ]);
+});
+
 test('deriveTelemetryFreshness promotes fresh and stale signals from freshness metadata', () => {
   assert.deepEqual(
     deriveTelemetryFreshness({ freshness: { status: 'fresh', last_updated_at: '2026-04-01T12:00:00.000Z' } }),

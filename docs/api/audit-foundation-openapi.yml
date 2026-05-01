@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Low-risk Simple contracts may request `autoApproval`, which records Operator Approval by `execution-contract-low-risk-simple-auto-approval.v1` only when acceptance criteria are complete, no risk flags or unresolved dependencies exist, no production auth/security/data-model paths are present, and rollback is clear; blocked policy requests return `execution_contract_auto_approval_blocked` and still require explicit Operator Approval. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Dispatch readiness also includes `execution-contract-dispatch-policy.v1`, which selects Jr, Sr, or Principal Engineer from tier, risk, and contract signals; blocks unsafe Jr assignments without a clear test plan; requires Principal review/involvement for Principal triggers; and exposes QA parallel-dispatch eligibility. Contract Coverage Audit records `task.contract_coverage_audit_submitted` and `task.contract_coverage_audit_validated` as structured Task data under `execution-contract-coverage-audit.v1`; the Engineer must submit rows versioned to the approved Execution Contract and current implementation attempt before entering Contract Coverage Audit, QA must close the gate before QA Verification, `implementation_incomplete` blocks QA Verification and Operator Closeout, Markdown coverage is generated for `docs/reports/`, and outcomes update `feature_contract_coverage_audits_submitted_total`, `feature_contract_coverage_audits_closed_total`, `feature_contract_coverage_implementation_incomplete_total`, plus autonomy-confidence metrics including `feature_autonomy_confidence_positive_signals_total`, `feature_autonomy_confidence_neutral_signals_total`, `feature_autonomy_confidence_negative_signals_total`, and `feature_autonomy_confidence_signal_score`. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested. `feature_operator_trusted_autonomous_delivery_rate` measures auto-approved contracts that later close successfully.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Low-risk Simple contracts may request `autoApproval`, which records Operator Approval by `execution-contract-low-risk-simple-auto-approval.v1` only when acceptance criteria are complete, no risk flags or unresolved dependencies exist, no production auth/security/data-model paths are present, and rollback is clear; blocked policy requests return `execution_contract_auto_approval_blocked` and still require explicit Operator Approval. Deferred Considerations are first-class Task child records under `deferred-considerations.v1` for ideas explicitly outside current approved scope; they are visible in approval and closeout views, excluded from Contract Coverage Audit unless promoted, non-blocking for QA/closeout, and promotable only through explicit PM/operator action into a new Intake Draft. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Dispatch readiness also includes `execution-contract-dispatch-policy.v1`, which selects Jr, Sr, or Principal Engineer from tier, risk, and contract signals; blocks unsafe Jr assignments without a clear test plan; requires Principal review/involvement for Principal triggers; and exposes QA parallel-dispatch eligibility. Contract Coverage Audit records `task.contract_coverage_audit_submitted` and `task.contract_coverage_audit_validated` as structured Task data under `execution-contract-coverage-audit.v1`; the Engineer must submit rows versioned to the approved Execution Contract and current implementation attempt before entering Contract Coverage Audit, QA must close the gate before QA Verification, `implementation_incomplete` blocks QA Verification and Operator Closeout, Markdown coverage is generated for `docs/reports/`, and outcomes update `feature_contract_coverage_audits_submitted_total`, `feature_contract_coverage_audits_closed_total`, `feature_contract_coverage_implementation_incomplete_total`, plus autonomy-confidence metrics including `feature_autonomy_confidence_positive_signals_total`, `feature_autonomy_confidence_neutral_signals_total`, `feature_autonomy_confidence_negative_signals_total`, and `feature_autonomy_confidence_signal_score`. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested. `feature_operator_trusted_autonomous_delivery_rate` measures auto-approved contracts that later close successfully.
 components:
   securitySchemes:
     BearerAuth:
@@ -58,6 +58,8 @@ components:
         operator_intake_requirements: { type: [string, 'null'] }
         execution_contract:
           $ref: '#/components/schemas/ExecutionContractProjection'
+        deferred_considerations:
+          $ref: '#/components/schemas/DeferredConsiderationProjection'
         waiting_state: { type: [string, 'null'] }
         next_required_action: { type: [string, 'null'] }
         freshness:
@@ -77,6 +79,142 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TaskSummaryResponse'
+    DeferredConsideration:
+      type: object
+      required: [id, title, known_context, rationale, source_section, owner, status]
+      properties:
+        id: { type: string }
+        deferred_consideration_id: { type: string }
+        source_task_id: { type: string }
+        source_execution_contract_version: { type: [integer, 'null'] }
+        title: { type: string }
+        known_context: { type: string }
+        rationale: { type: string }
+        source_section: { type: string }
+        source_comment: { type: [string, 'null'] }
+        source_agent: { type: [string, 'null'] }
+        owner: { type: string }
+        revisit_trigger: { type: [string, 'null'] }
+        revisit_date: { type: [string, 'null'], format: date }
+        open_questions:
+          type: array
+          items: { type: string }
+        status:
+          type: string
+          enum: [captured, reviewed, promoted, closed_no_action]
+        promotion_link:
+          type: [object, 'null']
+          additionalProperties: true
+    DeferredConsiderationProjection:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeferredConsideration'
+        unresolved:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeferredConsideration'
+        summary:
+          type: object
+          properties:
+            total: { type: integer }
+            unresolved_count: { type: integer }
+            captured_count: { type: integer }
+            reviewed_count: { type: integer }
+            promoted_count: { type: integer }
+            closed_no_action_count: { type: integer }
+            policy_version: { type: string, enum: [deferred-considerations.v1] }
+    DeferredConsiderationQueueResponse:
+      type: object
+      properties:
+        policy_version: { type: string, enum: [deferred-considerations.v1] }
+        items:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/DeferredConsideration'
+              - type: object
+                properties:
+                  source_task:
+                    type: object
+                    properties:
+                      task_id: { type: string }
+                      title: { type: string }
+                      current_stage: { type: [string, 'null'] }
+                      priority: { type: [string, 'null'] }
+                      current_owner: { type: [string, 'null'] }
+        groups:
+          type: object
+          description: Queue groupings by revisit date, revisit trigger, and source Task.
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              properties:
+                group: { type: string }
+                key: { type: string }
+                label: { type: string }
+                count: { type: integer }
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DeferredConsideration'
+        summary:
+          type: object
+          additionalProperties: true
+    DeferredConsiderationCaptureRequest:
+      type: object
+      required: [title, known_context, rationale, source_section, owner]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        known_context: { type: string }
+        rationale: { type: string }
+        source_section: { type: string }
+        source_comment: { type: [string, 'null'] }
+        source_agent: { type: [string, 'null'] }
+        owner: { type: string }
+        revisit_trigger: { type: [string, 'null'] }
+        revisit_date: { type: [string, 'null'], format: date }
+        open_questions:
+          type: array
+          items: { type: string }
+        idempotencyKey: { type: string }
+    DeferredConsiderationReviewRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [leave_deferred, convert_blocker]
+        review_note: { type: string }
+        blocking_current_progress: { type: boolean }
+        conversion_type:
+          type: string
+          enum: [refinement_blocking_question, operator_decision_required_exception]
+        owner: { type: string }
+        revisit_trigger: { type: string }
+        revisit_date: { type: string, format: date }
+        open_questions:
+          type: array
+          items: { type: string }
+    DeferredConsiderationPromoteRequest:
+      type: object
+      properties:
+        title: { type: string }
+        priority: { type: string }
+        task_type: { type: string }
+        promotion_note: { type: string }
+        open_questions:
+          type: array
+          items: { type: string }
+        idempotencyKey: { type: string }
+    DeferredConsiderationCloseRequest:
+      type: object
+      required: [rationale]
+      properties:
+        rationale: { type: string }
     IntakeDraftCreateRequest:
       type: object
       required: [raw_requirements]
@@ -894,6 +1032,28 @@ components:
 security:
   - BearerAuth: []
 paths:
+  /deferred-considerations:
+    get:
+      summary: List the PM Deferred Considerations review queue
+      description: |
+        PM/admin-only queue of unresolved Deferred Considerations across Tasks, sorted by revisit date, dependency trigger, or source Task context. Items remain outside committed scope until promoted through an explicit PM/operator action.
+      responses:
+        '200':
+          description: Deferred Considerations review queue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/DeferredConsiderationQueueResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
   /tasks:
     get:
       summary: List projected task summaries with additive owner metadata
@@ -948,7 +1108,7 @@ paths:
     post:
       summary: Append a workflow audit event
       description: |
-        Generic event writes reject dedicated Execution Contract lifecycle events that must run route-specific gates, including `task.execution_contract_approved`, `task.execution_contract_verification_report_generated`, `task.execution_contract_artifact_bundle_generated`, and `task.execution_contract_artifact_bundle_approved`.
+        Generic event writes reject dedicated Execution Contract lifecycle events that must run route-specific gates, including `task.execution_contract_approved`, `task.execution_contract_verification_report_generated`, `task.execution_contract_artifact_bundle_generated`, and `task.execution_contract_artifact_bundle_approved`. Generic writes also reject Deferred Consideration events such as `task.deferred_consideration_captured` and `task.deferred_consideration_promoted`; use the dedicated Deferred Consideration route family instead.
       parameters:
         - name: id
           in: path
@@ -976,6 +1136,162 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/deferred-considerations:
+    get:
+      summary: Read Deferred Considerations for a Task
+      description: Returns first-class Deferred Consideration child records and counts for Task detail badges.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Deferred Consideration projection
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/DeferredConsiderationProjection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+    post:
+      summary: Capture a Deferred Consideration on a Task
+      description: PM/admin-only mutation that records a non-committed idea, alternative, or future enhancement as `task.deferred_consideration_captured`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeferredConsiderationCaptureRequest'
+      responses:
+        '201':
+          description: Deferred Consideration captured
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/deferred-considerations/{deferredConsiderationId}/review:
+    post:
+      summary: Review or convert a Deferred Consideration
+      description: |
+        PM/operator/stakeholder/admin mutation. Leaving the item deferred records review status. If the item blocks current progress, the request must convert it into a blocking refinement question or an `operator_decision_required` Exception.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: deferredConsiderationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeferredConsiderationReviewRequest'
+      responses:
+        '202':
+          description: Deferred Consideration reviewed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/deferred-considerations/{deferredConsiderationId}/promote:
+    post:
+      summary: Promote a Deferred Consideration to a new Intake Draft
+      description: |
+        Explicit PM/operator/stakeholder/admin action that creates a new Intake Draft carrying source Task ID, source Execution Contract version, Deferred Consideration ID, known context, rationale, and open questions.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: deferredConsiderationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeferredConsiderationPromoteRequest'
+      responses:
+        '201':
+          description: Deferred Consideration promoted to Intake Draft
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/deferred-considerations/{deferredConsiderationId}/close:
+    post:
+      summary: Close a Deferred Consideration with no action
+      description: PM/operator/stakeholder/admin mutation that records `closed_no_action` with rationale.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: deferredConsiderationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeferredConsiderationCloseRequest'
+      responses:
+        '202':
+          description: Deferred Consideration closed with no action
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/BadRequest'
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/execution-contract:

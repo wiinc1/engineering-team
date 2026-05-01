@@ -402,6 +402,37 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
         body: JSON.stringify(payload),
       });
     },
+    fetchDeferredConsiderationQueue() {
+      return request('/deferred-considerations');
+    },
+    captureDeferredConsideration(taskId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/deferred-considerations`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    reviewDeferredConsideration(taskId, considerationId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/deferred-considerations/${encodeURIComponent(considerationId)}/review`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    promoteDeferredConsideration(taskId, considerationId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/deferred-considerations/${encodeURIComponent(considerationId)}/promote`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
+    closeDeferredConsideration(taskId, considerationId, payload) {
+      return request(`/tasks/${encodeURIComponent(taskId)}/deferred-considerations/${encodeURIComponent(considerationId)}/close`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    },
     fetchAssignableAgents() { return request('/ai-agents'); },
     assignTaskOwner(taskId, agentId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });

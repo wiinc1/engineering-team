@@ -518,6 +518,361 @@ test('blocks Execution Contract approval on missing required approvals and unres
   });
 });
 
+test('captures Deferred Considerations as task child records and excludes them from approval scope', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Capture non-committed refinement ideas without turning them into current scope.',
+        title: 'Deferred Consideration intake',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-110', roles: ['pm', 'reader'] }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/deferred-considerations`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        title: 'Add automatic stakeholder digest later',
+        knownContext: 'Stakeholders asked whether deferred ideas can be batched into a weekly digest.',
+        rationale: 'The digest is useful but not part of the approved Execution Contract for this task.',
+        sourceSection: 'CONTEXT.md#deferred-considerations',
+        sourceAgent: 'pm-refinement-agent',
+        owner: 'pm',
+        revisitTrigger: 'After the first Deferred Considerations queue is used in production.',
+        openQuestions: ['Which stakeholder groups should receive the digest?'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.deferredConsiderationId, `DC-${created.taskId}-001`);
+    assert.equal(body.data.deferredConsideration.status, 'captured');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        eventType: 'task.deferred_consideration_captured',
+        actorType: 'user',
+        idempotencyKey: 'direct-deferred-write',
+        payload: { deferred_consideration_id: 'DC-DIRECT' },
+      }),
+    });
+    assert.equal(response.status, 403);
+    body = await response.json();
+    assert.equal(body.error.code, 'forbidden');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/deferred-considerations`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.summary.total, 1);
+    assert.equal(body.data.summary.unresolved_count, 1);
+
+    response = await fetch(`${baseUrl}/deferred-considerations`, { headers: pmHeaders });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.items.length, 1);
+    assert.equal(body.data.items[0].source_task.task_id, created.taskId);
+    assert.equal(body.data.groups.by_revisit_trigger[0].label, 'Trigger: After the first Deferred Considerations queue is used in production.');
+    assert.equal(body.data.groups.by_source_task[0].key, created.taskId);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: executionContractSections('Simple', ' for Deferred Considerations'),
+        scopeBoundaries: {
+          committedRequirements: [
+            { id: 'REQ-110-1', text: 'Deferred Considerations are task child records.', sourceSectionId: '2' },
+          ],
+          deferredConsiderations: ['A weekly digest is still deferred and not committed scope.'],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Deferred Considerations are visible but not approved scope.' }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.approvalSummary.deferredConsiderationsExcludedFromCoverage, true);
+    assert.deepEqual(body.data.approvalSummary.deferredConsiderationsNotInScope.map((item) => item.title), [
+      'Add automatic stakeholder digest later',
+    ]);
+    assert.deepEqual(body.data.committedScope.committed_requirements.map((item) => item.id), ['REQ-110-1']);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.context.deferredConsiderations.summary.unresolved_count, 1);
+    assert.equal(body.context.closeGovernance.deferredConsiderations.blocks_qa_verification, false);
+    assert.equal(body.context.closeGovernance.deferredConsiderations.blocks_operator_closeout, false);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.deferred_considerations_total, 1);
+    assert.equal(body.deferred_considerations_unresolved, 1);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/relationships`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.deepEqual(body.deferred_consideration_ids, [`DC-${created.taskId}-001`]);
+  });
+});
+
+test('promotes and closes Deferred Considerations only through explicit operator actions', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-110', roles: ['pm', 'reader'] }),
+    };
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'operator-110', roles: ['contributor'] }),
+    };
+    let response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-110-PROMOTE',
+        payload: {
+          title: 'Promotion source task',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Promote explicitly selected deferred ideas into new intake drafts.',
+          priority: 'P2',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/deferred-considerations`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        id: 'DC-TSK-110-PROMOTE-001',
+        title: 'Support multi-tenant queue filters',
+        knownContext: 'Enterprise operators may need tenant-specific queue filters.',
+        rationale: 'Filtering policy needs separate product review.',
+        sourceSection: 'docs/product/software-factory-control-plane-prd.md#pm-queue',
+        sourceComment: 'Operator noted tenant filtering during review.',
+        owner: 'pm',
+        revisitDate: '2026-06-01',
+        openQuestions: ['Should tenant filters be admin-only?'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/deferred-considerations/DC-TSK-110-PROMOTE-001/promote`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        title: 'Add tenant filters to Deferred Considerations queue',
+        promotionNote: 'Explicit PM promotion for separate discovery.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.status, 'promoted');
+    assert.match(body.data.promotedTaskId, /^TSK-/);
+    assert.match(body.data.rawRequirements, /Source Task ID: TSK-110-PROMOTE/);
+    assert.match(body.data.rawRequirements, /Deferred Consideration ID: DC-TSK-110-PROMOTE-001/);
+    assert.match(body.data.rawRequirements, /Enterprise operators may need tenant-specific queue filters/);
+    assert.match(body.data.rawRequirements, /Filtering policy needs separate product review/);
+    assert.match(body.data.rawRequirements, /Should tenant filters be admin-only/);
+
+    response = await fetch(`${baseUrl}/tasks/${body.data.promotedTaskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const promotedDetail = await response.json();
+    assert.equal(promotedDetail.context.intakeDraft, true);
+    assert.match(promotedDetail.context.operatorIntakeRequirements, /Source Execution Contract Version: not recorded/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/deferred-considerations/DC-TSK-110-PROMOTE-001/close`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ rationale: 'Attempt close after promotion.' }),
+    });
+    assert.equal(response.status, 409);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/deferred-considerations`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        id: 'DC-TSK-110-PROMOTE-002',
+        title: 'Add color-coded queue labels',
+        knownContext: 'PMs asked for optional queue label colors.',
+        rationale: 'Labels are cosmetic and not needed for workflow correctness.',
+        sourceSection: 'docs/templates/USER_STORY_TEMPLATE.md#notes',
+        sourceAgent: 'ux-review-agent',
+        owner: 'pm',
+        revisitTrigger: 'After queue adoption metrics are available.',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/deferred-considerations/DC-TSK-110-PROMOTE-002/close`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ rationale: 'No action because the queue remains usable without label colors.' }),
+    });
+    assert.equal(response.status, 202);
+    body = await response.json();
+    assert.equal(body.data.status, 'closed_no_action');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-PROMOTE/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.deferred_considerations_total, 2);
+    assert.equal(body.deferred_considerations_unresolved, 0);
+  });
+});
+
+test('converts blocking Deferred Considerations into blocking questions or operator exceptions', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-110', roles: ['pm', 'reader'] }),
+    };
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'operator-110', roles: ['contributor'] }),
+    };
+    let response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-110-BLOCKER',
+        payload: {
+          title: 'Deferred blocker conversion',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Convert blocking deferred items before work proceeds.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/deferred-considerations`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        id: 'DC-TSK-110-BLOCKER-001',
+        title: 'Clarify whether queue actions are audited',
+        knownContext: 'The current implementation plan mentions actions but not audit visibility.',
+        rationale: 'This was deferred until PM review determines if it affects the approved scope.',
+        sourceSection: 'CONTEXT.md#rules',
+        sourceAgent: 'architect-review-agent',
+        owner: 'pm',
+        revisitTrigger: 'Before implementation dispatch if audit visibility becomes required.',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/deferred-considerations/DC-TSK-110-BLOCKER-001/review`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        action: 'leave_deferred',
+        blockingCurrentProgress: true,
+        reviewNote: 'This is now blocking implementation dispatch.',
+      }),
+    });
+    assert.equal(response.status, 409);
+    let body = await response.json();
+    assert.equal(body.error.code, 'deferred_consideration_blocker_requires_conversion');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/deferred-considerations/DC-TSK-110-BLOCKER-001/review`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        action: 'convert_blocker',
+        conversionType: 'refinement_blocking_question',
+        reviewNote: 'PM must answer whether action audit visibility is committed scope.',
+      }),
+    });
+    assert.equal(response.status, 202);
+    body = await response.json();
+    assert.equal(body.data.review.conversion_type, 'refinement_blocking_question');
+    assert.ok(body.data.conversionEventId);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/history`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.ok(body.items.some((item) => item.event_type === 'task.workflow_thread_created'
+      && item.payload.deferred_consideration_id === 'DC-TSK-110-BLOCKER-001'
+      && item.payload.blocking === true));
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/deferred-considerations`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        id: 'DC-TSK-110-BLOCKER-002',
+        title: 'Operator must decide exception path',
+        knownContext: 'A late governance question conflicts with current operator approval.',
+        rationale: 'It was deferred until the conflict became explicit.',
+        sourceSection: 'docs/product/software-factory-control-plane-prd.md#operator-approval',
+        sourceComment: 'Operator noted the conflict in closeout review.',
+        owner: 'operator',
+        revisitTrigger: 'When operator approval conflict appears.',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/deferred-considerations/DC-TSK-110-BLOCKER-002/review`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        action: 'convert_blocker',
+        conversionType: 'operator_decision_required_exception',
+        reviewNote: 'Operator must decide whether to revise the contract or continue.',
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-110-BLOCKER/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.blocked, true);
+    assert.equal(body.waiting_state, 'operator_decision_required');
+  });
+});
+
 test('generates verification report skeletons before Standard dispatch while Simple no-risk dispatch remains optional', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks/TSK-105/events`, {

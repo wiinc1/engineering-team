@@ -55,6 +55,16 @@ The Execution Contract uses `docs/templates/USER_STORY_TEMPLATE.md` sections by 
 
 Material changes create a new Execution Contract version. Typo fixes and non-substantive formatting corrections may be metadata-only edits.
 
+## Deferred Consideration Requirements
+
+Deferred Considerations are first-class Task child records for ideas, alternatives, and future enhancements that are explicitly not committed to the current approved Execution Contract. They preserve context without adding hidden scope.
+
+Each Deferred Consideration records title, known context, rationale for deferring, source section, source comment or source agent, owner, revisit trigger or revisit date, status, promotion link, and open questions. Supported statuses are `captured`, `reviewed`, `promoted`, and `closed_no_action`.
+
+Task detail must show a visible count or badge. Product Managers must have a review queue for unresolved items by revisit date, dependency trigger, or source Task. Operator Approval must list unresolved Deferred Considerations as not in current scope. Operator Closeout must show unresolved items with leave deferred, promote to new Intake Draft, and close no action actions.
+
+Deferred Considerations are not committed requirements, do not block QA Verification or Operator Closeout, and are excluded from Contract Coverage Audit unless promoted into committed scope through a new approved Execution Contract or a new Intake Draft. If review shows an item blocks current progress, it must become a refinement blocking question or `operator_decision_required` Exception instead of remaining deferred.
+
 ## Task ID And Repo Artifact Requirements
 
 Production Task display IDs are generated at Intake Draft creation, are sequential and never reused, use `TSK-123` format, and are used in filenames, PR titles, operator conversation, dashboards, and repo artifacts.

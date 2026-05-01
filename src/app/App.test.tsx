@@ -277,6 +277,55 @@ function installTaskFetchMock({
       }, 200);
     }
 
+    if (url.endsWith('/tasks/TSK-42/deferred-considerations') && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          deferredConsiderationId: 'DC-TSK-42-NEW',
+          status: 'captured',
+          capturedAt: '2026-04-01T19:04:00.000Z',
+        },
+      }, 201);
+    }
+
+    if (/\/tasks\/TSK-42\/deferred-considerations\/[^/]+\/review$/.test(url) && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          deferredConsiderationId: 'DC-TSK-42-001',
+          status: 'reviewed',
+          reviewedAt: '2026-04-01T19:04:30.000Z',
+        },
+      }, 202);
+    }
+
+    if (/\/tasks\/TSK-42\/deferred-considerations\/[^/]+\/promote$/.test(url) && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          deferredConsiderationId: 'DC-TSK-42-001',
+          status: 'promoted',
+          promotedTaskId: 'TSK-INTAKE-DC',
+          promotedAt: '2026-04-01T19:04:45.000Z',
+        },
+      }, 201);
+    }
+
+    if (/\/tasks\/TSK-42\/deferred-considerations\/[^/]+\/close$/.test(url) && init?.method === 'POST') {
+      return createJsonResponse({
+        success: true,
+        data: {
+          taskId: 'TSK-42',
+          deferredConsiderationId: 'DC-TSK-42-001',
+          status: 'closed_no_action',
+          closedAt: '2026-04-01T19:05:00.000Z',
+        },
+      }, 202);
+    }
+
     if (url.endsWith('/tasks/TSK-42/close-review/cancellation-recommendation') && init?.method === 'POST') {
       return createJsonResponse({
         success: true,
@@ -2309,6 +2358,119 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText(/close gate failed/i)).toBeInTheDocument();
   });
 
+  it('renders and submits Deferred Consideration task-detail actions for PM sessions', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    const deferredConsideration = {
+      id: 'DC-TSK-42-001',
+      title: 'Mobile offline mode',
+      known_context: 'Operators asked whether mobile use should work offline.',
+      rationale: 'Offline support is outside the current approved contract.',
+      source_section: 'Refinement notes',
+      source_agent: 'pm',
+      owner: 'pm',
+      revisit_trigger: 'After mobile baseline ships.',
+      open_questions: ['Which field teams need offline support first?'],
+      status: 'captured',
+    };
+    const fetchMock = installTaskFetchMock({
+      detailOverride: {
+        context: {
+          deferredConsiderations: {
+            items: [deferredConsideration],
+            unresolved: [deferredConsideration],
+            summary: {
+              total: 1,
+              unresolved_count: 1,
+              captured_count: 1,
+              reviewed_count: 0,
+              promoted_count: 0,
+              closed_no_action_count: 0,
+              policy_version: 'deferred-considerations.v1',
+            },
+          },
+          closeGovernance: {
+            active: true,
+            readiness: { state: 'pending', checklist: [] },
+            humanDecision: { required: false, status: 'not_required', summary: 'No human close decision required.' },
+            cancellation: { awaitingHumanDecision: false, recommendations: { pm: null, architect: null } },
+            backtrack: { available: false, latestReason: null, latestReasonCode: null },
+            deferredConsiderations: {
+              unresolved_count: 1,
+              blocks_qa_verification: false,
+              blocks_operator_closeout: false,
+              available_actions: ['leave_deferred', 'promote_to_intake_draft', 'close_no_action'],
+              unresolved: [{ id: 'DC-TSK-42-001', title: 'Mobile offline mode', status: 'captured', owner: 'pm' }],
+            },
+          },
+        },
+      },
+    });
+    window.history.pushState({}, '', '/tasks/TSK-42');
+    render(<App />);
+
+    const region = await screen.findByRole('region', { name: 'Deferred Considerations' });
+    expect(within(region).getByText(/1 unresolved · 1 total/i)).toBeInTheDocument();
+    expect(within(region).getByText('Mobile offline mode')).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Leave deferred' })).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Promote to Intake Draft' })).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Close no action' })).toBeInTheDocument();
+    expect(screen.getByText('Deferred Considerations are not close blockers')).toBeInTheDocument();
+
+    fireEvent.click(within(region).getByRole('button', { name: 'Leave deferred' }));
+    await screen.findByText('Deferred Consideration updated.');
+
+    const reviewRequest = fetchMock.mock.calls.find(([url, init]) => (
+      String(url).endsWith('/tasks/TSK-42/deferred-considerations/DC-TSK-42-001/review')
+      && init?.method === 'POST'
+    ));
+    expect(reviewRequest).toBeTruthy();
+    expect(JSON.parse(String(reviewRequest?.[1]?.body))).toMatchObject({
+      action: 'leave_deferred',
+      reviewNote: 'Deferred Consideration reviewed and left deferred.',
+      revisitTrigger: 'After mobile baseline ships.',
+    });
+
+    const captureHeading = within(region).getByRole('heading', { name: 'Capture Deferred Consideration' });
+    const captureForm = captureHeading.closest('form');
+    expect(captureForm).toBeTruthy();
+    const capture = within(captureForm as HTMLElement);
+    fireEvent.change(capture.getByLabelText('Title'), { target: { value: 'Desktop saved filters' } });
+    fireEvent.change(capture.getByLabelText('Known context'), { target: { value: 'PM wants saved queue filters later.' } });
+    fireEvent.change(capture.getByLabelText('Rationale for deferring'), { target: { value: 'The current contract only covers the review queue.' } });
+    fireEvent.change(capture.getByLabelText('Source section'), { target: { value: 'PM review' } });
+    fireEvent.change(capture.getByLabelText('Source agent'), { target: { value: 'pm' } });
+    fireEvent.change(capture.getByLabelText('Responsible role'), { target: { value: 'pm' } });
+    fireEvent.change(capture.getByLabelText('Revisit trigger'), { target: { value: 'After queue adoption metrics.' } });
+    fireEvent.change(capture.getByLabelText('Open questions'), { target: { value: 'Which filters should persist?' } });
+    fireEvent.click(capture.getByRole('button', { name: 'Capture Deferred Consideration' }));
+    await screen.findByText('Deferred Consideration captured.');
+
+    const captureRequest = fetchMock.mock.calls.find(([url, init]) => (
+      String(url).endsWith('/tasks/TSK-42/deferred-considerations')
+      && init?.method === 'POST'
+    ));
+    expect(captureRequest).toBeTruthy();
+    expect(JSON.parse(String(captureRequest?.[1]?.body))).toMatchObject({
+      title: 'Desktop saved filters',
+      knownContext: 'PM wants saved queue filters later.',
+      rationale: 'The current contract only covers the review queue.',
+      sourceSection: 'PM review',
+      sourceAgent: 'pm',
+      owner: 'pm',
+      revisitTrigger: 'After queue adoption metrics.',
+      openQuestions: ['Which filters should persist?'],
+    });
+  });
+
   it('hides stakeholder actions in task detail until close governance is decision-ready', async () => {
     writeBrowserSessionConfig({
       apiBaseUrl: '',
@@ -2920,6 +3082,85 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('Triage queue drift')).toBeInTheDocument();
     expect(screen.getByText('PM triage required')).toBeInTheDocument();
     expect(screen.getByText(/Routed to PM because the task is explicitly waiting on PM action/i)).toBeInTheDocument();
+  });
+
+  it('renders the PM Deferred Considerations queue grouped by revisit signal', async () => {
+    writeBrowserSessionConfig({
+      apiBaseUrl: '',
+      bearerToken: makeToken({
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: makeFutureExp(),
+      }),
+      expiresAt: makeFutureExpiry(),
+    });
+    installTaskFetchMock({
+      tasksOverride: [
+        {
+          task_id: 'TSK-110-A',
+          tenant_id: 'tenant-a',
+          title: 'Queue date task',
+          priority: 'P2',
+          current_stage: 'DRAFT',
+          current_owner: 'pm',
+          owner: { actor_id: 'pm', display_name: 'pm' },
+          blocked: false,
+          closed: false,
+          freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
+          deferred_considerations: {
+            unresolved: [
+              {
+                id: 'DC-DATE',
+                title: 'Date-grouped idea',
+                rationale: 'Needs scheduled revisit.',
+                source_section: 'PM notes',
+                owner: 'pm',
+                revisit_date: '2026-06-01',
+                status: 'captured',
+              },
+            ],
+            summary: { total: 1, unresolved_count: 1 },
+          },
+        },
+        {
+          task_id: 'TSK-110-B',
+          tenant_id: 'tenant-a',
+          title: 'Queue trigger task',
+          priority: 'P3',
+          current_stage: 'DRAFT',
+          current_owner: 'pm',
+          owner: { actor_id: 'pm', display_name: 'pm' },
+          blocked: false,
+          closed: false,
+          freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
+          deferred_considerations: {
+            unresolved: [
+              {
+                id: 'DC-TRIGGER',
+                title: 'Trigger-grouped idea',
+                rationale: 'Needs dependency signal.',
+                source_section: 'Design notes',
+                owner: 'architect',
+                revisit_trigger: 'After dependency ships.',
+                status: 'reviewed',
+              },
+            ],
+            summary: { total: 1, unresolved_count: 1 },
+          },
+        },
+      ],
+    });
+    window.history.pushState({}, '', '/deferred-considerations');
+    render(<App />);
+
+    await screen.findByRole('heading', { level: 1, name: 'Deferred Considerations' });
+    expect(screen.getByRole('heading', { name: 'Revisit date: 2026-06-01' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trigger: After dependency ships.' })).toBeInTheDocument();
+    expect(screen.getByText('Date-grouped idea')).toBeInTheDocument();
+    expect(screen.getByText('Trigger-grouped idea')).toBeInTheDocument();
+    expect(screen.getByText('Queue date task')).toBeInTheDocument();
+    expect(screen.getByText('Queue trigger task')).toBeInTheDocument();
   });
 
   it('routes Intake Drafts to PM inbox and excludes them from Engineer inbox', async () => {
