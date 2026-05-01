@@ -673,6 +673,144 @@ test('generates verification report skeletons before Standard dispatch while Sim
   });
 });
 
+test('enforces risk-based engineer tier policy during approved contract assignment dispatch', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-106', roles: ['pm', 'reader'] }),
+    };
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'dispatcher-106', roles: ['contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-106-JR/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-106-JR',
+        payload: {
+          title: 'Unsafe Jr dispatch',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Simple feature work is not safe for Jr dispatch without a clear test plan.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-JR/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: {
+          ...executionContractSections('Simple', ' for dispatch policy'),
+          4: 'Manual review after implementation.',
+        },
+        dispatchSignals: {
+          workCategory: 'feature',
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-JR/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Approved Simple contract still needs dispatch policy routing.' }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.dispatchPolicy.selectedEngineerTier, 'Sr');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-JR/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: 'stage:TSK-106-JR:BACKLOG',
+        payload: { to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-JR/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'engineer-jr' }),
+    });
+    assert.equal(response.status, 409);
+    body = await response.json();
+    assert.equal(body.error.code, 'dispatch_policy_blocked');
+    assert.equal(body.error.details.recommended_engineer_tier, 'Sr');
+    assert.ok(body.error.details.blocking_reasons.some((reason) => reason.code === 'jr_requires_clear_test_plan'));
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-JR/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'engineer-sr' }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.owner.agentId, 'engineer-sr');
+    assert.equal(body.data.dispatchPolicy.selectedEngineerTier, 'Sr');
+    assert.equal(body.data.dispatchPolicy.proposedEngineerTier, 'Sr');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-PRINCIPAL/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-106-PRINCIPAL',
+        payload: {
+          title: 'Principal dispatch approval gate',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Security-sensitive implementation must require Principal review before approval.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-PRINCIPAL/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        riskFlags: ['security'],
+        sections: {
+          ...executionContractSections('Standard', ' for Principal dispatch'),
+          4: 'Write failing authorization-boundary tests before implementation.',
+        },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-106' },
+          ux: { status: 'approved', actorId: 'ux-106' },
+          qa: { status: 'approved', actorId: 'qa-106' },
+          principalEngineer: { status: 'pending' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-106-PRINCIPAL/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Attempt without Principal approval.' }),
+    });
+    assert.equal(response.status, 409);
+    body = await response.json();
+    assert.equal(body.error.code, 'execution_contract_approval_blocked');
+    assert.ok(body.error.details.missing_required_approvals.some((approval) => approval.role === 'principalEngineer'));
+  });
+});
+
 test('generates and approves Execution Contract repo artifact bundles before commit readiness', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks/TSK-104/events`, {
@@ -3101,6 +3239,9 @@ test('records structured QA results, routes fail/pass outcomes, preserves re-tes
     const failedQa = await response.json();
     assert.equal(failedQa.data.routedToStage, 'IMPLEMENTATION');
     assert.equal(failedQa.data.escalationPackage.routing.required_engineer_tier, 'Sr');
+    assert.equal(failedQa.data.escalationPackage.failure_loop.returnToImplementingEngineerFirst, true);
+    assert.equal(failedQa.data.escalationPackage.failure_loop.principalEscalationRequired, false);
+    assert.deepEqual(failedQa.data.escalationPackage.routing.escalation_chain, ['qa', 'engineer']);
     assert.equal(failedQa.data.escalationPackage.previous_fix_history.length, 1);
     assert.equal(failedQa.data.escalationPackage.notification_preview.recipient_role, 'engineer');
     assert.equal(failedQa.data.escalationPackage.notification_preview.highlights[0], 'Regression in the audit history view.');

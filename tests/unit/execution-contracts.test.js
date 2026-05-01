@@ -9,6 +9,7 @@ const {
   createExecutionContractVerificationReportSkeleton,
   evaluateExecutionContractApprovalReadiness,
   evaluateExecutionContractDispatchReadiness,
+  evaluateExecutionContractDispatchPolicy,
   normalizeArtifactIdentity,
   validateExecutionContract,
 } = require('../../lib/audit/execution-contracts');
@@ -299,6 +300,195 @@ test('approval readiness blocks missing role approvals and unresolved blocking q
   readiness = evaluateExecutionContractApprovalReadiness(ready);
   assert.equal(readiness.canApprove, true);
   assert.deepEqual(readiness.nonBlockingComments.map((item) => item.id), ['c-1']);
+});
+
+test('evaluates risk-based engineer tier dispatch policy with explainable routing and QA parallelism', () => {
+  const standard = createExecutionContractDraft({
+    taskId: 'TSK-106-STANDARD',
+    summary: {
+      task_id: 'TSK-106-STANDARD',
+      title: 'Standard dispatch policy',
+      intake_draft: true,
+      operator_intake_requirements: 'Route Standard work to Sr with QA in parallel.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-106-standard', payload: { intake_draft: true } }],
+    actorId: 'pm-106',
+    body: {
+      templateTier: 'Standard',
+      sections: {
+        ...sectionBodiesFor('Standard', ' dispatch policy'),
+        4: 'Write failing unit tests, integration tests, and browser coverage before implementation.',
+      },
+      reviewers: {
+        architect: { status: 'approved' },
+        ux: { status: 'approved' },
+        qa: { status: 'approved' },
+      },
+    },
+  }).contract;
+
+  const standardPolicy = evaluateExecutionContractDispatchPolicy({ contract: standard });
+  assert.equal(standardPolicy.canDispatch, true);
+  assert.equal(standardPolicy.selectedEngineerTier, 'Sr');
+  assert.equal(standardPolicy.selectedAssignee, 'engineer-sr');
+  assert.equal(standardPolicy.qaDispatch.parallelAllowed, true);
+  assert.ok(standardPolicy.selectionReasons.some((reason) => reason.code === 'sr_default_standard_plus'));
+  assert.deepEqual(standardPolicy.metricsPolicy.excludedMetrics, ['lines_of_code', 'raw_task_count']);
+
+  const simpleDocs = createExecutionContractDraft({
+    taskId: 'TSK-106-JR',
+    summary: {
+      task_id: 'TSK-106-JR',
+      title: 'Docs-only dispatch policy',
+      intake_draft: true,
+      operator_intake_requirements: 'Constrained docs-only work can go to Jr when tests are explicit.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-106-jr', payload: { intake_draft: true } }],
+    actorId: 'pm-106',
+    body: {
+      templateTier: 'Simple',
+      sections: {
+        ...sectionBodiesFor('Simple', ' constrained docs'),
+        4: 'Pending documentation smoke test checks generated report links before implementation closes.',
+      },
+      dispatchSignals: {
+        workCategory: 'docs',
+        proposedEngineerTier: 'Jr',
+      },
+    },
+  }).contract;
+
+  const jrPolicy = evaluateExecutionContractDispatchPolicy({
+    contract: simpleDocs,
+    proposedEngineerTier: 'Jr',
+    proposedAssignee: 'engineer-jr',
+  });
+  assert.equal(jrPolicy.canDispatch, true);
+  assert.equal(jrPolicy.selectedEngineerTier, 'Jr');
+  assert.equal(jrPolicy.contractSignals.clearTestPlan, true);
+  assert.ok(jrPolicy.selectionReasons.some((reason) => reason.code === 'jr_constrained_simple_work'));
+});
+
+test('blocks unsafe Jr dispatch and requires Principal review for Principal triggers', () => {
+  const simpleFeature = createExecutionContractDraft({
+    taskId: 'TSK-106-BLOCK-JR',
+    summary: {
+      task_id: 'TSK-106-BLOCK-JR',
+      title: 'Simple feature without test plan',
+      intake_draft: true,
+      operator_intake_requirements: 'A feature change without a clear failing or pending test plan.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-106-block-jr', payload: { intake_draft: true } }],
+    actorId: 'pm-106',
+    body: {
+      templateTier: 'Simple',
+      sections: {
+        ...sectionBodiesFor('Simple', ' feature scope'),
+        4: 'Manual reviewer judgment after implementation.',
+      },
+      dispatchSignals: {
+        workCategory: 'feature',
+      },
+    },
+  }).contract;
+
+  const blockedJr = evaluateExecutionContractDispatchPolicy({
+    contract: simpleFeature,
+    proposedEngineerTier: 'Jr',
+    proposedAssignee: 'engineer-jr',
+  });
+  assert.equal(blockedJr.canDispatch, false);
+  assert.equal(blockedJr.selectedEngineerTier, 'Sr');
+  assert.equal(blockedJr.rerouted, true);
+  assert.ok(blockedJr.blockingReasons.some((reason) => reason.code === 'jr_requires_clear_test_plan'));
+  assert.ok(blockedJr.blockingReasons.some((reason) => reason.code === 'jr_requires_constrained_simple_scope'));
+
+  const principalRisk = createExecutionContractDraft({
+    taskId: 'TSK-106-PRINCIPAL',
+    summary: {
+      task_id: 'TSK-106-PRINCIPAL',
+      title: 'Security dispatch policy',
+      intake_draft: true,
+      operator_intake_requirements: 'Security-sensitive implementation needs Principal review.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-106-principal', payload: { intake_draft: true } }],
+    actorId: 'pm-106',
+    body: {
+      templateTier: 'Standard',
+      riskFlags: ['security'],
+      sections: {
+        ...sectionBodiesFor('Standard', ' security scope'),
+        4: 'Write failing authorization-boundary tests before implementation.',
+      },
+      reviewers: {
+        architect: { status: 'approved' },
+        ux: { status: 'approved' },
+        qa: { status: 'approved' },
+        principalEngineer: { status: 'pending' },
+      },
+    },
+  }).contract;
+
+  const principalBlocked = evaluateExecutionContractDispatchPolicy({
+    contract: principalRisk,
+    proposedEngineerTier: 'Sr',
+    proposedAssignee: 'engineer-sr',
+  });
+  assert.equal(principalBlocked.canDispatch, false);
+  assert.equal(principalBlocked.selectedEngineerTier, 'Principal');
+  assert.ok(principalBlocked.blockingReasons.some((reason) => reason.code === 'principal_review_required'));
+  assert.ok(principalBlocked.blockingReasons.some((reason) => reason.code === 'principal_tier_required'));
+
+  const principalApproved = {
+    ...principalRisk,
+    reviewer_routing: {
+      ...principalRisk.reviewer_routing,
+      reviewers: {
+        ...principalRisk.reviewer_routing.reviewers,
+        principalEngineer: {
+          ...principalRisk.reviewer_routing.reviewers.principalEngineer,
+          status: 'approved',
+          approved: true,
+        },
+      },
+    },
+    reviewers: {
+      ...principalRisk.reviewers,
+      principalEngineer: {
+        ...principalRisk.reviewers.principalEngineer,
+        status: 'approved',
+        approved: true,
+      },
+    },
+  };
+  const principalReady = evaluateExecutionContractDispatchPolicy({
+    contract: principalApproved,
+    proposedEngineerTier: 'Principal',
+    proposedAssignee: 'engineer-principal',
+  });
+  assert.equal(principalReady.canDispatch, true);
+  assert.equal(principalReady.principalReview.satisfied, true);
+});
+
+test('failure-loop policy returns failing work to the implementing engineer before Principal escalation triggers', () => {
+  const initialFailure = evaluateExecutionContractDispatchPolicy({
+    contract: { task_id: 'TSK-106-FAIL', template_tier: 'Standard', risk_flags: [] },
+    implementingEngineerTier: 'Sr',
+    implementingAssignee: 'engineer-sr',
+  });
+  assert.equal(initialFailure.failureLoop.returnToImplementingEngineerFirst, true);
+  assert.equal(initialFailure.failureLoop.principalEscalationRequired, false);
+  assert.deepEqual(initialFailure.failureLoop.escalationChain, ['qa', 'engineer']);
+
+  const repeatedFailure = evaluateExecutionContractDispatchPolicy({
+    contract: { task_id: 'TSK-106-FAIL', template_tier: 'Standard', risk_flags: [] },
+    implementingEngineerTier: 'Sr',
+    implementingAssignee: 'engineer-sr',
+    failureContext: { priorFailedQaCount: 1 },
+  });
+  assert.equal(repeatedFailure.failureLoop.returnToImplementingEngineerFirst, true);
+  assert.equal(repeatedFailure.failureLoop.principalEscalationRequired, true);
+  assert.deepEqual(repeatedFailure.failureLoop.escalationChain, ['qa', 'engineer', 'principalEngineer', 'pm']);
 });
 
 test('versions material changes to structured section payload and metadata', () => {

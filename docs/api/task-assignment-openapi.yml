@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Task Assignment API
-  version: 1.2.0
+  version: 1.3.0
   description: |
     API contract for assigning an AI agent owner to a task.
     The runtime accepts both `/tasks/...` and `/api/tasks/...` paths; `/tasks/...` is the canonical route shape used elsewhere in this repo.
@@ -14,6 +14,9 @@ info:
     their dedicated workflow endpoints and do not mutate assignment state directly.
     Human close decisions and dual-party close-review backtrack recommendations likewise remain on dedicated
     close-governance endpoints and do not mutate canonical assignment state directly.
+    Approved Execution Contract assignment to tier-specific engineer ids runs the risk-based dispatch policy.
+    Unsafe `engineer-jr` proposals are rejected when the contract lacks constrained Simple scope or a clear
+    failing/pending test plan; Principal-triggered work requires Principal review/involvement before dispatch.
 paths:
   /tasks/{taskId}/assignment:
     patch:
@@ -39,8 +42,8 @@ paths:
                 agentId:
                   type: string
                   nullable: true
-                  description: Unique identifier of the active AI agent to assign. Use `null` or an empty string to clear assignment.
-                  example: qa
+                  description: Unique identifier of the active AI agent to assign. Use `null` or an empty string to clear assignment. Tier-specific engineer ids include `engineer-jr`, `engineer-sr`, and `engineer-principal`.
+                  example: engineer-sr
                 actorType:
                   type: string
                   description: Optional actor type override for the generated audit event.
@@ -127,6 +130,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StandardErrorResponse'
+        '409':
+          description: Assignment conflicts with the approved Execution Contract dispatch policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+              examples:
+                jrWithoutTestPlan:
+                  value:
+                    error:
+                      code: dispatch_policy_blocked
+                      message: Jr Engineer dispatch requires a clear failing or pending test plan.
+                      request_id: req-example
+                      requestId: req-example
+                      details:
+                        recommended_engineer_tier: Sr
+                        recommended_assignee: engineer-sr
+                        blocking_reasons:
+                          - code: jr_requires_clear_test_plan
+                            detail: Jr Engineer dispatch requires a clear failing or pending test plan.
+                        dispatch_readiness:
+                          dispatchPolicy:
+                            policy_version: execution-contract-dispatch-policy.v1
+                            selectedEngineerTier: Sr
+                            selectedAssignee: engineer-sr
         '503':
           description: Assignment feature flag disabled or kill switch enabled
           content:

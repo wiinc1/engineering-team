@@ -294,6 +294,8 @@ test('e2e: PM generates a versioned Execution Contract, Markdown, verification s
     const verificationReport = await response.json();
     assert.equal(verificationReport.data.path, 'docs/reports/TSK-105-generate-verification-report-skeletons-from-approved-execution-contracts-verification.md');
     assert.equal(verificationReport.data.dispatchGate.canDispatch, true);
+    assert.equal(verificationReport.data.dispatchGate.dispatchPolicy.selectedEngineerTier, 'Sr');
+    assert.equal(verificationReport.data.dispatchGate.dispatchPolicy.qaDispatch.parallelAllowed, true);
     assert.match(verificationReport.data.verificationReport.content, /E2E completed Complex-tier section 4/);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/artifacts`, {
@@ -352,6 +354,7 @@ test('e2e: PM generates a versioned Execution Contract, Markdown, verification s
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_markdown_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_approved'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_verification_report_generated'));
+    assert.ok(history.items.some((event) => event.payload?.dispatch_gate?.dispatchPolicy?.selectedEngineerTier === 'Sr'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
     assert.ok(history.items.some((event) => event.event_type === 'task.stage_changed'));

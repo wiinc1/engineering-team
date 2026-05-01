@@ -151,6 +151,8 @@ test('e2e: Execution Contract generation does not make Intake Draft assignment m
       body: JSON.stringify({ agentId: 'engineer' }),
     });
     assert.equal(response.status, 400);
-    assert.equal((await response.json()).error.code, 'workflow_violation');
+    const assignmentError = await response.json();
+    assert.equal(assignmentError.error.code, 'workflow_violation');
+    assert.match(assignmentError.error.message, /Intake Drafts must remain assigned to PM/);
   });
 });

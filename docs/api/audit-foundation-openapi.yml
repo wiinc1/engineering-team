@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Dispatch readiness also includes `execution-contract-dispatch-policy.v1`, which selects Jr, Sr, or Principal Engineer from tier, risk, and contract signals; blocks unsafe Jr assignments without a clear test plan; requires Principal review/involvement for Principal triggers; and exposes QA parallel-dispatch eligibility. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested.
 components:
   securitySchemes:
     BearerAuth:
@@ -309,6 +309,10 @@ components:
               items:
                 type: object
                 additionalProperties: true
+        dispatch_signals:
+          type: object
+          additionalProperties: true
+          description: Contract-level dispatch hints such as `workCategory`, `clearTestPlan`, `proposedEngineerTier`, `qaCoverageApplicable`, and explicit Principal escalation triggers. These signals are material contract inputs.
         committed_scope:
           type: object
           required: [commitment_status, committed_requirements, out_of_scope, deferred_considerations, follow_up_tasks, exclusion_policy]
@@ -391,9 +395,60 @@ components:
         commit_policy:
           type: object
           additionalProperties: true
+    ExecutionContractDispatchPolicy:
+      type: object
+      required: [policy_version, status, canDispatch, selectedEngineerTier, selectedAssignee, selectionReasons, blockingReasons, contractSignals, principalReview, qaDispatch, failureLoop, metricsPolicy]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-dispatch-policy.v1] }
+        status: { type: string, enum: [ready, blocked] }
+        canDispatch: { type: boolean }
+        selectedEngineerTier: { type: string, enum: [Jr, Sr, Principal] }
+        selectedAssignee:
+          type: string
+          enum: [engineer-jr, engineer-sr, engineer-principal]
+        proposedEngineerTier:
+          type: [string, 'null']
+          enum: [Jr, Sr, Principal, null]
+        proposedAssignee:
+          type: [string, 'null']
+        rerouted:
+          type: boolean
+          description: True when a proposed tier differs from the policy-selected tier.
+        selectionReasons:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        blockingReasons:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        contractSignals:
+          type: object
+          additionalProperties: true
+          description: Normalized template tier, risk flags, work category, test-plan clarity, QA applicability, and Principal triggers used by the policy.
+        principalReview:
+          type: object
+          additionalProperties: true
+        qaDispatch:
+          type: object
+          additionalProperties: true
+          description: Indicates whether QA coverage work can run in parallel with Sr implementation.
+        escalationPaths:
+          type: object
+          additionalProperties: true
+        failureLoop:
+          type: object
+          additionalProperties: true
+          description: Failing implementation work returns to the implementing Engineer first unless repeated-failure, unclear-root-cause, high-risk-regression, or contract-defect triggers require Principal escalation.
+        metricsPolicy:
+          type: object
+          additionalProperties: true
+          description: Quality/intervention outcome metrics used for tier measurement; excludes lines of code and raw task count.
     ExecutionContractDispatchReadiness:
       type: object
-      required: [policy_version, skeletonRequired, canDispatch, missingRequiredArtifacts, riskFlags, reason]
+      required: [policy_version, skeletonRequired, canDispatch, missingRequiredArtifacts, riskFlags, blockedReasons, dispatchPolicy, reason]
       properties:
         policy_version: { type: string, enum: [execution-contract-verification-report-skeleton.v1] }
         skeletonRequired: { type: boolean }
@@ -404,6 +459,13 @@ components:
         riskFlags:
           type: array
           items: { type: string }
+        blockedReasons:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        dispatchPolicy:
+          $ref: '#/components/schemas/ExecutionContractDispatchPolicy'
         reason: { type: string }
     ExecutionContractVerificationReport:
       type: object
@@ -451,6 +513,7 @@ components:
         dispatch_gate:
           type: object
           additionalProperties: true
+          description: Dispatch gate snapshot including skeleton state, selected engineer tier, selected engineer assignee, QA parallel eligibility, and the embedded dispatch policy.
     ExecutionContractProjection:
       type: object
       required: [active, latest, latestVersion, versions, validation, approval, markdown, artifacts, verificationReport, dispatchReadiness]
@@ -520,6 +583,10 @@ components:
               - type: string
               - type: object
                 additionalProperties: true
+        dispatchSignals:
+          type: object
+          description: Optional dispatch-policy hints. `workCategory` may be `tests`, `fixtures`, `docs`, `clear_refactor`, or `feature`; `clearTestPlan` marks a clear failing/pending test plan; `proposedEngineerTier` may be `Jr`, `Sr`, or `Principal`; `qaCoverageApplicable` controls Standard-plus QA parallel eligibility.
+          additionalProperties: true
         reviewers:
           type: object
           description: Reviewer status and optional model judgment. Deterministic rules are applied first; stricter model-required reviewers remain required unless PM provides an operator-visible downgrade rationale.
