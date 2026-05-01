@@ -50,12 +50,25 @@ function githubSignature(secret, body) {
 }
 
 const EXECUTION_CONTRACT_STANDARD_SECTIONS = ['1', '2', '3', '4', '6', '7', '10', '11', '12', '15', '16', '17'];
+const EXECUTION_CONTRACT_SIMPLE_SECTIONS = ['1', '2', '4', '11', '12', '15', '16', '17'];
 
 function standardExecutionContractSections() {
   return Object.fromEntries(EXECUTION_CONTRACT_STANDARD_SECTIONS.map((sectionId) => [
     sectionId,
     `Security completed Standard section ${sectionId}.`,
   ]));
+}
+
+function simpleExecutionContractSections() {
+  return {
+    ...Object.fromEntries(EXECUTION_CONTRACT_SIMPLE_SECTIONS.map((sectionId) => [
+      sectionId,
+      `Security completed Simple section ${sectionId}.`,
+    ])),
+    2: 'Given risk flags exist, when auto-approval policy runs, then explicit Operator Approval is still required.',
+    11: 'Rollback by reverting the change or disabling the low-risk Simple auto-approval policy.',
+    17: 'Operator handoff records policy, rationale, and timestamp.',
+  };
 }
 
 // Governance note: audit-facing route changes should keep security coverage updated in the same change set.
@@ -768,6 +781,60 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     const body = await response.json();
     assert.equal(body.error.code, 'execution_contract_approval_blocked');
     assert.deepEqual(body.error.details.missing_required_approvals.map((item) => item.role), ['qa', 'sre']);
+  });
+});
+
+test('fails closed when policy auto-approval is requested for risk-bearing Simple contracts', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'operator', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm', 'reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        raw_requirements: 'Auto approval must fail closed for risk-bearing Simple work.',
+        title: 'Risk-bearing Simple auto approval',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        riskFlags: ['deployment'],
+        sections: simpleExecutionContractSections(),
+        reviewers: {
+          qa: { status: 'approved', actorId: 'qa-sec' },
+          sre: { status: 'approved', actorId: 'sre-sec' },
+        },
+        autoApprovalSignals: {
+          productionSensitivePaths: ['Production auth callback configuration.'],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({ autoApproval: true }),
+    });
+    assert.equal(response.status, 409);
+    const body = await response.json();
+    assert.equal(body.error.code, 'execution_contract_auto_approval_blocked');
+    assert.ok(body.error.details.blocking_reasons.some((reason) => reason.code === 'risk_flags_require_operator_approval'));
+    assert.ok(body.error.details.blocking_reasons.some((reason) => reason.code === 'production_auth_security_data_model_path_present'));
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: pmAuth,
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.ok(!history.items.some((event) => event.event_type === 'task.execution_contract_approved'));
   });
 });
 

@@ -30,6 +30,14 @@ const taskDetailPayload = {
     technicalSpec: 'Server-rendered technical spec',
     monitoringSpec: 'Server-rendered monitoring spec',
     executionContract: {
+      approval: {
+        autoApproval: {
+          approved_by_policy: true,
+          policy_version: 'execution-contract-low-risk-simple-auto-approval.v1',
+          rationale: 'Browser smoke policy approved low-risk Simple work.',
+          approved_at: '2026-05-01T13:00:00.000Z',
+        },
+      },
       artifacts: {
         links: [
           { rel: 'generated_user_story', label: 'Generated user story', path: 'docs/user-stories/TSK-104-artifact-generation.md' },
@@ -234,6 +242,10 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'docs/reports/TSK-104-artifact-generation-verification.md' })).toBeVisible();
     await expect(page.getByText('[TSK-104] Artifact generation')).toBeVisible();
+    await expect(page.getByText('Auto-approval policy')).toBeVisible();
+    await expect(page.getByText('execution-contract-low-risk-simple-auto-approval.v1')).toBeVisible();
+    await expect(page.getByText('Browser smoke policy approved low-risk Simple work.')).toBeVisible();
+    await expect(page.getByText('2026-05-01T13:00:00.000Z')).toBeVisible();
   });
 
   test('switches task activity tabs into the mobile two-column pattern and preserves usable controls', async ({ page }) => {

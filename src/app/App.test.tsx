@@ -710,6 +710,14 @@ describe('Task browser runtime coverage', () => {
       detailOverride: {
         context: {
           executionContract: {
+            approval: {
+              autoApproval: {
+                approved_by_policy: true,
+                policy_version: 'execution-contract-low-risk-simple-auto-approval.v1',
+                rationale: 'Policy approved this low-risk Simple contract.',
+                approved_at: '2026-05-01T13:00:00.000Z',
+              },
+            },
             artifacts: {
               links: [
                 { rel: 'generated_user_story', label: 'Generated user story', path: 'docs/user-stories/TSK-104-artifact-generation.md' },
@@ -735,6 +743,10 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'docs/reports/TSK-104-artifact-generation-verification.md' })).toBeInTheDocument();
     expect(screen.getByText('[TSK-104] Artifact generation')).toBeInTheDocument();
+    expect(screen.getByText('Auto-approval policy')).toBeInTheDocument();
+    expect(screen.getByText('execution-contract-low-risk-simple-auto-approval.v1')).toBeInTheDocument();
+    expect(screen.getByText('Policy approved this low-risk Simple contract.')).toBeInTheDocument();
+    expect(screen.getByText('2026-05-01T13:00:00.000Z')).toBeInTheDocument();
   });
 
   it('redirects protected routes to sign-in when no browser session exists', async () => {

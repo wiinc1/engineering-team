@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Dispatch readiness also includes `execution-contract-dispatch-policy.v1`, which selects Jr, Sr, or Principal Engineer from tier, risk, and contract signals; blocks unsafe Jr assignments without a clear test plan; requires Principal review/involvement for Principal triggers; and exposes QA parallel-dispatch eligibility. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Low-risk Simple contracts may request `autoApproval`, which records Operator Approval by `execution-contract-low-risk-simple-auto-approval.v1` only when acceptance criteria are complete, no risk flags or unresolved dependencies exist, no production auth/security/data-model paths are present, and rollback is clear; blocked policy requests return `execution_contract_auto_approval_blocked` and still require explicit Operator Approval. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Dispatch readiness also includes `execution-contract-dispatch-policy.v1`, which selects Jr, Sr, or Principal Engineer from tier, risk, and contract signals; blocks unsafe Jr assignments without a clear test plan; requires Principal review/involvement for Principal triggers; and exposes QA parallel-dispatch eligibility. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested. `feature_operator_trusted_autonomous_delivery_rate` measures auto-approved contracts that later close successfully.
 components:
   securitySchemes:
     BearerAuth:
@@ -254,6 +254,43 @@ components:
           items:
             type: object
             additionalProperties: true
+    ExecutionContractAutoApprovalPolicy:
+      type: object
+      required: [policy_version, status, canAutoApprove, operatorApprovalRequired, rationale, criteria, blockingReasons, metricsPolicy]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-low-risk-simple-auto-approval.v1] }
+        status: { type: string, enum: [ready, blocked] }
+        canAutoApprove: { type: boolean }
+        operatorApprovalRequired: { type: boolean }
+        rationale: { type: string }
+        criteria:
+          type: object
+          additionalProperties: true
+          description: Evaluated Simple-tier, acceptance-criteria, risk-flag, dependency, sensitive-path, rollback, and reviewer-gate criteria.
+        blockingReasons:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        metricsPolicy:
+          type: object
+          additionalProperties: true
+    ExecutionContractAutoApprovalRecord:
+      type: object
+      required: [policy_version, approved_by_policy, approval_mode, approved_at, rationale, criteria, metrics_policy]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-low-risk-simple-auto-approval.v1] }
+        approved_by_policy: { type: boolean, enum: [true] }
+        approval_mode: { type: string, enum: [policy] }
+        approved_at: { type: string, format: date-time }
+        recorded_by: { type: [string, 'null'] }
+        rationale: { type: string }
+        criteria:
+          type: object
+          additionalProperties: true
+        metrics_policy:
+          type: object
+          additionalProperties: true
     ExecutionContract:
       type: object
       required: [contract_id, task_id, version, tier, status, template_tier, template_source, owner, authoritative, source_intake_revision, required_sections, sections, risk_flags, reviewer_routing, reviewers, review_feedback, committed_scope, validation]
@@ -313,6 +350,17 @@ components:
           type: object
           additionalProperties: true
           description: Contract-level dispatch hints such as `workCategory`, `clearTestPlan`, `proposedEngineerTier`, `qaCoverageApplicable`, and explicit Principal escalation triggers. These signals are material contract inputs.
+        auto_approval_signals:
+          type: object
+          additionalProperties: true
+          description: Material auto-approval evidence such as rollback path, unresolved dependency declarations, and production-sensitive path declarations.
+        approval_mode:
+          type: [string, 'null']
+          enum: [explicit, policy, null]
+        auto_approval:
+          oneOf:
+            - $ref: '#/components/schemas/ExecutionContractAutoApprovalRecord'
+            - type: 'null'
         committed_scope:
           type: object
           required: [commitment_status, committed_requirements, out_of_scope, deferred_considerations, follow_up_tasks, exclusion_policy]
@@ -539,6 +587,13 @@ components:
             version: { type: integer }
             approvedAt: { type: [string, 'null'], format: date-time }
             approvedBy: { type: [string, 'null'] }
+            approvalMode:
+              type: [string, 'null']
+              enum: [explicit, policy, null]
+            autoApproval:
+              oneOf:
+                - $ref: '#/components/schemas/ExecutionContractAutoApprovalRecord'
+                - type: 'null'
             committedScope:
               type: object
               additionalProperties: true
@@ -890,7 +945,7 @@ paths:
     post:
       summary: Approve the latest valid Execution Contract without dispatching implementation
       description: |
-        Records `task.execution_contract_approved`, marks the latest valid contract as approved, and freezes its `committed_scope.committed_requirements` as future implementation scope. Approval is blocked unless deterministic reviewer routing has all required role approvals recorded and all blocking questions are resolved. Non-blocking comments are returned in `approvalSummary.nonBlockingComments` without blocking approval. `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain explicitly excluded unless promoted through a new approved contract version or a new Intake Draft.
+        Records `task.execution_contract_approved`, marks the latest valid contract as approved, and freezes its `committed_scope.committed_requirements` as future implementation scope. Approval is blocked unless deterministic reviewer routing has all required role approvals recorded and all blocking questions are resolved. Non-blocking comments are returned in `approvalSummary.nonBlockingComments` without blocking approval. `out_of_scope`, `deferred_considerations`, and `follow_up_tasks` remain explicitly excluded unless promoted through a new approved contract version or a new Intake Draft. When `autoApproval` is requested, `execution-contract-low-risk-simple-auto-approval.v1` may record Operator Approval by policy only for low-risk Simple contracts; blocked policy attempts return `execution_contract_auto_approval_blocked` and require explicit Operator Approval.
       parameters:
         - name: id
           in: path
@@ -904,6 +959,12 @@ paths:
               type: object
               properties:
                 approvalNote: { type: string }
+                autoApproval:
+                  type: boolean
+                  description: Request policy-based Operator Approval for a low-risk Simple contract.
+                autoApprovalRationale:
+                  type: string
+                  description: Optional operator-visible rationale recorded with the policy approval.
                 idempotencyKey: { type: string }
       responses:
         '201':
@@ -929,6 +990,12 @@ paths:
                         additionalProperties: true
                       approvalSummary:
                         $ref: '#/components/schemas/ExecutionContractApprovalSummary'
+                      autoApproval:
+                        oneOf:
+                          - $ref: '#/components/schemas/ExecutionContractAutoApprovalRecord'
+                          - type: 'null'
+                      autoApprovalPolicy:
+                        $ref: '#/components/schemas/ExecutionContractAutoApprovalPolicy'
                       approvedAt: { type: string, format: date-time }
                       approvedBy: { type: string }
         '401':
@@ -936,7 +1003,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          description: Latest contract is missing required sections, required reviewer approvals are missing, or unresolved blocking questions remain. Approval-gate failures use `execution_contract_approval_blocked` and include `approval_summary`, `missing_required_approvals`, and `unresolved_blocking_questions`.
+          description: Latest contract is missing required sections, required reviewer approvals are missing, unresolved blocking questions remain, or requested policy auto-approval is not eligible. Approval-gate failures use `execution_contract_approval_blocked` and include `approval_summary`, `missing_required_approvals`, and `unresolved_blocking_questions`; policy failures use `execution_contract_auto_approval_blocked` and include `auto_approval_policy`, `blocking_reasons`, and `explicit_operator_approval_required`.
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/execution-contract/verification-report:
