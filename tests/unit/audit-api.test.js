@@ -988,6 +988,12 @@ test('auto-approves low-risk Simple contracts by policy and counts trusted auton
           unresolvedDependencies: [],
           productionSensitivePaths: [],
         },
+        scopeBoundaries: {
+          committedRequirements: [
+            { id: 'AUTO-107-1', text: 'Policy approval can be recorded by policy with rationale.', sourceSectionId: '2' },
+            { id: 'AUTO-107-2', text: 'Auto-approved work updates trusted autonomous delivery metrics after successful close.', sourceSectionId: '2' },
+          ],
+        },
       }),
     });
     assert.equal(response.status, 201);
@@ -1031,29 +1037,167 @@ test('auto-approves low-risk Simple contracts by policy and counts trusted auton
     assert.match(body.data.generatedArtifacts.user_story.content, /Policy approved this low-risk Simple contract/);
     assert.match(body.data.generatedArtifacts.refinement_decision_log.content, /Operator Approval was recorded by execution-contract-low-risk-simple-auto-approval\.v1/);
 
-    for (const [fromStage, toStage] of [['DRAFT', 'BACKLOG'], ['BACKLOG', 'IN_PROGRESS'], ['IN_PROGRESS', 'VERIFY']]) {
-      response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...authHeaders(secret, { sub: 'engineer-107', roles: ['contributor'] }),
-        },
-        body: JSON.stringify({
-          eventType: 'task.stage_changed',
-          actorType: 'agent',
-          idempotencyKey: `stage:${created.taskId}:${fromStage}:${toStage}`,
-          payload: { from_stage: fromStage, to_stage: toStage },
-        }),
-      });
-      assert.equal(response.status, 202);
-    }
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-107', roles: ['engineer', 'contributor'] }),
+    };
+    const qaHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'qa-107', roles: ['qa', 'contributor'] }),
+    };
+    const sreHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'sre-107', roles: ['sre', 'contributor'] }),
+    };
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...authHeaders(secret, { sub: 'engineer-107', roles: ['contributor'] }),
-      },
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:DRAFT:BACKLOG`,
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'engineer-sr' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:BACKLOG:IN_PROGRESS`,
+        payload: { from_stage: 'BACKLOG', to_stage: 'IN_PROGRESS' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'abc1234' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/contract-coverage-audit`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        rows: [
+          {
+            requirementId: 'AUTO-107-1',
+            status: 'covered',
+            implementationEvidence: ['commit abc1234'],
+            verificationEvidence: ['node --test tests/unit/audit-api.test.js'],
+          },
+          {
+            requirementId: 'AUTO-107-2',
+            status: 'covered',
+            implementationEvidence: ['commit abc1234'],
+            verificationEvidence: ['node --test tests/unit/audit-api.test.js'],
+          },
+        ],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:IN_PROGRESS:CONTRACT_COVERAGE_AUDIT`,
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'CONTRACT_COVERAGE_AUDIT' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/contract-coverage-audit/validate`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.gateClosed, true);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:CONTRACT_COVERAGE_AUDIT:QA_TESTING`,
+        payload: { from_stage: 'CONTRACT_COVERAGE_AUDIT', to_stage: 'QA_TESTING' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/qa-results`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        outcome: 'pass',
+        summary: 'Coverage gate verified before QA.',
+        scenarios: ['Auto-approved Simple contract closes through QA.'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.github_pr_synced',
+        actorType: 'agent',
+        idempotencyKey: `pr:${created.taskId}:merged`,
+        payload: {
+          pr_number: 125,
+          pr_title: 'Issue 107 merged implementation',
+          state: 'closed',
+          pr_state: 'merged',
+          pr_merged: true,
+          pr_repository: 'wiinc1/engineering-team',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/sre-monitoring/start`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        deploymentEnvironment: 'staging',
+        deploymentUrl: 'https://example.com/issue-107',
+        deploymentVersion: 'abc1234',
+        evidence: ['Merged PR and stable rollout.'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/sre-monitoring/approve`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        reason: 'Telemetry remained stable.',
+        evidence: ['No errors during monitoring window.'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
       body: JSON.stringify({
         eventType: 'task.closed',
         actorType: 'agent',
@@ -1138,6 +1282,328 @@ test('blocks policy auto-approval for risk flags while preserving explicit Opera
     const metrics = await response.text();
     assert.match(metrics, /feature_execution_contract_auto_approval_blocked_total 1/);
     assert.match(metrics, /feature_execution_contract_auto_approvals_total 0/);
+  });
+});
+
+test('requires and validates Contract Coverage Audit before QA Verification and closeout', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'operator-108', roles: ['contributor'] }),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-108', roles: ['pm', 'reader'] }),
+    };
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-108', roles: ['engineer', 'contributor'] }),
+    };
+    const qaHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'qa-108', roles: ['qa', 'contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-108',
+        payload: {
+          title: 'Contract Coverage Audit gate',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Require coverage audit between implementation and QA.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        sections: {
+          ...executionContractSections('Standard', ' for Contract Coverage Audit'),
+          4: 'Automated unit, API, and browser evidence must map to every committed row.',
+          12: 'Coverage outcomes feed autonomy-confidence signals.',
+        },
+        scopeBoundaries: {
+          committedRequirements: [
+            { id: 'CCA-108-1', text: 'Engineer submits an initial coverage matrix before QA.', sourceSectionId: '2' },
+            { id: 'CCA-108-2', text: 'QA validates implementation and verification evidence for every row.', sourceSectionId: '4' },
+            { id: 'CCA-108-3', text: 'Autonomy confidence records the coverage outcome.', sourceSectionId: '12' },
+          ],
+          deferredConsiderations: [
+            'Deferred Consideration queue remains out of committed scope.',
+          ],
+        },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-108' },
+          ux: { status: 'approved', actorId: 'ux-108' },
+          qa: { status: 'approved', actorId: 'qa-108' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Approved for implementation with coverage audit gate.' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/execution-contract/verification-report`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        displayId: 'TSK-108',
+        title: 'Implement Contract Coverage Audit gate for all task tiers',
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: 'stage:TSK-108:DRAFT:BACKLOG',
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'engineer-sr' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'stage:TSK-108:BACKLOG:IN_PROGRESS',
+        payload: { from_stage: 'BACKLOG', to_stage: 'IN_PROGRESS' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'abc1080' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'stage:TSK-108:IN_PROGRESS:QA_TESTING:blocked',
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'QA_TESTING' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    let body = await response.json();
+    assert.equal(body.error.code, 'workflow_violation');
+    assert.match(body.error.message, /Contract Coverage Audit/i);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/contract-coverage-audit`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        rows: [
+          {
+            requirementId: 'CCA-108-1',
+            status: 'covered',
+            implementationEvidence: ['commit abc1080'],
+            verificationEvidence: ['node --test tests/unit/audit-api.test.js'],
+          },
+          {
+            requirementId: 'CCA-108-2',
+            status: 'covered',
+            implementationEvidence: ['commit abc1080'],
+            verificationEvidence: [{ label: 'Manual QA reviewed the diff', kind: 'manual' }],
+          },
+          {
+            requirementId: 'CCA-108-3',
+            status: 'not_applicable',
+            notApplicableRationale: 'No confidence metric emitted yet for this failed attempt.',
+          },
+        ],
+      }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.implementationAttempt, 1);
+    assert.equal(body.data.rows.length, 3);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'stage:TSK-108:IN_PROGRESS:CONTRACT_COVERAGE_AUDIT',
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'CONTRACT_COVERAGE_AUDIT' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/contract-coverage-audit/validate`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'implementation_incomplete');
+    assert.equal(body.data.gateClosed, false);
+    assert.ok(body.data.blockingExceptions.some((exception) => exception.exception_type === 'implementation_incomplete'));
+    assert.equal(body.data.autonomyConfidenceSignal.outcome, 'negative');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/state`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.current_stage, 'IMPLEMENTATION');
+    assert.equal(body.waiting_state, 'implementation_incomplete');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.closed',
+        actorType: 'user',
+        idempotencyKey: 'close:TSK-108:blocked',
+        payload: { reason: 'Attempt closeout before coverage is complete.' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    body = await response.json();
+    assert.equal(body.error.code, 'workflow_violation');
+    assert.match(body.error.message, /implementation|coverage|evidence/i);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'def1081' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/contract-coverage-audit`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        rows: [
+          {
+            requirementId: 'CCA-108-1',
+            status: 'covered',
+            implementationEvidence: ['commit def1081'],
+            verificationEvidence: ['node --test tests/unit/audit-api.test.js'],
+          },
+          {
+            requirementId: 'CCA-108-2',
+            status: 'covered',
+            implementationEvidence: ['commit def1081'],
+            verificationEvidence: ['npm run test:unit'],
+          },
+          {
+            requirementId: 'CCA-108-3',
+            status: 'covered',
+            implementationEvidence: ['feature_contract_coverage_audits_closed_total metric'],
+            verificationEvidence: ['GET /metrics returned autonomy confidence counters'],
+          },
+        ],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'stage:TSK-108:IMPLEMENTATION:CONTRACT_COVERAGE_AUDIT:attempt2',
+        payload: { from_stage: 'IMPLEMENTATION', to_stage: 'CONTRACT_COVERAGE_AUDIT' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/contract-coverage-audit/validate`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'closed');
+    assert.equal(body.data.gateClosed, true);
+    assert.equal(body.data.canStartQaVerification, true);
+    assert.equal(body.data.autonomyConfidenceSignal.outcome, 'positive');
+    assert.equal(body.data.markdown.path, 'docs/reports/TSK-108-implement-contract-coverage-audit-gate-for-all-task-tiers-verification.md');
+    assert.match(body.data.markdown.content, /Contract Coverage Audit/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/events`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: 'stage:TSK-108:CONTRACT_COVERAGE_AUDIT:QA_TESTING',
+        payload: { from_stage: 'CONTRACT_COVERAGE_AUDIT', to_stage: 'QA_TESTING' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.context.executionContract.contractCoverageAudit.validation.status, 'closed');
+    assert.equal(body.context.executionContract.contractCoverageAudit.latest.implementation_attempt, 2);
+    assert.equal(body.context.executionContract.contractCoverageAudit.validation.markdown.path, 'docs/reports/TSK-108-implement-contract-coverage-audit-gate-for-all-task-tiers-verification.md');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/contract-coverage-audit`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.validation.status, 'closed');
+    assert.equal(body.data.audits.length, 2);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-108/contract-coverage-audit/markdown`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    assert.match((await response.json()).data.content, /CCA-108-2/);
+
+    response = await fetch(`${baseUrl}/metrics`, {
+      headers: authHeaders(secret, { roles: ['admin'] }),
+    });
+    assert.equal(response.status, 200);
+    const metrics = await response.text();
+    assert.match(metrics, /feature_contract_coverage_audits_submitted_total 2/);
+    assert.match(metrics, /feature_contract_coverage_audits_closed_total 1/);
+    assert.match(metrics, /feature_contract_coverage_implementation_incomplete_total 1/);
+    assert.match(metrics, /feature_autonomy_confidence_positive_signals_total 1/);
+    assert.match(metrics, /feature_autonomy_confidence_negative_signals_total 1/);
   });
 });
 

@@ -166,7 +166,8 @@
             "^docs/design/US-003-design\\.md$",
             "^docs/design/ISSUE-104-design\\.md$",
             "^docs/design/ISSUE-105-design\\.md$",
-            "^docs/design/ISSUE-107-design\\.md$"
+            "^docs/design/ISSUE-107-design\\.md$",
+            "^docs/design/ISSUE-108-design\\.md$"
           ]
         },
         {
@@ -184,7 +185,8 @@
             "^docs/design/US-003-design\\.md$",
             "^docs/design/ISSUE-104-design\\.md$",
             "^docs/design/ISSUE-105-design\\.md$",
-            "^docs/design/ISSUE-107-design\\.md$"
+            "^docs/design/ISSUE-107-design\\.md$",
+            "^docs/design/ISSUE-108-design\\.md$"
           ]
         }
       ]

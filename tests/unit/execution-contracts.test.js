@@ -6,14 +6,19 @@ const {
   approveExecutionContractArtifactBundle,
   buildExecutionContractAutoApprovalRecord,
   contractMarkdown,
+  contractCoverageRequirements,
+  createContractCoverageAudit,
   createExecutionContractDraft,
   createExecutionContractArtifactBundle,
   createExecutionContractVerificationReportSkeleton,
+  deriveContractCoverageAuditProjection,
+  evaluateContractCoverageAudit,
   evaluateExecutionContractApprovalReadiness,
   evaluateExecutionContractAutoApprovalPolicy,
   evaluateExecutionContractDispatchReadiness,
   evaluateExecutionContractDispatchPolicy,
   normalizeArtifactIdentity,
+  validateContractCoverageAudit,
   validateExecutionContract,
 } = require('../../lib/audit/execution-contracts');
 
@@ -1220,4 +1225,159 @@ test('honors artifact approval aliases and approval fallback policies', () => {
   assert.equal(pendingOperator.approval_summary.operatorApprovalRequired, true);
   assert.deepEqual(pendingOperator.approval_summary.operatorApprovalReasons, [{ code: 'scope_mismatch', detail: 'Scope mismatch.' }]);
   assert.deepEqual(pendingOperator.commit_policy.blocked_reasons, ['missing_operator_approval']);
+});
+
+test('builds Contract Coverage Audit rows only from committed scope and excludes Deferred Considerations', () => {
+  const { contract } = createExecutionContractDraft({
+    taskId: 'TSK-108',
+    summary: { title: 'Contract Coverage Audit', operator_intake_requirements: 'Add coverage gate.' },
+    body: {
+      templateTier: 'Simple',
+      sections: lowRiskSimpleSections(),
+      scopeBoundaries: {
+        committedRequirements: [
+          { id: 'REQ-108-1', text: 'Engineer submits a coverage matrix before QA.', sourceSectionId: '2' },
+          { id: 'REQ-108-2', text: 'QA validates automated evidence before QA Verification.', sourceSectionId: '2' },
+        ],
+        deferredConsiderations: [
+          'Deferred Consideration queue is tracked separately and is not committed scope.',
+        ],
+      },
+    },
+    actorId: 'pm-108',
+  });
+  contract.status = 'approved';
+  contract.committed_scope.commitment_status = 'committed';
+
+  const requirements = contractCoverageRequirements(contract);
+  assert.deepEqual(requirements.map((requirement) => requirement.id), ['REQ-108-1', 'REQ-108-2']);
+  assert.deepEqual(requirements.map((requirement) => requirement.coverage_area), ['acceptance_criteria', 'acceptance_criteria']);
+  assert.equal(requirements.some((requirement) => /Deferred Consideration/.test(requirement.text)), false);
+
+  const { audit, readiness } = createContractCoverageAudit({
+    taskId: 'TSK-108',
+    contract,
+    implementationAttempt: 1,
+    actorId: 'engineer-108',
+    body: {
+      rows: [
+        {
+          requirementId: 'REQ-108-1',
+          status: 'covered',
+          implementationEvidence: ['commit abc1234'],
+          verificationEvidence: ['node --test tests/unit/execution-contracts.test.js'],
+        },
+        {
+          requirementId: 'REQ-108-2',
+          status: 'covered',
+          implementationEvidence: ['commit abc1234'],
+          verificationEvidence: [{ label: 'Manual reviewer looked at the screen', kind: 'manual' }],
+        },
+      ],
+    },
+  });
+
+  assert.equal(audit.contract_version, 1);
+  assert.equal(audit.implementation_attempt, 1);
+  assert.equal(audit.rows.length, 2);
+  assert.equal(readiness.status, 'implementation_incomplete');
+  assert.ok(readiness.blocking_exceptions.some((exception) => exception.reason_code === 'manual_only_verification_evidence'));
+});
+
+test('validates Contract Coverage Audit closure, Markdown, and autonomy-confidence outcomes', () => {
+  const contract = {
+    task_id: 'TSK-108',
+    version: 2,
+    contract_id: 'EC-TSK-108-v2',
+    template_tier: 'Complex',
+    committed_scope: {
+      commitment_status: 'committed',
+      committed_requirements: [
+        { id: 'REQ-108-AC', text: 'Coverage rows map to acceptance criteria.', source_section_id: '2' },
+        { id: 'REQ-108-QA', text: 'QA validation has automated evidence.', source_section_id: '4' },
+        { id: 'REQ-108-OBS', text: 'Coverage outcome feeds autonomy confidence.', source_section_id: '12' },
+      ],
+      deferred_considerations: [
+        { id: 'DEF-108', text: 'Future Deferred Consideration queue.' },
+      ],
+    },
+  };
+  const { audit } = createContractCoverageAudit({
+    taskId: 'TSK-108',
+    contract,
+    implementationAttempt: 3,
+    body: {
+      rows: [
+        {
+          requirementId: 'REQ-108-AC',
+          status: 'covered',
+          implementationEvidence: ['commit feed123'],
+          verificationEvidence: ['npm run test:unit'],
+        },
+        {
+          requirementId: 'REQ-108-QA',
+          status: 'covered',
+          implementationEvidence: ['PR #128'],
+          verificationEvidence: ['npm run test:e2e'],
+        },
+        {
+          requirementId: 'REQ-108-OBS',
+          status: 'not_applicable',
+          notApplicableRationale: 'Autonomy metrics are emitted by existing audit metric plumbing.',
+        },
+      ],
+    },
+  });
+
+  const { validation } = validateContractCoverageAudit({
+    audit,
+    contract,
+    history: [
+      {
+        event_type: 'task.execution_contract_verification_report_generated',
+        payload: { verification_report: { path: 'docs/reports/TSK-108-contract-coverage-audit-verification.md' } },
+      },
+    ],
+    actorId: 'qa-108',
+  });
+
+  assert.equal(validation.status, 'closed');
+  assert.equal(validation.gate_closed, true);
+  assert.equal(validation.can_start_qa_verification, true);
+  assert.equal(validation.autonomy_confidence_signal.outcome, 'neutral');
+  assert.match(validation.markdown.content, /## Contract Coverage Audit/);
+  assert.match(validation.markdown.content, /REQ-108-OBS/);
+
+  const negative = evaluateContractCoverageAudit({
+    contract,
+    audit: {
+      ...audit,
+      rows: audit.rows.map((row) => row.requirement_id === 'REQ-108-QA'
+        ? { ...row, status: 'partial', verification_evidence: [] }
+        : row),
+    },
+  });
+  assert.equal(negative.status, 'implementation_incomplete');
+  assert.equal(negative.autonomy_confidence_signal.outcome, 'negative');
+
+  const projection = deriveContractCoverageAuditProjection([
+    {
+      event_type: 'task.contract_coverage_audit_submitted',
+      sequence_number: 1,
+      occurred_at: '2026-05-01T00:00:00.000Z',
+      actor_id: 'engineer-108',
+      payload: { coverage_audit: audit },
+    },
+    {
+      event_type: 'task.contract_coverage_audit_validated',
+      sequence_number: 2,
+      occurred_at: '2026-05-01T00:01:00.000Z',
+      actor_id: 'qa-108',
+      payload: { audit_id: audit.audit_id, validation },
+    },
+  ], contract);
+  assert.equal(projection.active, true);
+  assert.equal(projection.latest.status, 'closed');
+  assert.equal(projection.validation.status, 'closed');
+  assert.equal(projection.audits[0].implementationAttempt, 3);
 });

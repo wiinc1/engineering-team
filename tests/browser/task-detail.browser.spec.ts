@@ -52,6 +52,20 @@ const taskDetailPayload = {
           { rel: 'verification_report', label: 'Verification report skeleton', path: 'docs/reports/TSK-104-artifact-generation-verification.md' },
         ],
       },
+      contractCoverageAudit: {
+        active: true,
+        latest: { status: 'closed', implementation_attempt: 2 },
+        validation: {
+          status: 'closed',
+          summary: 'All committed requirements are covered or explicitly excepted with approved rationale.',
+          markdown: {
+            path: 'docs/reports/TSK-108-contract-coverage-audit-verification.md',
+          },
+        },
+        readiness: {
+          summary: 'All committed requirements are covered or explicitly excepted with approved rationale.',
+        },
+      },
     },
     closeGovernance: {
       active: true,
@@ -246,6 +260,8 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByText('execution-contract-low-risk-simple-auto-approval.v1')).toBeVisible();
     await expect(page.getByText('Browser smoke policy approved low-risk Simple work.')).toBeVisible();
     await expect(page.getByText('2026-05-01T13:00:00.000Z')).toBeVisible();
+    await expect(page.getByText('Contract Coverage Audit')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'docs/reports/TSK-108-contract-coverage-audit-verification.md' })).toBeVisible();
   });
 
   test('switches task activity tabs into the mobile two-column pattern and preserves usable controls', async ({ page }) => {

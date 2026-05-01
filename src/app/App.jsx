@@ -1292,6 +1292,9 @@ export function App() {
   const executionContractAutoApproval = model.kind === 'detail'
     ? (model.detail?.context?.executionContract?.approval?.autoApproval || model.detail?.context?.executionContract?.latest?.auto_approval || null)
     : null;
+  const contractCoverageAudit = model.kind === 'detail'
+    ? (model.detail?.context?.executionContract?.contractCoverageAudit || null)
+    : null;
   const architectReviewEnabled = model.kind === 'detail' && Boolean(model.detail?.reviewQuestions);
   const canAskQuestions = architectReviewEnabled && canAskReviewQuestion(tokenClaims) && model.detail?.task?.stage === 'ARCHITECT_REVIEW';
   const canAnswerQuestions = architectReviewEnabled && canAnswerReviewQuestion(tokenClaims);
@@ -4338,6 +4341,16 @@ export function App() {
                     </li>
                   ))}
                 </ul>
+              ) : null}
+              {contractCoverageAudit?.active ? (
+                <div className="review-question-note">
+                  <span>Contract Coverage Audit</span>
+                  <p>{contractCoverageAudit.validation?.status || contractCoverageAudit.latest?.status || 'submitted'}</p>
+                  <p>{contractCoverageAudit.readiness?.summary || contractCoverageAudit.validation?.summary}</p>
+                  {contractCoverageAudit.validation?.markdown?.path ? (
+                    <a href={`/${contractCoverageAudit.validation.markdown.path}`}>{contractCoverageAudit.validation.markdown.path}</a>
+                  ) : null}
+                </div>
               ) : null}
               {model.detail?.context?.executionContract?.artifacts?.pr_guidance ? (
                 <div className="review-question-note">

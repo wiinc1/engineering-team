@@ -732,6 +732,20 @@ describe('Task browser runtime coverage', () => {
                 { rel: 'verification_report', label: 'Verification report skeleton', path: 'docs/reports/TSK-104-artifact-generation-verification.md' },
               ],
             },
+            contractCoverageAudit: {
+              active: true,
+              latest: { status: 'closed', implementation_attempt: 2 },
+              validation: {
+                status: 'closed',
+                summary: 'All committed requirements are covered or explicitly excepted with approved rationale.',
+                markdown: {
+                  path: 'docs/reports/TSK-108-contract-coverage-audit-verification.md',
+                },
+              },
+              readiness: {
+                summary: 'All committed requirements are covered or explicitly excepted with approved rationale.',
+              },
+            },
           },
         },
       },
@@ -747,6 +761,8 @@ describe('Task browser runtime coverage', () => {
     expect(screen.getByText('execution-contract-low-risk-simple-auto-approval.v1')).toBeInTheDocument();
     expect(screen.getByText('Policy approved this low-risk Simple contract.')).toBeInTheDocument();
     expect(screen.getByText('2026-05-01T13:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByText('Contract Coverage Audit')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'docs/reports/TSK-108-contract-coverage-audit-verification.md' })).toBeInTheDocument();
   });
 
   it('redirects protected routes to sign-in when no browser session exists', async () => {

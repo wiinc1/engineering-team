@@ -764,6 +764,19 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     assert.equal(response.status, 403);
     assert.match(JSON.stringify(await response.json()), /verification report skeletons must use the dedicated generation endpoint/i);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.contract_coverage_audit_validated',
+        actorType: 'user',
+        idempotencyKey: `forbidden-contract-coverage:${created.taskId}`,
+        payload: { audit_id: 'CCA-BYPASS', validation: { status: 'closed' } },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /Contract Coverage Audit events must use the dedicated coverage endpoint/i);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
       headers: pmAuth,
     });
@@ -771,6 +784,7 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     const historyAfterRejectedArtifactBypass = await response.json();
     assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
     assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_verification_report_generated'));
+    assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.contract_coverage_audit_validated'));
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
       method: 'POST',

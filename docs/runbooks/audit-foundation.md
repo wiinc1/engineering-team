@@ -76,6 +76,7 @@ Audit HTTP maintenance note:
 - Tier-based reassignment may emit explicit assignee ids such as `engineer-sr` in workflow payloads and task-detail context so downstream consumers can tell when ownership changed materially.
 - Approved Execution Contracts now expose `executionContract.dispatchReadiness.dispatchPolicy`, which selects Jr, Sr, or Principal Engineer from template tier, risk flags, and contract dispatch signals. Standard-or-higher work defaults to Sr and can allow QA coverage work in parallel; unsafe Jr proposals are blocked unless the work is constrained Simple scope with a clear failing/pending test plan; Principal triggers require Principal approval/involvement before dispatch.
 - Low-risk Simple Execution Contracts may request `autoApproval=true` on the approval route. The `execution-contract-low-risk-simple-auto-approval.v1` policy records Operator Approval only when acceptance criteria are complete, dependencies are clear, no risk flags or production auth/security/data-model paths are present, rollback is clear, and reviewer gates are ready; Task detail and generated artifacts show the policy, rationale, and timestamp.
+- Contract Coverage Audit is a required post-implementation gate for approved Execution Contracts. Engineers submit `task.contract_coverage_audit_submitted` through `POST /tasks/{id}/contract-coverage-audit`, QA validates through `POST /tasks/{id}/contract-coverage-audit/validate`, `implementation_incomplete` blocks QA Verification and Operator Closeout, and Task detail exposes `executionContract.contractCoverageAudit`.
 - SRE monitoring expiry is now worker-driven: reads reflect the current state but no longer append escalation events when the window has expired.
 - SRE monitoring also exposes `POST /tasks/{id}/sre-monitoring/anomaly-child-task`, which creates a linked child task with machine-generated telemetry context, records the auto-`P0` rationale, and blocks the parent while leaving it readable/commentable.
 - The anomaly-child parent block is cleared automatically when the linked child reaches a resolved terminal state; generic `task.unblocked` event injection is not the supported path for this workflow.
@@ -275,6 +276,21 @@ Immediate action:
 19. Confirm Standard-or-higher and risk-bearing Simple tasks cannot enter implementation preparation before the skeleton event, while Simple no-risk tasks are allowed to proceed without one.
 Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract reads and mutations while preserving historical audit events.
 
+### Contract Coverage Audit gate
+Symptom: an approved-contract task has implementation complete and needs to move toward QA Verification.
+Immediate action:
+1. Confirm the task has the latest approved Execution Contract and a current `task.engineer_submission_recorded` implementation attempt.
+2. Have the implementing Engineer call `POST /tasks/{id}/contract-coverage-audit` with rows mapped to each committed requirement. Rows are versioned to the Execution Contract and implementation attempt. Deferred Considerations, out-of-scope notes, and follow-up tasks are excluded unless promoted into a new approved contract version.
+3. Move the task from `IMPLEMENTATION` or `IN_PROGRESS` to `CONTRACT_COVERAGE_AUDIT`. The workflow rejects this transition when the current implementation attempt has no submitted matrix.
+4. Have QA call `POST /tasks/{id}/contract-coverage-audit/validate`. QA must validate every row before QA Verification begins.
+5. Treat a covered row as sufficient only when it has both implementation evidence and verification evidence. Manual-only evidence, unmapped evidence, partial implementation, implementation without verification evidence, or verification without implementation evidence creates a blocking `implementation_incomplete` exception.
+6. For non-code or not-applicable rows, require explicit rationale. Approved not-applicable or scope exceptions are neutral autonomy-confidence signals; committed-requirement `implementation_incomplete` is negative; first-pass full coverage is positive.
+7. If validation returns `implementation_incomplete`, the workflow returns the task to `IMPLEMENTATION`. The Engineer must submit a new implementation attempt and a new coverage audit before QA can revalidate impacted and dependent rows.
+8. Only after QA validation returns `status=closed` may the task enter `QA_TESTING`. Operator Closeout is blocked until the latest coverage validation for the current implementation attempt is closed and no committed requirement remains uncovered.
+9. Read the generated Markdown through `GET /tasks/{id}/contract-coverage-audit/markdown`; the path points to the verification report under `docs/reports/`, but the structured Task audit remains authoritative.
+10. Confirm metrics include `feature_contract_coverage_audits_submitted_total`, `feature_contract_coverage_audits_closed_total`, `feature_contract_coverage_implementation_incomplete_total`, `feature_autonomy_confidence_positive_signals_total`, `feature_autonomy_confidence_neutral_signals_total`, `feature_autonomy_confidence_negative_signals_total`, and `feature_autonomy_confidence_signal_score`.
+Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract and coverage-audit reads and mutations while preserving historical audit events.
+
 ## Observability hooks
 Structured log fields emitted in this slice:
 - `feature`
@@ -302,6 +318,13 @@ Prometheus-style metrics exported include:
 - `outbox_checkpoint`
 - `last_write_duration_ms`
 - `last_history_query_duration_ms`
+- `feature_contract_coverage_audits_submitted_total`
+- `feature_contract_coverage_audits_closed_total`
+- `feature_contract_coverage_implementation_incomplete_total`
+- `feature_autonomy_confidence_positive_signals_total`
+- `feature_autonomy_confidence_neutral_signals_total`
+- `feature_autonomy_confidence_negative_signals_total`
+- `feature_autonomy_confidence_signal_score`
 
 ## Validation suites
 - Unit: `npm run test:unit`
