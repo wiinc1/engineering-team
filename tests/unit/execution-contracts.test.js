@@ -1,13 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  AUTO_APPROVAL_POLICY_VERSION,
   REQUIRED_SECTIONS_BY_TIER,
   approveExecutionContractArtifactBundle,
+  buildExecutionContractAutoApprovalRecord,
   contractMarkdown,
   createExecutionContractDraft,
   createExecutionContractArtifactBundle,
   createExecutionContractVerificationReportSkeleton,
   evaluateExecutionContractApprovalReadiness,
+  evaluateExecutionContractAutoApprovalPolicy,
   evaluateExecutionContractDispatchReadiness,
   evaluateExecutionContractDispatchPolicy,
   normalizeArtifactIdentity,
@@ -21,6 +24,22 @@ function sectionBodiesFor(tier, suffix = '') {
     sectionId,
     `Completed section ${sectionId}${suffix}.`,
   ]));
+}
+
+function lowRiskSimpleSections(suffix = '') {
+  return {
+    ...sectionBodiesFor('Simple', suffix),
+    2: [
+      'Given a low-risk Simple contract, when the policy evaluates it, then approval can be recorded by policy.',
+      'Given the work closes successfully, when metrics update, then autonomous delivery rate includes it.',
+    ].join('\n'),
+    4: 'Run focused unit coverage for the policy and API path before shipping.',
+    11: 'Rollback by reverting the policy change or disabling the low-risk Simple auto-approval feature flag.',
+    12: 'No production observability change is required; existing workflow metrics remain stable.',
+    15: 'Done when the policy result, Task detail, artifacts, and metrics are verified.',
+    16: 'Validate in staging with one Simple contract before rollout.',
+    17: 'Operator handoff includes the policy rationale and approval timestamp.',
+  };
 }
 
 test('validates required Execution Contract sections for every template tier', () => {
@@ -300,6 +319,97 @@ test('approval readiness blocks missing role approvals and unresolved blocking q
   readiness = evaluateExecutionContractApprovalReadiness(ready);
   assert.equal(readiness.canApprove, true);
   assert.deepEqual(readiness.nonBlockingComments.map((item) => item.id), ['c-1']);
+});
+
+test('allows policy auto-approval only for low-risk Simple Execution Contracts', () => {
+  const contract = createExecutionContractDraft({
+    taskId: 'TSK-107-SIMPLE',
+    summary: {
+      task_id: 'TSK-107-SIMPLE',
+      title: 'Low-risk Simple auto approval',
+      intake_draft: true,
+      operator_intake_requirements: 'Approve low-risk Simple work by policy.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-107-simple', payload: { intake_draft: true } }],
+    actorId: 'pm-107',
+    body: {
+      templateTier: 'Simple',
+      sections: lowRiskSimpleSections(),
+      autoApprovalSignals: {
+        unresolvedDependencies: [],
+        productionSensitivePaths: [],
+      },
+    },
+  }).contract;
+
+  const approvalSummary = evaluateExecutionContractApprovalReadiness(contract);
+  const policy = evaluateExecutionContractAutoApprovalPolicy({ contract, approvalSummary });
+  assert.equal(policy.policy_version, AUTO_APPROVAL_POLICY_VERSION);
+  assert.equal(policy.canAutoApprove, true);
+  assert.equal(policy.operatorApprovalRequired, false);
+  assert.equal(policy.criteria.templateTier, 'Simple');
+  assert.equal(policy.criteria.acceptanceCriteriaComplete, true);
+  assert.equal(policy.criteria.rollbackPathClear, true);
+
+  const record = buildExecutionContractAutoApprovalRecord({
+    policy,
+    approvedAt: '2026-05-01T12:00:00.000Z',
+    actorId: 'pm-107',
+    body: { autoApprovalRationale: 'Policy approved low-risk Simple work.' },
+  });
+  assert.equal(record.approved_by_policy, true);
+  assert.equal(record.policy_version, AUTO_APPROVAL_POLICY_VERSION);
+  assert.equal(record.approval_mode, 'policy');
+  assert.equal(record.rationale, 'Policy approved low-risk Simple work.');
+  assert.equal(record.approved_at, '2026-05-01T12:00:00.000Z');
+});
+
+test('blocks policy auto-approval when risk flags, dependencies, sensitive paths, or rollback gaps exist', () => {
+  const riskyContract = createExecutionContractDraft({
+    taskId: 'TSK-107-RISK',
+    summary: {
+      task_id: 'TSK-107-RISK',
+      title: 'Risk blocks auto approval',
+      intake_draft: true,
+      operator_intake_requirements: 'Risk flags require explicit Operator Approval.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-107-risk', payload: { intake_draft: true } }],
+    actorId: 'pm-107',
+    body: {
+      templateTier: 'Simple',
+      riskFlags: ['deployment'],
+      sections: lowRiskSimpleSections(' risk flagged'),
+      reviewers: {
+        sre: { status: 'approved', actorId: 'sre-107' },
+      },
+      autoApprovalSignals: {
+        unresolvedDependencies: ['Waiting on rollout owner.'],
+        productionSensitivePaths: ['Production auth callback config.'],
+      },
+    },
+  }).contract;
+
+  const riskyPolicy = evaluateExecutionContractAutoApprovalPolicy({
+    contract: riskyContract,
+    approvalSummary: evaluateExecutionContractApprovalReadiness(riskyContract),
+  });
+  assert.equal(riskyPolicy.canAutoApprove, false);
+  assert.equal(riskyPolicy.operatorApprovalRequired, true);
+  assert.ok(riskyPolicy.blockingReasons.some((reason) => reason.code === 'risk_flags_require_operator_approval'));
+  assert.ok(riskyPolicy.blockingReasons.some((reason) => reason.code === 'unresolved_dependencies_present'));
+  assert.ok(riskyPolicy.blockingReasons.some((reason) => reason.code === 'production_auth_security_data_model_path_present'));
+
+  const missingRollbackContract = {
+    ...riskyContract,
+    risk_flags: [],
+    auto_approval_signals: { unresolved_dependencies: [], production_sensitive_paths: [], rollback_path: 'Ship with normal rollout notes.' },
+  };
+  const missingRollbackPolicy = evaluateExecutionContractAutoApprovalPolicy({
+    contract: missingRollbackContract,
+    approvalSummary: { canApprove: true, missingRequiredApprovals: [], unresolvedBlockingQuestions: [] },
+  });
+  assert.equal(missingRollbackPolicy.canAutoApprove, false);
+  assert.ok(missingRollbackPolicy.blockingReasons.some((reason) => reason.code === 'clear_rollback_path_required'));
 });
 
 test('evaluates risk-based engineer tier dispatch policy with explainable routing and QA parallelism', () => {
@@ -727,6 +837,56 @@ test('generates a reviewable repo artifact bundle with display-ID paths, approva
   assert.equal(approved.commit_policy.approved_by, 'pm-1');
   assert.equal(approved.commit_policy.commit_allowed, true);
   assert.deepEqual(approved.commit_policy.blocked_reasons, []);
+});
+
+test('generated repo artifacts expose policy auto-approval rationale', () => {
+  const contract = createExecutionContractDraft({
+    taskId: 'TSK-107',
+    summary: {
+      task_id: 'TSK-107',
+      title: 'Low-risk Simple auto approval',
+      intake_draft: true,
+      operator_intake_requirements: 'Make policy auto-approval visible in generated artifacts.',
+    },
+    history: [{ event_type: 'task.created', event_id: 'evt-107-artifacts', payload: { intake_draft: true } }],
+    actorId: 'pm-107',
+    body: {
+      templateTier: 'Simple',
+      sections: lowRiskSimpleSections(' artifacts'),
+    },
+  }).contract;
+  const policy = evaluateExecutionContractAutoApprovalPolicy({
+    contract,
+    approvalSummary: evaluateExecutionContractApprovalReadiness(contract),
+  });
+  const autoApproval = buildExecutionContractAutoApprovalRecord({
+    policy,
+    approvedAt: '2026-05-01T13:00:00.000Z',
+    actorId: 'pm-107',
+    body: {},
+  });
+  const approvedContract = { ...contract, status: 'approved', auto_approval: autoApproval };
+
+  const bundle = createExecutionContractArtifactBundle({
+    taskId: 'TSK-107',
+    contract: approvedContract,
+    history: [
+      { event_type: 'task.execution_contract_version_recorded', sequence_number: 1, payload: { version: 1, contract } },
+      { event_type: 'task.execution_contract_approved', sequence_number: 2, payload: { version: 1, auto_approval: autoApproval } },
+    ],
+    actorId: 'pm-107',
+    generatedAt: '2026-05-01T13:05:00.000Z',
+    approvalSummary: { nonBlockingComments: [] },
+    body: {
+      displayId: 'TSK-107',
+      title: 'Implement Low-Risk Simple Task Auto-Approval Policy',
+    },
+  });
+
+  assert.match(bundle.generated_artifacts.user_story.content, /## Auto-Approval Policy/);
+  assert.match(bundle.generated_artifacts.user_story.content, new RegExp(AUTO_APPROVAL_POLICY_VERSION));
+  assert.match(bundle.generated_artifacts.user_story.content, /Approved At: 2026-05-01T13:00:00.000Z/);
+  assert.match(bundle.generated_artifacts.refinement_decision_log.content, /Operator Approval was recorded by execution-contract-low-risk-simple-auto-approval\.v1/);
 });
 
 test('generates verification report skeletons from approved contract evidence and evaluates dispatch readiness', () => {

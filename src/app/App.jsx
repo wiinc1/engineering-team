@@ -1289,6 +1289,9 @@ export function App() {
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
   const isGovernanceOverview = model.kind === 'list' ? Boolean(model.list.isGovernanceOverview) : false;
   const detailPermissions = model.kind === 'detail' ? (model.detail?.meta?.permissions || {}) : {};
+  const executionContractAutoApproval = model.kind === 'detail'
+    ? (model.detail?.context?.executionContract?.approval?.autoApproval || model.detail?.context?.executionContract?.latest?.auto_approval || null)
+    : null;
   const architectReviewEnabled = model.kind === 'detail' && Boolean(model.detail?.reviewQuestions);
   const canAskQuestions = architectReviewEnabled && canAskReviewQuestion(tokenClaims) && model.detail?.task?.stage === 'ARCHITECT_REVIEW';
   const canAnswerQuestions = architectReviewEnabled && canAnswerReviewQuestion(tokenClaims);
@@ -4340,6 +4343,14 @@ export function App() {
                 <div className="review-question-note">
                   <span>PR guidance</span>
                   <p>{model.detail.context.executionContract.artifacts.pr_guidance.title}</p>
+                </div>
+              ) : null}
+              {executionContractAutoApproval?.approved_by_policy ? (
+                <div className="review-question-note">
+                  <span>Auto-approval policy</span>
+                  <p>{executionContractAutoApproval.policy_version}</p>
+                  <p>{executionContractAutoApproval.rationale}</p>
+                  <p>{executionContractAutoApproval.approved_at || executionContractAutoApproval.approvedAt}</p>
                 </div>
               ) : null}
               {model.detail?.relations?.parentTask ? (

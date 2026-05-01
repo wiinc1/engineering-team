@@ -82,6 +82,22 @@ function executionContractSections(tier, suffix = '') {
   ]));
 }
 
+function lowRiskSimpleExecutionContractSections(suffix = '') {
+  return {
+    ...executionContractSections('Simple', suffix),
+    2: [
+      'Given a Simple Execution Contract meets all low-risk criteria, when auto-approval policy runs, then Operator Approval can be recorded by policy with rationale.',
+      'Given auto-approved work closes successfully, when metrics update, then operator-trusted autonomous delivery rate includes it.',
+    ].join('\n'),
+    4: 'Run unit, API, browser, contract, e2e, and security checks for the policy path.',
+    11: 'Rollback by reverting the policy change or disabling low-risk Simple auto-approval at the workflow layer.',
+    12: 'No production observability change is required beyond workflow metrics emitted by this policy.',
+    15: 'Done when policy approval, Task detail, generated artifacts, and metrics are verified.',
+    16: 'Validate with one staging Simple contract before broad rollout.',
+    17: 'Operator handoff includes policy, rationale, and timestamp.',
+  };
+}
+
 test('enforces bearer-token auth context and isolates reads by tenant claim', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const unauthorized = await fetch(`${baseUrl}/tasks/TSK-200/history`);
@@ -939,6 +955,189 @@ test('generates and approves Execution Contract repo artifact bundles before com
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
     assert.ok(!history.items.some((event) => /github_issue/i.test(event.event_type)));
+  });
+});
+
+test('auto-approves low-risk Simple contracts by policy and counts trusted autonomous delivery', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Auto-approve low-risk Simple work when all policy criteria pass.',
+        title: 'Low-risk Simple auto approval',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-107', roles: ['pm', 'reader'] }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: lowRiskSimpleExecutionContractSections(),
+        autoApprovalSignals: {
+          unresolvedDependencies: [],
+          productionSensitivePaths: [],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        autoApproval: true,
+        autoApprovalRationale: 'Policy approved this low-risk Simple contract.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.status, 'approved');
+    assert.equal(body.data.autoApproval.approved_by_policy, true);
+    assert.equal(body.data.autoApproval.policy_version, 'execution-contract-low-risk-simple-auto-approval.v1');
+    assert.equal(body.data.autoApproval.rationale, 'Policy approved this low-risk Simple contract.');
+    assert.equal(body.data.autoApprovalPolicy.canAutoApprove, true);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.executionContract.latest.auto_approval.rationale, 'Policy approved this low-risk Simple contract.');
+    assert.equal(detail.context.executionContract.approval.autoApproval.policy_version, 'execution-contract-low-risk-simple-auto-approval.v1');
+    assert.ok(detail.context.executionContract.approval.autoApproval.approved_at);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/artifacts`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        displayId: 'TSK-107',
+        title: 'Implement Low-Risk Simple Task Auto-Approval Policy',
+      }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.match(body.data.generatedArtifacts.user_story.content, /## Auto-Approval Policy/);
+    assert.match(body.data.generatedArtifacts.user_story.content, /Policy approved this low-risk Simple contract/);
+    assert.match(body.data.generatedArtifacts.refinement_decision_log.content, /Operator Approval was recorded by execution-contract-low-risk-simple-auto-approval\.v1/);
+
+    for (const [fromStage, toStage] of [['DRAFT', 'BACKLOG'], ['BACKLOG', 'IN_PROGRESS'], ['IN_PROGRESS', 'VERIFY']]) {
+      response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...authHeaders(secret, { sub: 'engineer-107', roles: ['contributor'] }),
+        },
+        body: JSON.stringify({
+          eventType: 'task.stage_changed',
+          actorType: 'agent',
+          idempotencyKey: `stage:${created.taskId}:${fromStage}:${toStage}`,
+          payload: { from_stage: fromStage, to_stage: toStage },
+        }),
+      });
+      assert.equal(response.status, 202);
+    }
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'engineer-107', roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.closed',
+        actorType: 'agent',
+        idempotencyKey: `close:${created.taskId}:auto-approved`,
+        payload: { reason: 'Auto-approved work closed successfully.' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/metrics`, {
+      headers: authHeaders(secret, { roles: ['admin'] }),
+    });
+    assert.equal(response.status, 200);
+    const metrics = await response.text();
+    assert.match(metrics, /feature_execution_contract_auto_approvals_total 1/);
+    assert.match(metrics, /feature_operator_trusted_autonomous_deliveries_total 1/);
+    assert.match(metrics, /feature_operator_trusted_autonomous_delivery_rate 1/);
+  });
+});
+
+test('blocks policy auto-approval for risk flags while preserving explicit Operator Approval', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Risk flags must not be auto-approved by policy.',
+        title: 'Risk-flagged Simple approval',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-107-risk', roles: ['pm', 'reader'] }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        riskFlags: ['deployment'],
+        sections: lowRiskSimpleExecutionContractSections(' risk flag'),
+        reviewers: {
+          qa: { status: 'approved', actorId: 'qa-107' },
+          sre: { status: 'approved', actorId: 'sre-107' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ autoApproval: true }),
+    });
+    assert.equal(response.status, 409);
+    let body = await response.json();
+    assert.equal(body.error.code, 'execution_contract_auto_approval_blocked');
+    assert.equal(body.error.details.explicit_operator_approval_required, true);
+    assert.ok(body.error.details.blocking_reasons.some((reason) => reason.code === 'risk_flags_require_operator_approval'));
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Explicit Operator Approval for risk-flagged Simple work.' }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'approved');
+    assert.equal(body.data.autoApproval, null);
+    assert.equal(body.data.approvalSummary.canApprove, true);
+
+    response = await fetch(`${baseUrl}/metrics`, {
+      headers: authHeaders(secret, { roles: ['admin'] }),
+    });
+    assert.equal(response.status, 200);
+    const metrics = await response.text();
+    assert.match(metrics, /feature_execution_contract_auto_approval_blocked_total 1/);
+    assert.match(metrics, /feature_execution_contract_auto_approvals_total 0/);
   });
 });
 

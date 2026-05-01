@@ -22,12 +22,26 @@ function authHeaders(secret, roles, overrides = {}) {
 }
 
 const EXECUTION_CONTRACT_COMPLEX_SECTIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '15', '16', '17'];
+const EXECUTION_CONTRACT_SIMPLE_SECTIONS = ['1', '2', '4', '11', '12', '15', '16', '17'];
 
 function complexExecutionContractSections() {
   return Object.fromEntries(EXECUTION_CONTRACT_COMPLEX_SECTIONS.map((sectionId) => [
     sectionId,
     `E2E completed Complex-tier section ${sectionId}.`,
   ]));
+}
+
+function lowRiskSimpleExecutionContractSections() {
+  return {
+    ...Object.fromEntries(EXECUTION_CONTRACT_SIMPLE_SECTIONS.map((sectionId) => [
+      sectionId,
+      `E2E completed Simple-tier section ${sectionId}.`,
+    ])),
+    2: 'Given a low-risk Simple contract, when the auto-approval policy runs, then Operator Approval is recorded by policy with rationale.',
+    11: 'Rollback by reverting the auto-approval policy change or disabling the low-risk Simple policy.',
+    12: 'No production observability changes are required beyond the workflow metrics.',
+    17: 'Operator handoff includes policy, rationale, and timestamp.',
+  };
 }
 
 async function withServer(run, options = {}) {
@@ -359,6 +373,93 @@ test('e2e: PM generates a versioned Execution Contract, Markdown, verification s
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
     assert.ok(history.items.some((event) => event.event_type === 'task.stage_changed'));
     assert.ok(!history.items.some((event) => event.event_type === 'task.engineer_submission_recorded'));
+  });
+});
+
+test('e2e: low-risk Simple Execution Contracts can be auto-approved by policy', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['contributor']),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['pm', 'reader'], { sub: 'pm-e2e-auto' }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        raw_requirements: 'E2E low-risk Simple contract can be approved by policy.',
+        title: 'E2E low-risk Simple policy',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: lowRiskSimpleExecutionContractSections(),
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        autoApproval: true,
+        autoApprovalRationale: 'E2E policy accepted low-risk Simple work.',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const approved = await response.json();
+    assert.equal(approved.data.autoApproval.approved_by_policy, true);
+    assert.equal(approved.data.autoApproval.policy_version, 'execution-contract-low-risk-simple-auto-approval.v1');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.executionContract.approval.autoApproval.rationale, 'E2E policy accepted low-risk Simple work.');
+
+    for (const [fromStage, toStage] of [['DRAFT', 'BACKLOG'], ['BACKLOG', 'IN_PROGRESS'], ['IN_PROGRESS', 'VERIFY']]) {
+      response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+        method: 'POST',
+        headers: contributorHeaders,
+        body: JSON.stringify({
+          eventType: 'task.stage_changed',
+          actorType: 'agent',
+          idempotencyKey: `stage:${created.taskId}:${fromStage}:${toStage}`,
+          payload: { from_stage: fromStage, to_stage: toStage },
+        }),
+      });
+      assert.equal(response.status, 202);
+    }
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.closed',
+        actorType: 'agent',
+        idempotencyKey: `close:${created.taskId}:auto-approval-e2e`,
+        payload: { reason: 'Auto-approved work completed.' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/metrics`, {
+      headers: authHeaders(secret, ['admin']),
+    });
+    assert.equal(response.status, 200);
+    const metrics = await response.text();
+    assert.match(metrics, /feature_operator_trusted_autonomous_delivery_rate 1/);
   });
 });
 
