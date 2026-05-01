@@ -502,6 +502,177 @@ test('blocks Execution Contract approval on missing required approvals and unres
   });
 });
 
+test('generates verification report skeletons before Standard dispatch while Simple no-risk dispatch remains optional', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-105/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { roles: ['contributor'] }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-105',
+        payload: {
+          title: 'Verification skeleton dispatch gate',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Generate verification report skeletons before implementation preparation.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'pm-105', roles: ['pm', 'reader'] }),
+    };
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { sub: 'engineer-105', roles: ['contributor'] }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Standard',
+        sections: {
+          ...executionContractSections('Standard', ' for verification report skeletons'),
+          4: { body: 'Unit, API, e2e, browser, and governance checks must be recorded.', ownerRole: 'qa', approvalStatus: 'approved' },
+          8: { body: 'Direct skeleton event writes must be rejected by the API.', ownerRole: 'principalEngineer', approvalStatus: 'approved' },
+          11: { body: 'Ship only after the skeleton gate and checks pass.', ownerRole: 'sre', approvalStatus: 'approved' },
+          12: { body: 'Workflow audit history must record skeleton generation.', ownerRole: 'sre', approvalStatus: 'approved' },
+          16: { body: 'Production validation checks the task detail report link.', ownerRole: 'sre', approvalStatus: 'approved' },
+          17: { body: 'Operator review covers skeleton generation, not final evidence filling.', ownerRole: 'pm', approvalStatus: 'approved' },
+        },
+        reviewers: {
+          architect: { status: 'approved', actorId: 'architect-105' },
+          ux: { status: 'approved', actorId: 'ux-105' },
+          qa: { status: 'approved', actorId: 'qa-105' },
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.validation.status, 'valid');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Approved Standard contract requires a verification report skeleton before dispatch.' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: 'stage:TSK-105:backlog:blocked',
+        payload: { to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    body = await response.json();
+    assert.equal(body.error.code, 'workflow_violation');
+    assert.match(body.error.message, /verification report skeleton exists/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/execution-contract/verification-report`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        title: 'Generate verification report skeletons from approved Execution Contracts',
+      }),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.reportId, 'VR-TSK-105-v1');
+    assert.equal(body.data.required, true);
+    assert.equal(body.data.path, 'docs/reports/TSK-105-generate-verification-report-skeletons-from-approved-execution-contracts-verification.md');
+    assert.equal(body.data.dispatchGate.canDispatch, true);
+    assert.match(body.data.verificationReport.content, /Direct skeleton event writes must be rejected by the API/);
+    assert.match(body.data.verificationReport.content, /Production validation checks the task detail report link/);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/execution-contract/verification-report`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.data.path, 'docs/reports/TSK-105-generate-verification-report-skeletons-from-approved-execution-contracts-verification.md');
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: 'stage:TSK-105:backlog:allowed',
+        payload: { to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.context.executionContract.verificationReport.report_id, 'VR-TSK-105-v1');
+    assert.equal(body.context.executionContract.dispatchReadiness.canDispatch, true);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105-SIMPLE/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'user',
+        idempotencyKey: 'create:TSK-105-SIMPLE',
+        payload: {
+          title: 'Simple optional skeleton',
+          initial_stage: 'DRAFT',
+          intake_draft: true,
+          raw_requirements: 'Simple task has no risk flags and does not require a verification report skeleton.',
+          assignee: 'pm',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105-SIMPLE/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: executionContractSections('Simple', ' for optional skeleton dispatch'),
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105-SIMPLE/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Simple no-risk task does not require a skeleton before dispatch.' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-105-SIMPLE/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: 'stage:TSK-105-SIMPLE:backlog:allowed',
+        payload: { to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+  });
+});
+
 test('generates and approves Execution Contract repo artifact bundles before commit readiness', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks/TSK-104/events`, {

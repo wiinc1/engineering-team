@@ -6,7 +6,9 @@ const {
   contractMarkdown,
   createExecutionContractDraft,
   createExecutionContractArtifactBundle,
+  createExecutionContractVerificationReportSkeleton,
   evaluateExecutionContractApprovalReadiness,
+  evaluateExecutionContractDispatchReadiness,
   normalizeArtifactIdentity,
   validateExecutionContract,
 } = require('../../lib/audit/execution-contracts');
@@ -535,6 +537,78 @@ test('generates a reviewable repo artifact bundle with display-ID paths, approva
   assert.equal(approved.commit_policy.approved_by, 'pm-1');
   assert.equal(approved.commit_policy.commit_allowed, true);
   assert.deepEqual(approved.commit_policy.blocked_reasons, []);
+});
+
+test('generates verification report skeletons from approved contract evidence and evaluates dispatch readiness', () => {
+  const contract = {
+    task_id: 'opaque-internal-105',
+    version: 2,
+    contract_id: 'EC-opaque-internal-105-v2',
+    template_tier: 'Standard',
+    risk_flags: [{ id: 'deployment' }],
+    sections: {
+      2: { title: 'Acceptance Criteria', body: 'Given an approved Standard contract, then a report skeleton is generated.' },
+      4: { title: 'Automated Test Deliverables', body: 'Run unit, API, e2e, browser, and governance checks.' },
+      8: { title: 'Security & Compliance', body: 'Reject direct event writes that bypass the dedicated report endpoint.' },
+      11: { title: 'Deployment & Release Strategy', body: 'Ship only after the skeleton event exists and checks pass.' },
+      12: { title: 'Monitoring & Observability', body: 'Record workflow audit events for skeleton generation.' },
+      15: { title: 'Definition of Done', body: 'Dispatch is blocked until required skeleton evidence exists.' },
+      16: { title: 'Production Validation Strategy', body: 'Validate the generated report link in task detail.' },
+      17: { title: 'Compliance & Handoff', body: 'Operator review confirms skeleton scope only.' },
+    },
+  };
+
+  const beforeReport = evaluateExecutionContractDispatchReadiness({ contract });
+  assert.equal(beforeReport.skeletonRequired, true);
+  assert.equal(beforeReport.canDispatch, false);
+  assert.deepEqual(beforeReport.missingRequiredArtifacts, ['verification_report_skeleton']);
+
+  const report = createExecutionContractVerificationReportSkeleton({
+    taskId: 'opaque-internal-105',
+    contract,
+    actorId: 'pm-105',
+    generatedAt: '2026-04-30T20:00:00.000Z',
+    body: {
+      displayId: 'TSK-105',
+      title: 'Generate verification report skeletons from approved Execution Contracts',
+    },
+  });
+
+  assert.equal(report.policy_version, 'execution-contract-verification-report-skeleton.v1');
+  assert.equal(report.report_id, 'VR-TSK-105-v2');
+  assert.equal(report.display_id, 'TSK-105');
+  assert.equal(report.contract_version, 2);
+  assert.equal(report.required, true);
+  assert.equal(report.path, 'docs/reports/TSK-105-generate-verification-report-skeletons-from-approved-execution-contracts-verification.md');
+  assert.equal(report.required_evidence.test, 'Run unit, API, e2e, browser, and governance checks.');
+  assert.match(report.content, /## Required Evidence From Approved Contract/);
+  assert.match(report.content, /### Test Evidence/);
+  assert.match(report.content, /Reject direct event writes that bypass the dedicated report endpoint/);
+  assert.match(report.content, /Validate the generated report link in task detail/);
+
+  const afterReport = evaluateExecutionContractDispatchReadiness({ contract, verificationReport: report });
+  assert.equal(afterReport.skeletonRequired, true);
+  assert.equal(afterReport.canDispatch, true);
+  assert.deepEqual(afterReport.missingRequiredArtifacts, []);
+
+  const simpleNoRisk = {
+    task_id: 'TSK-SIMPLE',
+    version: 1,
+    template_tier: 'Simple',
+    risk_flags: [],
+    sections: {},
+  };
+  const optional = evaluateExecutionContractDispatchReadiness({ contract: simpleNoRisk });
+  assert.equal(optional.skeletonRequired, false);
+  assert.equal(optional.canDispatch, true);
+
+  const simpleWithRisk = {
+    ...simpleNoRisk,
+    risk_flags: ['security'],
+  };
+  const riskBearing = evaluateExecutionContractDispatchReadiness({ contract: simpleWithRisk });
+  assert.equal(riskBearing.skeletonRequired, true);
+  assert.equal(riskBearing.canDispatch, false);
 });
 
 test('keeps non-production artifact names collision-safe and requires operator approval for exception triggers', () => {

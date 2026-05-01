@@ -164,7 +164,8 @@
           "patterns": [
             "^docs/design/US-002-design\\.md$",
             "^docs/design/US-003-design\\.md$",
-            "^docs/design/ISSUE-104-design\\.md$"
+            "^docs/design/ISSUE-104-design\\.md$",
+            "^docs/design/ISSUE-105-design\\.md$"
           ]
         },
         {
@@ -180,7 +181,8 @@
             "^docs/runbooks/production-identity-provider\\.md$",
             "^docs/design/ISSUE-89-design\\.md$",
             "^docs/design/US-003-design\\.md$",
-            "^docs/design/ISSUE-104-design\\.md$"
+            "^docs/design/ISSUE-104-design\\.md$",
+            "^docs/design/ISSUE-105-design\\.md$"
           ]
         }
       ]

@@ -11,7 +11,7 @@ info:
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.
     Expired monitoring escalations are materialized by background worker processing (`processExpiredSreMonitoring`) rather than read-side mutation.
     `POST /tasks` now accepts raw operator intake requirements and records `task.refinement_requested` to route Intake Drafts to Product Manager refinement without claiming implementation has started. Incomplete intake creation records `task.intake_creation_failed` when a compensating audit event can be written.
-    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested.
+    Execution Contract refinement is additive behind `ff_execution_contracts`: `POST /tasks/{id}/execution-contract` records structured, versioned `task.execution_contract_version_recorded` Task data from an Intake Draft; validation records `task.execution_contract_validated`; Markdown generation records `task.execution_contract_markdown_generated` as a non-authoritative view; approval records `task.execution_contract_approved` only after deterministic reviewer routing, required role approvals, and blocking-question gates pass, then commits only the structured `committed_scope.committed_requirements`. Verification report skeleton generation records `task.execution_contract_verification_report_generated` under `docs/reports/` from approved-contract evidence; Standard-or-higher contracts and Simple contracts with risk flags block implementation dispatch until the skeleton exists, while Simple contracts without risk flags keep the skeleton optional. Repo artifact generation then records `task.execution_contract_artifact_bundle_generated` as a reviewable bundle with display-ID user-story and Refinement Decision Log paths; commit readiness requires `task.execution_contract_artifact_bundle_approved`, otherwise `artifact_bundle_approval_blocked` reports missing PM, section-owner, or exception-triggered operator approvals. GitHub issue creation is default-off unless explicitly requested.
 components:
   securitySchemes:
     BearerAuth:
@@ -391,9 +391,69 @@ components:
         commit_policy:
           type: object
           additionalProperties: true
+    ExecutionContractDispatchReadiness:
+      type: object
+      required: [policy_version, skeletonRequired, canDispatch, missingRequiredArtifacts, riskFlags, reason]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-verification-report-skeleton.v1] }
+        skeletonRequired: { type: boolean }
+        canDispatch: { type: boolean }
+        missingRequiredArtifacts:
+          type: array
+          items: { type: string }
+        riskFlags:
+          type: array
+          items: { type: string }
+        reason: { type: string }
+    ExecutionContractVerificationReport:
+      type: object
+      required: [policy_version, report_id, display_id, environment, slug, contract_version, required, status, generated_at, path, content, required_evidence, links, dispatch_gate]
+      properties:
+        policy_version: { type: string, enum: [execution-contract-verification-report-skeleton.v1] }
+        report_id: { type: string }
+        task_id: { type: string }
+        source_task_id: { type: string }
+        display_id:
+          type: string
+          description: Production skeletons use `TSK-123` display IDs so the generated path lands under `docs/reports/{display-id}-{slug}-verification.md`.
+        environment: { type: string, enum: [production, staging, local] }
+        slug: { type: string }
+        title: { type: string }
+        contract_id: { type: [string, 'null'] }
+        contract_version: { type: integer }
+        required: { type: boolean }
+        required_reason: { type: string }
+        status: { type: string, enum: [generated] }
+        generated_at: { type: string, format: date-time }
+        generated_by: { type: [string, 'null'] }
+        path: { type: string }
+        content: { type: string }
+        required_evidence:
+          type: object
+          required: [acceptance_criteria, test, security, sre, rollout, operator_customer_review, definition_of_done]
+          properties:
+            acceptance_criteria: { type: string }
+            test: { type: string }
+            security: { type: string }
+            sre: { type: string }
+            rollout: { type: string }
+            operator_customer_review: { type: string }
+            definition_of_done: { type: string }
+        links:
+          type: array
+          items:
+            type: object
+            required: [rel, label, path]
+            properties:
+              rel: { type: string }
+              label: { type: string }
+              path: { type: string }
+        dispatch_gate:
+          type: object
+          additionalProperties: true
     ExecutionContractProjection:
       type: object
-      required: [active, latest, latestVersion, versions, validation, approval, markdown, artifacts]
+      required: [active, latest, latestVersion, versions, validation, approval, markdown, artifacts, verificationReport, dispatchReadiness]
       properties:
         active: { type: boolean }
         latest:
@@ -433,6 +493,12 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ExecutionContractArtifactBundle'
             - type: 'null'
+        verificationReport:
+          oneOf:
+            - $ref: '#/components/schemas/ExecutionContractVerificationReport'
+            - type: 'null'
+        dispatchReadiness:
+          $ref: '#/components/schemas/ExecutionContractDispatchReadiness'
     ExecutionContractUpsertRequest:
       type: object
       required: [templateTier]
@@ -605,6 +671,8 @@ paths:
   /tasks/{id}/events:
     post:
       summary: Append a workflow audit event
+      description: |
+        Generic event writes reject dedicated Execution Contract lifecycle events that must run route-specific gates, including `task.execution_contract_approved`, `task.execution_contract_verification_report_generated`, `task.execution_contract_artifact_bundle_generated`, and `task.execution_contract_artifact_bundle_approved`.
       parameters:
         - name: id
           in: path
@@ -802,6 +870,93 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           description: Latest contract is missing required sections, required reviewer approvals are missing, or unresolved blocking questions remain. Approval-gate failures use `execution_contract_approval_blocked` and include `approval_summary`, `missing_required_approvals`, and `unresolved_blocking_questions`.
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/execution-contract/verification-report:
+    get:
+      summary: Read the latest generated Execution Contract verification report skeleton
+      description: |
+        Returns the generated `docs/reports/` skeleton for the latest approved Execution Contract version. The skeleton contains required evidence copied from the approved contract but does not fill final implementation evidence.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Generated verification report skeleton
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean }
+                  data:
+                    $ref: '#/components/schemas/ExecutionContractVerificationReport'
+        '404':
+          description: No verification report skeleton exists for the latest version.
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+    post:
+      summary: Generate a verification report skeleton from the approved Execution Contract
+      description: |
+        PM/admin-only mutation. Records `task.execution_contract_verification_report_generated` after the latest Execution Contract is approved. The generated skeleton path is `docs/reports/{display-id}-{slug}-verification.md` and includes required evidence from approved contract sections for acceptance criteria, tests, security, SRE, rollout, operator/customer review, and Definition of Done. Implementation dispatch is blocked for Standard, Complex, Epic, and risk-bearing Simple contracts until this event exists. Simple contracts without risk flags may dispatch without a skeleton.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayId: { type: string }
+                environment: { type: string, enum: [production, staging, local] }
+                title: { type: string }
+                slug: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        '201':
+          description: Verification report skeleton generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    required: [taskId, version, reportId, status, path, required, requiredEvidence, links, dispatchGate, verificationReport, generatedAt]
+                    properties:
+                      taskId: { type: string }
+                      version: { type: integer }
+                      reportId: { type: string }
+                      status: { type: string, enum: [generated] }
+                      path: { type: string }
+                      required: { type: boolean }
+                      requiredEvidence:
+                        type: object
+                        additionalProperties: true
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: true
+                      dispatchGate:
+                        type: object
+                        additionalProperties: true
+                      verificationReport:
+                        $ref: '#/components/schemas/ExecutionContractVerificationReport'
+                      generatedAt: { type: string, format: date-time }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Latest contract is not approved or the display ID would collide with production report naming rules.
         '503':
           $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/execution-contract/artifacts:

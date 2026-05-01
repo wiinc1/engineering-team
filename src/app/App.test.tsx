@@ -719,6 +719,11 @@ describe('Task browser runtime coverage', () => {
                 title: '[TSK-104] Artifact generation',
               },
             },
+            verificationReport: {
+              links: [
+                { rel: 'verification_report', label: 'Verification report skeleton', path: 'docs/reports/TSK-104-artifact-generation-verification.md' },
+              ],
+            },
           },
         },
       },
@@ -728,6 +733,7 @@ describe('Task browser runtime coverage', () => {
     await screen.findByRole('heading', { name: 'Wire task detail' });
     expect(screen.getByRole('link', { name: 'docs/user-stories/TSK-104-artifact-generation.md' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'docs/reports/TSK-104-artifact-generation-verification.md' })).toBeInTheDocument();
     expect(screen.getByText('[TSK-104] Artifact generation')).toBeInTheDocument();
   });
 
