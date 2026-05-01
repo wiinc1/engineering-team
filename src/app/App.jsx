@@ -4326,6 +4326,16 @@ export function App() {
                   ))}
                 </ul>
               ) : null}
+              {model.detail?.context?.executionContract?.verificationReport?.links?.length ? (
+                <ul className="detail-bullets">
+                  {model.detail.context.executionContract.verificationReport.links.map((reportLink) => (
+                    <li key={reportLink.rel || reportLink.path}>
+                      <strong>{reportLink.label}</strong>
+                      <a href={`/${reportLink.path}`}>{reportLink.path}</a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {model.detail?.context?.executionContract?.artifacts?.pr_guidance ? (
                 <div className="review-question-note">
                   <span>PR guidance</span>

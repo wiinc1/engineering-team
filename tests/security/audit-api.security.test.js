@@ -738,12 +738,26 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     assert.equal(response.status, 403);
     assert.match(JSON.stringify(await response.json()), /artifact-bundle approval must use the dedicated approval endpoint/i);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.execution_contract_verification_report_generated',
+        actorType: 'user',
+        idempotencyKey: `forbidden-verification-report:${created.taskId}`,
+        payload: { version: 1, report_id: 'VR-TSK-1-v1', verification_report: { status: 'generated' } },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /verification report skeletons must use the dedicated generation endpoint/i);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
       headers: pmAuth,
     });
     assert.equal(response.status, 200);
     const historyAfterRejectedArtifactBypass = await response.json();
     assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
+    assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_verification_report_generated'));
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
       method: 'POST',

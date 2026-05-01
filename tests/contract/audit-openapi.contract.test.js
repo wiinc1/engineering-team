@@ -77,6 +77,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/execution-contract/validate:',
     '/tasks/{id}/execution-contract/markdown:',
     '/tasks/{id}/execution-contract/approve:',
+    '/tasks/{id}/execution-contract/verification-report:',
     '/tasks/{id}/execution-contract/artifacts:',
     '/tasks/{id}/execution-contract/artifacts/approve:',
     '/tasks/{id}/close-review/exceptional-dispute:',
@@ -116,6 +117,11 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'approvalSummary',
     'execution_contract_approval_blocked',
     'artifact_bundle_approval_blocked',
+    'task.execution_contract_verification_report_generated',
+    'ExecutionContractVerificationReport',
+    'ExecutionContractDispatchReadiness',
+    'dispatchReadiness',
+    'verificationReport',
     'task.execution_contract_artifact_bundle_generated',
     'task.execution_contract_artifact_bundle_approved',
     'required_role_approvals',
@@ -345,6 +351,29 @@ test('documented endpoints satisfy the runtime contract', async () => {
     });
     assert.equal(response.status, 201);
     assert.equal((await response.json()).data.committedScope.commitment_status, 'committed');
+
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract/verification-report`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+      },
+      body: JSON.stringify({
+        displayId: 'TSK-105',
+        title: 'Generate verification report skeletons from approved Execution Contracts',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const report = await response.json();
+    assert.equal(report.data.reportId, 'VR-TSK-105-v1');
+    assert.equal(report.data.dispatchGate.canDispatch, true);
+    assert.match(report.data.path, /^docs\/reports\/TSK-105-/);
+
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract/verification-report`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.report_id, 'VR-TSK-105-v1');
 
     response = await fetch(`${baseUrl}/tasks/TSK-CONTRACT-ANOM/events`, {
       method: 'POST',

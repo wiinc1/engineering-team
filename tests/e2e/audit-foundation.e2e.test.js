@@ -168,7 +168,7 @@ test('e2e: raw operator requirements create a draft routed only to PM refinement
   });
 });
 
-test('e2e: PM generates a versioned Execution Contract and Markdown without dispatching implementation', async () => {
+test('e2e: PM generates a versioned Execution Contract, Markdown, verification skeleton, and artifacts without engineer submission', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks`, {
       method: 'POST',
@@ -266,6 +266,36 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     assert.equal(approval.data.committedScope.commitment_status, 'committed');
     assert.equal(approval.data.committedScope.committed_requirements[0].text, 'Future implementation must satisfy the approved contract sections.');
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['contributor'], { sub: 'engineer-dispatcher' }),
+      },
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: `dispatch-attempt-before-skeleton:${created.taskId}`,
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(await response.json()), /verification report skeleton exists/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/verification-report`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        displayId: 'TSK-105',
+        title: 'Generate verification report skeletons from approved Execution Contracts',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const verificationReport = await response.json();
+    assert.equal(verificationReport.data.path, 'docs/reports/TSK-105-generate-verification-report-skeletons-from-approved-execution-contracts-verification.md');
+    assert.equal(verificationReport.data.dispatchGate.canDispatch, true);
+    assert.match(verificationReport.data.verificationReport.content, /E2E completed Complex-tier section 4/);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/artifacts`, {
       method: 'POST',
       headers: pmHeaders,
@@ -307,12 +337,11 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
       body: JSON.stringify({
         eventType: 'task.stage_changed',
         actorType: 'user',
-        idempotencyKey: `dispatch-attempt:${created.taskId}`,
+        idempotencyKey: `dispatch-attempt-after-skeleton:${created.taskId}`,
         payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
       }),
     });
-    assert.equal(response.status, 400);
-    assert.equal((await response.json()).error.code, 'workflow_violation');
+    assert.equal(response.status, 202);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
       headers: authHeaders(secret, ['reader']),
@@ -322,8 +351,10 @@ test('e2e: PM generates a versioned Execution Contract and Markdown without disp
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_version_recorded'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_markdown_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_approved'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_verification_report_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_generated'));
     assert.ok(history.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
+    assert.ok(history.items.some((event) => event.event_type === 'task.stage_changed'));
     assert.ok(!history.items.some((event) => event.event_type === 'task.engineer_submission_recorded'));
   });
 });

@@ -39,6 +39,11 @@ const taskDetailPayload = {
           title: '[TSK-104] Artifact generation',
         },
       },
+      verificationReport: {
+        links: [
+          { rel: 'verification_report', label: 'Verification report skeleton', path: 'docs/reports/TSK-104-artifact-generation-verification.md' },
+        ],
+      },
     },
     closeGovernance: {
       active: true,
@@ -227,6 +232,7 @@ test.describe('task detail browser verification', () => {
 
     await expect(page.getByRole('link', { name: 'docs/user-stories/TSK-104-artifact-generation.md' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'docs/refinement/TSK-104-artifact-generation.md' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'docs/reports/TSK-104-artifact-generation-verification.md' })).toBeVisible();
     await expect(page.getByText('[TSK-104] Artifact generation')).toBeVisible();
   });
 
