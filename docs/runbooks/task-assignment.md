@@ -17,6 +17,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Only callers with `assignment:write` (PM/admin in the current role map) can mutate owner state through `PATCH /tasks/{taskId}/assignment`.
 - Restricted telemetry behavior is separate: lower-privilege readers still get owner metadata, while `GET /tasks/{taskId}/observability-summary` omits privileged telemetry fields server-side.
 - Tier-specific projected assignee ids such as `engineer-jr`, `engineer-sr`, and `engineer-principal` are valid owner values and should still be treated as canonical engineer ownership for delivery routing.
+- When a task has an approved Execution Contract, assignment to a tier-specific engineer id evaluates the dispatch policy first. `engineer-sr` is the default Standard-or-higher implementation route, `engineer-jr` is accepted only for constrained Simple tests/fixtures/docs/clear refactors with a clear failing or pending test plan, and `engineer-principal` is required when Principal triggers are present.
 - The SRE monitoring inbox is a separate workflow surface: tasks may appear in `/inbox/sre` by workflow stage even when `current_owner` still points at an engineer.
 - If SRE creates a monitoring-anomaly child task from task detail, the new child is intentionally assigned to `pm`; that route is distinct from `PATCH /tasks/{taskId}/assignment`.
 - Governed close-review cancellation recommendations and exceptional-dispute escalations are also distinct workflow routes; they may affect routing into `/inbox/human` without mutating canonical assignment state.
@@ -52,10 +53,11 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - **401 Authentication error** → verify session/auth provider and PM login state.
 - **403 Authorization error** → verify user role includes task-management permission.
 - **403 Only the currently assigned owner may perform this action** → verify the task was not reassigned to a different canonical owner role or tier-specific engineer assignee before the caller retried the action.
+- **409 dispatch_policy_blocked** → verify the proposed engineer tier matches the approved Execution Contract dispatch policy. Common fixes are assigning `engineer-sr`, adding a clear failing/pending test plan before `engineer-jr`, or recording required Principal review before `engineer-principal`/Principal-triggered dispatch.
 - **400 Invalid agent** → verify selected agent exists and is active in the roster source.
 - **404 Task not found** → verify task id and tenant/workspace scope.
 - **No queue/list update visible** → this repo projects assignee into task state, but does not yet include a dedicated board/inbox UI. Downstream consumers should read `current_owner`/`assignee` from the projection.
-- **Intake Draft assignment rejected after contract generation** → expected until a future approval/dispatch workflow is implemented; Execution Contract generation does not make assignment mutable or dispatch-ready.
+- **Intake Draft assignment rejected before approval** → expected until PM refinement and approval complete; Execution Contract generation alone does not make assignment mutable or dispatch-ready.
 
 ## Dashboards + alert links
 - Dashboard: `/monitoring/dashboards/task-assignment.json`
@@ -65,7 +67,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Changes to the assignment mutation path in `lib/audit/http.js` or the assignment controls in `src/app/App.jsx` should update this runbook or the matching assignment API contract in the same PR.
 - SRE anomaly child-task creation should continue to bypass assignment mutation and remain on its dedicated monitoring workflow endpoint.
 - Close-governance human decisions and backtrack approvals should continue to bypass assignment mutation and remain on their dedicated workflow endpoints.
-- Execution Contract versioning, validation, and Markdown generation should continue to bypass assignment mutation and preserve PM ownership until a future approval/dispatch story changes the lifecycle.
+- Execution Contract versioning, validation, and Markdown generation should continue to bypass assignment mutation and preserve PM ownership until approval. Approved-contract engineer assignment must preserve dispatch-policy evaluation and return `dispatch_policy_blocked` rather than silently assigning the wrong tier.
 - Nearest verification artifacts for that surface are:
 - `tests/unit/task-assignment.test.js`
 - `tests/unit/audit-api.test.js`

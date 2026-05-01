@@ -120,6 +120,10 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'task.execution_contract_verification_report_generated',
     'ExecutionContractVerificationReport',
     'ExecutionContractDispatchReadiness',
+    'ExecutionContractDispatchPolicy',
+    'execution-contract-dispatch-policy.v1',
+    'dispatchPolicy',
+    'selectedEngineerTier',
     'dispatchReadiness',
     'verificationReport',
     'task.execution_contract_artifact_bundle_generated',
@@ -159,7 +163,9 @@ test('openapi contract documents the live audit routes and auth model', () => {
 
   for (const snippet of [
     'Only the currently assigned owner may perform this action.',
+    'dispatch_policy_blocked',
     'engineer-sr',
+    'engineer-principal',
     'Shared browser surfaces such as `/inbox/sre` remain read-only unless a dedicated workflow endpoint is used.',
     'Human close decisions and dual-party close-review backtrack recommendations',
   ]) {

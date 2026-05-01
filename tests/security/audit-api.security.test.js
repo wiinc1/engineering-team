@@ -771,6 +771,87 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
   });
 });
 
+test('rejects generic assignment event bypasses of approved-contract dispatch policy', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorAuth = { authorization: `Bearer ${sign({ sub: 'operator', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const pmAuth = { authorization: `Bearer ${sign({ sub: 'pm', tenant_id: 'tenant-sec', roles: ['pm', 'reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        raw_requirements: 'Do not let generic assignment events bypass dispatch policy.',
+        title: 'Dispatch policy bypass',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: {
+          1: 'As an operator, I want dispatch policy enforcement.',
+          2: 'Given unsafe Jr dispatch, then generic events are blocked.',
+          4: 'Manual review after implementation.',
+          11: 'Roll out behind existing feature gates.',
+          12: 'Record audit history.',
+          15: 'Generic event bypass is rejected.',
+          16: 'Smoke assignment policy after deployment.',
+          17: 'Operator reviews dispatch blockers.',
+        },
+        dispatchSignals: {
+          workCategory: 'feature',
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...pmAuth },
+      body: JSON.stringify({ approvalNote: 'Approved for dispatch policy bypass test.' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'user',
+        idempotencyKey: `dispatch-policy-bypass-stage:${created.taskId}`,
+        payload: { to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.assigned',
+        actorType: 'user',
+        idempotencyKey: `dispatch-policy-bypass-assign:${created.taskId}`,
+        payload: { assignee: 'engineer-jr' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.equal(body.error.code, 'workflow_violation');
+    assert.match(body.error.message, /Jr Engineer dispatch requires a clear failing or pending test plan/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
+      headers: pmAuth,
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.ok(!history.items.some((event) => event.event_type === 'task.assigned' && event.payload.assignee === 'engineer-jr'));
+  });
+});
+
 test('accepts production-style JWKS tokens with explicit claim mapping', async () => {
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
   await withServer(async ({ baseUrl }) => {

@@ -1748,7 +1748,9 @@ describe('Task browser runtime coverage', () => {
     expect(within(discussionSection as HTMLElement).getByText('Notification targets: PM · Engineer · SRE')).toBeInTheDocument();
     expect(within(discussionSection as HTMLElement).getByRole('button', { name: 'Show 1 older thread updates' })).toBeInTheDocument();
     fireEvent.click(within(discussionSection as HTMLElement).getByRole('button', { name: 'Show 1 older thread updates' }));
-    expect(within(discussionSection as HTMLElement).getByRole('button', { name: 'Collapse thread history' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(discussionSection as HTMLElement).getByRole('button', { name: 'Collapse thread history' })).toBeInTheDocument();
+    });
     expect(within(discussionSection as HTMLElement).getByText('Initial escalation.')).toBeInTheDocument();
   });
 
@@ -2378,13 +2380,11 @@ describe('Task browser runtime coverage', () => {
       severity: 'critical',
     });
 
-    const agreementArtifactInput = screen.getByLabelText('Agreement artifact');
-    const backtrackRationaleInput = screen.getByLabelText('Backtrack rationale');
-    fireEvent.change(agreementArtifactInput, { target: { value: 'pm+architect-close-review-2026-04-15' } });
-    fireEvent.change(backtrackRationaleInput, { target: { value: 'The close gate failed and implementation must resume.' } });
+    fireEvent.change(screen.getByLabelText('Agreement artifact'), { target: { value: 'pm+architect-close-review-2026-04-15' } });
+    fireEvent.change(screen.getByLabelText('Backtrack rationale'), { target: { value: 'The close gate failed and implementation must resume.' } });
     await waitFor(() => {
-      expect(agreementArtifactInput).toHaveValue('pm+architect-close-review-2026-04-15');
-      expect(backtrackRationaleInput).toHaveValue('The close gate failed and implementation must resume.');
+      expect(screen.getByLabelText('Agreement artifact')).toHaveValue('pm+architect-close-review-2026-04-15');
+      expect(screen.getByLabelText('Backtrack rationale')).toHaveValue('The close gate failed and implementation must resume.');
     });
     fireEvent.click(screen.getByRole('button', { name: 'Backtrack to implementation' }));
     await screen.findByText('Close review backtracked to implementation.', {}, { timeout: 5000 });

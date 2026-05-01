@@ -74,6 +74,7 @@ Audit HTTP maintenance note:
 - Current nearest artifacts for HTTP-surface changes are this runbook plus the matching `docs/api/*.yml` contract for the affected route family.
 - Engineer-only delivery-loop mutations now validate the task's current canonical assignee before accepting writes.
 - Tier-based reassignment may emit explicit assignee ids such as `engineer-sr` in workflow payloads and task-detail context so downstream consumers can tell when ownership changed materially.
+- Approved Execution Contracts now expose `executionContract.dispatchReadiness.dispatchPolicy`, which selects Jr, Sr, or Principal Engineer from template tier, risk flags, and contract dispatch signals. Standard-or-higher work defaults to Sr and can allow QA coverage work in parallel; unsafe Jr proposals are blocked unless the work is constrained Simple scope with a clear failing/pending test plan; Principal triggers require Principal approval/involvement before dispatch.
 - SRE monitoring expiry is now worker-driven: reads reflect the current state but no longer append escalation events when the window has expired.
 - SRE monitoring also exposes `POST /tasks/{id}/sre-monitoring/anomaly-child-task`, which creates a linked child task with machine-generated telemetry context, records the auto-`P0` rationale, and blocks the parent while leaving it readable/commentable.
 - The anomaly-child parent block is cleared automatically when the linked child reaches a resolved terminal state; generic `task.unblocked` event injection is not the supported path for this workflow.
