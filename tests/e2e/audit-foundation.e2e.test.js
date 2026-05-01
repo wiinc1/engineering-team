@@ -404,6 +404,12 @@ test('e2e: low-risk Simple Execution Contracts can be auto-approved by policy', 
       body: JSON.stringify({
         templateTier: 'Simple',
         sections: lowRiskSimpleExecutionContractSections(),
+        scopeBoundaries: {
+          committedRequirements: [
+            { id: 'AUTO-E2E-1', text: 'Policy approval can be recorded by policy with rationale.', sourceSectionId: '2' },
+            { id: 'AUTO-E2E-2', text: 'Auto-approved work updates trusted autonomous delivery metrics after successful close.', sourceSectionId: '2' },
+          ],
+        },
       }),
     });
     assert.equal(response.status, 201);
@@ -428,19 +434,162 @@ test('e2e: low-risk Simple Execution Contracts can be auto-approved by policy', 
     const detail = await response.json();
     assert.equal(detail.context.executionContract.approval.autoApproval.rationale, 'E2E policy accepted low-risk Simple work.');
 
-    for (const [fromStage, toStage] of [['DRAFT', 'BACKLOG'], ['BACKLOG', 'IN_PROGRESS'], ['IN_PROGRESS', 'VERIFY']]) {
-      response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
-        method: 'POST',
-        headers: contributorHeaders,
-        body: JSON.stringify({
-          eventType: 'task.stage_changed',
-          actorType: 'agent',
-          idempotencyKey: `stage:${created.taskId}:${fromStage}:${toStage}`,
-          payload: { from_stage: fromStage, to_stage: toStage },
-        }),
-      });
-      assert.equal(response.status, 202);
-    }
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['engineer', 'contributor'], { sub: 'engineer-e2e-auto' }),
+    };
+    const qaHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['qa', 'contributor'], { sub: 'qa-e2e-auto' }),
+    };
+    const sreHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['sre', 'contributor'], { sub: 'sre-e2e-auto' }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:DRAFT:BACKLOG`,
+        payload: { from_stage: 'DRAFT', to_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
+      method: 'PATCH',
+      headers: pmHeaders,
+      body: JSON.stringify({ agentId: 'engineer-sr' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:BACKLOG:IN_PROGRESS`,
+        payload: { from_stage: 'BACKLOG', to_stage: 'IN_PROGRESS' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'abc1070' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/contract-coverage-audit`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        rows: [
+          {
+            requirementId: 'AUTO-E2E-1',
+            status: 'covered',
+            implementationEvidence: ['commit abc1070'],
+            verificationEvidence: ['node --test tests/e2e/audit-foundation.e2e.test.js'],
+          },
+          {
+            requirementId: 'AUTO-E2E-2',
+            status: 'covered',
+            implementationEvidence: ['feature_operator_trusted_autonomous_delivery_rate metric'],
+            verificationEvidence: ['GET /metrics includes trusted autonomous delivery rate'],
+          },
+        ],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:IN_PROGRESS:CONTRACT_COVERAGE_AUDIT`,
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'CONTRACT_COVERAGE_AUDIT' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/contract-coverage-audit/validate`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    assert.equal((await response.json()).data.gateClosed, true);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:CONTRACT_COVERAGE_AUDIT:QA_TESTING`,
+        payload: { from_stage: 'CONTRACT_COVERAGE_AUDIT', to_stage: 'QA_TESTING' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/qa-results`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        outcome: 'pass',
+        summary: 'Coverage gate closed before QA completion.',
+        scenarios: ['Auto-approved Simple contract retains required coverage gate.'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.github_pr_synced',
+        actorType: 'agent',
+        idempotencyKey: `pr:${created.taskId}:merged`,
+        payload: {
+          pr_number: 107,
+          pr_title: 'Issue 107 e2e auto approval',
+          state: 'closed',
+          pr_state: 'merged',
+          pr_merged: true,
+          pr_repository: 'wiinc1/engineering-team',
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/sre-monitoring/start`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        deploymentEnvironment: 'staging',
+        deploymentUrl: 'https://example.com/e2e-auto-approval',
+        deploymentVersion: 'abc1070',
+        evidence: ['Merged PR and stable rollout.'],
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/sre-monitoring/approve`, {
+      method: 'POST',
+      headers: sreHeaders,
+      body: JSON.stringify({
+        reason: 'Telemetry remained stable.',
+        evidence: ['No errors during monitoring window.'],
+      }),
+    });
+    assert.equal(response.status, 201);
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
       method: 'POST',
@@ -460,6 +609,168 @@ test('e2e: low-risk Simple Execution Contracts can be auto-approved by policy', 
     assert.equal(response.status, 200);
     const metrics = await response.text();
     assert.match(metrics, /feature_operator_trusted_autonomous_delivery_rate 1/);
+  });
+});
+
+test('e2e: Contract Coverage Audit blocks QA until QA validates committed requirements', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['contributor']),
+    };
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['pm', 'reader'], { sub: 'pm-e2e-108' }),
+    };
+    const engineerHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['engineer', 'contributor'], { sub: 'engineer-e2e-108' }),
+    };
+    const qaHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['qa', 'contributor'], { sub: 'qa-e2e-108' }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        raw_requirements: 'Coverage audit must close before QA Verification.',
+        title: 'E2E Contract Coverage Audit gate',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: {
+          ...lowRiskSimpleExecutionContractSections(),
+          2: 'Given implementation completes, when QA is requested, then Contract Coverage Audit must close first.',
+        },
+        scopeBoundaries: {
+          committedRequirements: [
+            { id: 'CCA-E2E-1', text: 'QA Verification is blocked until coverage closes.', sourceSectionId: '2' },
+          ],
+          deferredConsiderations: ['Coverage dashboard remains a later enhancement.'],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({ approvalNote: 'Approve coverage gate e2e contract.' }),
+    });
+    assert.equal(response.status, 201);
+
+    for (const [fromStage, toStage] of [['DRAFT', 'BACKLOG'], ['BACKLOG', 'IN_PROGRESS']]) {
+      if (fromStage === 'BACKLOG') {
+        response = await fetch(`${baseUrl}/tasks/${created.taskId}/assignment`, {
+          method: 'PATCH',
+          headers: pmHeaders,
+          body: JSON.stringify({ agentId: 'engineer-sr' }),
+        });
+        assert.equal(response.status, 200);
+      }
+      response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+        method: 'POST',
+        headers: engineerHeaders,
+        body: JSON.stringify({
+          eventType: 'task.stage_changed',
+          actorType: 'agent',
+          idempotencyKey: `stage:${created.taskId}:${fromStage}:${toStage}`,
+          payload: { from_stage: fromStage, to_stage: toStage },
+        }),
+      });
+      assert.equal(response.status, 202);
+    }
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/engineer-submission`, {
+      method: 'PUT',
+      headers: engineerHeaders,
+      body: JSON.stringify({ commitSha: 'cca1081' }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:IN_PROGRESS:QA_TESTING:blocked`,
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'QA_TESTING' },
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.match(JSON.stringify(await response.json()), /Contract Coverage Audit/i);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/contract-coverage-audit`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        rows: [
+          {
+            requirementId: 'CCA-E2E-1',
+            status: 'covered',
+            implementationEvidence: ['commit cca1081'],
+            verificationEvidence: ['node --test tests/e2e/audit-foundation.e2e.test.js'],
+          },
+        ],
+      }),
+    });
+    assert.equal(response.status, 201);
+    let body = await response.json();
+    assert.equal(body.data.rows.length, 1);
+    assert.equal(body.data.rows[0].implementationAttempt || body.data.implementationAttempt, 1);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: engineerHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:IN_PROGRESS:CONTRACT_COVERAGE_AUDIT`,
+        payload: { from_stage: 'IN_PROGRESS', to_stage: 'CONTRACT_COVERAGE_AUDIT' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/contract-coverage-audit/validate`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    body = await response.json();
+    assert.equal(body.data.status, 'closed');
+    assert.equal(body.data.canStartQaVerification, true);
+    assert.match(body.data.markdown.content, /CCA-E2E-1/);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: qaHeaders,
+      body: JSON.stringify({
+        eventType: 'task.stage_changed',
+        actorType: 'agent',
+        idempotencyKey: `stage:${created.taskId}:CONTRACT_COVERAGE_AUDIT:QA_TESTING`,
+        payload: { from_stage: 'CONTRACT_COVERAGE_AUDIT', to_stage: 'QA_TESTING' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    body = await response.json();
+    assert.equal(body.context.executionContract.contractCoverageAudit.validation.status, 'closed');
+    assert.equal(body.context.executionContract.contractCoverageAudit.latest.rows.length, 1);
   });
 });
 
