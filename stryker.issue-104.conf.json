@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-schema.json",
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "node --test tests/unit/execution-contracts.test.js"
+  },
+  "mutate": [
+    "lib/audit/execution-contracts.js:1267-1423"
+  ],
+  "reporters": [
+    "clear-text",
+    "progress"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 70,
+    "break": 60
+  }
+}

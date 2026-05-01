@@ -35,6 +35,7 @@
     "test:e2e": "node --test tests/e2e/*.test.js",
     "test:delegation:verification": "node --test tests/unit/runtime-delegation.test.js tests/unit/specialist-delegation.test.js tests/unit/command-router-delegation.test.js tests/unit/validate-specialist-runtime.test.js tests/contract/specialist-delegation.contract.test.js tests/integration/specialist-delegation.integration.test.js tests/e2e/specialist-delegation.e2e.test.js tests/performance/specialist-delegation.performance.test.js tests/security/specialist-delegation.security.test.js",
     "test:delegation:mutation": "npx stryker run stryker.specialist-delegation.conf.json",
+    "test:issue-104:mutation": "stryker run stryker.issue-104.conf.json",
     "test:delegation:live-smoke": "node scripts/validate-specialist-runtime.js \"Please implement this fix\"",
     "test:delegation:live-smoke:openclaw": "SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js' node scripts/validate-specialist-runtime.js \"Please implement this fix\"",
     "metrics:delegation:push": "node scripts/push-specialist-delegation-metrics.js",
@@ -87,6 +88,8 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@stryker-mutator/core": "^9.6.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@vitejs/plugin-react": "^5.1.0",
@@ -94,7 +97,6 @@
     "axe-core": "^4.10.3",
     "jsdom": "^26.1.0",
     "typescript": "^5.9.3",
-    "@playwright/test": "^1.55.0",
     "vite": "^8.0.3",
     "vitest": "^3.2.4"
   }

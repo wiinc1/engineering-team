@@ -860,7 +860,7 @@ paths:
     post:
       summary: Approve a generated repo artifact bundle for commit
       description: |
-        Records `task.execution_contract_artifact_bundle_approved` only when PM approval, section-owner approvals for section-owned generated content, and exception-triggered operator approval are present. If content reveals scope mismatch, promotes Deferred Considerations, changes committed requirements, accepts unresolved non-blocking comments, or is bundled with Operator Approval or Closeout, operator approval is required. Missing approvals return `artifact_bundle_approval_blocked`.
+        Records `task.execution_contract_artifact_bundle_approved` only when PM approval, section-owner approvals for section-owned generated content, and exception-triggered operator approval are present. Approval calls may be incremental; supplied role approvals are merged with existing bundle approvals, and omitted roles are not reset. If content reveals scope mismatch, promotes Deferred Considerations, changes committed requirements, accepts unresolved non-blocking comments, or is bundled with Operator Approval or Closeout, operator approval is required. Missing approvals return `artifact_bundle_approval_blocked`.
       parameters:
         - name: id
           in: path
