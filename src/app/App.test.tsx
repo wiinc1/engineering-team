@@ -1310,8 +1310,12 @@ describe('Task browser runtime coverage', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Wire task detail' });
-    fireEvent.change(screen.getByPlaceholderText('7-40 hex characters'), { target: { value: 'abc1234' } });
-    fireEvent.change(screen.getByPlaceholderText('https://github.com/owner/repo/pull/123'), { target: { value: 'https://github.com/wiinc1/engineering-team/pull/14' } });
+    const commitInput = await screen.findByPlaceholderText('7-40 hex characters');
+    const prInput = await screen.findByPlaceholderText('https://github.com/owner/repo/pull/123');
+    fireEvent.change(commitInput, { target: { value: 'abc1234' } });
+    fireEvent.change(prInput, { target: { value: 'https://github.com/wiinc1/engineering-team/pull/14' } });
+    await waitFor(() => expect(commitInput).toHaveValue('abc1234'));
+    await waitFor(() => expect(prInput).toHaveValue('https://github.com/wiinc1/engineering-team/pull/14'));
     fireEvent.click(screen.getByRole('button', { name: 'Submit implementation handoff' }));
 
     await screen.findByText('Implementation metadata submitted.');
