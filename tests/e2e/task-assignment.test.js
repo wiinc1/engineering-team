@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const fixture = require('../fixtures/task-assignment/task-assignment-states.json');
 const { createAuditApiServer } = require('../../lib/audit/http');
 
+// Governance note: issue #111 extends assignment-adjacent HTTP projections with control-plane eligibility context.
+
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');

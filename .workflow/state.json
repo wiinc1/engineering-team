@@ -1,7 +1,7 @@
 {
-  "storyId": "US-003",
-  "issueNumber": 95,
-  "branch": "docs/refinement-execution-contract",
+  "storyId": "ISSUE-111",
+  "issueNumber": 111,
+  "branch": "issue-111-control-plane",
   "status": {
     "phase0": "completed",
     "design": "completed",
@@ -9,23 +9,20 @@
     "testing": "completed",
     "security": "completed",
     "customerReview": "completed",
-    "closeout": "completed"
+    "closeout": "completed",
+    "ship": "completed"
   },
   "artifacts": {
-    "story": "docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements.md",
-    "design": "docs/design/US-003-design.md",
-    "workflowDiagram": "docs/diagrams/workflow-US-003.mmd",
-    "architectureDiagram": "docs/diagrams/architecture-US-003.mmd",
-    "adr": "docs/adr/ADD-2026-04-28-intake-draft-as-task-stage.md",
-    "verification": "docs/reports/US-003-verification.md",
-    "testReport": "docs/reports/test_report_US-003.md",
-    "securityAudit": "docs/reports/security_audit_US-003.md",
-    "customerReview": "docs/reports/customer_review_US-003.md",
-    "closeoutReview": "docs/reports/US-003-review.md"
+    "design": "docs/design/ISSUE-111-design.md",
+    "verification": "docs/reports/ISSUE-111-verification.md",
+    "testReport": "docs/reports/test_report_ISSUE-111.md",
+    "securityAudit": "docs/reports/security_audit_ISSUE-111.md",
+    "customerReview": "docs/reports/customer_review_ISSUE-111.md",
+    "closeoutReview": "docs/reports/ISSUE-111-review.md"
   },
   "notes": [
-    "Requested workflow wrappers such as task:pull, ag:workflow, workflow:execute, and workflow:ship are absent in package.json, so the issue workflow is executed directly against the repo scripts and evidence artifacts.",
-    "Existing uncommitted CONTEXT.md execution-contract addition was preserved and not reverted.",
-    "Issue #95 acceptance requires raw requirements intake, DRAFT task persistence, PM refinement routing, task list/detail visibility, and audit history without implementation-start claims."
+    "Requested workflow wrappers such as task:pull, ag:workflow, workflow:execute, and workflow:ship are absent in package.json, so the issue workflow was executed directly against the repo scripts and evidence artifacts.",
+    "Issue #111 acceptance criteria were audited in docs/reports/ISSUE-111-verification.md before entering ship preparation.",
+    "Control-plane policy surfaces are additive to the existing audit-backed task lifecycle."
   ]
 }

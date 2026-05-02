@@ -285,3 +285,63 @@ test('filters history without mixing telemetry records', async () => {
   const byActor = store.getTaskHistory('TSK-102', { actorId: 'principal-engineer' });
   assert.equal(byActor.length, 3);
 });
+
+test('records control-plane decision and observe-only WIP metadata in projections and metrics', async () => {
+  const { store } = makeStore();
+  await store.appendEvent({
+    taskId: 'TSK-CP-STORE',
+    eventType: 'task.created',
+    actorType: 'agent',
+    actorId: 'pm',
+    idempotencyKey: 'create:TSK-CP-STORE',
+    payload: { title: 'Control-plane store', initial_stage: 'BACKLOG' },
+  });
+
+  await store.appendEvent({
+    taskId: 'TSK-CP-STORE',
+    eventType: 'task.control_plane_decision_recorded',
+    actorType: 'system',
+    actorId: 'system:control-plane',
+    idempotencyKey: 'decision:TSK-CP-STORE',
+    payload: {
+      policy_name: 'prioritization',
+      policy_version: 'control-plane-work-prioritization.v1',
+      input_facts: { priority: 'P1' },
+      decision: 'ranked_first',
+      rationale: 'Operator override and production risk outrank normal priority.',
+    },
+  });
+
+  await store.appendEvent({
+    taskId: 'TSK-CP-STORE',
+    eventType: 'task.stage_changed',
+    actorType: 'agent',
+    actorId: 'pm',
+    idempotencyKey: 'stage:TSK-CP-STORE:IN_PROGRESS',
+    payload: {
+      from_stage: 'BACKLOG',
+      to_stage: 'IN_PROGRESS',
+      control_plane: {
+        wip_limits: {
+          mode: 'observe_only',
+          current_count: 2,
+          limit: 1,
+          scope_type: 'stage',
+          scope_id: 'IN_PROGRESS',
+        },
+      },
+    },
+  });
+
+  const state = store.getTaskCurrentState('TSK-CP-STORE');
+  assert.equal(state.latest_control_plane_decision_policy, 'prioritization');
+  assert.equal(state.current_stage, 'IN_PROGRESS');
+
+  const history = store.getTaskHistory('TSK-CP-STORE');
+  const stageEvent = history.find((event) => event.event_type === 'task.stage_changed');
+  assert.equal(stageEvent.payload.control_plane_wip_decision.evaluations[0].decision, 'observe_would_block');
+
+  const metrics = store.readMetrics();
+  assert.equal(metrics.feature_control_plane_decisions_total, 1);
+  assert.equal(metrics.feature_control_plane_wip_would_block_total, 1);
+});

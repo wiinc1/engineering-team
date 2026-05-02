@@ -112,6 +112,60 @@ test('must-have: accepted workflow writes persist immutable canonical audit hist
   });
 });
 
+test('e2e: control-plane decisions are inspectable in task detail with policy facts and provenance', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['contributor']),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-E2E-CP/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-E2E-CP',
+        payload: { title: 'Control-plane policy detail', initial_stage: 'BACKLOG', priority: 'P1' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-CP/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.control_plane_decision_recorded',
+        actorType: 'system',
+        idempotencyKey: 'decision:TSK-E2E-CP:priority',
+        payload: {
+          policy_name: 'work_prioritization',
+          policy_version: 'control-plane-work-prioritization.v1',
+          input_facts: { production_risk: true, priority: 'P1' },
+          decision: 'rank_first',
+          rationale: 'Production risk outranks normal priority.',
+          context_provenance: {
+            source_intake: ['task.created'],
+            repo_docs: ['docs/product/software-factory-control-plane-prd.md'],
+          },
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-E2E-CP/detail`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    const controlPlane = detail.context.controlPlane;
+    assert.equal(controlPlane.decisions[0].policy_version, 'control-plane-work-prioritization.v1');
+    assert.deepEqual(controlPlane.decisions[0].input_facts, { priority: 'P1', production_risk: true });
+    assert.equal(controlPlane.decisions[0].decision, 'rank_first');
+    assert.equal(controlPlane.decisions[0].context_provenance.repo_docs[0].reference, 'docs/product/software-factory-control-plane-prd.md');
+  });
+});
+
 test('must-have: duplicate retries stay idempotent and do not create extra audit events', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const headers = {

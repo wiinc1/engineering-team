@@ -17,6 +17,9 @@ info:
     Approved Execution Contract assignment to tier-specific engineer ids runs the risk-based dispatch policy.
     Unsafe `engineer-jr` proposals are rejected when the contract lacks constrained Simple scope or a clear
     failing/pending test plan; Principal-triggered work requires Principal review/involvement before dispatch.
+    Issue #111 adds the shared control-plane capability model: assignment eligibility must consider OpenClaw profile,
+    control-plane permissions, risk limits, eligible task classes, evidence history, recent outcomes, and routing eligibility,
+    not only the requested `agentId`.
 paths:
   /tasks/{taskId}/assignment:
     patch:

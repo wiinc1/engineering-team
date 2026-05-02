@@ -34,6 +34,7 @@ async function withServer(run, options = {}) {
 }
 
 // Governance note: assignment changes should keep one hardening-oriented verification path updated in the same change set.
+// Issue #111 keeps assignment mutation permissions unchanged while adding inspectable control-plane policy context.
 
 test('security: unauthorized and malformed assignment requests never mutate state', async () => {
   await withServer(async ({ baseUrl, secret }) => {
