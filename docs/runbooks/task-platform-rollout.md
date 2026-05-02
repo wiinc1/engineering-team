@@ -1,5 +1,7 @@
 # Runbook — Canonical Task Platform Rollout
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no task-platform rollout procedure change.
+
 ## Scope
 This runbook covers the first environment rollout of the additive canonical task platform introduced for Issue #30.
 

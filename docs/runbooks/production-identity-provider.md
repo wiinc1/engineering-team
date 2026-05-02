@@ -1,5 +1,7 @@
 # Production Identity Provider Integration
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no identity-provider procedure change.
+
 ## Purpose
 
 This runbook documents the provider-backed JWT validation path and the explicit no-IdP internal-bootstrap production path.

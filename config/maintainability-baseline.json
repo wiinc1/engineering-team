@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "caps": {
+    "sourceFileLines": 400,
+    "testFileLines": 500,
+    "functionLines": 50
+  },
+  "entries": []
+}

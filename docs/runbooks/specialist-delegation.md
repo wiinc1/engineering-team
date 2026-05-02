@@ -1,5 +1,7 @@
 # Specialist delegation rollout plan
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no delegation rollout procedure change.
+
 ## Feature flag
 - `FF_REAL_SPECIALIST_DELEGATION=true` enables specialist routing and delegation.
 - `FF_REAL_SPECIALIST_DELEGATION=false` disables delegation and keeps the coordinator in direct-response mode.

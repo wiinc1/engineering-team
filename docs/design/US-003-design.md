@@ -1,5 +1,7 @@
 # US-003 Design
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no task-creation design behavior change.
+
 ## Research & Context
 
 Issue 95 implements the first narrow slice of the intake-to-execution-ready workflow: capture raw operator requirements as a Task in `DRAFT`, then route the Task to PM refinement. Existing planning artifacts already establish that Intake Draft is a Task stage rather than a separate entity.

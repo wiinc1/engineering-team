@@ -65,6 +65,14 @@ All standards below derive directly from these axioms and have been observed at 
   Rationale: Uniformity reduces cognitive load and defect classes.  
   Evidence: Industry-wide adoption at scale across Amazon, Google, and Microsoft.
 
+- Maintainability line-count thresholds are mandatory for authored code. Authored source files warn at `300` lines and hard fail at `400` lines; test files warn at `400` lines and hard fail at `500` lines; functions or methods warn at `40` lines and hard fail at `50` lines.  
+  Rationale: Smaller files and functions reduce review risk, change blast radius, and maintenance cost.  
+  Evidence: Repo-template standards control plane, version `0.1.0`.
+
+- Legacy maintainability violations must be tracked in `config/maintainability-baseline.json`; the maintainability gate fails when new violations appear or existing baseline entries regress.  
+  Rationale: A ratchet lets the repo adopt objective thresholds without forcing a high-risk big-bang rewrite of existing runtime and test surfaces.  
+  Evidence: Repo-template maintainability ratchet policy, version `0.1.0`.
+
 - Mandatory code reviews and static analysis on every change.  
   Rationale: Human and machine verification together catch issues before production.  
   Evidence: Google, Meta, and Microsoft public engineering practices.

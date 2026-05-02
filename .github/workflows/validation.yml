@@ -66,6 +66,7 @@ jobs:
 
       - name: Verify standards governance artifacts
         run: |
+          npm run coverage
           npm run standards:check
           npm run ownership:lint
 

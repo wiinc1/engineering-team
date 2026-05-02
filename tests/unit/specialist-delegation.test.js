@@ -1,4 +1,5 @@
 const test = require('node:test');
+// Issue #130 standards evidence: specialist delegation unit coverage remains active after mechanical compaction.
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');

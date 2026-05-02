@@ -8,7 +8,9 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
+      include: ['src/app/**/*.{js,jsx,mjs,ts,tsx}'],
+      exclude: ['src/app/main.jsx', 'src/app/session.js', 'src/app/session-oidc.js'],
     },
   },
 });

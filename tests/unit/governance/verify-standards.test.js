@@ -8,6 +8,12 @@ const {
 } = require('./helpers');
 
 function createValidStandardsFixture(root, overrides = {}) {
+  writeStandardsDocs(root);
+  writeGovernanceTemplates(root);
+  writeComplianceDocs(root, overrides);
+}
+
+function writeStandardsDocs(root) {
   writeFile(root, 'docs/standards/software-development-standards.md', `# Standards
 
 ## Repo Enforcement Policy
@@ -19,6 +25,10 @@ function createValidStandardsFixture(root, overrides = {}) {
 
 ## Required Gap Statement Format
 Gap observed: X. Documented rationale: Y (source Z).
+
+## Coding and Code-Quality Standards
+- Maintainability line-count thresholds are mandatory for authored code. Authored source files warn at \`300\` lines and hard fail at \`400\` lines; test files warn at \`400\` lines and hard fail at \`500\` lines; functions or methods warn at \`40\` lines and hard fail at \`50\` lines.
+- Legacy maintainability violations must be tracked in \`config/maintainability-baseline.json\`.
 `);
   writeFile(root, 'docs/standards/change-governance-maintenance.md', '# maintenance\n');
   writeFile(root, '.github/BRANCH_PROTECTION.md', `## Required Status Checks
@@ -36,6 +46,9 @@ Gap observed: X. Documented rationale: Y (source Z).
     },
     domains: [],
   }, null, 2));
+}
+
+function writeGovernanceTemplates(root) {
   writeFile(root, 'docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md', `# Checklist
 
 ## Architecture and Design
@@ -71,7 +84,9 @@ Gap observed: X. Documented rationale: Y (source Z).
 ## Standards Enforcement
 - \`docs/standards/software-development-standards.md\`
 `);
+}
 
+function writeComplianceDocs(root, overrides) {
   const commonDoc = overrides.commonDoc || `## Standards Alignment
 
 - Applicable standards areas: testing and quality assurance

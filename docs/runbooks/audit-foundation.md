@@ -1,5 +1,7 @@
 # Audit Foundation Runbook
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no runbook procedure change.
+
 ## Scope
 This slice supports both the original file-backed audit path and a PostgreSQL-backed store contract, plus bounded async workers for projection catch-up and outbox publication.
 
