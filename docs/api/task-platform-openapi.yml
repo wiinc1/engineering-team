@@ -187,6 +187,117 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /tasks/{taskId}/merge-readiness-reviews:
+    get:
+      summary: List merge readiness reviews for a canonical task
+      operationId: listTaskMergeReadinessReviews
+      tags: [Merge Readiness Reviews]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - name: repository
+          in: query
+          schema:
+            type: string
+        - name: pullRequestNumber
+          in: query
+          schema:
+            type: integer
+        - name: commitSha
+          in: query
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{7,40}$'
+        - name: current
+          in: query
+          description: Defaults to true. Set false to include historical superseded reviews.
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Merge readiness review records for the requested Task and optional PR identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergeReadinessReviewListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Create a merge readiness review and supersede any current review for the same PR identity
+      operationId: createTaskMergeReadinessReview
+      tags: [Merge Readiness Reviews]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMergeReadinessReviewRequest'
+      responses:
+        '201':
+          description: Merge readiness review created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MergeReadinessReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    patch:
+      summary: Update mutable merge readiness review fields with optimistic concurrency
+      operationId: updateTaskMergeReadinessReview
+      tags: [Merge Readiness Reviews]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMergeReadinessReviewRequest'
+      responses:
+        '200':
+          description: Merge readiness review updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/MergeReadinessReview'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 components:
   parameters:
     TaskId:
@@ -260,6 +371,110 @@ components:
           type: string
           format: date-time
           nullable: true
+    MergeReadinessReviewStatus:
+      type: string
+      enum: [pending, passed, blocked, stale, error]
+    MergeReadinessReviewJsonValue:
+      nullable: true
+      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline.
+      oneOf:
+        - type: object
+          additionalProperties: true
+        - type: array
+          items:
+            type: object
+            additionalProperties: true
+    MergeReadinessReview:
+      type: object
+      required:
+        - tenantId
+        - reviewId
+        - taskId
+        - repository
+        - pullRequestNumber
+        - commitSha
+        - reviewStatus
+        - isCurrent
+        - policyVersion
+        - recordVersion
+        - reviewedLogSources
+        - findings
+        - reviewerActorId
+        - reviewerActorType
+        - createdAt
+        - updatedAt
+      properties:
+        tenantId:
+          type: string
+        reviewId:
+          type: string
+        taskId:
+          type: string
+        repository:
+          type: string
+        pullRequestNumber:
+          type: integer
+        commitSha:
+          type: string
+          pattern: '^[0-9a-fA-F]{7,40}$'
+        reviewStatus:
+          $ref: '#/components/schemas/MergeReadinessReviewStatus'
+        isCurrent:
+          type: boolean
+        policyVersion:
+          type: string
+        recordVersion:
+          type: integer
+        githubCheckRunId:
+          type: integer
+          nullable: true
+        sourceInventory:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        requiredCheckInventory:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        reviewedLogSources:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        findings:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        classification:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        owner:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        rationale:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        followUpLinks:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        approvals:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        metadata:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        reviewerActorId:
+          type: string
+        reviewerActorType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MergeReadinessReviewListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [items, current]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MergeReadinessReview'
+            current:
+              allOf:
+                - $ref: '#/components/schemas/MergeReadinessReview'
+              nullable: true
+              description: The current review from the returned item set, or null.
     CreateTaskRequest:
       type: object
       required: [title, status]
@@ -306,6 +521,91 @@ components:
           type: integer
         idempotencyKey:
           type: string
+    CreateMergeReadinessReviewRequest:
+      type: object
+      required: [repository, pullRequestNumber, commitSha, reviewStatus]
+      properties:
+        repository:
+          type: string
+        pullRequestNumber:
+          type: integer
+        commitSha:
+          type: string
+          pattern: '^[0-9a-fA-F]{7,40}$'
+        reviewStatus:
+          $ref: '#/components/schemas/MergeReadinessReviewStatus'
+        isCurrent:
+          type: boolean
+          default: true
+        policyVersion:
+          type: string
+          default: merge-readiness-review-storage.v1
+        githubCheckRunId:
+          type: integer
+          nullable: true
+        sourceInventory:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        requiredCheckInventory:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        reviewedLogSources:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        findings:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        classification:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        owner:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        rationale:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        followUpLinks:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        approvals:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        metadata:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        reviewerActorId:
+          type: string
+        reviewerActorType:
+          type: string
+    UpdateMergeReadinessReviewRequest:
+      type: object
+      required: [reviewId, recordVersion]
+      properties:
+        reviewId:
+          type: string
+        recordVersion:
+          type: integer
+        reviewStatus:
+          $ref: '#/components/schemas/MergeReadinessReviewStatus'
+        policyVersion:
+          type: string
+        githubCheckRunId:
+          type: integer
+          nullable: true
+        sourceInventory:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        requiredCheckInventory:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        reviewedLogSources:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        findings:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        classification:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        owner:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        rationale:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        followUpLinks:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        approvals:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        metadata:
+          $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
+        reviewerActorId:
+          type: string
+        reviewerActorType:
+          type: string
     ErrorEnvelope:
       type: object
       required: [error]
@@ -349,7 +649,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorEnvelope'
     Conflict:
-      description: Task version conflict
+      description: Optimistic concurrency or uniqueness conflict
       content:
         application/json:
           schema:

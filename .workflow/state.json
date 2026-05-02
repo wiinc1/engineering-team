@@ -1,7 +1,7 @@
 {
-  "storyId": "ISSUE-111",
-  "issueNumber": 111,
-  "branch": "issue-111-control-plane",
+  "storyId": "ISSUE-112",
+  "issueNumber": 112,
+  "branch": "issue-112-merge-readiness",
   "status": {
     "phase0": "completed",
     "design": "completed",
@@ -13,16 +13,16 @@
     "ship": "completed"
   },
   "artifacts": {
-    "design": "docs/design/ISSUE-111-design.md",
-    "verification": "docs/reports/ISSUE-111-verification.md",
-    "testReport": "docs/reports/test_report_ISSUE-111.md",
-    "securityAudit": "docs/reports/security_audit_ISSUE-111.md",
-    "customerReview": "docs/reports/customer_review_ISSUE-111.md",
-    "closeoutReview": "docs/reports/ISSUE-111-review.md"
+    "design": "docs/design/ISSUE-112-design.md",
+    "verification": "docs/reports/ISSUE-112-verification.md",
+    "testReport": "docs/reports/test_report_ISSUE-112.md",
+    "securityAudit": "docs/reports/security_audit_ISSUE-112.md",
+    "customerReview": "docs/reports/customer_review_ISSUE-112.md",
+    "closeoutReview": "docs/reports/ISSUE-112-review.md"
   },
   "notes": [
-    "Requested workflow wrappers such as task:pull, ag:workflow, workflow:execute, and workflow:ship are absent in package.json, so the issue workflow was executed directly against the repo scripts and evidence artifacts.",
-    "Issue #111 acceptance criteria were audited in docs/reports/ISSUE-111-verification.md before entering ship preparation.",
-    "Control-plane policy surfaces are additive to the existing audit-backed task lifecycle."
+    "Requested workflow wrappers such as task:pull, ag:workflow, workflow:execute, and workflow:ship are absent in package.json, so the issue workflow is executed directly against repo scripts and evidence artifacts.",
+    "Issue #112 acceptance criteria were audited in docs/reports/ISSUE-112-verification.md before entering ship preparation.",
+    "Merge Readiness Review storage/API is additive; GitHub check-run emission, source-inventory policy, branch-protection enforcement, PR summary rendering, standalone OpenAPI, and normalized findings tables remain out of scope."
   ]
 }

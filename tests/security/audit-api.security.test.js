@@ -144,6 +144,48 @@ test('rejects invalid JSON, oversized bodies, and legacy headers unless explicit
   }, { allowLegacyHeaders: true });
 });
 
+test('merge readiness review mutations require write authorization and reject copied source logs', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const admin = { authorization: `Bearer ${sign({ sub: 'admin', tenant_id: 'tenant-sec', roles: ['admin'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const reader = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...admin },
+      body: JSON.stringify({ title: 'Merge readiness security', status: 'READY_FOR_REVIEW' }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    const reviewBody = {
+      repository: 'wiinc1/engineering-team',
+      pullRequestNumber: 128,
+      commitSha: 'abcdef1234567',
+      reviewStatus: 'pending',
+      reviewedLogSources: [{ url: 'https://github.com/wiinc1/engineering-team/actions/runs/1' }],
+      findings: [],
+    };
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...reader },
+      body: JSON.stringify(reviewBody),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...admin },
+      body: JSON.stringify({
+        ...reviewBody,
+        reviewedLogSources: [{ url: 'https://github.com/wiinc1/engineering-team/actions/runs/1', content: 'copied raw source log' }],
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, 'full_log_content_not_allowed');
+  });
+});
+
 test('control-plane policy writes require contributor authorization and preserve prompt-boundary audit fields', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const reader = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };

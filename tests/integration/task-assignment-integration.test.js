@@ -74,3 +74,62 @@ test('integration: assignment mutates audit projection and canonical v1 task rec
     assert.equal(canonical.data.status, 'BACKLOG');
   });
 });
+
+test('integration: merge readiness reviews stay linked to canonical Task and PR identity', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['admin']),
+      },
+      body: JSON.stringify({
+        title: 'Integrated merge readiness task',
+        status: 'READY_FOR_REVIEW',
+        priority: 'P1',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    const reviewBody = {
+      repository: 'wiinc1/engineering-team',
+      pullRequestNumber: 128,
+      commitSha: 'abcdef1234567',
+      reviewedLogSources: [{ url: 'https://github.com/wiinc1/engineering-team/actions/runs/1' }],
+      findings: [],
+    };
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['admin']),
+      },
+      body: JSON.stringify({ ...reviewBody, reviewStatus: 'pending' }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['admin']),
+      },
+      body: JSON.stringify({ ...reviewBody, reviewStatus: 'passed' }),
+    });
+    assert.equal(response.status, 201);
+    const replacement = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews?repository=wiinc1%2Fengineering-team&pullRequestNumber=128&commitSha=abcdef1234567`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const current = await response.json();
+    assert.equal(current.data.items.length, 1);
+    assert.equal(current.data.current.reviewId, replacement.reviewId);
+    assert.equal(current.data.current.taskId, task.taskId);
+    assert.equal(current.data.current.pullRequestNumber, 128);
+    assert.equal(current.data.current.commitSha, 'abcdef1234567');
+  });
+});

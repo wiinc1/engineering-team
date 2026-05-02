@@ -60,6 +60,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
   const browserAuthSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/authenticated-browser-app-openapi.yml'), 'utf8');
   const assignmentSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-assignment-openapi.yml'), 'utf8');
   const taskDetailSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-detail-history-telemetry-openapi.yml'), 'utf8');
+  const taskPlatformSpec = fs.readFileSync(path.join(__dirname, '../../docs/api/task-platform-openapi.yml'), 'utf8');
 
   for (const snippet of [
     '/tasks:',
@@ -236,6 +237,19 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'deferredConsiderations',
   ]) {
     assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const snippet of [
+    '/tasks/{taskId}/merge-readiness-reviews:',
+    'createTaskMergeReadinessReview',
+    'listTaskMergeReadinessReviews',
+    'updateTaskMergeReadinessReview',
+    'MergeReadinessReviewStatus',
+    'reviewedLogSources',
+    'findings',
+    'recordVersion',
+  ]) {
+    assert.match(taskPlatformSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 
