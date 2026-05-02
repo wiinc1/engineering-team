@@ -276,6 +276,20 @@ Immediate action:
 19. Confirm Standard-or-higher and risk-bearing Simple tasks cannot enter implementation preparation before the skeleton event, while Simple no-risk tasks are allowed to proceed without one.
 Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract reads and mutations while preserving historical audit events.
 
+### Deferred Considerations review
+Symptom: PM identifies an idea, alternative, or future enhancement during refinement that is useful context but not current approved scope.
+Immediate action:
+1. Use `POST /tasks/{id}/deferred-considerations` to capture title, known context, deferral rationale, source section, source comment or source agent, owner, revisit trigger or date, and open questions.
+2. Confirm Task detail exposes `deferred_considerations.summary.total` and `summary.unresolved_count`; the browser detail page shows the count badge.
+3. Use `GET /deferred-considerations` as the PM review queue for unresolved items across Tasks. Review by revisit date, dependency trigger, or source Task.
+4. Before Operator Approval, confirm `approvalSummary.deferredConsiderationsNotInScope` lists unresolved items and `deferredConsiderationsExcludedFromCoverage=true`.
+5. During Operator Closeout, inspect `closeGovernance.deferredConsiderations`. Unresolved items must show `leave_deferred`, `promote_to_intake_draft`, and `close_no_action`, and must keep `blocks_qa_verification=false` and `blocks_operator_closeout=false`.
+6. To promote, use `POST /tasks/{id}/deferred-considerations/{deferredConsiderationId}/promote`. Confirm the new Intake Draft raw requirements include source Task ID, source Execution Contract version, Deferred Consideration ID, known context, rationale, and open questions.
+7. To close with no action, use `POST /tasks/{id}/deferred-considerations/{deferredConsiderationId}/close` with rationale.
+8. If review determines the item blocks current work, use `POST /tasks/{id}/deferred-considerations/{deferredConsiderationId}/review` with `action=convert_blocker` and `conversion_type=refinement_blocking_question` or `operator_decision_required_exception`. It must not remain only deferred.
+9. Do not inject Deferred Consideration events through the generic `/events` route. The dedicated routes enforce role, state, promotion, and blocker-conversion policy.
+Rollback: set `FF_EXECUTION_CONTRACTS=false` to stop contract-adjacent reads and mutations while preserving append-only Deferred Consideration audit events.
+
 ### Contract Coverage Audit gate
 Symptom: an approved-contract task has implementation complete and needs to move toward QA Verification.
 Immediate action:

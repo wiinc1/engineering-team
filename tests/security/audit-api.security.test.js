@@ -777,6 +777,22 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     assert.equal(response.status, 403);
     assert.match(JSON.stringify(await response.json()), /Contract Coverage Audit events must use the dedicated coverage endpoint/i);
 
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...contributorAuth },
+      body: JSON.stringify({
+        eventType: 'task.deferred_consideration_captured',
+        actorType: 'user',
+        idempotencyKey: `forbidden-deferred-consideration:${created.taskId}`,
+        payload: {
+          deferred_consideration_id: 'DC-BYPASS',
+          title: 'Bypass Deferred Consideration',
+        },
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /Deferred Consideration records must use the dedicated endpoints/i);
+
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/history`, {
       headers: pmAuth,
     });
@@ -785,6 +801,7 @@ test('rejects direct Execution Contract approval event bypasses and enforces app
     assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_artifact_bundle_approved'));
     assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.execution_contract_verification_report_generated'));
     assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.contract_coverage_audit_validated'));
+    assert.ok(!historyAfterRejectedArtifactBypass.items.some((event) => event.event_type === 'task.deferred_consideration_captured'));
 
     response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
       method: 'POST',

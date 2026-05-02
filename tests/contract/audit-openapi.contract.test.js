@@ -81,6 +81,11 @@ test('openapi contract documents the live audit routes and auth model', () => {
     '/tasks/{id}/contract-coverage-audit:',
     '/tasks/{id}/contract-coverage-audit/validate:',
     '/tasks/{id}/contract-coverage-audit/markdown:',
+    '/deferred-considerations:',
+    '/tasks/{id}/deferred-considerations:',
+    '/tasks/{id}/deferred-considerations/{deferredConsiderationId}/review:',
+    '/tasks/{id}/deferred-considerations/{deferredConsiderationId}/promote:',
+    '/tasks/{id}/deferred-considerations/{deferredConsiderationId}/close:',
     '/tasks/{id}/execution-contract/artifacts:',
     '/tasks/{id}/execution-contract/artifacts/approve:',
     '/tasks/{id}/close-review/exceptional-dispute:',
@@ -149,6 +154,11 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'feature_autonomy_confidence_positive_signals_total',
     'feature_autonomy_confidence_neutral_signals_total',
     'feature_autonomy_confidence_negative_signals_total',
+    'DeferredConsideration',
+    'DeferredConsiderationProjection',
+    'deferred-considerations.v1',
+    'task.deferred_consideration_captured',
+    'task.deferred_consideration_promoted',
     'required_role_approvals',
     'nonBlockingComments',
     'ff_execution_contracts',
@@ -217,6 +227,7 @@ test('openapi contract documents the live audit routes and auth model', () => {
     'operatorIntakeRequirements',
     'executionContract',
     'contractCoverageAudit',
+    'deferredConsiderations',
   ]) {
     assert.match(taskDetailSpec, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -358,6 +369,41 @@ test('documented endpoints satisfy the runtime contract', async () => {
     assert.equal(executionContract.data.version, 1);
     assert.equal(executionContract.data.validation.status, 'valid');
 
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/deferred-considerations`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+      },
+      body: JSON.stringify({
+        title: 'Consider a bulk-edit shortcut',
+        knownContext: 'Operators asked about editing several contract rows together.',
+        rationale: 'The approved contract does not include bulk-edit UX.',
+        sourceSection: 'Refinement notes',
+        sourceAgent: 'pm',
+        owner: 'pm',
+        revisitTrigger: 'After row-level editing is prioritized.',
+        openQuestions: ['Should the shortcut apply across filtered rows?'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const capturedDeferredConsideration = await response.json();
+    assert.equal(capturedDeferredConsideration.data.status, 'captured');
+
+    response = await fetch(`${baseUrl}/deferred-considerations`, {
+      headers: authHeaders(secret, { sub: 'pm-1', roles: ['pm', 'reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const deferredQueue = await response.json();
+    assert.equal(deferredQueue.data.summary.total, 1);
+    assert.equal(deferredQueue.data.groups.by_revisit_trigger[0].key, 'After row-level editing is prioritized.');
+
+    response = await fetch(`${baseUrl}/tasks/${intake.taskId}/deferred-considerations`, {
+      headers: readerHeaders,
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.summary.unresolved_count, 1);
+
     response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract/markdown`, {
       method: 'POST',
       headers: {
@@ -378,7 +424,13 @@ test('documented endpoints satisfy the runtime contract', async () => {
       body: JSON.stringify({}),
     });
     assert.equal(response.status, 201);
-    assert.equal((await response.json()).data.committedScope.commitment_status, 'committed');
+    const approvedContract = await response.json();
+    assert.equal(approvedContract.data.committedScope.commitment_status, 'committed');
+    assert.equal(approvedContract.data.approvalSummary.deferredConsiderationsExcludedFromCoverage, true);
+    assert.equal(
+      approvedContract.data.approvalSummary.deferredConsiderationsNotInScope[0].title,
+      'Consider a bulk-edit shortcut',
+    );
 
     response = await fetch(`${baseUrl}/tasks/${intake.taskId}/execution-contract/verification-report`, {
       method: 'POST',

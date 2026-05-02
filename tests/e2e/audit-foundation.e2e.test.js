@@ -182,6 +182,87 @@ test('e2e: raw operator requirements create a draft routed only to PM refinement
   });
 });
 
+test('e2e: Deferred Considerations stay outside approved scope until explicit promotion', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['contributor']),
+      },
+      body: JSON.stringify({
+        raw_requirements: 'Capture non-committed ideas without expanding approved scope.',
+        title: 'Deferred Consideration e2e',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const created = await response.json();
+
+    const pmHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, ['pm', 'reader'], { sub: 'pm-e2e' }),
+    };
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        templateTier: 'Simple',
+        sections: lowRiskSimpleExecutionContractSections(),
+        scopeBoundaries: {
+          committedRequirements: ['Only committed Simple-tier requirements are in scope.'],
+          deferredConsiderations: ['The shortcut workflow is intentionally deferred.'],
+        },
+      }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/deferred-considerations`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        title: 'Shortcut workflow',
+        knownContext: 'PM wants a shortcut after the basic flow proves useful.',
+        rationale: 'The approved Simple contract does not include the shortcut.',
+        sourceSection: 'Acceptance criteria',
+        sourceComment: 'Could add shortcut later.',
+        owner: 'pm',
+        revisitTrigger: 'After initial usage feedback.',
+        openQuestions: ['Which operators need the shortcut first?'],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const captured = await response.json();
+    assert.equal(captured.data.deferredConsideration.source_execution_contract_version, 1);
+
+    response = await fetch(`${baseUrl}/deferred-considerations`, {
+      headers: authHeaders(secret, ['pm', 'reader'], { sub: 'pm-e2e' }),
+    });
+    assert.equal(response.status, 200);
+    const queue = await response.json();
+    assert.equal(queue.data.summary.total, 1);
+    assert.equal(queue.data.items[0].source_task.task_id, created.taskId);
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/execution-contract/approve`, {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({}),
+    });
+    assert.equal(response.status, 201);
+    const approval = await response.json();
+    assert.equal(approval.data.approvalSummary.deferredConsiderationsExcludedFromCoverage, true);
+    assert.equal(approval.data.approvalSummary.deferredConsiderationsNotInScope[0].title, 'Shortcut workflow');
+
+    response = await fetch(`${baseUrl}/tasks/${created.taskId}/detail`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.context.deferredConsiderations.summary.unresolved_count, 1);
+    assert.equal(detail.context.closeGovernance.deferredConsiderations.blocks_operator_closeout, false);
+  });
+});
+
 test('e2e: PM generates a versioned Execution Contract, Markdown, verification skeleton, and artifacts without engineer submission', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks`, {

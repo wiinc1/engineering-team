@@ -92,6 +92,7 @@ function isProtectedRoute(pathname = '') {
     || matchAdminUsersRoute(normalizedPath)
     || Boolean(matchPmOverviewRoute(normalizedPath))
     || Boolean(matchGovernanceOverviewRoute(normalizedPath))
+    || Boolean(matchDeferredConsiderationsRoute(normalizedPath))
     || Boolean(readRouteTask(normalizedPath));
 }
 
@@ -199,6 +200,11 @@ function matchGovernanceOverviewRoute(pathname = '') {
   return normalizedPath === '/overview/governance' ? { scope: 'governance' } : null;
 }
 
+function matchDeferredConsiderationsRoute(pathname = '') {
+  const normalizedPath = ((pathname || '').replace(/\/+$/, '') || '/');
+  return normalizedPath === '/deferred-considerations' ? { scope: 'deferred-considerations' } : null;
+}
+
 function readTaskListRouteState(search = '') {
   const params = new URLSearchParams(search);
   const owner = params.get('owner') || '';
@@ -272,17 +278,19 @@ function buildListLoadingModel(pathname, search) {
   const roleInbox = matchRoleInboxRoute(pathname);
   const pmOverview = matchPmOverviewRoute(pathname);
   const governanceOverview = matchGovernanceOverviewRoute(pathname);
+  const deferredConsiderations = matchDeferredConsiderationsRoute(pathname);
   return {
     kind: 'list',
-    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null },
+    route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : deferredConsiderations ? '/deferred-considerations' : '/tasks', taskId: null },
     list: {
       filters: readTaskListRouteState(search),
       items: [],
-      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : pmOverview ? 'Loading PM overview.' : governanceOverview ? 'Loading governance reviews.' : 'Loading task list.' },
+      state: { kind: 'loading', message: roleInbox ? `Loading ${getRoleInboxLabel(roleInbox.role)} inbox.` : pmOverview ? 'Loading PM overview.' : governanceOverview ? 'Loading governance reviews.' : deferredConsiderations ? 'Loading Deferred Considerations.' : 'Loading task list.' },
       resultSummary: '',
       inboxRole: roleInbox?.role || null,
       isPmOverview: Boolean(pmOverview),
       isGovernanceOverview: Boolean(governanceOverview),
+      isDeferredConsiderations: Boolean(deferredConsiderations),
     },
   };
 }
@@ -660,6 +668,91 @@ function normalizeCloseBacktrackDraft(detail = {}) {
   };
 }
 
+function normalizeDeferredConsiderationDraft() {
+  return {
+    title: '',
+    knownContext: '',
+    rationale: '',
+    sourceSection: '',
+    sourceComment: '',
+    sourceAgent: '',
+    owner: 'pm',
+    revisitTrigger: '',
+    revisitDate: '',
+    openQuestions: '',
+  };
+}
+
+function normalizeDeferredConsiderationActionDraft(item = {}) {
+  return {
+    reviewNote: '',
+    revisitTrigger: item.revisit_trigger || '',
+    revisitDate: item.revisit_date || '',
+    promotionTitle: item.title || '',
+    promotionNote: '',
+    closeRationale: '',
+  };
+}
+
+function toDeferredConsiderationActionDrafts(items = []) {
+  return items.reduce((drafts, item) => {
+    const id = item.id || item.deferred_consideration_id;
+    if (id) drafts[id] = normalizeDeferredConsiderationActionDraft(item);
+    return drafts;
+  }, {});
+}
+
+function formatDeferredConsiderationStatus(status) {
+  switch (status) {
+    case 'reviewed':
+      return 'Reviewed';
+    case 'promoted':
+      return 'Promoted';
+    case 'closed_no_action':
+      return 'Closed no action';
+    default:
+      return 'Captured';
+  }
+}
+
+function buildDeferredConsiderationQueueItems(items = []) {
+  return items.flatMap((task) => {
+    const unresolved = task?.deferred_considerations?.unresolved || task?.deferredConsiderations?.unresolved || [];
+    return unresolved.map((consideration) => ({
+      ...consideration,
+      task,
+      sourceTaskId: task.task_id || task.taskId,
+      sourceTaskTitle: task.title || task.task_id || task.taskId,
+    }));
+  }).sort((left, right) => {
+    const leftDate = left.revisit_date || left.reviewed_at || left.captured_at || '';
+    const rightDate = right.revisit_date || right.reviewed_at || right.captured_at || '';
+    return String(leftDate).localeCompare(String(rightDate));
+  });
+}
+
+function deferredConsiderationQueueGroup(item = {}) {
+  if (item.revisit_date) {
+    return { key: `date:${item.revisit_date}`, label: `Revisit date: ${item.revisit_date}` };
+  }
+  if (item.revisit_trigger) {
+    return { key: `trigger:${item.revisit_trigger}`, label: `Trigger: ${item.revisit_trigger}` };
+  }
+  return { key: `source:${item.sourceTaskId || 'unknown'}`, label: `Source task: ${item.sourceTaskId || 'Unknown task'}` };
+}
+
+function buildDeferredConsiderationQueueSections(items = []) {
+  const sections = new Map();
+  for (const item of items) {
+    const group = deferredConsiderationQueueGroup(item);
+    if (!sections.has(group.key)) {
+      sections.set(group.key, { ...group, items: [] });
+    }
+    sections.get(group.key).items.push(item);
+  }
+  return [...sections.values()];
+}
+
 function splitTextareaLines(value) {
   return String(value || '')
     .split(/\n+/)
@@ -809,6 +902,14 @@ function canRequestCloseReviewBacktrack(tokenClaims) {
   return hasAnyRole(tokenClaims, ['pm', 'architect', 'admin']);
 }
 
+function canManageDeferredConsiderations(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'admin']);
+}
+
+function canOperateDeferredConsiderations(tokenClaims) {
+  return hasAnyRole(tokenClaims, ['pm', 'human', 'stakeholder', 'operator', 'admin']);
+}
+
 function getEffectiveEngineerTierFromDetail(detail) {
   return detail?.context?.retiering?.engineerTier
     || detail?.context?.architectHandoff?.engineerTier
@@ -866,7 +967,7 @@ export function App() {
   const [signInStatus, setSignInStatus] = React.useState({ kind: 'idle', message: '' });
   const [authNotice, setAuthNotice] = React.useState('');
   const [model, setModel] = React.useState(() => {
-    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname) || matchGovernanceOverviewRoute(pathname)) return buildListLoadingModel(pathname, search);
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname) || matchGovernanceOverviewRoute(pathname) || matchDeferredConsiderationsRoute(pathname)) return buildListLoadingModel(pathname, search);
     return matchTaskRoute(pathname) ? buildLoadingModel(pathname, search) : buildRouteMissModel(pathname);
   });
   const [agentOptions, setAgentOptions] = React.useState([]);
@@ -916,6 +1017,9 @@ export function App() {
   const [humanInboxDecisionStatuses, setHumanInboxDecisionStatuses] = React.useState({});
   const [closeBacktrackDraft, setCloseBacktrackDraft] = React.useState(() => normalizeCloseBacktrackDraft());
   const [closeBacktrackStatus, setCloseBacktrackStatus] = React.useState({ kind: 'idle', message: '' });
+  const [deferredConsiderationDraft, setDeferredConsiderationDraft] = React.useState(() => normalizeDeferredConsiderationDraft());
+  const [deferredConsiderationActionDrafts, setDeferredConsiderationActionDrafts] = React.useState({});
+  const [deferredConsiderationStatus, setDeferredConsiderationStatus] = React.useState({ kind: 'idle', message: '', considerationId: null, action: null });
   const [lifecycleStatus, setLifecycleStatus] = React.useState({ kind: 'idle', message: '', taskId: null });
   const [sreFindingDraft, setSreFindingDraft] = React.useState('');
   const [dragState, setDragState] = React.useState({ taskId: null, overStage: '' });
@@ -1087,6 +1191,8 @@ export function App() {
       setExceptionalDisputeDraft(normalizeExceptionalDisputeDraft(model.detail));
       setHumanCloseDecisionDraft(normalizeHumanCloseDecisionDraft(model.detail));
       setCloseBacktrackDraft(normalizeCloseBacktrackDraft(model.detail));
+      setDeferredConsiderationDraft(normalizeDeferredConsiderationDraft());
+      setDeferredConsiderationActionDrafts(toDeferredConsiderationActionDrafts(model.detail?.context?.deferredConsiderations?.unresolved || []));
       setSreFindingDraft('');
       setHistoryLoadMoreState({ kind: 'idle', message: '' });
 
@@ -1113,6 +1219,7 @@ export function App() {
         setHumanInboxDecisionDrafts({});
         setHumanInboxDecisionStatuses({});
         setCloseBacktrackStatus({ kind: 'idle', message: '' });
+        setDeferredConsiderationStatus({ kind: 'idle', message: '', considerationId: null, action: null });
         setLifecycleStatus({ kind: 'idle', message: '', taskId: null });
       }
     }
@@ -1134,7 +1241,7 @@ export function App() {
       };
     }
 
-    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname) || matchGovernanceOverviewRoute(pathname)) {
+    if (matchTaskListRoute(pathname) || matchRoleInboxRoute(pathname) || matchPmOverviewRoute(pathname) || matchGovernanceOverviewRoute(pathname) || matchDeferredConsiderationsRoute(pathname)) {
       setModel(buildListLoadingModel(pathname, search));
       taskClient.fetchTaskList()
         .then((payload) => {
@@ -1143,9 +1250,10 @@ export function App() {
           const roleInbox = matchRoleInboxRoute(pathname);
           const pmOverview = matchPmOverviewRoute(pathname);
           const governanceOverview = matchGovernanceOverviewRoute(pathname);
+          const deferredConsiderations = matchDeferredConsiderationsRoute(pathname);
           setModel({
             kind: 'list',
-            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null },
+            route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : deferredConsiderations ? '/deferred-considerations' : '/tasks', taskId: null },
             list: {
               filters,
               items: payload.items || [],
@@ -1154,6 +1262,7 @@ export function App() {
               inboxRole: roleInbox?.role || null,
               isPmOverview: Boolean(pmOverview),
               isGovernanceOverview: Boolean(governanceOverview),
+              isDeferredConsiderations: Boolean(deferredConsiderations),
             },
           });
         })
@@ -1162,9 +1271,10 @@ export function App() {
             const roleInbox = matchRoleInboxRoute(pathname);
             const pmOverview = matchPmOverviewRoute(pathname);
             const governanceOverview = matchGovernanceOverviewRoute(pathname);
+            const deferredConsiderations = matchDeferredConsiderationsRoute(pathname);
             setModel({
               kind: 'list',
-              route: { pathname: roleInbox ? pathname : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null },
+              route: { pathname: roleInbox ? pathname : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : deferredConsiderations ? '/deferred-considerations' : '/tasks', taskId: null },
               list: {
                 filters: readTaskListRouteState(search),
                 items: [],
@@ -1173,6 +1283,7 @@ export function App() {
                 inboxRole: roleInbox?.role || null,
                 isPmOverview: Boolean(pmOverview),
                 isGovernanceOverview: Boolean(governanceOverview),
+                isDeferredConsiderations: Boolean(deferredConsiderations),
               },
             });
           }
@@ -1288,6 +1399,7 @@ export function App() {
   const activeInboxRole = model.kind === 'list' ? model.list.inboxRole : null;
   const isPmOverview = model.kind === 'list' ? Boolean(model.list.isPmOverview) : false;
   const isGovernanceOverview = model.kind === 'list' ? Boolean(model.list.isGovernanceOverview) : false;
+  const isDeferredConsiderations = model.kind === 'list' ? Boolean(model.list.isDeferredConsiderations) : false;
   const detailPermissions = model.kind === 'detail' ? (model.detail?.meta?.permissions || {}) : {};
   const executionContractAutoApproval = model.kind === 'detail'
     ? (model.detail?.context?.executionContract?.approval?.autoApproval || model.detail?.context?.executionContract?.latest?.auto_approval || null)
@@ -1295,6 +1407,11 @@ export function App() {
   const contractCoverageAudit = model.kind === 'detail'
     ? (model.detail?.context?.executionContract?.contractCoverageAudit || null)
     : null;
+  const deferredConsiderations = model.kind === 'detail'
+    ? (model.detail?.context?.deferredConsiderations || { items: [], unresolved: [], summary: { total: 0, unresolved_count: 0 } })
+    : { items: [], unresolved: [], summary: { total: 0, unresolved_count: 0 } };
+  const canCaptureDeferredConsiderations = model.kind === 'detail' && canManageDeferredConsiderations(tokenClaims);
+  const canActOnDeferredConsiderations = model.kind === 'detail' && canOperateDeferredConsiderations(tokenClaims);
   const architectReviewEnabled = model.kind === 'detail' && Boolean(model.detail?.reviewQuestions);
   const canAskQuestions = architectReviewEnabled && canAskReviewQuestion(tokenClaims) && model.detail?.task?.stage === 'ARCHITECT_REVIEW';
   const canAnswerQuestions = architectReviewEnabled && canAnswerReviewQuestion(tokenClaims);
@@ -1364,13 +1481,82 @@ export function App() {
       const roleInbox = matchRoleInboxRoute(pathname);
       const pmOverview = matchPmOverviewRoute(pathname);
       const governanceOverview = matchGovernanceOverviewRoute(pathname);
-      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null, isPmOverview: Boolean(pmOverview), isGovernanceOverview: Boolean(governanceOverview) } });
+      const deferredConsiderations = matchDeferredConsiderationsRoute(pathname);
+      setModel({ kind: 'list', route: { pathname: roleInbox ? `/inbox/${roleInbox.role}` : pmOverview ? '/overview/pm' : governanceOverview ? '/overview/governance' : deferredConsiderations ? '/deferred-considerations' : '/tasks', taskId: null }, list: { filters: readTaskListRouteState(search), items: payload.items || [], state: { kind: 'ready' }, resultSummary: '', inboxRole: roleInbox?.role || null, isPmOverview: Boolean(pmOverview), isGovernanceOverview: Boolean(governanceOverview), isDeferredConsiderations: Boolean(deferredConsiderations) } });
       return;
     }
     setModel(buildLoadingModel(pathname, search));
     const nextModel = await pageModule.load({ pathname, search });
     setModel({ ...nextModel, kind: 'detail' });
   }, [model.kind, pageModule, pathname, search, taskClient]);
+
+  const updateDeferredConsiderationActionDraft = React.useCallback((considerationId, updates) => {
+    setDeferredConsiderationActionDrafts((current) => ({
+      ...current,
+      [considerationId]: {
+        ...normalizeDeferredConsiderationActionDraft(),
+        ...(current[considerationId] || {}),
+        ...updates,
+      },
+    }));
+  }, []);
+
+  const submitDeferredConsiderationCapture = React.useCallback(async (event) => {
+    event.preventDefault();
+    const taskId = model.kind === 'detail' ? model.route?.taskId : null;
+    if (!taskId) return;
+    setDeferredConsiderationStatus({ kind: 'loading', message: 'Capturing Deferred Consideration.', considerationId: null, action: 'capture' });
+    try {
+      await taskClient.captureDeferredConsideration(taskId, {
+        title: deferredConsiderationDraft.title,
+        knownContext: deferredConsiderationDraft.knownContext,
+        rationale: deferredConsiderationDraft.rationale,
+        sourceSection: deferredConsiderationDraft.sourceSection,
+        sourceComment: deferredConsiderationDraft.sourceComment,
+        sourceAgent: deferredConsiderationDraft.sourceAgent,
+        owner: deferredConsiderationDraft.owner,
+        revisitTrigger: deferredConsiderationDraft.revisitTrigger,
+        revisitDate: deferredConsiderationDraft.revisitDate,
+        openQuestions: splitTextareaLines(deferredConsiderationDraft.openQuestions),
+      });
+      setDeferredConsiderationDraft(normalizeDeferredConsiderationDraft());
+      setDeferredConsiderationStatus({ kind: 'success', message: 'Deferred Consideration captured.', considerationId: null, action: 'capture' });
+      await reloadTask();
+    } catch (error) {
+      setDeferredConsiderationStatus({ kind: 'error', message: error?.message || 'Deferred Consideration capture failed.', considerationId: null, action: 'capture' });
+    }
+  }, [deferredConsiderationDraft, model, reloadTask, taskClient]);
+
+  const reviewDeferredConsideration = React.useCallback(async (consideration, action) => {
+    const taskId = model.kind === 'detail' ? model.route?.taskId : null;
+    const considerationId = consideration?.id || consideration?.deferred_consideration_id;
+    if (!taskId || !considerationId) return;
+    const draft = deferredConsiderationActionDrafts[considerationId] || normalizeDeferredConsiderationActionDraft(consideration);
+    setDeferredConsiderationStatus({ kind: 'loading', message: 'Updating Deferred Consideration.', considerationId, action });
+    try {
+      if (action === 'leave_deferred') {
+        await taskClient.reviewDeferredConsideration(taskId, considerationId, {
+          action: 'leave_deferred',
+          reviewNote: draft.reviewNote || 'Deferred Consideration reviewed and left deferred.',
+          revisitTrigger: draft.revisitTrigger,
+          revisitDate: draft.revisitDate,
+        });
+      } else if (action === 'promote') {
+        await taskClient.promoteDeferredConsideration(taskId, considerationId, {
+          title: draft.promotionTitle || consideration.title,
+          promotionNote: draft.promotionNote,
+        });
+      } else if (action === 'close') {
+        await taskClient.closeDeferredConsideration(taskId, considerationId, {
+          rationale: draft.closeRationale,
+        });
+      }
+      setDeferredConsiderationStatus({ kind: 'success', message: 'Deferred Consideration updated.', considerationId, action });
+      await reloadTask();
+    } catch (error) {
+      setDeferredConsiderationStatus({ kind: 'error', message: error?.message || 'Deferred Consideration update failed.', considerationId, action });
+    }
+  }, [deferredConsiderationActionDrafts, model, reloadTask, taskClient]);
 
   const runLifecycleTransition = React.useCallback(async ({ item, toStage, note = '', source = 'board' }) => {
     if (!item?.task_id) return;
@@ -1973,6 +2159,8 @@ export function App() {
   const roleInboxItems = model.kind === 'list' && activeInboxRole ? buildRoleInboxItems(model.list.items, activeInboxRole, agentLookup) : [];
   const pmSections = model.kind === 'list' && isPmOverview ? buildPmOverviewSections(model.list.items, agentLookup) : [];
   const governanceItems = model.kind === 'list' && isGovernanceOverview ? buildGovernanceReviewItems(model.list.items, agentLookup) : [];
+  const deferredConsiderationQueueItems = model.kind === 'list' && isDeferredConsiderations ? buildDeferredConsiderationQueueItems(model.list.items) : [];
+  const deferredConsiderationQueueSections = isDeferredConsiderations ? buildDeferredConsiderationQueueSections(deferredConsiderationQueueItems) : [];
   const activePmBucket = isPmOverview && PM_OVERVIEW_BUCKET_ORDER.includes(listFilters.bucket) ? listFilters.bucket : '';
   const selectedPmSection = activePmBucket ? pmSections.find((section) => section.key === activePmBucket) || null : null;
   const visiblePmSections = isPmOverview
@@ -1999,6 +2187,8 @@ export function App() {
       ? summarizePmOverviewResults(visiblePmSections, activePmBucket)
       : isGovernanceOverview
         ? `${governanceItems.length} governance review${governanceItems.length === 1 ? '' : 's'} shown.`
+        : isDeferredConsiderations
+          ? `${deferredConsiderationQueueItems.length} Deferred Consideration${deferredConsiderationQueueItems.length === 1 ? '' : 's'} awaiting PM review.`
       : activeInboxRole
         ? roleInboxState.kind === 'ready'
           ? summarizeRoleInboxResults(roleInboxItems.length, activeInboxRole)
@@ -2270,11 +2460,12 @@ export function App() {
     <main className="app-shell">
       <nav className="app-nav" aria-label="Primary navigation">
         <div className="app-nav__links">
-          <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view !== 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks')}>Task list</button>
-          <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
+          <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && !activeInboxRole && listFilters.view !== 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks')}>Task list</button>
+          <button type="button" className={model.kind === 'list' && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && !activeInboxRole && listFilters.view === 'board' ? '' : 'button-secondary'} onClick={() => navigate('/tasks', writeTaskListUrlState({ view: 'board' }, ''))}>Board</button>
           <button type="button" className="button-secondary" onClick={() => navigate('/tasks/create')}>Create intake</button>
           <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
           <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
+          <button type="button" className={isDeferredConsiderations ? '' : 'button-secondary'} onClick={() => navigate('/deferred-considerations')}>Deferred considerations</button>
           {hasAnyRole(tokenClaims, ['admin']) ? (
             <button type="button" className="button-secondary" onClick={() => navigate('/admin/users')}>User admin</button>
           ) : null}
@@ -2293,13 +2484,15 @@ export function App() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Authenticated browser shell for US-002</p>
-          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : isGovernanceOverview ? 'Governance Reviews' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
+          <h1>{model.kind === 'list' ? (isPmOverview ? 'PM Overview' : isGovernanceOverview ? 'Governance Reviews' : isDeferredConsiderations ? 'Deferred Considerations' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} Inbox` : 'Task list') : model.detail?.task?.title || model.summary.title || 'Task detail'}</h1>
           <p className="lede">
 	            {model.kind === 'list'
 	              ? isPmOverview
 	                ? 'Read-only grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping.'
 	                : isGovernanceOverview
 	                  ? 'Dedicated operational surface for inactivity and governance review tasks that should stay out of delivery queues.'
+	                  : isDeferredConsiderations
+	                    ? 'PM review queue for non-committed ideas that are explicitly outside the current approved scope.'
 	                : activeInboxRole
 	                  ? activeInboxRole === 'sre'
 	                    ? 'Read-only monitoring inbox showing tasks routed here because they are in the SRE monitoring stage or explicitly assigned to SRE-owned work.'
@@ -2331,6 +2524,7 @@ export function App() {
               <button type="button" className="button-secondary" onClick={() => navigate('/tasks/create')}>Create intake</button>
               <button type="button" className={isPmOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/pm')}>PM overview</button>
               <button type="button" className={isGovernanceOverview ? '' : 'button-secondary'} onClick={() => navigate('/overview/governance')}>Governance reviews</button>
+              <button type="button" className={isDeferredConsiderations ? '' : 'button-secondary'} onClick={() => navigate('/deferred-considerations')}>Deferred considerations</button>
               {ROLE_INBOXES.map((role) => (
                 <button key={role} type="button" className={activeInboxRole === role ? '' : 'button-secondary'} onClick={() => navigate(`/inbox/${role}`)}>
                   {getRoleInboxLabel(role)} inbox
@@ -2368,7 +2562,7 @@ export function App() {
       </header>
 
       {model.kind === 'list' ? (
-        <section className="task-list-panel" aria-label={isPmOverview ? 'PM overview view' : isGovernanceOverview ? 'Governance reviews view' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
+        <section className="task-list-panel" aria-label={isPmOverview ? 'PM overview view' : isGovernanceOverview ? 'Governance reviews view' : isDeferredConsiderations ? 'Deferred Considerations review queue' : activeInboxRole ? `${getRoleInboxLabel(activeInboxRole)} inbox view` : 'Task list view'}>
           <div className="task-list-toolbar">
             {isPmOverview ? (
               <div className="role-inbox-toolbar">
@@ -2397,6 +2591,18 @@ export function App() {
                   <p className="eyebrow">Operational governance</p>
                   <h2>Governance review queue</h2>
                   <p className="role-inbox-toolbar__cue">Inactivity review and governance follow-up tasks live here so they remain visible without mixing into normal delivery views.</p>
+                </div>
+                <div className="task-list-toolbar__actions">
+                  <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Open full task list</button>
+                  <button type="button" onClick={() => void reloadTask()}>Refresh</button>
+                </div>
+              </div>
+            ) : isDeferredConsiderations ? (
+              <div className="role-inbox-toolbar">
+                <div>
+                  <p className="eyebrow">PM review queue</p>
+                  <h2>Deferred Considerations</h2>
+                  <p className="role-inbox-toolbar__cue">Captured ideas remain outside committed scope until a PM or operator explicitly promotes them to a new Intake Draft.</p>
                 </div>
                 <div className="task-list-toolbar__actions">
                   <button type="button" className="button-secondary" onClick={() => navigate('/tasks')}>Open full task list</button>
@@ -2493,8 +2699,8 @@ export function App() {
 
           <p className="task-list-results" role="status" aria-live="polite">{resultSummary}</p>
 
-          {(isPmOverview && listState.kind === 'loading') || (isGovernanceOverview && listState.kind === 'loading') || (!activeInboxRole && !isPmOverview && !isGovernanceOverview && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : isPmOverview ? 'Loading PM overview.' : isGovernanceOverview ? 'Loading governance reviews.' : 'Loading task list.'}</p> : null}
-          {((!activeInboxRole && !isPmOverview && !isGovernanceOverview && listState.kind === 'error') || (isPmOverview && listState.kind === 'error') || (isGovernanceOverview && listState.kind === 'error')) ? <p role="alert">{listState.message}</p> : null}
+          {(isPmOverview && listState.kind === 'loading') || (isGovernanceOverview && listState.kind === 'loading') || (isDeferredConsiderations && listState.kind === 'loading') || (!activeInboxRole && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && listState.kind === 'loading') || (activeInboxRole && roleInboxState.kind === 'loading') ? <p role="status">{activeInboxRole ? roleInboxState.message : isPmOverview ? 'Loading PM overview.' : isGovernanceOverview ? 'Loading governance reviews.' : isDeferredConsiderations ? 'Loading Deferred Considerations.' : 'Loading task list.'}</p> : null}
+          {((!activeInboxRole && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && listState.kind === 'error') || (isPmOverview && listState.kind === 'error') || (isGovernanceOverview && listState.kind === 'error') || (isDeferredConsiderations && listState.kind === 'error')) ? <p role="alert">{listState.message}</p> : null}
           {isPmOverview && agentOptionsState.kind === 'error' && listState.kind === 'ready' ? (
             <div className="empty-state" role="alert">
               <h2>Some routing metadata is unavailable</h2>
@@ -2545,6 +2751,53 @@ export function App() {
                             <span className="routing-badge">{item.pmBucket.routingCue}</span>
                             <div className="task-list-meta">{item.pmBucket.routingReason}</div>
                           </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              ))}
+            </div>
+          ) : null}
+
+          {isDeferredConsiderations && listState.kind === 'ready' && deferredConsiderationQueueItems.length ? (
+            <div className="task-list-table-wrap">
+              {deferredConsiderationQueueSections.map((section) => (
+                <section key={section.key} className="pm-overview-section" aria-labelledby={`deferred-consideration-group-${section.key.replace(/[^a-z0-9_-]/gi, '-')}`}>
+                  <div className="task-board__column-header">
+                    <h2 id={`deferred-consideration-group-${section.key.replace(/[^a-z0-9_-]/gi, '-')}`}>{section.label}</h2>
+                    <span>{section.items.length}</span>
+                  </div>
+                  <table className="task-list-table" aria-label={`${section.label} Deferred Considerations`}>
+                    <thead>
+                      <tr>
+                        <th scope="col">Consideration</th>
+                        <th scope="col">Source task</th>
+                        <th scope="col">Owner</th>
+                        <th scope="col">Revisit</th>
+                        <th scope="col">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.items.map((item) => (
+                        <tr key={`${item.sourceTaskId}-${item.id || item.deferred_consideration_id}`}>
+                          <td>
+                            <strong>{item.title || item.id}</strong>
+                            <div className="task-list-meta">{item.id || item.deferred_consideration_id}</div>
+                            <div className="task-list-meta">{item.rationale || 'No rationale recorded.'}</div>
+                          </td>
+                          <td>
+                            <a href={`/tasks/${encodeURIComponent(item.sourceTaskId)}`} onClick={(event) => { event.preventDefault(); navigate(`/tasks/${encodeURIComponent(item.sourceTaskId)}`); }}>
+                              {item.sourceTaskTitle}
+                            </a>
+                            <div className="task-list-meta">{item.sourceTaskId} · {item.task?.current_stage || '—'}</div>
+                          </td>
+                          <td>{item.owner || 'Unassigned'}</td>
+                          <td>
+                            <div>{item.revisit_date || item.revisit_trigger || 'Not scheduled'}</div>
+                            <div className="task-list-meta">{item.source_section || 'No source section'}</div>
+                          </td>
+                          <td><span className="routing-badge">{formatDeferredConsiderationStatus(item.status)}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -2825,7 +3078,7 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && visibleListItems.length && listFilters.view === 'list' ? (
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && visibleListItems.length && listFilters.view === 'list' ? (
             <div className="task-list-table-wrap">
               <table className="task-list-table">
                 <thead>
@@ -2865,7 +3118,7 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && visibleListItems.length && listFilters.view === 'board' ? (
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && visibleListItems.length && listFilters.view === 'board' ? (
             <div className="task-board" aria-label="Task board">
               {lifecycleStatus.kind !== 'idle' ? (
                 <p className={`assignment-status assignment-status--${lifecycleStatus.kind}`} role={lifecycleStatus.kind === 'error' ? 'alert' : 'status'}>
@@ -2974,7 +3227,14 @@ export function App() {
             </div>
           ) : null}
 
-          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && !visibleListItems.length ? (
+          {isDeferredConsiderations && listState.kind === 'ready' && !deferredConsiderationQueueItems.length ? (
+            <div className="empty-state" role="status">
+              <h2>No Deferred Considerations awaiting review</h2>
+              <p>Captured considerations with unresolved status will appear here.</p>
+            </div>
+          ) : null}
+
+          {listState.kind === 'ready' && !activeInboxRole && !isPmOverview && !isGovernanceOverview && !isDeferredConsiderations && !visibleListItems.length ? (
             <div className="empty-state" role="status">
               <h2>No matching tasks</h2>
               <p>{hasActiveListFilters ? 'No tasks match the active task filters.' : 'No tasks are available yet.'}</p>
@@ -3073,6 +3333,11 @@ export function App() {
               <article>
                 <span>Child tasks</span>
                 <strong>{model.detail?.summary?.childStatus?.label || 'No child tasks'}</strong>
+              </article>
+              <article>
+                <span>Deferred considerations</span>
+                <strong>{deferredConsiderations.summary?.unresolved_count || 0} unresolved</strong>
+                <small>{deferredConsiderations.summary?.total || 0} total</small>
               </article>
               <article>
                 <span>Timers and freshness</span>
@@ -3239,6 +3504,158 @@ export function App() {
             </section>
           ) : null}
 
+          <section className="detail-card detail-card--full" aria-label="Deferred Considerations">
+            <div className="detail-card__header">
+              <div>
+                <h2>Deferred Considerations</h2>
+                <p className="task-list-meta">
+                  {deferredConsiderations.summary?.unresolved_count || 0} unresolved · {deferredConsiderations.summary?.total || 0} total · Excluded from current approved scope until explicitly promoted.
+                </p>
+              </div>
+              <span className="routing-badge">{deferredConsiderations.summary?.policy_version || 'deferred-considerations.v1'}</span>
+            </div>
+
+            {deferredConsiderations.items?.length ? (
+              <div className="review-question-list">
+                {deferredConsiderations.items.map((item) => {
+                  const considerationId = item.id || item.deferred_consideration_id;
+                  const draft = deferredConsiderationActionDrafts[considerationId] || normalizeDeferredConsiderationActionDraft(item);
+                  const isOpen = ['captured', 'reviewed'].includes(item.status);
+                  const status = deferredConsiderationStatus.considerationId === considerationId ? deferredConsiderationStatus : { kind: 'idle', message: '' };
+                  return (
+                    <article className="review-question-note" key={considerationId}>
+                      <span>{formatDeferredConsiderationStatus(item.status)}</span>
+                      <p><strong>{item.title}</strong></p>
+                      <p>{item.known_context || 'No known context recorded.'}</p>
+                      <p className="task-list-meta">
+                        {considerationId} · Owner: {item.owner || 'Unassigned'} · Source: {item.source_section || 'No source section'}
+                        {item.revisit_date ? ` · Revisit ${item.revisit_date}` : item.revisit_trigger ? ` · ${item.revisit_trigger}` : ''}
+                      </p>
+                      {item.rationale ? <p className="task-list-meta">Rationale: {item.rationale}</p> : null}
+                      {item.open_questions?.length ? renderList(item.open_questions, 'No open questions recorded.') : null}
+                      {item.promotion_link?.task_id ? (
+                        <p className="task-list-meta">Promoted intake: {item.promotion_link.task_id}</p>
+                      ) : null}
+
+                      {isOpen && canActOnDeferredConsiderations ? (
+                        <div className="architect-handoff-form">
+                          <label>
+                            Review note
+                            <textarea
+                              value={draft.reviewNote}
+                              onChange={(event) => updateDeferredConsiderationActionDraft(considerationId, { reviewNote: event.target.value })}
+                              placeholder="Why this remains deferred."
+                            />
+                          </label>
+                          <label>
+                            Revisit trigger
+                            <input
+                              value={draft.revisitTrigger}
+                              onChange={(event) => updateDeferredConsiderationActionDraft(considerationId, { revisitTrigger: event.target.value })}
+                              placeholder="Metric, milestone, or decision point"
+                            />
+                          </label>
+                          <label>
+                            Promotion title
+                            <input
+                              value={draft.promotionTitle}
+                              onChange={(event) => updateDeferredConsiderationActionDraft(considerationId, { promotionTitle: event.target.value })}
+                              placeholder="New Intake Draft title"
+                            />
+                          </label>
+                          <label>
+                            Promotion note
+                            <textarea
+                              value={draft.promotionNote}
+                              onChange={(event) => updateDeferredConsiderationActionDraft(considerationId, { promotionNote: event.target.value })}
+                              placeholder="Why this should become a new Intake Draft."
+                            />
+                          </label>
+                          <label>
+                            Close no-action rationale
+                            <textarea
+                              value={draft.closeRationale}
+                              onChange={(event) => updateDeferredConsiderationActionDraft(considerationId, { closeRationale: event.target.value })}
+                              placeholder="Why no follow-up action is needed."
+                            />
+                          </label>
+                          <div className="assignment-form__actions">
+                            <button type="button" className="button-secondary" onClick={() => void reviewDeferredConsideration(item, 'leave_deferred')} disabled={status.kind === 'loading'}>Leave deferred</button>
+                            <button type="button" onClick={() => void reviewDeferredConsideration(item, 'promote')} disabled={status.kind === 'loading'}>Promote to Intake Draft</button>
+                            <button type="button" className="button-secondary" onClick={() => void reviewDeferredConsideration(item, 'close')} disabled={status.kind === 'loading'}>Close no action</button>
+                          </div>
+                          {status.kind !== 'idle' ? (
+                            <p className={`assignment-status assignment-status--${status.kind}`} role={status.kind === 'error' ? 'alert' : 'status'}>
+                              {status.message}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="empty-copy">No Deferred Considerations are recorded for this task.</p>
+            )}
+
+            {canCaptureDeferredConsiderations ? (
+              <form className="architect-handoff-form" onSubmit={submitDeferredConsiderationCapture}>
+                <h3>Capture Deferred Consideration</h3>
+                <label>
+                  Title
+                  <input value={deferredConsiderationDraft.title} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, title: event.target.value }))} />
+                </label>
+                <label>
+                  Known context
+                  <textarea value={deferredConsiderationDraft.knownContext} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, knownContext: event.target.value }))} />
+                </label>
+                <label>
+                  Rationale for deferring
+                  <textarea value={deferredConsiderationDraft.rationale} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, rationale: event.target.value }))} />
+                </label>
+                <label>
+                  Source section
+                  <input value={deferredConsiderationDraft.sourceSection} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, sourceSection: event.target.value }))} />
+                </label>
+                <label>
+                  Source comment
+                  <textarea value={deferredConsiderationDraft.sourceComment} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, sourceComment: event.target.value }))} />
+                </label>
+                <label>
+                  Source agent
+                  <input value={deferredConsiderationDraft.sourceAgent} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, sourceAgent: event.target.value }))} />
+                </label>
+                <label>
+                  Responsible role
+                  <input value={deferredConsiderationDraft.owner} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, owner: event.target.value }))} />
+                </label>
+                <label>
+                  Revisit trigger
+                  <input value={deferredConsiderationDraft.revisitTrigger} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, revisitTrigger: event.target.value }))} />
+                </label>
+                <label>
+                  Revisit date
+                  <input type="date" value={deferredConsiderationDraft.revisitDate} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, revisitDate: event.target.value }))} />
+                </label>
+                <label>
+                  Open questions
+                  <textarea value={deferredConsiderationDraft.openQuestions} onChange={(event) => setDeferredConsiderationDraft((current) => ({ ...current, openQuestions: event.target.value }))} />
+                </label>
+                <div className="assignment-form__actions">
+                  <button type="submit" disabled={deferredConsiderationStatus.kind === 'loading' && deferredConsiderationStatus.action === 'capture'}>
+                    {deferredConsiderationStatus.kind === 'loading' && deferredConsiderationStatus.action === 'capture' ? 'Capturing…' : 'Capture Deferred Consideration'}
+                  </button>
+                </div>
+                {deferredConsiderationStatus.kind !== 'idle' && deferredConsiderationStatus.action === 'capture' ? (
+                  <p className={`assignment-status assignment-status--${deferredConsiderationStatus.kind}`} role={deferredConsiderationStatus.kind === 'error' ? 'alert' : 'status'}>
+                    {deferredConsiderationStatus.message}
+                  </p>
+                ) : null}
+              </form>
+            ) : null}
+          </section>
+
           {model.detail?.context?.closeGovernance?.active ? (
             <section className="detail-card detail-card--full" aria-label="Close review governance">
               <h2>Close review governance</h2>
@@ -3262,6 +3679,23 @@ export function App() {
                   ))}
                 </ul>
               </div>
+
+              {model.detail.context.closeGovernance.deferredConsiderations?.unresolved?.length ? (
+                <div className="review-question-note">
+                  <span>Deferred Considerations are not close blockers</span>
+                  <p className="task-list-meta">
+                    {model.detail.context.closeGovernance.deferredConsiderations.unresolved_count} unresolved · Actions available: leave deferred, promote to Intake Draft, close no action.
+                  </p>
+                  <ul className="detail-bullets">
+                    {model.detail.context.closeGovernance.deferredConsiderations.unresolved.map((item) => (
+                      <li key={item.id}>
+                        <strong>{item.title}</strong>
+                        <span>{item.id} · {formatDeferredConsiderationStatus(item.status)} · {item.owner || 'Unassigned'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               {(model.detail.context.closeGovernance.cancellation?.recommendations?.pm || model.detail.context.closeGovernance.cancellation?.recommendations?.architect) ? (
                 <div className="review-question-note">

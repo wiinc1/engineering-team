@@ -67,6 +67,45 @@ const taskDetailPayload = {
         },
       },
     },
+    deferredConsiderations: {
+      items: [
+        {
+          id: 'DC-TSK-42-001',
+          title: 'Mobile offline mode',
+          known_context: 'Operators asked whether mobile task review should work offline.',
+          rationale: 'Offline support is outside the current approved contract.',
+          source_section: 'Refinement notes',
+          source_agent: 'pm',
+          owner: 'pm',
+          revisit_trigger: 'After mobile baseline ships.',
+          open_questions: ['Which field teams need offline support first?'],
+          status: 'captured',
+        },
+      ],
+      unresolved: [
+        {
+          id: 'DC-TSK-42-001',
+          title: 'Mobile offline mode',
+          known_context: 'Operators asked whether mobile task review should work offline.',
+          rationale: 'Offline support is outside the current approved contract.',
+          source_section: 'Refinement notes',
+          source_agent: 'pm',
+          owner: 'pm',
+          revisit_trigger: 'After mobile baseline ships.',
+          open_questions: ['Which field teams need offline support first?'],
+          status: 'captured',
+        },
+      ],
+      summary: {
+        total: 1,
+        unresolved_count: 1,
+        captured_count: 1,
+        reviewed_count: 0,
+        promoted_count: 0,
+        closed_no_action_count: 0,
+        policy_version: 'deferred-considerations.v1',
+      },
+    },
     closeGovernance: {
       active: true,
       readiness: {
@@ -102,6 +141,15 @@ const taskDetailPayload = {
       backtrack: {
         available: true,
         latestReason: 'An unresolved child task is still blocking closure.',
+      },
+      deferredConsiderations: {
+        unresolved_count: 1,
+        blocks_qa_verification: false,
+        blocks_operator_closeout: false,
+        available_actions: ['leave_deferred', 'promote_to_intake_draft', 'close_no_action'],
+        unresolved: [
+          { id: 'DC-TSK-42-001', title: 'Mobile offline mode', status: 'captured', owner: 'pm' },
+        ],
       },
     },
   },
@@ -262,6 +310,21 @@ test.describe('task detail browser verification', () => {
     await expect(page.getByText('2026-05-01T13:00:00.000Z')).toBeVisible();
     await expect(page.getByText('Contract Coverage Audit')).toBeVisible();
     await expect(page.getByRole('link', { name: 'docs/reports/TSK-108-contract-coverage-audit-verification.md' })).toBeVisible();
+  });
+
+  test('shows Deferred Considerations as visible non-blocking task-detail scope', async ({ page }) => {
+    await openRoute(page, '/tasks/TSK-42');
+
+    const section = page.getByRole('region', { name: 'Deferred Considerations' });
+    await expect(section).toBeVisible();
+    await expect(section).toContainText('1 unresolved');
+    await expect(section).toContainText('1 total');
+    await expect(section).toContainText('Mobile offline mode');
+    await expect(section).toContainText('Offline support is outside the current approved contract.');
+    await expect(section.getByRole('button', { name: 'Leave deferred' })).toBeVisible();
+    await expect(section.getByRole('button', { name: 'Promote to Intake Draft' })).toBeVisible();
+    await expect(section.getByRole('button', { name: 'Close no action' })).toBeVisible();
+    await expect(page.getByText('Deferred Considerations are not close blockers')).toBeVisible();
   });
 
   test('switches task activity tabs into the mobile two-column pattern and preserves usable controls', async ({ page }) => {
