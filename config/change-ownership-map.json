@@ -335,13 +335,15 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/task-platform-api\\.test\\.js$",
-            "^tests/unit/task-platform-backfill\\.test\\.js$"
+            "^tests/unit/task-platform-backfill\\.test\\.js$",
+            "^tests/unit/task-platform-source-policy\\.test\\.js$"
           ]
         },
         {
           "name": "integration",
           "patterns": [
-            "^tests/integration/task-assignment-integration\\.test\\.js$"
+            "^tests/integration/task-assignment-integration\\.test\\.js$",
+            "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$"
           ]
         }
       ],

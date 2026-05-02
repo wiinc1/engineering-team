@@ -151,12 +151,15 @@ Verify:
 - task payloads include `taskId`, `version`, and owner metadata when assigned
 - previously audit-owned tasks are visible canonically after backfill
 - merge readiness review payloads include typed identity/status/version fields and linked `reviewedLogSources`, without copied full source logs
+- merge readiness review payloads include `sourceInventory.policy_version=merge-readiness-source-inventory.v1`, explicit `required_sources`, and `metadata.merge_readiness_check.conclusion`
+- required source gaps produce `reviewStatus=blocked`; inaccessible required evidence produces `reviewStatus=error` and a failing merge-readiness check conclusion
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
 - confirm backfill logs show `action=canonical_backfill` with `outcome=success` or an explained `partial`
 - check assignment monitoring artifacts under [monitoring/dashboards/task-assignment.json](/Users/wiinc2/.openclaw/workspace/engineering-team/monitoring/dashboards/task-assignment.json) and [monitoring/alerts/task-assignment.yml](/Users/wiinc2/.openclaw/workspace/engineering-team/monitoring/alerts/task-assignment.yml)
 - verify no unexpected drift symptoms appear in task detail, task list, or assignment flows during the window
+- investigate any merge-readiness `policy_blocked` exception before retrying ship. Permission or missing-configuration failures are owned by repo admins unless the source is deployment/runtime evidence, which is owned by SRE.
 
 ## Rollback Posture
 This rollout is additive. The first rollback action is operational containment, not destructive schema rollback.
