@@ -128,6 +128,59 @@ test('enforces bearer-token auth context and isolates reads by tenant claim', as
   });
 });
 
+test('projects control-plane policy decisions into task detail context', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributorHeaders = {
+      'content-type': 'application/json',
+      ...authHeaders(secret, { roles: ['contributor'] }),
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-CP-DETAIL/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-CP-DETAIL',
+        payload: { title: 'Control-plane detail', initial_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CP-DETAIL/events`, {
+      method: 'POST',
+      headers: contributorHeaders,
+      body: JSON.stringify({
+        eventType: 'task.control_plane_decision_recorded',
+        actorType: 'system',
+        idempotencyKey: 'decision:TSK-CP-DETAIL',
+        payload: {
+          policy_name: 'delivery_budgets',
+          policy_version: 'control-plane-delivery-budgets.v1',
+          input_facts: { time_spent_minutes: 61, time_budget_minutes: 60 },
+          decision: 'record_workflow_exception',
+          rationale: 'Time budget exhausted.',
+          context_provenance: {
+            repo_docs: ['docs/product/software-factory-control-plane-prd.md'],
+          },
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-CP-DETAIL/detail`, {
+      headers: authHeaders(secret, { roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    const decision = detail.context.controlPlane.decisions[0];
+    assert.equal(decision.policy_name, 'delivery_budgets');
+    assert.equal(decision.policy_version, 'control-plane-delivery-budgets.v1');
+    assert.deepEqual(decision.input_facts, { time_budget_minutes: 60, time_spent_minutes: 61 });
+    assert.equal(decision.context_provenance.repo_docs[0].reference, 'docs/product/software-factory-control-plane-prd.md');
+  });
+});
+
 test('issues browser bootstrap sessions from the auth exchange endpoint and supports the /api alias', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/auth/session`, {

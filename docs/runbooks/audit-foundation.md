@@ -110,6 +110,32 @@ When `limit` and/or `cursor` is present, the route returns:
 ## Supported event types in this slice
 See `lib/audit/event-types.js`. The store handles the declared workflow event types used by Issue #22: task creation, assignment changes, stage transitions, child links, escalation/decision records, and closure. Intake Draft creation also records `task.refinement_requested` after `task.created` so task history shows PM refinement routing without any implementation-start event. Incomplete Intake Draft creation may record `task.intake_creation_failed` as a compensating audit marker.
 
+## Control-plane operating model
+
+The control-plane policy model is additive to the audit stream:
+
+- `task.control_plane_decision_recorded` stores inspectable policy decisions with policy name, version, input facts, decision, rationale, override, actor, timestamp, and context provenance.
+- `task.control_plane_exception_recorded` stores linked workflow Exception records without requiring a lifecycle stage change.
+- `task.closed` is enriched with `delivery_retrospective_signal` when no caller-supplied signal exists.
+- Execution Contracts now include `context_provenance` with source intake, repo docs, ADRs, code inspection, issue/PR history, logs, external sources, previous failures, and specialist contributions where supplied or inferable.
+
+Implemented policy versions:
+
+- `control-plane-policy-decision.v1`
+- `control-plane-capability-model.v1`
+- `control-plane-context-provenance.v1`
+- `delivery-retrospective-signal.v1`
+- `autonomy-confidence-thresholds.v1`
+- `control-plane-exception-recovery.v1`
+- `control-plane-work-prioritization.v1`
+- `control-plane-wip-limits.v1`
+- `control-plane-delivery-budgets.v1`
+- `control-plane-prompt-boundary.v1`
+
+WIP limits can be attached to a stage transition under `payload.control_plane.wip_limits`. In `observe_only` mode, a would-block decision increments `feature_control_plane_wip_would_block_total` and the transition continues. In `enforced` mode, excess stage, role, or concrete-agent obligations are blocked unless the payload identifies production incident or S1 security/data-risk preemption.
+
+Budget policy can be attached to any event under `payload.control_plane.budget`. Exhausted time, cost, iteration, or retry budget records `control_plane_budget_decision`, a linked workflow exception, `waiting_state=workflow_exception`, and a next required recovery action.
+
 ## Intake Draft creation
 Use `POST /tasks` with `raw_requirements` to create a Task in `DRAFT` from raw operator requirements. `title` is optional, capped at 120 characters, and blank or omitted titles are stored as `Untitled intake draft`. Created Intake Drafts are routed to `current_owner=pm`, set `waiting_state=task_refinement`, and expose `next_required_action=PM refinement required` in list/detail projections. Intake Draft stage changes are blocked until PM refinement creates a non-intake execution contract.
 
@@ -339,6 +365,12 @@ Prometheus-style metrics exported include:
 - `feature_autonomy_confidence_neutral_signals_total`
 - `feature_autonomy_confidence_negative_signals_total`
 - `feature_autonomy_confidence_signal_score`
+- `feature_control_plane_decisions_total`
+- `feature_control_plane_exceptions_total`
+- `feature_control_plane_wip_would_block_total`
+- `feature_control_plane_wip_blocks_total`
+- `feature_control_plane_budget_exhausted_total`
+- `feature_control_plane_delivery_retrospective_signals_total`
 
 ## Validation suites
 - Unit: `npm run test:unit`

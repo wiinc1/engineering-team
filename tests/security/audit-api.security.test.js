@@ -144,6 +144,74 @@ test('rejects invalid JSON, oversized bodies, and legacy headers unless explicit
   }, { allowLegacyHeaders: true });
 });
 
+test('control-plane policy writes require contributor authorization and preserve prompt-boundary audit fields', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const reader = { authorization: `Bearer ${sign({ sub: 'reader', tenant_id: 'tenant-sec', roles: ['reader'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };
+    const contributor = {
+      'content-type': 'application/json',
+      authorization: `Bearer ${sign({ sub: 'contributor', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}`,
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-CP/events`, {
+      method: 'POST',
+      headers: contributor,
+      body: JSON.stringify({
+        eventType: 'task.created',
+        actorType: 'agent',
+        idempotencyKey: 'create:TSK-SEC-CP',
+        payload: { title: 'Control-plane security', initial_stage: 'BACKLOG' },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CP/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...reader },
+      body: JSON.stringify({
+        eventType: 'task.control_plane_decision_recorded',
+        actorType: 'system',
+        idempotencyKey: 'decision:TSK-SEC-CP:reader',
+        payload: {
+          policy_name: 'prompt_boundary_enforcement',
+          policy_version: 'control-plane-prompt-boundary.v1',
+          input_facts: { requested_sources: ['/etc/secrets'] },
+          decision: 'block_prompt_boundary',
+          rationale: 'Disallowed source requested.',
+        },
+      }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CP/events`, {
+      method: 'POST',
+      headers: contributor,
+      body: JSON.stringify({
+        eventType: 'task.control_plane_decision_recorded',
+        actorType: 'system',
+        idempotencyKey: 'decision:TSK-SEC-CP:prompt-boundary',
+        payload: {
+          policy_name: 'prompt_boundary_enforcement',
+          policy_version: 'control-plane-prompt-boundary.v1',
+          input_facts: { requested_sources: ['/etc/secrets'] },
+          decision: 'block_prompt_boundary',
+          rationale: 'Disallowed source requested.',
+          context_provenance: {
+            repo_docs: ['docs/product/software-factory-control-plane-prd.md'],
+          },
+        },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-CP/history`, { headers: reader });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    const decisionEvent = history.items.find((event) => event.event_type === 'task.control_plane_decision_recorded');
+    assert.equal(decisionEvent.payload.control_plane_decision.policy_name, 'prompt_boundary_enforcement');
+    assert.equal(decisionEvent.payload.control_plane_decision.context_provenance.repo_docs[0].reference, 'docs/product/software-factory-control-plane-prd.md');
+  });
+});
+
 test('omits restricted telemetry fields for under-authorized task viewers', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const contributorAuth = { authorization: `Bearer ${sign({ sub: 'eng', tenant_id: 'tenant-sec', roles: ['contributor'], exp: Math.floor(Date.now() / 1000) + 60 }, secret)}` };

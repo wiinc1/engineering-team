@@ -94,6 +94,28 @@ Operator approval is exception-triggered, not routine. It is required when gener
 
 GitHub issues are optional and default-off. The Task is the authoritative workflow record; the remote repo is the durable audit surface through committed artifacts and PRs.
 
+## Operating Model Policy Requirements
+
+Control-plane decisions must be inspectable as versioned policy records. Every automated workflow decision stores policy name, policy version, input facts, decision, rationale, override metadata, actor, timestamp, and context provenance.
+
+The shared policy surfaces cover reviewer routing, dispatch routing, low-risk auto-approval, Principal escalation, capability routing, context provenance, retrospective signals, autonomy confidence, exception recovery, prioritization, WIP limits, delivery budgets, and prompt-boundary enforcement.
+
+Agent assignment must evaluate the OpenClaw profile together with control-plane permissions, risk limits, eligible task classes, evidence history, recent outcomes, and routing eligibility. OpenClaw profile alone is not sufficient evidence for autonomous routing.
+
+Generated Execution Contracts, recommendations, and automated workflow decisions must carry context provenance where applicable. Provenance categories are source intake, repo docs, ADRs, code inspection, issue and PR history, logs, external sources, previous failures, and specialist contributions.
+
+At Task closeout, the control plane must generate a Delivery Retrospective Signal capturing contract quality, routing quality, test-plan quality, implementation quality, QA and SRE rework, operator interventions, escaped defects, rollback, policy overrides, and final outcome.
+
+Autonomy expansion is evaluated per task class. Expansion is blocked until class-specific clean closed-task evidence, success rate, first-pass rate, operator-intervention rate, and escaped-defect thresholds are met.
+
+Exceptions remain linked records rather than hidden stage transitions. A Task can stay in its lifecycle stage while a linked Exception record carries type, owner, blocked state, severity, escalation, verifier, resolution rules, and audit history.
+
+Prioritization must produce an explainable ordering from production or S1 security/data risk, operator override, dependency unblocks, urgency, age, normal priority, and WIP or specialist availability.
+
+WIP limits support observe-only and enforced modes across stage, role, and concrete-agent obligations. Observe-only mode records would-block metrics without blocking; enforced mode blocks excess obligations unless production incident or S1 security/data-risk work preempts with audit.
+
+Delivery budgets track time, cost, iteration, and retry limits. Exhausted budgets record a workflow exception and next required action. Prompt-boundary policy blocks disallowed context sources, secrets, credential requests, and bypass instructions.
+
 ## Success Measures
 
 The primary product metric is operator-trusted autonomous delivery rate: the percentage of approved or auto-approved tasks that reach verified closeout without operator intervention after approval while still passing QA, SRE, and required evidence gates.
