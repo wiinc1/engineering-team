@@ -501,6 +501,7 @@
       "runtime_patterns": [
         "^scripts/lint-repo\\.js$",
         "^scripts/governance-lib\\.js$",
+        "^scripts/(check-coverage-policy|check-maintainability|run-coverage)\\.js$",
         "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
         "^scripts/verify-(standards|pr-body|change-completeness)\\.js$"
       ],

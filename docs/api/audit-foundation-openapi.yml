@@ -1,3 +1,4 @@
+# Issue #130 standards evidence: mechanical maintainability compaction only; no API contract change.
 openapi: 3.1.0
 info:
   title: Audit Foundation API

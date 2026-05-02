@@ -1,5 +1,7 @@
 # Architecture Decision Record: Button Component System
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no button architecture decision change.
+
 **Date:** 2026-03-30  
 **Status:** Proposed  
 **Deciders:** Architect (Arch)

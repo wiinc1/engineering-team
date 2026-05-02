@@ -1,5 +1,7 @@
 # Workflow Delivery Loop
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no workflow procedure change.
+
 This runbook documents the delivery-loop primitives implemented for:
 
 - `SF-005` task locking and concurrency control

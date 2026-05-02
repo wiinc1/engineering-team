@@ -1,5 +1,7 @@
 # Issue 104 Design
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no design behavior change.
+
 ## Research & Context
 
 Issue #104 builds on the Execution Contract generation and reviewer-gating work from issues #102 and #103. The accepted context in `CONTEXT.md` requires generated Markdown user stories, Refinement Decision Logs, task detail links, and PR guidance to use human-readable Task display IDs while preserving structured Task data as authoritative.

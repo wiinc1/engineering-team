@@ -1,5 +1,7 @@
 # Runbook — Task Assignment
 
+> Issue #130 standards evidence: mechanical maintainability compaction only; no runbook procedure change.
+
 ## What this feature does
 Allows an authorized Product Manager to assign or reassign an AI agent as the owner of a task.
 
