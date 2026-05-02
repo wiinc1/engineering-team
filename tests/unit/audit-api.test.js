@@ -5464,6 +5464,52 @@ test('rejects unauthorized or invalid AI-agent assignment attempts', async () =>
   });
 });
 
+test('exposes canonical merge readiness reviews on the /api/v1 task platform path', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['admin'] }),
+      },
+      body: JSON.stringify({
+        title: 'Merge readiness route task',
+        status: 'READY_FOR_REVIEW',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, { tenant_id: 'tenant-a', roles: ['admin'] }),
+      },
+      body: JSON.stringify({
+        repository: 'wiinc1/engineering-team',
+        pullRequestNumber: 128,
+        commitSha: 'abcdef1234567',
+        reviewStatus: 'pending',
+        reviewedLogSources: [{ url: 'https://github.com/wiinc1/engineering-team/actions/runs/1' }],
+        findings: [],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const review = (await response.json()).data;
+    assert.equal(review.taskId, task.taskId);
+    assert.equal(review.isCurrent, true);
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews?repository=wiinc1%2Fengineering-team&pullRequestNumber=128&commitSha=abcdef1234567`, {
+      headers: authHeaders(secret, { tenant_id: 'tenant-a', roles: ['reader'] }),
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.data.current.reviewId, review.reviewId);
+    assert.equal(body.data.items.length, 1);
+  });
+});
+
 test('accepts /api-prefixed assignment and agent routes for docs compatibility', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     await fetch(`${baseUrl}/tasks/TSK-206/events`, {

@@ -72,6 +72,7 @@ Successful read/write access is now logged with `action=audit_access` so tenant-
 Audit HTTP maintenance note:
 - When `lib/audit/http.js` changes, update the nearest API or runbook artifact in the same PR.
 - Current nearest artifacts for HTTP-surface changes are this runbook plus the matching `docs/api/*.yml` contract for the affected route family.
+- Canonical `/api/v1/tasks/{taskId}/merge-readiness-reviews` is implemented by the audit HTTP server but governed by the task-platform contract in `docs/api/task-platform-openapi.yml`; it stores linked source-log references only, not full source logs.
 - Engineer-only delivery-loop mutations now validate the task's current canonical assignee before accepting writes.
 - Tier-based reassignment may emit explicit assignee ids such as `engineer-sr` in workflow payloads and task-detail context so downstream consumers can tell when ownership changed materially.
 - Approved Execution Contracts now expose `executionContract.dispatchReadiness.dispatchPolicy`, which selects Jr, Sr, or Principal Engineer from template tier, risk flags, and contract dispatch signals. Standard-or-higher work defaults to Sr and can allow QA coverage work in parallel; unsafe Jr proposals are blocked unless the work is constrained Simple scope with a clear failing/pending test plan; Principal triggers require Principal approval/involvement before dispatch.

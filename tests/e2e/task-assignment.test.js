@@ -88,6 +88,50 @@ test('e2e: assignment endpoint honors feature readiness, assignment, and smoke c
   });
 });
 
+test('e2e: merge readiness review current query stays isolated to canonical Task identity', async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['admin']),
+      },
+      body: JSON.stringify({
+        title: 'Merge readiness e2e task',
+        status: 'READY_FOR_REVIEW',
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...authHeaders(secret, ['admin']),
+      },
+      body: JSON.stringify({
+        repository: 'wiinc1/engineering-team',
+        pullRequestNumber: 128,
+        commitSha: 'abcdef1234567',
+        reviewStatus: 'passed',
+        reviewedLogSources: [{ url: 'https://github.com/wiinc1/engineering-team/actions/runs/1' }],
+        findings: [],
+      }),
+    });
+    assert.equal(response.status, 201);
+    const review = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/merge-readiness-reviews?repository=wiinc1%2Fengineering-team&pullRequestNumber=128&commitSha=abcdef1234567`, {
+      headers: authHeaders(secret, ['reader']),
+    });
+    assert.equal(response.status, 200);
+    const query = await response.json();
+    assert.equal(query.data.current.reviewId, review.reviewId);
+    assert.equal(query.data.items.length, 1);
+  });
+});
+
 test('e2e: Execution Contract generation does not make Intake Draft assignment mutable', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     let response = await fetch(`${baseUrl}/tasks`, {

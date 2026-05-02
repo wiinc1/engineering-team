@@ -327,6 +327,7 @@
       "runtime_patterns": [
         "^lib/task-platform/",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
+        "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout)\\.js$"
       ],
       "test_requirements": [

@@ -6,6 +6,7 @@ This runbook covers the first environment rollout of the additive canonical task
 It assumes:
 - audit storage is already configured to use PostgreSQL through `DATABASE_URL`
 - the additive `/api/v1/tasks` and `/api/v1/ai-agents` routes are deployed with the current repo code
+- the additive `/api/v1/tasks/{taskId}/merge-readiness-reviews` routes are deployed with the current repo code
 - legacy audit-backed task routes remain available during the rollout window
 
 ## Preconditions
@@ -80,6 +81,10 @@ select version
 from schema_migrations
 where version = '006_canonical_task_persistence.sql';
 
+select version
+from schema_migrations
+where version = '010_merge_readiness_reviews.sql';
+
 select count(*) as canonical_task_count
 from tasks
 where tenant_id = 'engineering-team';
@@ -95,14 +100,22 @@ from tasks
 where tenant_id = 'engineering-team'
 order by updated_at desc
 limit 20;
+
+select task_id, repository, pull_request_number, commit_sha, review_status, is_current, record_version
+from merge_readiness_reviews
+where tenant_id = 'engineering-team'
+order by updated_at desc
+limit 20;
 ```
 
 Expected results:
 - the migration row exists in `schema_migrations`
+- the merge readiness review migration row exists in `schema_migrations`
 - canonical task count is non-zero in a non-empty environment
 - checkpoint rows are present for backfilled tasks
 - `sync_status` is predominantly `synced` or `active`
 - legacy-only owners may appear as imported canonical agents rather than causing dropped ownership
+- merge readiness rows, when present, have at most one `is_current=true` record for the same Task, repository, PR number, and commit SHA
 
 ## API Smoke Checks
 Replace placeholders before running:
@@ -125,10 +138,17 @@ curl -sS \
   https://<host>/api/v1/tasks/<task-id>
 ```
 
+```bash
+curl -sS \
+  -H "Authorization: Bearer <admin-jwt>" \
+  "https://<host>/api/v1/tasks/<task-id>/merge-readiness-reviews?repository=wiinc1%2Fengineering-team&pullRequestNumber=<pr-number>&commitSha=<sha>"
+```
+
 Verify:
 - responses return `200`
 - task payloads include `taskId`, `version`, and owner metadata when assigned
 - previously audit-owned tasks are visible canonically after backfill
+- merge readiness review payloads include typed identity/status/version fields and linked `reviewedLogSources`, without copied full source logs
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
@@ -142,7 +162,8 @@ This rollout is additive. The first rollback action is operational containment, 
 1. Stop read-path cutover work if it has begun.
 2. Leave legacy audit-backed routes in place.
 3. Disable assignment rollout flags if the incident affects assignment behavior.
-4. Investigate backfill errors or canonical drift before rerunning backfill.
+4. Stop creating new merge readiness reviews if current-review uniqueness or stale-write conflicts appear.
+5. Investigate backfill errors or canonical drift before rerunning backfill.
 
 If assignment behavior is part of the incident, use [task-assignment-emergency.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/runbooks/task-assignment-emergency.md).
 
