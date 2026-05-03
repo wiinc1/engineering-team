@@ -377,7 +377,7 @@ components:
       enum: [pending, passed, blocked, stale, error]
     MergeReadinessReviewJsonValue:
       nullable: true
-      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`.
+      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`; branch-protection enforcement is evaluated under `merge-readiness-branch-protection.v1` when verification evidence is supplied.
       oneOf:
         - type: object
           additionalProperties: true
@@ -440,6 +440,7 @@ components:
         findings:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         classification:
+          description: Includes `branch_protection_policy` when default-branch required status checks are verified. `enforced=true` is valid only when branch protection requires `Merge readiness`; otherwise the policy reports `policy_blocked` or `error`.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         owner:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
@@ -450,7 +451,7 @@ components:
         approvals:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         metadata:
-          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes.
+          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes. Includes `github_merge_readiness_branch_protection` with `policy_version=merge-readiness-branch-protection.v1`, status, branch, required check name, and `enforced` when branch-protection verification runs.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         reviewerActorId:
           type: string
@@ -596,6 +597,10 @@ components:
         evidenceAccess:
           type: object
           description: Per-source access status. Inaccessible required evidence sets review status to `error`; configuration or permission failures raise `policy_blocked`.
+          additionalProperties: true
+        branchProtection:
+          type: object
+          description: Default-branch protection evidence from GitHub. Required status checks must include `Merge readiness` before the control plane represents the gate as enforced. Missing or unreadable evidence reports `policy_blocked` or `error`; this field is verification evidence only and does not mutate GitHub settings.
           additionalProperties: true
         sourceInventory:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'

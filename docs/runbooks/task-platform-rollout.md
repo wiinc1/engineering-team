@@ -146,6 +146,10 @@ curl -sS \
   "https://<host>/api/v1/tasks/<task-id>/merge-readiness-reviews?repository=wiinc1%2Fengineering-team&pullRequestNumber=<pr-number>&commitSha=<sha>"
 ```
 
+```bash
+GITHUB_TOKEN=<repo-read-token> npm run task-platform:verify-branch-protection -- wiinc1/engineering-team main
+```
+
 Verify:
 - responses return `200`
 - task payloads include `taskId`, `version`, and owner metadata when assigned
@@ -156,6 +160,9 @@ Verify:
 - when a GitHub check-run client is configured, every current review refreshes a GitHub check named `Merge readiness`
 - `reviewStatus=passed` is the only state that can complete the GitHub check with `conclusion=success`; `blocked` and `error` complete with `failure`, while missing, pending, or stale reviews leave the check `in_progress`
 - pull request open, synchronize, reopen, required-check, workflow-run, preview, and deployment evidence events refresh the gate; changed PR HEAD SHA or changed evidence fingerprint marks the prior review `stale` and moves `Merge readiness` back to pending
+- default-branch protection requires the exact status check `Merge readiness` before `classification.branch_protection_policy.enforced=true` appears on a review
+- missing or unreadable default-branch protection evidence reports `classification.branch_protection_policy.status=policy_blocked` or `error`, with repo-admin ownership for follow-up
+- `npm run task-platform:verify-branch-protection -- <owner/repo> <branch>` exits non-zero until GitHub branch protection requires `Merge readiness`
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
@@ -164,6 +171,7 @@ Verify:
 - verify no unexpected drift symptoms appear in task detail, task list, or assignment flows during the window
 - investigate any merge-readiness `policy_blocked` exception before retrying ship. Permission or missing-configuration failures are owned by repo admins unless the source is deployment/runtime evidence, which is owned by SRE.
 - confirm `metadata.github_merge_readiness_gate.policy_version=merge-readiness-github-check.v1` and `githubCheckRunId` are present after check-run emission
+- confirm `metadata.github_merge_readiness_branch_protection.policy_version=merge-readiness-branch-protection.v1` and `enforced=true` only after GitHub branch protection requires `Merge readiness`
 - investigate any stale review with `metadata.github_merge_readiness_gate.invalidated_reason` before attempting to ship the PR
 
 ## Rollback Posture
@@ -174,7 +182,8 @@ This rollout is additive. The first rollback action is operational containment, 
 3. Disable assignment rollout flags if the incident affects assignment behavior.
 4. Stop creating new merge readiness reviews if current-review uniqueness or stale-write conflicts appear.
 5. Disable the GitHub check-run client configuration to stop new `Merge readiness` check-run writes while keeping review storage readable.
-6. Investigate backfill errors or canonical drift before rerunning backfill.
+6. Leave branch-protection settings unchanged unless an operator or repo admin explicitly approves a settings change; the verifier is read-only.
+7. Investigate backfill errors or canonical drift before rerunning backfill.
 
 If assignment behavior is part of the incident, use [task-assignment-emergency.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/runbooks/task-assignment-emergency.md).
 

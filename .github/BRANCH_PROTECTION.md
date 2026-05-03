@@ -10,6 +10,7 @@ Require these exact GitHub Actions job names before merge:
 - `Pull request metadata`
 - `Repo validation`
 - `Browser validation`
+- `Merge readiness`
 
 Require this job if governance drift is treated as blocking in your environment:
 - `Governance drift report`
@@ -28,4 +29,5 @@ Require this job if governance drift is treated as blocking in your environment:
 ## Maintainer Notes
 - If a workflow job name changes, update this file and any downstream org policy that references the old status name.
 - Do not mark a status as required unless the corresponding workflow runs on pull requests for the protected branch.
+- The control plane may represent Merge readiness as enforced only after default-branch protection requires `Merge readiness`.
 - If governance drift should be advisory only, leave `Governance drift report` out of the required-check list but keep the scheduled workflow enabled.
