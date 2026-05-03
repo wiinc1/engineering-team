@@ -377,7 +377,7 @@ components:
       enum: [pending, passed, blocked, stale, error]
     MergeReadinessReviewJsonValue:
       nullable: true
-      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline.
+      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`.
       oneOf:
         - type: object
           additionalProperties: true
@@ -430,6 +430,7 @@ components:
           type: integer
           nullable: true
         sourceInventory:
+          description: Required source inventory produced by the source policy. Includes `policy_version`, `status`, `required_sources`, and ignored optional source references.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         requiredCheckInventory:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
@@ -544,6 +545,52 @@ components:
         githubCheckRunId:
           type: integer
           nullable: true
+        changedFiles:
+          type: array
+          description: Changed files used by the source inventory policy to select required review sources.
+          items:
+            type: string
+        requiredChecks:
+          type: array
+          description: Required GitHub checks or check-like contexts used to require linked check evidence.
+          items:
+            type: object
+            additionalProperties: true
+        executionContractEvidence:
+          type: array
+          description: Execution Contract evidence expectations that become required inventory entries.
+          items:
+            type: object
+            additionalProperties: true
+        previewDeployment:
+          type: object
+          description: Preview presence that requires linked preview evidence.
+          additionalProperties: true
+        deployment:
+          type: object
+          description: Deployment presence that requires deployment and runtime observability evidence.
+          additionalProperties: true
+        riskFlags:
+          type: array
+          description: Risk flags such as `security`, `deployment`, `migration`, `accessibility`, or `performance` that add required evidence sources.
+          items:
+            type: string
+        availableSources:
+          type: array
+          description: Linked evidence sources available to satisfy the required source inventory.
+          items:
+            type: object
+            additionalProperties: true
+        optionalSources:
+          type: array
+          description: Linked logs outside the required inventory. These remain optional and do not require human review.
+          items:
+            type: object
+            additionalProperties: true
+        evidenceAccess:
+          type: object
+          description: Per-source access status. Inaccessible required evidence sets review status to `error`; configuration or permission failures raise `policy_blocked`.
+          additionalProperties: true
         sourceInventory:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         requiredCheckInventory:
