@@ -230,7 +230,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
     post:
-      summary: Create a merge readiness review and supersede any current review for the same PR identity
+      summary: Create a merge readiness review, supersede any current review for the same PR identity, and refresh the GitHub Merge readiness check when a check client is configured
       operationId: createTaskMergeReadinessReview
       tags: [Merge Readiness Reviews]
       security:
@@ -429,6 +429,7 @@ components:
         githubCheckRunId:
           type: integer
           nullable: true
+          description: GitHub check run id for the `Merge readiness` check. It is set after check-run emission when GitHub returns an id.
         sourceInventory:
           description: Required source inventory produced by the source policy. Includes `policy_version`, `status`, `required_sources`, and ignored optional source references.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
@@ -449,6 +450,7 @@ components:
         approvals:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         metadata:
+          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         reviewerActorId:
           type: string
@@ -545,6 +547,10 @@ components:
         githubCheckRunId:
           type: integer
           nullable: true
+          description: Existing GitHub `Merge readiness` check run id to update rather than recreate.
+        detailsUrl:
+          type: string
+          description: Optional details URL attached to the emitted GitHub `Merge readiness` check run.
         changedFiles:
           type: array
           description: Changed files used by the source inventory policy to select required review sources.
@@ -552,7 +558,7 @@ components:
             type: string
         requiredChecks:
           type: array
-          description: Required GitHub checks or check-like contexts used to require linked check evidence.
+          description: Required GitHub checks or check-like contexts used to require linked check evidence and to fingerprint check-run freshness.
           items:
             type: object
             additionalProperties: true
@@ -564,11 +570,11 @@ components:
             additionalProperties: true
         previewDeployment:
           type: object
-          description: Preview presence that requires linked preview evidence.
+          description: Preview presence that requires linked preview evidence and can invalidate stale merge-readiness checks when it changes.
           additionalProperties: true
         deployment:
           type: object
-          description: Deployment presence that requires deployment and runtime observability evidence.
+          description: Deployment presence that requires deployment and runtime observability evidence and can invalidate stale merge-readiness checks when it changes.
           additionalProperties: true
         riskFlags:
           type: array
@@ -630,6 +636,10 @@ components:
         githubCheckRunId:
           type: integer
           nullable: true
+          description: Existing GitHub `Merge readiness` check run id to update rather than recreate.
+        detailsUrl:
+          type: string
+          description: Optional details URL attached to the emitted GitHub `Merge readiness` check run.
         sourceInventory:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         requiredCheckInventory:
