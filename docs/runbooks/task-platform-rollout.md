@@ -153,6 +153,9 @@ Verify:
 - merge readiness review payloads include typed identity/status/version fields and linked `reviewedLogSources`, without copied full source logs
 - merge readiness review payloads include `sourceInventory.policy_version=merge-readiness-source-inventory.v1`, explicit `required_sources`, and `metadata.merge_readiness_check.conclusion`
 - required source gaps produce `reviewStatus=blocked`; inaccessible required evidence produces `reviewStatus=error` and a failing merge-readiness check conclusion
+- when a GitHub check-run client is configured, every current review refreshes a GitHub check named `Merge readiness`
+- `reviewStatus=passed` is the only state that can complete the GitHub check with `conclusion=success`; `blocked` and `error` complete with `failure`, while missing, pending, or stale reviews leave the check `in_progress`
+- pull request open, synchronize, reopen, required-check, workflow-run, preview, and deployment evidence events refresh the gate; changed PR HEAD SHA or changed evidence fingerprint marks the prior review `stale` and moves `Merge readiness` back to pending
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
@@ -160,6 +163,8 @@ Verify:
 - check assignment monitoring artifacts under [monitoring/dashboards/task-assignment.json](/Users/wiinc2/.openclaw/workspace/engineering-team/monitoring/dashboards/task-assignment.json) and [monitoring/alerts/task-assignment.yml](/Users/wiinc2/.openclaw/workspace/engineering-team/monitoring/alerts/task-assignment.yml)
 - verify no unexpected drift symptoms appear in task detail, task list, or assignment flows during the window
 - investigate any merge-readiness `policy_blocked` exception before retrying ship. Permission or missing-configuration failures are owned by repo admins unless the source is deployment/runtime evidence, which is owned by SRE.
+- confirm `metadata.github_merge_readiness_gate.policy_version=merge-readiness-github-check.v1` and `githubCheckRunId` are present after check-run emission
+- investigate any stale review with `metadata.github_merge_readiness_gate.invalidated_reason` before attempting to ship the PR
 
 ## Rollback Posture
 This rollout is additive. The first rollback action is operational containment, not destructive schema rollback.
@@ -168,7 +173,8 @@ This rollout is additive. The first rollback action is operational containment, 
 2. Leave legacy audit-backed routes in place.
 3. Disable assignment rollout flags if the incident affects assignment behavior.
 4. Stop creating new merge readiness reviews if current-review uniqueness or stale-write conflicts appear.
-5. Investigate backfill errors or canonical drift before rerunning backfill.
+5. Disable the GitHub check-run client configuration to stop new `Merge readiness` check-run writes while keeping review storage readable.
+6. Investigate backfill errors or canonical drift before rerunning backfill.
 
 If assignment behavior is part of the incident, use [task-assignment-emergency.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/runbooks/task-assignment-emergency.md).
 
