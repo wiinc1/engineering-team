@@ -41,6 +41,7 @@ Implemented acceptance criteria:
 - Block `task.stage_changed` while an Intake Draft is still waiting on PM refinement.
 - Update the browser creation route to collect raw requirements and optional title only.
 - Surface Intake Draft badges and operator intake requirements in list/detail views.
+- Preserve the compact authenticated browser shell around creation and detail routes so operators keep primary navigation, task lookup, and first-screen status context while moving between intake drafting and task review.
 
 ## Rollout
 
