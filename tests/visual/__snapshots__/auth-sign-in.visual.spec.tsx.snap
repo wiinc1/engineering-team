@@ -11,7 +11,7 @@ exports[`auth sign-in visual states > matches the configured enterprise OIDC sta
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Workflow operations
     </p>
     <h1>
       Sign in to the workflow app
@@ -45,7 +45,7 @@ exports[`auth sign-in visual states > matches the local internal fallback state 
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Workflow operations
     </p>
     <h1>
       Sign in to the workflow app
@@ -116,7 +116,7 @@ exports[`auth sign-in visual states > matches the magic-link state 1`] = `
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Workflow operations
     </p>
     <h1>
       Sign in to the workflow app
@@ -164,7 +164,7 @@ exports[`auth sign-in visual states > matches the no-login-path configuration er
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Workflow operations
     </p>
     <h1>
       Sign in to the workflow app

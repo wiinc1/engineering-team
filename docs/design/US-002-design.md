@@ -27,6 +27,7 @@
 - authenticated users land on `/tasks` by default and keep shared shell navigation
 - expired sessions redirect back to sign-in with a recovery message
 - role-gated controls remain based on token roles, so PM/admin-only assignment behavior is preserved
+- the browser shell presents a compact operational UI with visible email-entry sign-in for magic-link deployments, persistent primary navigation, a task-id route utility, and first-screen task-detail status, owner, blocker, and readiness context
 - Explicit repo-scope reality check:
 - this repo does not contain external identity provider integration
 - the supported browser sign-in flow is an internal auth bootstrap exchange backed by `POST /auth/session`
@@ -82,4 +83,5 @@
 - `/inbox/human` is a protected route in the authenticated shell and now renders governed close-review decision cards for cancellation recommendations and exceptional-dispute escalations
 - `/inbox/human` is intentionally limited to decision-ready close-governance items; task detail may still show governed close review context while stakeholder actions remain hidden until backend readiness is explicit
 - protected `/tasks/{taskId}` sessions can now surface the SRE-only anomaly-child-task form on task detail, so browser-shell auth coverage must continue to protect that route restoration path as detail capabilities expand
+- UI/UX-only browser-shell changes should preserve the dense operational layout: authenticated routes keep primary navigation and task lookup visible, while task-detail keeps blocker and summary context visible in the initial desktop, tablet, and mobile viewport evidence.
 - ISSUE-89 extends this shell with production auth strategy validation and a safe no-login-path state for preview or failed-validation deployments where no configured OIDC or explicit internal-bootstrap path is available.
