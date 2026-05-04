@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const {
   createTaskPlatformService,
+  evaluateMergeReadinessGate,
   evaluateMergeReadinessSummaryPrecedence,
   renderMergeReadinessPrSummary,
 } = require('../../lib/task-platform');
@@ -55,6 +56,21 @@ function blockReview(service, task, review) {
   });
 }
 
+function mergeReadinessGateContext() {
+  return {
+    includePrSummary: true,
+    sourcePolicyInput: {
+      requiredChecks: [{ name: 'Repo validation' }],
+      availableSources: [{ id: 'check:repo-validation', url: 'https://github.com/checks/116' }],
+    },
+    branchProtectionInput: {
+      verifyBranchProtection: true,
+      branchProtection: { required_status_checks: { checks: [{ context: 'Merge readiness' }] } },
+    },
+    structuredReviewUrl: 'https://github.com/wiinc1/engineering-team/issues/116#structured-review',
+  };
+}
+
 test('renders a persisted MergeReadinessReview PR summary without making the comment authoritative', () => {
   const { service, task } = createServiceWithTask();
   const review = createPassingReview(service, task);
@@ -78,4 +94,18 @@ test('renders a persisted MergeReadinessReview PR summary without making the com
   assert.equal(result.authoritativeStatus, 'blocked');
   assert.equal(result.commentConflict, true);
   assert.equal(result.gate.conclusion, 'failure');
+});
+
+test('evaluates the reusable merge-readiness gate through the task platform export', () => {
+  const { service, task } = createServiceWithTask();
+  const review = createPassingReview(service, task);
+  const blockedReview = blockReview(service, task, review);
+
+  const gate = evaluateMergeReadinessGate(blockedReview, mergeReadinessGateContext());
+
+  assert.equal(gate.checkRun.conclusion, 'failure');
+  assert.equal(gate.branchProtection.status, 'enforced');
+  assert.equal(gate.sourcePolicy.status, 'satisfied');
+  assert.equal(gate.findingPolicy.blockingFindings[0].id, 'MRR-BLOCK-116');
+  assert.match(gate.prSummary, /Structured MergeReadinessReview:/);
 });

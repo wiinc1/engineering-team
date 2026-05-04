@@ -165,6 +165,9 @@ Verify:
 - `npm run task-platform:verify-branch-protection -- <owner/repo> <branch>` exits non-zero until GitHub branch protection requires `Merge readiness`
 - rendered PR summaries include only review status, commit SHA, required sources reviewed, blocking findings, non-blocking findings with rationale, deferred blocking findings with approvals, inaccessible evidence, follow-up links, and the structured `MergeReadinessReview` link
 - PR summary comments never include full logs and never override the structured `MergeReadinessReview` for check-run or ship decisions
+- `tests/unit/task-platform-merge-readiness-gate.test.js` covers the reusable gate across source selectors, status transitions, SHA invalidation, inaccessible evidence, finding classification, deferral approvals, GitHub check-run emission, branch protection, and PR summary rendering
+- `tests/integration/task-platform-pr-summary.integration.test.js` verifies the public task-platform export composes the reusable gate with check-run, source-policy, branch-protection, finding-policy, and PR-summary behavior
+- blocking-finding deferral requires Product Manager risk acceptance, technical-owner risk acceptance, a follow-up link, explicit deferral policy permission, and Principal/SRE approval for high-risk findings
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
