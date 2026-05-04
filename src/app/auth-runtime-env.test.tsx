@@ -58,7 +58,7 @@ describe('browser auth runtime environment', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
-    expect(screen.getByText('Workflow operations')).toBeInTheDocument();
+    expect(screen.getByText('Authenticated browser shell for US-002')).toBeInTheDocument();
     expect(screen.getByLabelText('Email address')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send sign-in link' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Continue with enterprise sign-in' })).not.toBeInTheDocument();
