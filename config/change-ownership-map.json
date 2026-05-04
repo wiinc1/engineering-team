@@ -148,6 +148,7 @@
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
+            "^src/app/auth-runtime-env\\.test\\.tsx$",
             "^tests/unit/auth-admin-seed\\.test\\.js$",
             "^tests/unit/task-browser-session\\.test\\.js$",
             "^tests/unit/auth-config-check\\.test\\.js$"
