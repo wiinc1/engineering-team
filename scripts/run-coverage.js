@@ -32,6 +32,7 @@ const NODE_TEST_FILES = [
   'tests/unit/task-platform-github-check.test.js',
   'tests/unit/task-platform-branch-protection.test.js',
   'tests/unit/task-platform-pr-summary.test.js',
+  'tests/unit/task-platform-merge-readiness-gate.test.js',
   'tests/unit/task-assignment.test.js',
   'tests/unit/task-browser-session.test.js',
   'tests/unit/auth-config-check.test.js',

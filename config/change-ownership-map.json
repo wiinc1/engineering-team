@@ -340,7 +340,8 @@
             "^tests/unit/task-platform-source-policy\\.test\\.js$",
             "^tests/unit/task-platform-github-check\\.test\\.js$",
             "^tests/unit/task-platform-branch-protection\\.test\\.js$",
-            "^tests/unit/task-platform-pr-summary\\.test\\.js$"
+            "^tests/unit/task-platform-pr-summary\\.test\\.js$",
+            "^tests/unit/task-platform-merge-readiness-gate\\.test\\.js$"
           ]
         },
         {
