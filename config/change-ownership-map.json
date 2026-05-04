@@ -329,7 +329,7 @@
         "^lib/task-platform/",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
-        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout)\\.js$"
+        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection)\\.js$"
       ],
       "test_requirements": [
         {
@@ -338,7 +338,8 @@
             "^tests/unit/task-platform-api\\.test\\.js$",
             "^tests/unit/task-platform-backfill\\.test\\.js$",
             "^tests/unit/task-platform-source-policy\\.test\\.js$",
-            "^tests/unit/task-platform-github-check\\.test\\.js$"
+            "^tests/unit/task-platform-github-check\\.test\\.js$",
+            "^tests/unit/task-platform-branch-protection\\.test\\.js$"
           ]
         },
         {
@@ -346,7 +347,8 @@
           "patterns": [
             "^tests/integration/task-assignment-integration\\.test\\.js$",
             "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$",
-            "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$"
+            "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
+            "^tests/integration/task-platform-branch-protection\\.integration\\.test\\.js$"
           ]
         }
       ],
