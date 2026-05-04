@@ -163,6 +163,8 @@ Verify:
 - default-branch protection requires the exact status check `Merge readiness` before `classification.branch_protection_policy.enforced=true` appears on a review
 - missing or unreadable default-branch protection evidence reports `classification.branch_protection_policy.status=policy_blocked` or `error`, with repo-admin ownership for follow-up
 - `npm run task-platform:verify-branch-protection -- <owner/repo> <branch>` exits non-zero until GitHub branch protection requires `Merge readiness`
+- rendered PR summaries include only review status, commit SHA, required sources reviewed, blocking findings, non-blocking findings with rationale, deferred blocking findings with approvals, inaccessible evidence, follow-up links, and the structured `MergeReadinessReview` link
+- PR summary comments never include full logs and never override the structured `MergeReadinessReview` for check-run or ship decisions
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
@@ -173,6 +175,7 @@ Verify:
 - confirm `metadata.github_merge_readiness_gate.policy_version=merge-readiness-github-check.v1` and `githubCheckRunId` are present after check-run emission
 - confirm `metadata.github_merge_readiness_branch_protection.policy_version=merge-readiness-branch-protection.v1` and `enforced=true` only after GitHub branch protection requires `Merge readiness`
 - investigate any stale review with `metadata.github_merge_readiness_gate.invalidated_reason` before attempting to ship the PR
+- treat conflicts between a PR comment summary and the stored `MergeReadinessReview` as stale comment content; the structured review remains authoritative
 
 ## Rollback Posture
 This rollout is additive. The first rollback action is operational containment, not destructive schema rollback.
@@ -183,7 +186,8 @@ This rollout is additive. The first rollback action is operational containment, 
 4. Stop creating new merge readiness reviews if current-review uniqueness or stale-write conflicts appear.
 5. Disable the GitHub check-run client configuration to stop new `Merge readiness` check-run writes while keeping review storage readable.
 6. Leave branch-protection settings unchanged unless an operator or repo admin explicitly approves a settings change; the verifier is read-only.
-7. Investigate backfill errors or canonical drift before rerunning backfill.
+7. Stop posting derived PR summaries if comment rendering is noisy; do not change structured review evaluation to read comment text.
+8. Investigate backfill errors or canonical drift before rerunning backfill.
 
 If assignment behavior is part of the incident, use [task-assignment-emergency.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/runbooks/task-assignment-emergency.md).
 

@@ -339,7 +339,8 @@
             "^tests/unit/task-platform-backfill\\.test\\.js$",
             "^tests/unit/task-platform-source-policy\\.test\\.js$",
             "^tests/unit/task-platform-github-check\\.test\\.js$",
-            "^tests/unit/task-platform-branch-protection\\.test\\.js$"
+            "^tests/unit/task-platform-branch-protection\\.test\\.js$",
+            "^tests/unit/task-platform-pr-summary\\.test\\.js$"
           ]
         },
         {
@@ -348,7 +349,8 @@
             "^tests/integration/task-assignment-integration\\.test\\.js$",
             "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
-            "^tests/integration/task-platform-branch-protection\\.integration\\.test\\.js$"
+            "^tests/integration/task-platform-branch-protection\\.integration\\.test\\.js$",
+            "^tests/integration/task-platform-pr-summary\\.integration\\.test\\.js$"
           ]
         }
       ],

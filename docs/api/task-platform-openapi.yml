@@ -377,7 +377,7 @@ components:
       enum: [pending, passed, blocked, stale, error]
     MergeReadinessReviewJsonValue:
       nullable: true
-      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`; branch-protection enforcement is evaluated under `merge-readiness-branch-protection.v1` when verification evidence is supplied.
+      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`; branch-protection enforcement is evaluated under `merge-readiness-branch-protection.v1` when verification evidence is supplied. Human-facing PR summaries are derived from this structured review under `merge-readiness-pr-summary.v1`; comment text is never the source of truth.
       oneOf:
         - type: object
           additionalProperties: true
@@ -438,6 +438,7 @@ components:
         reviewedLogSources:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         findings:
+          description: Structured findings used by check-run evaluation and by the derived PR summary. PR comments may render blocking findings, non-blocking findings with rationale, and deferred blockers with approvals, but must not include full logs.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         classification:
           description: Includes `branch_protection_policy` when default-branch required status checks are verified. `enforced=true` is valid only when branch protection requires `Merge readiness`; otherwise the policy reports `policy_blocked` or `error`.
@@ -447,11 +448,13 @@ components:
         rationale:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         followUpLinks:
+          description: Structured follow-up links that may be rendered in the derived PR summary.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         approvals:
+          description: Structured approvals that may be rendered only for deferred blocking findings in the derived PR summary.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         metadata:
-          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes. Includes `github_merge_readiness_branch_protection` with `policy_version=merge-readiness-branch-protection.v1`, status, branch, required check name, and `enforced` when branch-protection verification runs.
+          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes. Includes `github_merge_readiness_branch_protection` with `policy_version=merge-readiness-branch-protection.v1`, status, branch, required check name, and `enforced` when branch-protection verification runs. May include a structured review URL for PR summary rendering; merge readiness evaluation still reads this review record, not comment text.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         reviewerActorId:
           type: string
