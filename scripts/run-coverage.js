@@ -132,7 +132,20 @@ function writeArtifact(suites) {
 }
 
 const nodeOutput = run('node', [...NODE_COVERAGE_ARGS, ...NODE_TEST_FILES], 'Node/API coverage');
-const uiOutput = run('npx', ['vitest', 'run', '--coverage', ...UI_TEST_FILES], 'UI coverage');
+const uiOutput = run(
+  'npx',
+  [
+    'vitest',
+    'run',
+    '--coverage',
+    '--no-file-parallelism',
+    '--maxWorkers=1',
+    '--minWorkers=1',
+    '--testTimeout=10000',
+    ...UI_TEST_FILES,
+  ],
+  'UI coverage'
+);
 const artifact = writeArtifact([parseNodeCoverage(nodeOutput), parseUiCoverage(uiOutput)]);
 
 if (!artifact.overall.pass) {

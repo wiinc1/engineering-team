@@ -139,6 +139,7 @@
         "^src/app/session(\\.browser)?\\.js$",
         "^lib/auth/config-check\\.js$",
         "^scripts/check-auth-config\\.js$",
+        "^scripts/seed-auth-admin\\.js$",
         "^scripts/serve-browser-dist\\.js$"
       ],
       "test_requirements": [
@@ -147,6 +148,7 @@
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
+            "^tests/unit/auth-admin-seed\\.test\\.js$",
             "^tests/unit/task-browser-session\\.test\\.js$",
             "^tests/unit/auth-config-check\\.test\\.js$"
           ]
@@ -169,7 +171,8 @@
             "^docs/design/ISSUE-105-design\\.md$",
             "^docs/design/ISSUE-107-design\\.md$",
             "^docs/design/ISSUE-108-design\\.md$",
-            "^docs/design/ISSUE-110-design\\.md$"
+            "^docs/design/ISSUE-110-design\\.md$",
+            "^docs/design/ISSUE-137-design\\.md$"
           ]
         },
         {

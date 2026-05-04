@@ -15,6 +15,8 @@ info:
     Production magic-link requires the browser-visible strategy to be `magic-link` through `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
     or injected runtime config `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy`.
     Its public app URL must be HTTPS, magic-link TTL must be 15 minutes, and session TTL must be 8 hours.
+    Initial production admin access is seeded out-of-band by the operator-only `npm run auth:admin:seed -- --apply`
+    workflow; the browser contract never exposes the seed inputs, database URL, raw email address, or generated session secrets.
 paths:
   /sign-in:
     get:

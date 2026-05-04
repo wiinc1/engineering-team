@@ -117,7 +117,7 @@ Point the browser app at the API:
 - `VITE_OIDC_CLIENT_ID`
 - optional `VITE_OIDC_REDIRECT_URI`, `VITE_OIDC_SCOPE`, `VITE_OIDC_LOGOUT_URL`, and `VITE_OIDC_LOGOUT_REDIRECT_URI`
 - set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false` for OIDC production browser builds so the internal fallback form is hidden
-- if no production IdP exists, set `AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap` and explicitly enable both `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true` and `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true` with a production `AUTH_JWT_SECRET`
+- if no production IdP exists, use the durable magic-link path: set `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, expose `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, configure the required email/session variables, and keep both internal bootstrap flags disabled
 
 ### Vercel deployment
 - This repo can now run on a single Vercel project with the SPA plus serverless API routes.
@@ -126,8 +126,9 @@ Point the browser app at the API:
 - Vercel additionally exposes explicit `api/v1/tasks.js`, `api/v1/tasks/[...route].js`, and `api/v1/ai-agents.js` handlers so the versioned task-platform routes do not depend on nested catch-all matching quirks.
 - To avoid route collisions between SPA paths like `/tasks/...` and API paths like `/tasks/...`, set `VITE_TASK_API_BASE_URL=/backend` in Vercel.
 - `vercel.json` rewrites `/backend/*` to the Vercel API functions and falls back non-API browser routes to `index.html`.
-- Required backend env vars in Vercel: `DATABASE_URL` plus either OIDC verifier vars (`AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`) or the explicit no-IdP internal strategy (`AUTH_PRODUCTION_AUTH_STRATEGY=internal-bootstrap`, `AUTH_JWT_SECRET`, `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=true`, `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=true`).
-- Keep `AUTH_PRODUCTION_AUTH_STRATEGY=oidc` when a provider exists. Use `internal-bootstrap` only as the documented production strategy while no IdP exists.
+- Required backend env vars in Vercel: `DATABASE_URL` plus either OIDC verifier vars (`AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`) or magic-link vars (`AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, `AUTH_SESSION_SECRET`, `AUTH_EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `AUTH_PUBLIC_APP_URL`, `AUTH_MAGIC_LINK_TTL_MINUTES=15`, `AUTH_SESSION_TTL_HOURS=8`, and either `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link` or documented runtime-config evidence via `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY=magic-link`).
+- Keep `AUTH_PRODUCTION_AUTH_STRATEGY=oidc` when a provider exists. Use `magic-link` as the durable production strategy while no IdP exists; reserve `internal-bootstrap` for explicitly approved emergency or local/internal fallback use.
+- Seed the first production magic-link admin with `npm run auth:admin:seed` to inspect a redacted dry-run plan, then `npm run auth:admin:seed -- --apply` after the production owner confirms the target identifiers.
 - Production `npm run build` runs the auth gate before Vite emits deployable assets and writes `observability/auth-config-diagnostics.json` with boolean presence status only.
 - Validate Vercel production env names with `npm run auth:config:check:vercel`; the script uses name-only `vercel env ls production --format json` output and never pulls or prints values.
 - After Vercel auth changes, trigger a new production deployment and attach deployment URL or ID, commit, Ready status, build timestamp, selected auth strategy, sign-in smoke result, post-login data check, monitoring evidence, and rollback evidence to the issue or PR.

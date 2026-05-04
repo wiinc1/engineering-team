@@ -70,7 +70,7 @@ exports[`auth sign-in visual states > matches the local internal fallback state 
     class="auth-status auth-status--error"
     role="alert"
   >
-    This deployment is missing enterprise auth configuration. Contact the operator responsible for production identity-provider settings.
+    This deployment has no enabled sign-in method. Contact the production operator to restore the approved login path.
   </p>
   <form
     class="session-form auth-form"
@@ -189,7 +189,7 @@ exports[`auth sign-in visual states > matches the no-login-path configuration er
     class="auth-status auth-status--error"
     role="alert"
   >
-    This deployment is missing enterprise auth configuration. Contact the operator responsible for production identity-provider settings.
+    This deployment has no enabled sign-in method. Contact the production operator to restore the approved login path.
   </p>
 </section>
 `;
