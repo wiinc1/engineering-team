@@ -25,6 +25,10 @@ approved emergency exception is active.
   prints the database URL or raw email address.
 - The browser no-login state now tells users that the deployment has no enabled
   sign-in method and directs them to the production operator.
+- The browser shell reads `import.meta.env` when resolving auth runtime config,
+  so a production bundle with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`
+  renders the email-entry magic-link form even when no runtime config object is
+  injected into `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__`.
 
 ## Rollout
 
@@ -34,7 +38,9 @@ approved emergency exception is active.
 2. Dry-run the admin seed script and confirm the redacted target identity.
 3. Re-run the script with `--apply` to upsert the first enabled admin.
 4. Request and consume a magic link against the deployed production URL.
-5. Attach the production evidence to issue #137 before closing it.
+5. Verify `/sign-in` shows the `Email address` field and `Send sign-in link`
+   action on the deployed production URL.
+6. Attach the production evidence to issue #137 before closing it.
 
 ## Rollback
 

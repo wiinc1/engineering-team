@@ -20,6 +20,7 @@ Internal bootstrap remains available only for explicitly approved emergency or l
 - [ ] Confirm Vercel production env names with `npm run auth:config:check:vercel`.
 - [ ] Confirm production values with `npm run auth:config:check` in an environment containing production auth variables.
 - [ ] Confirm the production deployment is built with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`.
+- [ ] Confirm the browser app reads the Vite auth strategy by loading `/sign-in` and verifying the `Email address` magic-link form appears without `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__` injection.
 - [ ] Confirm `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false`.
 - [ ] Confirm `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`.
 - [ ] Confirm `VITE_TASK_API_BASE_URL=/backend`.

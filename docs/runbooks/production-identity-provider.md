@@ -231,6 +231,7 @@ node --test tests/unit/auth-config-check.test.js
 node --test tests/security/audit-api.security.test.js
 node --test tests/unit/audit-api.test.js
 node --test tests/unit/task-browser-session.test.js
+./node_modules/.bin/vitest run src/app/auth-runtime-env.test.tsx src/app/AuthAppShell.test.tsx tests/visual/auth-sign-in.visual.spec.tsx
 npm run test:ui:vitest -- src/app/AuthAppShell.test.tsx
 ```
 
@@ -242,3 +243,5 @@ The automated coverage includes:
 - mixed-mode compatibility for browser bootstrap tokens during JWKS rollout
 - OIDC callback exchange and PKCE transaction coverage in the browser session helpers
 - browser-shell callback restore coverage for protected routes
+- production browser bundles reading `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`
+  without runtime config injection

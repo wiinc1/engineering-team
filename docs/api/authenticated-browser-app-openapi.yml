@@ -24,6 +24,7 @@ paths:
       description: |
         The SPA renders the sign-in screen and starts hosted OIDC Authorization Code + PKCE when the user selects the enterprise sign-in action.
         The route also accepts `next` and `reason` query parameters for protected-route restore and recovery messaging.
+        Production magic-link bundles render an email-entry form when `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link` or runtime config selects the magic-link strategy.
         When no configured login path is available, the SPA renders a safe deployment-configuration error without raw env values, provider URLs, client IDs, tokens, authorization codes, or secrets.
       parameters:
         - in: query
