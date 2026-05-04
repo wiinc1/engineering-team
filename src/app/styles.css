@@ -83,9 +83,23 @@ select:focus-visible {
   max-width: none;
   width: 100%;
   padding: 48px 24px 64px;
+  color: #0f172a;
   background:
     radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 30%),
     #f8fafc;
+}
+
+.app-shell--auth button:not(:disabled):hover {
+  filter: none;
+}
+
+.app-shell--auth a:focus-visible,
+.app-shell--auth button:focus-visible,
+.app-shell--auth input:focus-visible,
+.app-shell--auth textarea:focus-visible,
+.app-shell--auth select:focus-visible {
+  outline: auto;
+  outline-offset: 0;
 }
 
 .app-nav {
