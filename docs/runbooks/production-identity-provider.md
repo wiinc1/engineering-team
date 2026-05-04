@@ -1,10 +1,10 @@
-# Production Identity Provider Integration
+# Production Auth Integration
 
-> Issue #130 standards evidence: mechanical maintainability compaction only; no identity-provider procedure change.
+> Issue #137 update: the durable no-IdP production login path is magic-link; internal-bootstrap is emergency/local fallback only.
 
 ## Purpose
 
-This runbook documents the provider-backed JWT validation path and the explicit no-IdP internal-bootstrap production path.
+This runbook documents the provider-backed JWT validation path and the durable no-IdP magic-link production path.
 
 The audit and workflow APIs can now validate bearer tokens using either:
 
@@ -16,7 +16,8 @@ The browser app now supports:
 
 - production hosted OIDC Authorization Code + PKCE sign-in
 - direct use of provider-issued bearer tokens against the existing API verifier
-- internal `POST /auth/session` bootstrap when explicitly selected as the production strategy because no external IdP exists
+- invite-only first-party magic-link sign-in when no external IdP exists
+- internal `POST /auth/session` bootstrap only for local/internal use or an explicitly approved emergency exception
 
 ## Configuration
 
@@ -61,7 +62,7 @@ Optional browser settings:
 - `AUTH_PRODUCTION_AUTH_STRATEGY`
   - `oidc`: require external OIDC browser config and provider JWT verifier settings
   - `magic-link`: require invite-only first-party email auth, DB sessions, CSRF, and Resend delivery
-  - `internal-bootstrap`: allow signed internal browser bootstrap in production when no external IdP exists
+  - `internal-bootstrap`: allow signed internal browser bootstrap only for local/internal use or an explicitly approved emergency exception
 - `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
   - browser-visible strategy used by the SPA; set to `magic-link` for production magic-link builds
 - `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY`
@@ -82,7 +83,7 @@ Optional browser settings:
   - disable it in production to turn off `POST /auth/session`
 - `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`
   - controls whether the browser sign-in screen renders the internal fallback form
-  - required for the explicit `internal-bootstrap` production strategy
+  - keep disabled for the durable production magic-link path
 
 ## Validation rules
 
@@ -125,9 +126,10 @@ Production no-IdP path:
 - expose the browser strategy with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`; if the deployment injects runtime config instead, set `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy = "magic-link"` and declare `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY=magic-link` for the production gate
 - set `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false` and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
 - provision invited users at `/admin/users` with email, tenant ID, actor ID, roles, and status
+- seed the first admin before any admin session exists with `npm run auth:admin:seed` to inspect a redacted dry-run plan, then `npm run auth:admin:seed -- --apply` after the production configuration owner confirms the target identifiers
 - smoke `/sign-in` by requesting a link for an invited user, consuming it, verifying `/auth/me`, loading protected views, and signing out
 - run `npm run auth:magic-link:production-smoke` to write redacted machine-check evidence to `observability/magic-link-production-smoke.json`
-- temporary path: `internal-bootstrap` remains only for explicitly approved emergency remediation while #92 is incomplete
+- temporary path: `internal-bootstrap` remains only for explicitly approved emergency remediation or local/internal fallback use
 
 Operational guidance:
 
@@ -207,7 +209,7 @@ Use `--dry-run` only to validate command wiring and redacted artifact shape. Dry
 | Vercel env vars | Production configuration owner |
 | IdP client settings and redirect URI allowlist | Production configuration owner when OIDC exists |
 | JWKS verifier settings | Production configuration owner when OIDC exists |
-| Internal bootstrap auth-code issuance and secret rotation | Production configuration owner when no IdP exists |
+| Internal bootstrap auth-code issuance and secret rotation | Production configuration owner for approved emergency/local fallback use |
 | Production smoke execution | Release operator |
 | Rollback approval | Production auth approver |
 | Monitoring and alert thresholds | Operations owner |
@@ -223,6 +225,7 @@ Minimum validation commands:
 ```bash
 npm run auth:config:check
 npm run auth:config:check:vercel
+node --test tests/unit/auth-admin-seed.test.js
 node --test tests/unit/audit-jwt-auth.test.js
 node --test tests/unit/auth-config-check.test.js
 node --test tests/security/audit-api.security.test.js
