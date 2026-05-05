@@ -1,5 +1,95 @@
 export const LIFECYCLE_STAGE_ORDER = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'VERIFY', 'REOPEN', 'DONE'];
 
+export const BOARD_STAGE_ORDER = [
+  'DRAFT',
+  'BACKLOG',
+  'TODO',
+  'IMPLEMENT',
+  'IMPLEMENTATION',
+  'IN_PROGRESS',
+  'CONTRACT_COVERAGE_AUDIT',
+  'REVIEW',
+  'QA_TESTING',
+  'VERIFY',
+  'SRE_MONITORING',
+  'PM_CLOSE_REVIEW',
+  'REOPEN',
+  'DONE',
+];
+
+const BOARD_STAGE_PRESENTATION = {
+  DRAFT: {
+    label: 'Intake Draft',
+    description: 'Raw request awaiting PM refinement.',
+    group: 'Intake Draft',
+  },
+  BACKLOG: {
+    label: 'Task Refinement',
+    description: 'PM and architect shaping before approval.',
+    group: 'Task Refinement',
+  },
+  TODO: {
+    label: 'Operator Approval',
+    description: 'Ready for approval, routing, or dispatch.',
+    group: 'Operator Approval',
+  },
+  IMPLEMENT: {
+    label: 'Implementation',
+    description: 'Engineer-owned delivery work.',
+    group: 'Implementation',
+  },
+  IMPLEMENTATION: {
+    label: 'Implementation',
+    description: 'Engineer-owned delivery work.',
+    group: 'Implementation',
+  },
+  IN_PROGRESS: {
+    label: 'Implementation',
+    description: 'Active engineer-owned work.',
+    group: 'Implementation',
+  },
+  CONTRACT_COVERAGE_AUDIT: {
+    label: 'Implementation Evidence',
+    description: 'Coverage evidence before QA verification.',
+    group: 'Implementation',
+  },
+  REVIEW: {
+    label: 'QA Verification',
+    description: 'QA review and validation work.',
+    group: 'QA Verification',
+  },
+  QA_TESTING: {
+    label: 'QA Verification',
+    description: 'QA testing and validation work.',
+    group: 'QA Verification',
+  },
+  VERIFY: {
+    label: 'SRE Verification',
+    description: 'Release verification and monitoring readiness.',
+    group: 'SRE Verification',
+  },
+  SRE_MONITORING: {
+    label: 'SRE Verification',
+    description: 'Production monitoring validation.',
+    group: 'SRE Verification',
+  },
+  PM_CLOSE_REVIEW: {
+    label: 'Operator Closeout',
+    description: 'PM, operator, or stakeholder close review.',
+    group: 'Operator Closeout',
+  },
+  REOPEN: {
+    label: 'Reopened Work',
+    description: 'Returned work awaiting reroute.',
+    group: 'Implementation',
+  },
+  DONE: {
+    label: 'Closed',
+    description: 'Operator closeout complete.',
+    group: 'Operator Closeout',
+  },
+};
+
 export const LIFECYCLE_TRANSITIONS = {
   BACKLOG: { TODO: 'any' },
   TODO: { BACKLOG: 'any', IN_PROGRESS: 'any' },
@@ -38,16 +128,29 @@ export function compareLifecycleStage(a, b) {
   return left - right;
 }
 
+export function getBoardStagePresentation(stage) {
+  const key = String(stage || '').trim().toUpperCase();
+  return BOARD_STAGE_PRESENTATION[key] || {
+    label: key || 'Unspecified',
+    description: key ? 'Unmapped lifecycle state from the task read model.' : 'Task has no projected lifecycle state.',
+    group: 'Unmapped',
+  };
+}
+
+function isBoardStage(stage) {
+  return BOARD_STAGE_ORDER.includes(String(stage || '').trim().toUpperCase());
+}
+
 export function buildBoardStageOrder(items = []) {
   const extras = Array.from(
     new Set(
       items
         .map((item) => String(item?.current_stage || '').trim())
-        .filter((stage) => stage && !isLifecycleStage(stage)),
+        .filter((stage) => stage && !isBoardStage(stage)),
     ),
   ).sort((left, right) => String(left).localeCompare(String(right)));
 
-  const presentLifecycle = LIFECYCLE_STAGE_ORDER.filter((stage) => items.some((item) => (item?.current_stage || '') === stage));
+  const presentLifecycle = BOARD_STAGE_ORDER.filter((stage) => items.some((item) => (item?.current_stage || '') === stage));
   return [...presentLifecycle, ...extras];
 }
 
