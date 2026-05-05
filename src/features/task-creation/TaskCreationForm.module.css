@@ -38,6 +38,12 @@
   resize: vertical;
 }
 
+.help {
+  margin: 0;
+  color: var(--muted, #526174);
+  font-size: 0.875rem;
+}
+
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;

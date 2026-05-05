@@ -2,18 +2,49 @@ import React from 'react';
 import { TaskCreationForm } from './TaskCreationForm';
 import { buildAuthHeaders } from '../../app/session.browser';
 
+type CreatedTaskSummary = {
+  taskId: string | null;
+  title: string;
+  status: string;
+  nextRequiredAction: string;
+  rawRequirements: string;
+};
+
+type TaskCreationPageProps = {
+  sessionConfig?: { apiBaseUrl?: string };
+  envApiBaseUrl?: string;
+  onTaskCreated?: (result: unknown) => void;
+};
+
 function resolveApiBaseUrl(config: { apiBaseUrl?: string } = {}, envApiBaseUrl = '') {
   return (typeof config?.apiBaseUrl === 'string' && config.apiBaseUrl.trim()) || envApiBaseUrl.trim() || '';
 }
 
-export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }) {
+function normalizeCreatedTask(result: any, request: any): CreatedTaskSummary {
+  const requestTitle = typeof request?.title === 'string' ? request.title.trim() : '';
+  const rawRequirements = typeof request?.raw_requirements === 'string' ? request.raw_requirements : '';
+
+  return {
+    taskId: result?.taskId || result?.data?.taskId || null,
+    title: result?.title || result?.data?.title || requestTitle || 'Untitled intake draft',
+    status: result?.status || result?.data?.status || 'DRAFT',
+    nextRequiredAction: result?.nextRequiredAction || result?.data?.nextRequiredAction || 'PM refinement required',
+    rawRequirements,
+  };
+}
+
+export function TaskCreationPage({ sessionConfig, envApiBaseUrl }: TaskCreationPageProps) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
-  const [createdTask, setCreatedTask] = React.useState<null | {
-    taskId: string | null;
-    status: string;
-    nextRequiredAction: string;
-  }>(null);
+  const [formVersion, setFormVersion] = React.useState(0);
+  const [createdTask, setCreatedTask] = React.useState<null | CreatedTaskSummary>(null);
+  const successRef = React.useRef<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    if (createdTask) {
+      successRef.current?.focus();
+    }
+  }, [createdTask]);
 
   const client = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -43,19 +74,18 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
     setError(null);
     try {
       const result = await client.createTask(data);
-      const taskId = result?.taskId || result?.data?.taskId || null;
-      setCreatedTask({
-        taskId,
-        status: result?.status || result?.data?.status || 'DRAFT',
-        nextRequiredAction:
-          result?.nextRequiredAction || result?.data?.nextRequiredAction || 'PM refinement required',
-      });
-      if (onTaskCreated) onTaskCreated(result);
+      setCreatedTask(normalizeCreatedTask(result, data));
     } catch (err) {
       setError(err.message || 'Failed to create task');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateAnother = () => {
+    setCreatedTask(null);
+    setError(null);
+    setFormVersion((version) => version + 1);
   };
 
   return (
@@ -68,20 +98,53 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
         </p>
       </div>
       {createdTask ? (
-        <section className="task-create-page__success" role="status" aria-live="polite">
+        <section
+          ref={successRef}
+          className="task-create-page__success"
+          role="status"
+          aria-live="polite"
+          tabIndex={-1}
+        >
           <div>
             <p className="eyebrow">Intake Draft created</p>
             <h2>{createdTask.taskId || 'New task'} is ready for PM refinement</h2>
             <p>
               Status: {createdTask.status}. Next step: {createdTask.nextRequiredAction}.
             </p>
+            <div className="task-create-page__intake-summary">
+              <h3>{createdTask.title}</h3>
+              <dl>
+                <div>
+                  <dt>Stage</dt>
+                  <dd>Intake Draft</dd>
+                </div>
+                <div>
+                  <dt>Next step</dt>
+                  <dd>{createdTask.nextRequiredAction}</dd>
+                </div>
+              </dl>
+              {createdTask.rawRequirements ? (
+                <div>
+                  <h4>Operator intake requirements</h4>
+                  <p>{createdTask.rawRequirements}</p>
+                </div>
+              ) : null}
+            </div>
           </div>
-          {createdTask.taskId ? (
-            <a href={`/tasks/${encodeURIComponent(createdTask.taskId)}`}>Open task detail</a>
-          ) : null}
+          <div className="task-create-page__success-actions">
+            {createdTask.taskId ? (
+              <a href={`/tasks/${encodeURIComponent(createdTask.taskId)}?created=intake-draft`}>Open task detail</a>
+            ) : null}
+            <a href="/tasks?view=board">View task workspace</a>
+            <button type="button" className="button-secondary" onClick={handleCreateAnother}>
+              Create another task
+            </button>
+          </div>
         </section>
       ) : null}
-      <TaskCreationForm onSubmit={handleSubmit} loading={loading} error={error} />
+      {createdTask ? null : (
+        <TaskCreationForm onSubmit={handleSubmit} loading={loading} error={error} resetToken={formVersion} />
+      )}
     </section>
   );
 }
