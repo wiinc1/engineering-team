@@ -2,18 +2,29 @@ import React from 'react';
 import { TaskCreationForm } from './TaskCreationForm';
 import { buildAuthHeaders } from '../../app/session.browser';
 
+type CreatedTaskSummary = {
+  taskId: string | null;
+  status: string;
+  nextRequiredAction: string;
+};
+
 function resolveApiBaseUrl(config: { apiBaseUrl?: string } = {}, envApiBaseUrl = '') {
   return (typeof config?.apiBaseUrl === 'string' && config.apiBaseUrl.trim()) || envApiBaseUrl.trim() || '';
+}
+
+function normalizeCreatedTask(result: any): CreatedTaskSummary {
+  return {
+    taskId: result?.taskId || result?.data?.taskId || null,
+    status: result?.status || result?.data?.status || 'DRAFT',
+    nextRequiredAction: result?.nextRequiredAction || result?.data?.nextRequiredAction || 'PM refinement required',
+  };
 }
 
 export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
-  const [createdTask, setCreatedTask] = React.useState<null | {
-    taskId: string | null;
-    status: string;
-    nextRequiredAction: string;
-  }>(null);
+  const [formVersion, setFormVersion] = React.useState(0);
+  const [createdTask, setCreatedTask] = React.useState<null | CreatedTaskSummary>(null);
 
   const client = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -43,19 +54,19 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
     setError(null);
     try {
       const result = await client.createTask(data);
-      const taskId = result?.taskId || result?.data?.taskId || null;
-      setCreatedTask({
-        taskId,
-        status: result?.status || result?.data?.status || 'DRAFT',
-        nextRequiredAction:
-          result?.nextRequiredAction || result?.data?.nextRequiredAction || 'PM refinement required',
-      });
+      setCreatedTask(normalizeCreatedTask(result));
       if (onTaskCreated) onTaskCreated(result);
     } catch (err) {
       setError(err.message || 'Failed to create task');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateAnother = () => {
+    setCreatedTask(null);
+    setError(null);
+    setFormVersion((version) => version + 1);
   };
 
   return (
@@ -76,12 +87,18 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
               Status: {createdTask.status}. Next step: {createdTask.nextRequiredAction}.
             </p>
           </div>
-          {createdTask.taskId ? (
-            <a href={`/tasks/${encodeURIComponent(createdTask.taskId)}`}>Open task detail</a>
-          ) : null}
+          <div className="task-create-page__success-actions">
+            {createdTask.taskId ? (
+              <a href={`/tasks/${encodeURIComponent(createdTask.taskId)}`}>Open task detail</a>
+            ) : null}
+            <a href="/tasks?view=board">View task workspace</a>
+            <button type="button" className="button-secondary" onClick={handleCreateAnother}>
+              Create another task
+            </button>
+          </div>
         </section>
       ) : null}
-      <TaskCreationForm onSubmit={handleSubmit} loading={loading} error={error} />
+      <TaskCreationForm onSubmit={handleSubmit} loading={loading} error={error} resetToken={formVersion} />
     </section>
   );
 }

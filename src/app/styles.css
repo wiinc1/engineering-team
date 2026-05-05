@@ -1048,20 +1048,41 @@ button {
   color: #14532d;
 }
 
+.task-create-page__success-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .task-create-page__success h2,
 .task-create-page__success p {
   margin: 0;
 }
 
-.task-create-page__success a {
+.task-create-page__success a,
+.task-create-page__success button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid #86efac;
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  background: #ffffff;
   color: #14532d;
   font-weight: 700;
+  text-decoration: none;
+}
+
+.task-create-page__success button {
+  border-color: #bbf7d0;
 }
 
 .task-list-panel {
   display: grid;
   gap: 16px;
-  padding: 18px;
+  padding: 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border-soft);
   background: var(--surface);
@@ -1217,13 +1238,14 @@ button {
 
 .task-board__scroll {
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 2px 2px 10px;
+  scrollbar-gutter: stable both-edges;
 }
 
 .task-board__columns {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(260px, 300px);
+  grid-auto-columns: minmax(272px, 304px);
   gap: 12px;
   align-items: start;
 }
@@ -1232,11 +1254,22 @@ button {
   display: grid;
   gap: 12px;
   min-height: 100%;
-  padding: 14px;
+  padding: 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border-soft);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+}
+
+.task-board__column[aria-label='QA Verification column'],
+.task-board__column[aria-label='SRE Verification column'] {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.task-board__column[aria-label='Reopened Work column'] {
+  border-color: #fecaca;
+  background: #fff7f7;
 }
 
 .task-board__column--drop-target {
@@ -1249,6 +1282,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .task-board__column-header h2,
@@ -1256,9 +1291,25 @@ button {
   margin: 0;
 }
 
+.task-board__column-header h2 {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.task-board__column-header > span {
+  min-width: 30px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .task-board__stage-meta {
   margin: 3px 0 0;
-  max-width: 24ch;
+  max-width: 28ch;
   color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.25;
@@ -1272,10 +1323,12 @@ button {
 .task-board__card {
   display: grid;
   gap: 8px;
+  min-width: 0;
   padding: 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border-soft);
-  background: var(--surface-muted);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .task-board__card--match,
@@ -1290,17 +1343,31 @@ button {
 .task-board__card a {
   color: var(--text);
   font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .task-board__card-meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .task-board__card-meta--owner {
   align-items: flex-start;
+}
+
+.task-board__card-meta:not(.task-board__card-meta--owner) span:last-child {
+  justify-self: end;
+  min-width: 2.6rem;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: var(--surface-subtle);
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .task-board__label {
@@ -1311,8 +1378,12 @@ button {
 
 .task-board__empty {
   margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-muted);
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .task-list-table-wrap {
@@ -1505,6 +1576,20 @@ button {
     width: 100%;
   }
 
+  .task-board__scroll {
+    margin-inline: -14px;
+    padding-inline: 14px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .task-board__columns {
+    grid-auto-columns: minmax(min(84vw, 320px), min(84vw, 320px));
+  }
+
+  .task-board__column {
+    scroll-snap-align: start;
+  }
+
   .view-toggle {
     justify-content: stretch;
   }
@@ -1550,8 +1635,12 @@ button {
   }
 
   .task-board__card-meta {
-    display: grid;
+    grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .task-board__card-meta:not(.task-board__card-meta--owner) span:last-child {
+    justify-self: start;
   }
 
   .owner-badge--board {

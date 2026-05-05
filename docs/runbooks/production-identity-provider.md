@@ -148,6 +148,12 @@ npm run preview:magic-link
 
 That script builds the browser bundle with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, disables `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`, points the browser task API base at `/backend`, and then starts `vite preview`. `/sign-in` should render `Email address` and `Send sign-in link`; it should not render the trusted auth-code fallback. Use normal `npm run dev` or `npm run preview` for local/internal compatibility work where the trusted bootstrap form is intentionally enabled.
 
+Local preview ports are intentionally distinct so stale preview processes do not show the wrong auth surface:
+
+- `npm run preview` serves the normal browser preview on `http://127.0.0.1:4174`.
+- `npm run preview:magic-link` serves the production-like magic-link preview on `http://127.0.0.1:4175`.
+- Both commands use `--strictPort`; if the selected port is already occupied, stop the old preview before validating the UI.
+
 ## Build and release gates
 
 Run the deterministic production gate before release:

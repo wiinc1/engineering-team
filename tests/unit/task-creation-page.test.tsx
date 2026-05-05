@@ -43,6 +43,8 @@ describe('TaskCreationPage', () => {
     expect(screen.getByText(/TSK-INTAKE is ready for PM refinement/i)).toBeInTheDocument();
     expect(screen.getByText(/Status: DRAFT. Next step: PM refinement required./i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open task detail/i })).toHaveAttribute('href', '/tasks/TSK-INTAKE');
+    expect(screen.getByRole('link', { name: /view task workspace/i })).toHaveAttribute('href', '/tasks?view=board');
+    expect(screen.getByRole('button', { name: /create another task/i })).toBeInTheDocument();
   });
 
   it('keeps the operator input visible when creation fails', async () => {
@@ -57,5 +59,38 @@ describe('TaskCreationPage', () => {
 
     await waitFor(() => expect(screen.getByText(/Tenant or user not found/i)).toBeInTheDocument());
     expect(screen.getByLabelText(/requirements/i)).toHaveValue('Do not lose this raw request.');
+  });
+
+  it('resets the form when the operator chooses to create another task', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        response(
+          {
+            taskId: 'TSK-INTAKE',
+            status: 'DRAFT',
+            nextRequiredAction: 'PM refinement required',
+          },
+          201,
+        ),
+      ),
+    );
+
+    render(<TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" />);
+
+    fireEvent.change(screen.getByLabelText(/title/i), {
+      target: { value: 'Keep the workspace clear' },
+    });
+    fireEvent.change(screen.getByLabelText(/requirements/i), {
+      target: { value: 'Raw operator request that should clear after success.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
+
+    await screen.findByRole('status');
+    fireEvent.click(screen.getByRole('button', { name: /create another task/i }));
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/title/i)).toHaveValue('');
+    expect(screen.getByLabelText(/requirements/i)).toHaveValue('');
   });
 });
