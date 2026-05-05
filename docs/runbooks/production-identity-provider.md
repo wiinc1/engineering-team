@@ -138,6 +138,16 @@ Operational guidance:
 - production no-IdP mode: configure `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, expose browser strategy `magic-link`, and keep internal bootstrap disabled
 - preview mode: either configure a preview-specific OIDC redirect URI/strategy, use the same approved internal-bootstrap strategy, or allow the app to show the no-login-path configuration state.
 
+### Local magic-link preview parity
+
+Use the production-like preview when comparing local UI to the Vercel magic-link deployment:
+
+```bash
+npm run preview:magic-link
+```
+
+That script builds the browser bundle with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`, disables `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED`, points the browser task API base at `/backend`, and then starts `vite preview`. `/sign-in` should render `Email address` and `Send sign-in link`; it should not render the trusted auth-code fallback. Use normal `npm run dev` or `npm run preview` for local/internal compatibility work where the trusted bootstrap form is intentionally enabled.
+
 ## Build and release gates
 
 Run the deterministic production gate before release:

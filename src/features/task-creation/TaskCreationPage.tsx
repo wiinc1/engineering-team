@@ -9,6 +9,11 @@ function resolveApiBaseUrl(config: { apiBaseUrl?: string } = {}, envApiBaseUrl =
 export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const [createdTask, setCreatedTask] = React.useState<null | {
+    taskId: string | null;
+    status: string;
+    nextRequiredAction: string;
+  }>(null);
 
   const client = React.useMemo(() => {
     const baseUrl = resolveApiBaseUrl(sessionConfig, envApiBaseUrl);
@@ -38,6 +43,13 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
     setError(null);
     try {
       const result = await client.createTask(data);
+      const taskId = result?.taskId || result?.data?.taskId || null;
+      setCreatedTask({
+        taskId,
+        status: result?.status || result?.data?.status || 'DRAFT',
+        nextRequiredAction:
+          result?.nextRequiredAction || result?.data?.nextRequiredAction || 'PM refinement required',
+      });
       if (onTaskCreated) onTaskCreated(result);
     } catch (err) {
       setError(err.message || 'Failed to create task');
@@ -47,9 +59,29 @@ export function TaskCreationPage({ sessionConfig, envApiBaseUrl, onTaskCreated }
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Create Intake Draft</h1>
+    <section className="task-create-page" aria-labelledby="task-create-title">
+      <div className="task-create-page__header">
+        <p className="eyebrow">New task</p>
+        <h1 id="task-create-title">Add a new task</h1>
+        <p className="lede">
+          Paste the raw request here to create a PM intake draft and route it into the task workflow.
+        </p>
+      </div>
+      {createdTask ? (
+        <section className="task-create-page__success" role="status" aria-live="polite">
+          <div>
+            <p className="eyebrow">Intake Draft created</p>
+            <h2>{createdTask.taskId || 'New task'} is ready for PM refinement</h2>
+            <p>
+              Status: {createdTask.status}. Next step: {createdTask.nextRequiredAction}.
+            </p>
+          </div>
+          {createdTask.taskId ? (
+            <a href={`/tasks/${encodeURIComponent(createdTask.taskId)}`}>Open task detail</a>
+          ) : null}
+        </section>
+      ) : null}
       <TaskCreationForm onSubmit={handleSubmit} loading={loading} error={error} />
-    </div>
+    </section>
   );
 }

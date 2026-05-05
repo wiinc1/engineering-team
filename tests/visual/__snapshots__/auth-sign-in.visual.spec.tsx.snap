@@ -19,7 +19,7 @@ exports[`auth sign-in visual states > matches the configured enterprise OIDC sta
     <p
       class="lede"
     >
-      Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.
+      Use the configured enterprise identity provider to start a browser session for the task workspace, board, PM overview, inboxes, and task detail routes.
     </p>
   </div>
   <div
@@ -53,7 +53,7 @@ exports[`auth sign-in visual states > matches the local internal fallback state 
     <p
       class="lede"
     >
-      Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.
+      Use the configured enterprise identity provider to start a browser session for the task workspace, board, PM overview, inboxes, and task detail routes.
     </p>
   </div>
   <div
@@ -172,7 +172,7 @@ exports[`auth sign-in visual states > matches the no-login-path configuration er
     <p
       class="lede"
     >
-      Use the configured enterprise identity provider to start a browser session for the task list, board, PM overview, inboxes, and task detail routes.
+      Use the configured enterprise identity provider to start a browser session for the task workspace, board, PM overview, inboxes, and task detail routes.
     </p>
   </div>
   <div

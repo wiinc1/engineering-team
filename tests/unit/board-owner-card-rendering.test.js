@@ -32,6 +32,12 @@ describe('board owner card rendering', () => {
     const cards = columns.flatMap((column) => column.items);
 
     expect(columns.map((column) => column.stage)).toEqual(['BACKLOG', 'TODO', 'IMPLEMENT', 'REVIEW']);
+    expect(columns.map((column) => column.stageLabel)).toEqual([
+      'Task Refinement',
+      'Operator Approval',
+      'Implementation',
+      'QA Verification',
+    ]);
     expect(cards).toHaveLength(5);
     expect(cards.every((card) => card.ownerPresentation && typeof card.ownerPresentation.label === 'string')).toBe(true);
     expect(cards.find((card) => card.task_id === 'TSK-BOARD-5').ownerPresentation.label).toBe('Owner hidden');
