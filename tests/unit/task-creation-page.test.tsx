@@ -42,9 +42,43 @@ describe('TaskCreationPage', () => {
     await screen.findByRole('status');
     expect(screen.getByText(/TSK-INTAKE is ready for PM refinement/i)).toBeInTheDocument();
     expect(screen.getByText(/Status: DRAFT. Next step: PM refinement required./i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open task detail/i })).toHaveAttribute('href', '/tasks/TSK-INTAKE');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveFocus());
+    expect(screen.getByRole('link', { name: /open task detail/i })).toHaveAttribute(
+      'href',
+      '/tasks/TSK-INTAKE?created=intake-draft',
+    );
     expect(screen.getByRole('link', { name: /view task workspace/i })).toHaveAttribute('href', '/tasks?view=board');
     expect(screen.getByRole('button', { name: /create another task/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create task draft/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps the routed success state local instead of calling the legacy navigation callback', async () => {
+    const onTaskCreated = vi.fn();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        response(
+          {
+            taskId: 'TSK-INTAKE',
+            status: 'DRAFT',
+            nextRequiredAction: 'PM refinement required',
+          },
+          201,
+        ),
+      ),
+    );
+
+    render(
+      <TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" onTaskCreated={onTaskCreated} />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/requirements/i), {
+      target: { value: 'Raw operator request that should not navigate.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
+
+    await screen.findByRole('status');
+    expect(onTaskCreated).not.toHaveBeenCalled();
   });
 
   it('keeps the operator input visible when creation fails', async () => {

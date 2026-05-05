@@ -86,12 +86,32 @@ describe('App navigation workspace UX', () => {
     render(<App />);
 
     await screen.findByRole('heading', { name: 'Task workspace' });
+    const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
+    const secondaryNav = screen.getByRole('group', { name: 'Secondary workspace navigation' });
+
+    expect(within(primaryNav).getByRole('button', { name: 'Task workspace' })).toBeInTheDocument();
+    expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toBeInTheDocument();
+    expect(within(primaryNav).getByRole('button', { name: 'New task' })).toBeInTheDocument();
+    expect(within(secondaryNav).getByRole('button', { name: 'PM overview' })).toBeInTheDocument();
+    expect(within(secondaryNav).getByRole('button', { name: 'Governance reviews' })).toBeInTheDocument();
+    expect(within(secondaryNav).getByLabelText('Role inboxes')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByLabelText('Intake Draft column')).toBeInTheDocument();
     expect(screen.getByLabelText('Operator Approval column')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Intake Draft column')).getByText('PM refinement required')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Role inboxes'), { target: { value: 'pm' } });
+    fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
+
+    await screen.findByText('1 unassigned cards shown.');
+    const intakeDraftColumn = within(screen.getByLabelText('Intake Draft column'));
+    expect(intakeDraftColumn.getByText('No matching tasks in this column.')).toBeInTheDocument();
+    expect(
+      intakeDraftColumn.getByText('Raw request awaiting PM refinement.', {
+        selector: '.task-board__empty-guidance',
+      }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(within(secondaryNav).getByLabelText('Role inboxes'), { target: { value: 'pm' } });
 
     await screen.findByRole('heading', { name: 'PM Inbox' });
     expect(window.location.pathname).toBe('/inbox/pm');

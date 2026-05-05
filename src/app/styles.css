@@ -119,6 +119,26 @@ button {
 .app-nav__links {
   flex: 1 1 680px;
   min-width: 0;
+  gap: 10px;
+}
+
+.app-nav__primary,
+.app-nav__secondary {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.app-nav__primary {
+  flex: 0 1 auto;
+}
+
+.app-nav__secondary {
+  flex: 1 1 360px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-soft);
 }
 
 .app-nav__session {
@@ -140,9 +160,26 @@ button {
   background: transparent;
 }
 
-.app-nav__links button:not(.button-secondary, .app-nav__primary-action) {
+.app-nav__primary button:not(.button-secondary, .app-nav__primary-action) {
   border-color: var(--text);
   background: var(--text);
+  color: #ffffff;
+}
+
+.app-nav__secondary button,
+.app-nav__role-select {
+  font-size: 0.84rem;
+}
+
+.app-nav__secondary .button-secondary {
+  border-color: transparent;
+  background: var(--surface-muted) !important;
+  color: var(--muted) !important;
+}
+
+.app-nav__secondary button:not(.button-secondary) {
+  border-color: #475569;
+  background: #475569;
   color: #ffffff;
 }
 
@@ -1048,6 +1085,11 @@ button {
   color: #14532d;
 }
 
+.task-create-page__success:focus-visible {
+  outline: 3px solid rgba(21, 128, 61, 0.3);
+  outline-offset: 2px;
+}
+
 .task-create-page__success-actions {
   display: flex;
   gap: 10px;
@@ -1059,6 +1101,53 @@ button {
 .task-create-page__success h2,
 .task-create-page__success p {
   margin: 0;
+}
+
+.task-create-page__intake-summary {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #bbf7d0;
+}
+
+.task-create-page__intake-summary h3,
+.task-create-page__intake-summary h4,
+.task-create-page__intake-summary dl,
+.task-create-page__intake-summary dd {
+  margin: 0;
+}
+
+.task-create-page__intake-summary h3 {
+  font-size: 1rem;
+}
+
+.task-create-page__intake-summary h4,
+.task-create-page__intake-summary dt {
+  color: #166534;
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.task-create-page__intake-summary dl {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.task-create-page__intake-summary dl > div {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.task-create-page__intake-summary p {
+  max-width: 68ch;
+  overflow-wrap: anywhere;
 }
 
 .task-create-page__success a,
@@ -1386,6 +1475,15 @@ button {
   font-size: 0.9rem;
 }
 
+.task-board__empty-guidance {
+  display: block;
+  margin-top: 4px;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 .task-list-table-wrap {
   overflow-x: auto;
 }
@@ -1521,12 +1619,26 @@ button {
   }
 
   .app-nav__links {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-bottom: 2px;
+  }
+
+  .app-nav__primary,
+  .app-nav__secondary {
+    width: 100%;
     flex-wrap: nowrap;
     overflow-x: auto;
     padding-bottom: 2px;
   }
 
-  .app-nav__links button {
+  .app-nav__secondary {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .app-nav__links button,
+  .app-nav__role-select {
     white-space: nowrap;
   }
 
