@@ -38,6 +38,8 @@ const NODE_TEST_FILES = [
   'tests/unit/auth-config-check.test.js',
   'tests/unit/magic-link-auth.test.js',
   'tests/unit/magic-link-production-smoke.test.js',
+  'tests/unit/oidc-production-smoke.test.js',
+  'tests/unit/production-auth-status.test.js',
   'tests/unit/task-detail-adapter.test.js',
   'tests/unit/task-detail-responsive.test.js',
   'tests/unit/specialist-delegation.test.js',

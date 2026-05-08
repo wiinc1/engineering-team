@@ -2,6 +2,8 @@
 
 Date opened for remediation: 2026-05-04
 Issue: https://github.com/wiinc1/engineering-team/issues/137
+Canonical status: `docs/runbooks/production-auth-status.md`
+Issue #151 ship gate: `npm run auth:status:check -- --require-complete`
 
 ## Decision
 
@@ -14,6 +16,8 @@ Issue #137 reports that the landing/sign-in page has no usable login option. The
 - first admin provisioned through the audited dry-run/apply script before `/admin/users` can be used
 
 Internal bootstrap remains available only for explicitly approved emergency or local/internal fallback use. It is not the production closure path for this issue.
+
+Issue #151 reconciliation note: fresh production evidence is still required for closure. The April issue #92 smoke artifact remains historical evidence and must not be reused to close issue #137 or issue #151.
 
 ## Operator Setup Checklist
 
@@ -111,6 +115,7 @@ Attach these before closing issue #137:
 - [ ] redacted `observability/auth-config-diagnostics.json`.
 - [ ] redacted first-admin seed output.
 - [ ] redacted `observability/magic-link-production-smoke.json` from `--require-complete`.
+- [ ] `npm run auth:status:check -- --require-complete` passes against fresh issue #151 evidence.
 - [ ] Resend delivery evidence without raw token material.
 - [ ] monitoring evidence for `auth-no-login-path-after-deploy`.
 - [ ] rollback target identifying the last known-good deployment/config for the selected strategy.
@@ -119,7 +124,7 @@ Attach these before closing issue #137:
 
 - Applicable standards areas: architecture and design, coding and code quality, testing and quality assurance, deployment and release, security, and observability and monitoring.
 - Evidence in this report: accepted auth strategy decisions, operator setup checklist, first-admin seed evidence requirements, complete production magic-link smoke criteria, closure evidence requirements, and rollback evidence requirements.
-- Gap observed: fresh production evidence is still pending for issue #137. Documented rationale: the repo implements and verifies the durable magic-link path, but production env mutation, Resend delivery, and live smoke execution remain production-operator responsibilities (source https://github.com/wiinc1/engineering-team/issues/137).
+- Gap observed: fresh production evidence is still pending for issue #137 and issue #151. Documented rationale: the repo implements and verifies the durable magic-link path, but production env mutation, Resend delivery, live smoke execution, and rollback evidence remain production-operator responsibilities (source https://github.com/wiinc1/engineering-team/issues/137 and https://github.com/wiinc1/engineering-team/issues/151).
 
 ## Required Evidence
 
@@ -130,4 +135,8 @@ Attach these before closing issue #137:
 
 ## Current Status
 
-Fresh production evidence is still pending. Do not close issue #137 using the April issue #92 smoke artifact alone.
+Fresh production evidence is still pending. Do not close issue #137 or issue #151 using the April issue #92 smoke artifact alone. Closure requires the canonical status gate in `docs/runbooks/production-auth-status.md` to pass:
+
+```bash
+npm run auth:status:check -- --require-complete
+```

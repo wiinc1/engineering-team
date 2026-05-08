@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-const smoke = require('../lib/auth/magic-link-production-smoke');
+const smoke = require('../lib/auth/oidc-production-smoke');
 
 const {
-  DEFAULT_EVIDENCE_PATH,
-  buildDryRunEvidence,
-  runSmoke,
+  DEFAULT_OIDC_EVIDENCE_PATH,
+  buildDryRunOidcEvidence,
+  runOidcSmoke,
   writeEvidence,
 } = smoke;
 
@@ -20,13 +20,26 @@ function hasFlag(name) {
 function readSmokeOptions() {
   return {
     baseUrl: readArg('--base-url', process.env.AUTH_PROD_BASE_URL),
-    email: readArg('--email', process.env.AUTH_PROD_INVITED_EMAIL),
-    unknownEmail: readArg('--unknown-email', process.env.AUTH_PROD_UNKNOWN_EMAIL),
-    magicLinkUrl: readArg('--magic-link-url', process.env.AUTH_PROD_MAGIC_LINK_URL),
-    next: readArg('--next', process.env.AUTH_PROD_NEXT || '/tasks'),
+    oidcDiscoveryUrl: readArg(
+      '--oidc-discovery-url',
+      process.env.AUTH_PROD_OIDC_DISCOVERY_URL || process.env.VITE_OIDC_DISCOVERY_URL
+    ),
+    oidcClientId: readArg(
+      '--oidc-client-id',
+      process.env.AUTH_PROD_OIDC_CLIENT_ID || process.env.VITE_OIDC_CLIENT_ID
+    ),
+    oidcRedirectUri: readArg(
+      '--oidc-redirect-uri',
+      process.env.AUTH_PROD_OIDC_REDIRECT_URI || process.env.VITE_OIDC_REDIRECT_URI
+    ),
+    oidcLogoutUrl: readArg(
+      '--oidc-logout-url',
+      process.env.AUTH_PROD_OIDC_LOGOUT_URL || process.env.VITE_OIDC_LOGOUT_URL
+    ),
+    accessToken: readArg('--access-token', process.env.AUTH_PROD_OIDC_ACCESS_TOKEN),
     protectedRoutes: readArg('--protected-routes', process.env.AUTH_PROD_PROTECTED_ROUTES || ''),
     taskDetailPath: readArg('--task-detail-path', process.env.AUTH_PROD_TASK_DETAIL_PATH || ''),
-    selectedAuthStrategy: readArg('--auth-strategy', process.env.AUTH_PROD_AUTH_STRATEGY || 'magic-link'),
+    selectedAuthStrategy: 'oidc',
     deploymentId: readArg('--deployment-id', process.env.AUTH_PROD_DEPLOYMENT_ID || ''),
     deploymentUrl: readArg('--deployment-url', process.env.AUTH_PROD_DEPLOYMENT_URL || ''),
     deploymentStatus: readArg('--deployment-status', process.env.AUTH_PROD_DEPLOYMENT_STATUS || ''),
@@ -56,9 +69,9 @@ async function main() {
   const options = readSmokeOptions();
   const evidencePath = readArg(
     '--evidence-out',
-    process.env.AUTH_PROD_EVIDENCE_OUT || DEFAULT_EVIDENCE_PATH
+    process.env.AUTH_PROD_EVIDENCE_OUT || DEFAULT_OIDC_EVIDENCE_PATH
   );
-  const evidence = hasFlag('--dry-run') ? buildDryRunEvidence(options) : await runSmoke(options);
+  const evidence = hasFlag('--dry-run') ? buildDryRunOidcEvidence(options) : await runOidcSmoke(options);
 
   writeEvidence(evidencePath, evidence);
   printSmokeResult(evidencePath, evidence);

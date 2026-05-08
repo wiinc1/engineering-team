@@ -94,7 +94,7 @@ Task-detail contract notes for approval readiness:
 - App runtime: `src/app/`
 - Route/page module still lives at `src/features/task-detail/route.js`
 - Feature shell still lives at `src/features/task-detail/`
-- Production browser sign-in now starts at `/sign-in` and uses a hosted OIDC Authorization Code + PKCE flow. The callback route is `/auth/callback`, and the resulting provider-issued access token is stored in `sessionStorage`.
+- Production browser sign-in now starts at `/sign-in` and supports hosted OIDC Authorization Code + PKCE when an identity provider exists, or the durable invite-only magic-link path when no IdP exists. The current production-auth source of truth is `docs/runbooks/production-auth-status.md`.
 - The trusted browser auth code exchange on `POST /auth/session` remains available only as an internal/local fallback when explicitly enabled.
 - The app protects `/tasks`, `/tasks?view=board`, `/overview/pm`, `/inbox/:role`, and `/tasks/:taskId`; unauthenticated or expired sessions are redirected back to `/sign-in`.
 - PM/admin tokens also unlock the task assignment control, which reads `GET /ai-agents` and writes `PATCH /tasks/:taskId/assignment`.
@@ -131,6 +131,8 @@ Point the browser app at the API:
 - Seed the first production magic-link admin with `npm run auth:admin:seed` to inspect a redacted dry-run plan, then `npm run auth:admin:seed -- --apply` after the production owner confirms the target identifiers.
 - Production `npm run build` runs the auth gate before Vite emits deployable assets and writes `observability/auth-config-diagnostics.json` with boolean presence status only.
 - Validate Vercel production env names with `npm run auth:config:check:vercel`; the script uses name-only `vercel env ls production --format json` output and never pulls or prints values.
+- Validate the canonical production auth status and evidence with `npm run auth:status:check`; before moving a production-auth issue to ship, run `npm run auth:status:check -- --require-complete`.
+- If production switches to OIDC, use `npm run auth:oidc:production-smoke -- --require-complete` as the OIDC-equivalent production smoke and attach the redacted `observability/oidc-production-smoke.json` artifact.
 - After Vercel auth changes, trigger a new production deployment and attach deployment URL or ID, commit, Ready status, build timestamp, selected auth strategy, sign-in smoke result, post-login data check, monitoring evidence, and rollback evidence to the issue or PR.
 
 Build/package the thin browser app:
@@ -193,4 +195,4 @@ Latest local browser verification evidence from 2026-04-21:
 - This is still lightweight internal-use coverage, not full cross-browser visual regression.
 - No Lighthouse/Core Web Vitals run is wired yet; performance evidence is now browser-timing based, but still local/mock-backed rather than a deployed environment measurement.
 - WebKit coverage remains opt-in rather than part of the default local matrix.
-- The browser app now includes a shared authenticated shell, sign-in flow, task list/board/PM overview/inbox navigation, and task detail routing. Production identity-provider integration is still pending; the current auth flow is an internal trusted auth-code exchange.
+- The browser app now includes a shared authenticated shell, sign-in flow, task list/board/PM overview/inbox navigation, and task detail routing. Production auth status is tracked in `docs/runbooks/production-auth-status.md`; production-auth issue closure is blocked until `npm run auth:status:check -- --require-complete` passes with fresh redacted smoke evidence for the selected strategy.

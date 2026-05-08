@@ -2,6 +2,8 @@
 
 > Issue #137 update: the durable no-IdP production login path is magic-link; internal-bootstrap is emergency/local fallback only.
 
+Canonical current production-auth status and the Issue #151 ship gate live in `docs/runbooks/production-auth-status.md`.
+
 ## Purpose
 
 This runbook documents the provider-backed JWT validation path and the durable no-IdP magic-link production path.
@@ -192,6 +194,20 @@ Environment changes alone do not complete remediation. The production configurat
 
 Rollback means restoring the last known-good working production auth deployment/config for the selected strategy. Do not switch strategies during rollback unless a separate emergency exception is approved.
 
+For OIDC production remediation, run the parity smoke after hosted sign-in produces a smoke-account access token:
+
+```bash
+AUTH_PROD_BASE_URL=https://app.example \
+AUTH_PROD_OIDC_DISCOVERY_URL=https://idp.example/.well-known/openid-configuration \
+AUTH_PROD_OIDC_CLIENT_ID=engineering-team-browser \
+AUTH_PROD_OIDC_ACCESS_TOKEN='<redacted-token-from-hosted-sign-in>' \
+AUTH_PROD_OIDC_LOGOUT_URL=https://idp.example/logout \
+AUTH_PROD_ROLLBACK_TARGET='last-known-good-oidc-config' \
+npm run auth:oidc:production-smoke -- --require-complete
+```
+
+The OIDC smoke writes `observability/oidc-production-smoke.json` by default and stores hashes of access-token and OIDC configuration material, never raw tokens, client secrets, cookies, or authorization headers. It verifies provider discovery, hosted callback route availability, `/auth/me` token/session behavior, protected routes, logout routing, redaction, deployment metadata, and rollback evidence.
+
 For magic-link production remediation, run the smoke in two phases because the sign-in link arrives through Resend:
 
 ```bash
@@ -217,6 +233,14 @@ The smoke artifact stores hashes of email addresses and magic-link token materia
 
 Use `--dry-run` only to validate command wiring and redacted artifact shape. Dry-run mode skips network calls and does not count as production smoke evidence.
 
+Before moving a production-auth remediation issue to the ship portion of the workflow, run:
+
+```bash
+npm run auth:status:check -- --require-complete
+```
+
+That gate validates the canonical status docs, diagrams, monitoring dashboard reference, fresh redacted smoke artifact, selected auth strategy, deployment metadata, and rollback target. A passing April issue #92 artifact is historical evidence only and is not sufficient for Issue #151 or Issue #137 closure.
+
 ## Ownership
 
 | Area | Owner |
@@ -241,6 +265,7 @@ Minimum validation commands:
 ```bash
 npm run auth:config:check
 npm run auth:config:check:vercel
+npm run auth:status:check
 node --test tests/unit/auth-admin-seed.test.js
 node --test tests/unit/audit-jwt-auth.test.js
 node --test tests/unit/auth-config-check.test.js

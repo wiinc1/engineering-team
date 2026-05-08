@@ -218,6 +218,9 @@ Existing task creation endpoint remains authoritative:
 
 **Automated API Testing**
 - Contract coverage for raw requirements only.
+
+**Issue #151 maintenance evidence**
+- The task creation page/form decomposition for the Issue #151 workflow is behavior-preserving maintenance: it keeps the raw-requirements intake, local success state, create-another reset, and workspace recovery behavior covered by `tests/unit/task-creation-page.test.tsx` and `tests/browser/task-workspace.browser.spec.ts`.
 - Regression coverage for missing auth, missing permission, and blank requirements.
 
 ## 10. UI/UX Requirements
