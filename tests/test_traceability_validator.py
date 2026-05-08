@@ -13,7 +13,7 @@ SCRIPT_PATH = REPO_ROOT / "dev-standards" / "tooling" / "validate_traceability.p
 
 
 def run_validator(repo_root: Path, env: Optional[dict[str, str]] = None) -> subprocess.CompletedProcess[str]:
-    merged_env = os.environ.copy()
+    merged_env = isolated_env()
     if env:
         merged_env.update(env)
     return subprocess.run(
@@ -23,6 +23,13 @@ def run_validator(repo_root: Path, env: Optional[dict[str, str]] = None) -> subp
         check=False,
         env=merged_env,
     )
+
+
+def isolated_env() -> dict[str, str]:
+    env = os.environ.copy()
+    for key in ("GITHUB_ACTIONS", "GITHUB_TOKEN", "GITHUB_EVENT_NAME", "GITHUB_SHA", "GITHUB_HEAD_SHA"):
+        env.pop(key, None)
+    return env
 
 
 class TraceabilityValidatorTest(unittest.TestCase):

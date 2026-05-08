@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import unittest
 from pathlib import Path
@@ -16,7 +17,15 @@ def run_validator(repo_root: Path) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         check=False,
+        env=isolated_env(),
     )
+
+
+def isolated_env() -> dict[str, str]:
+    env = os.environ.copy()
+    for key in ("GITHUB_ACTIONS", "GITHUB_TOKEN", "GITHUB_EVENT_NAME", "GITHUB_SHA", "GITHUB_HEAD_SHA"):
+        env.pop(key, None)
+    return env
 
 
 class ArtifactProvenanceValidatorTest(unittest.TestCase):
