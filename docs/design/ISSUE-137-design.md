@@ -2,6 +2,12 @@
 
 Historical note: this document records the pre-registration magic-link remediation. Issues #160-#167 supersede the active production auth strategy with registration auth, so magic-link instructions below are retained only as historical audit context.
 
+Current browser-shell follow-up: production registration now supports public
+self-service signup without invite links. New accounts are created in the
+approval-gated state and cannot use the app until an admin activates them.
+The sign-in shell must therefore expose the create-account route, omit invite
+code fields, and explain that admin approval is required before access.
+
 ## Context
 
 Issue #137 restores a production-usable login path for deployments that do not

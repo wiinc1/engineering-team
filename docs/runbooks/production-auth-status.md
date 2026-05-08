@@ -14,11 +14,10 @@ Issue #151 is superseded by the registration cutover work in Issues #160-#167. T
 
 PR #159 is the prior Issue #151 production-auth evidence path and is reconciled as historical. Its magic-link/OIDC status evidence is superseded by PR #168, the registration smoke artifact, and this runbook's registration-only production gate.
 
-Registration mode must be explicit:
+Production registration mode must be explicit and approval-gated:
 
-- `open`: public registration creates active or pending-verification accounts based on email-verification policy.
-- `invite-only`: only invited users or users with the configured invite code can receive credentials.
-- `admin-approved`: registration creates pending-approval users until an admin activates them.
+- `admin-approved`: anyone can create an account, but the account stays pending until an admin activates it.
+- `open` and `invite-only` remain recognized by the service for non-production/local compatibility, but they are not valid production registration modes for this product policy.
 
 First-admin creation remains operator-owned through `npm run auth:admin:seed -- --apply`. The seed workflow writes only redacted identifiers and never prints database URLs, raw email addresses, passwords, cookies, or secrets.
 
@@ -73,7 +72,7 @@ If registration must be rolled back before full removal is complete, use the doc
 - `AUTH_SESSION_TTL_HOURS=8`.
 - `AUTH_EMAIL_VERIFICATION_TTL_HOURS=24`.
 - `AUTH_PASSWORD_RESET_TTL_MINUTES=30`.
-- `AUTH_REGISTRATION_MODE` is `open`, `invite-only`, or `admin-approved`.
+- `AUTH_REGISTRATION_MODE=admin-approved`.
 - `/sign-in` shows email/password login, registration, and password reset controls.
 - `/sign-in` does not show magic-link copy or the trusted auth-code fallback for registration deployments.
 - `/auth/login` sets session and CSRF cookies.

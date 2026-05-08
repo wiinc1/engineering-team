@@ -44,7 +44,7 @@ Local value validation additionally enforces:
 - browser runtime strategy is `registration`
 - `AUTH_EMAIL_PROVIDER=resend`
 - `AUTH_PUBLIC_APP_URL` is HTTPS
-- `AUTH_REGISTRATION_MODE` is `open`, `invite-only`, or `admin-approved`
+- `AUTH_REGISTRATION_MODE=admin-approved`
 - `AUTH_SESSION_TTL_HOURS=8`
 - `AUTH_EMAIL_VERIFICATION_TTL_HOURS=24`
 - `AUTH_PASSWORD_RESET_TTL_MINUTES=30`

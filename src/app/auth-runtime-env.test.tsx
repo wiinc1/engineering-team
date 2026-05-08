@@ -57,14 +57,16 @@ describe('browser auth runtime environment', () => {
 
     render(<App />);
 
-    await screen.findByRole('heading', { name: 'Sign in to the workflow app' });
-    expect(screen.getByText('Authenticated browser shell for US-002')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Sign in to Engineering Team' });
+    expect(screen.getByText('Engineering Team')).toBeInTheDocument();
+    expect(screen.getByText('Access your task workspace and inboxes.')).toBeInTheDocument();
     expect(screen.getByLabelText('Email address')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reset password' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create an account' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Forgot password?' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Continue with enterprise sign-in' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Trusted auth code')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('API base URL')).not.toBeInTheDocument();
   });
 });

@@ -17,7 +17,7 @@ function completeRegistrationEnv(overrides = {}) {
     RESEND_API_KEY: 'resend-secret',
     AUTH_EMAIL_FROM: 'Workflow <noreply@example.com>',
     AUTH_PUBLIC_APP_URL: 'https://app.example',
-    AUTH_REGISTRATION_MODE: 'invite-only',
+    AUTH_REGISTRATION_MODE: 'admin-approved',
     AUTH_REGISTRATION_DEFAULT_TENANT: 'tenant-int',
     AUTH_SESSION_TTL_HOURS: '8',
     AUTH_EMAIL_VERIFICATION_TTL_HOURS: '24',
@@ -65,7 +65,7 @@ test('production registration strategy enforces https, mode, exact TTLs, and int
   const result = validateAuthConfig({
     env: completeRegistrationEnv({
       AUTH_PUBLIC_APP_URL: 'http://app.example',
-      AUTH_REGISTRATION_MODE: 'unknown',
+      AUTH_REGISTRATION_MODE: 'open',
       AUTH_SESSION_TTL_HOURS: '24',
       AUTH_EMAIL_VERIFICATION_TTL_HOURS: '1',
       AUTH_PASSWORD_RESET_TTL_MINUTES: '60',
@@ -76,7 +76,7 @@ test('production registration strategy enforces https, mode, exact TTLs, and int
 
   assert.equal(result.ok, false);
   assert.match(result.errors.join('\n'), /AUTH_PUBLIC_APP_URL must be an https URL/);
-  assert.match(result.errors.join('\n'), /AUTH_REGISTRATION_MODE must be/);
+  assert.match(result.errors.join('\n'), /AUTH_REGISTRATION_MODE must be "admin-approved"/);
   assert.match(result.errors.join('\n'), /AUTH_SESSION_TTL_HOURS must be exactly 8/);
   assert.match(result.errors.join('\n'), /AUTH_EMAIL_VERIFICATION_TTL_HOURS must be exactly 24/);
   assert.match(result.errors.join('\n'), /AUTH_PASSWORD_RESET_TTL_MINUTES must be exactly 30/);

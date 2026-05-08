@@ -1,1 +1,310 @@
-import{expect as e,test as i}from"@playwright/test";const c={items:[{task_id:"TSK-42",tenant_id:"tenant-a",title:"Wire task detail",priority:"P1",current_stage:"IMPLEMENT",current_owner:"engineer",owner:{actor_id:"engineer",display_name:"Engineer"},blocked:!1,closed:!1,waiting_state:null,next_required_action:null,queue_entered_at:"2026-04-01T15:00:00.000Z",freshness:{status:"fresh",last_updated_at:"2026-04-01T15:00:00.000Z"}}]},s="https://idp.example/.well-known/openid-configuration",d="https://idp.example/oauth2/authorize",r="https://idp.example/oauth2/token";async function w(t){await t.route(s,async a=>{await a.fulfill({contentType:"application/json",headers:{"access-control-allow-origin":"*"},json:{authorization_endpoint:d,token_endpoint:r}})}),await t.route(r,async a=>{const n={sub:"pm-1",tenant_id:"tenant-a",roles:["pm","reader"],exp:Math.floor(Date.now()/1e3)+3600},o=Buffer.from(JSON.stringify(n)).toString("base64url");await a.fulfill({contentType:"application/json",headers:{"access-control-allow-origin":"*"},json:{access_token:`header.${o}.signature`,expires_in:3600,token_type:"Bearer"}})}),await t.route("**/auth/session",async a=>{if(a.request().postDataJSON()?.authCode!=="signed-browser-auth-code"){await a.fulfill({status:401,json:{error:{code:"invalid_auth_code",message:"The sign-in code was rejected."}}});return}const o={sub:"pm-1",tenant_id:"tenant-a",roles:["pm","reader"],exp:Math.floor(Date.now()/1e3)+3600},l=Buffer.from(JSON.stringify(o)).toString("base64url");await a.fulfill({json:{success:!0,data:{accessToken:`header.${l}.signature`,expiresAt:new Date(Date.now()+3600*1e3).toISOString(),claims:{tenant_id:"tenant-a",actor_id:"pm-1",roles:["pm","reader"]}}}})}),await t.route("**/api/tasks",async a=>{if(a.request().method()!=="GET")return a.fallback();await a.fulfill({json:c})}),await t.route("**/api/ai-agents",async a=>{await a.fulfill({json:{items:[{id:"architect",display_name:"Architect",role:"Architect",active:!0},{id:"qa",display_name:"QA Engineer",role:"QA",active:!0},{id:"engineer",display_name:"Engineer",role:"Engineering",active:!0},{id:"sre",display_name:"SRE",role:"SRE",active:!0}]}})})}i.describe("authenticated browser app shell",()=>{i.beforeEach(async({page:t})=>{await t.addInitScript(({discoveryUrl:a,clientId:n,redirectUri:o})=>{window.__ENGINEERING_TEAM_RUNTIME_CONFIG__={oidcDiscoveryUrl:a,oidcClientId:n,oidcRedirectUri:o,internalAuthBootstrapEnabled:!0}},{discoveryUrl:s,clientId:"browser-client",redirectUri:"http://127.0.0.1:4174/auth/callback"}),await w(t)}),i("redirects a protected deep link to sign-in and restores it after successful sign-in",async({page:t})=>{await t.goto("/tasks?view=board",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Sign in to the workflow app"})).toBeVisible(),await e(t).toHaveURL(/\/sign-in\?/),await e(t.getByRole("button",{name:"Continue with enterprise sign-in"})).toBeVisible(),await e(t.getByLabel("Trusted auth code")).toBeEditable(),await t.getByLabel("Trusted auth code").fill("signed-browser-auth-code"),await t.getByLabel("API base URL").fill("/api"),await t.getByRole("button",{name:"Use internal bootstrap fallback"}).click(),await e(t.getByRole("heading",{name:"Task workspace"})).toBeVisible(),await e(t).toHaveURL(/\/tasks\?view=board/),await e(t.getByRole("navigation",{name:"Primary navigation"})).toBeVisible(),await e(t.getByRole("button",{name:"Sign out"})).toBeVisible()}),i("shows a safe no-login-path configuration state when preview auth is unavailable",async({page:t})=>{await t.addInitScript(()=>{window.__ENGINEERING_TEAM_RUNTIME_CONFIG__={internalAuthBootstrapEnabled:!1}}),await t.goto("/sign-in",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Sign in to the workflow app"})).toBeVisible(),await e(t.getByRole("button",{name:"Continue with enterprise sign-in"})).toBeDisabled(),await e(t.getByRole("alert")).toContainText("This deployment has no enabled sign-in method."),await e(t.getByLabel("Trusted auth code")).toHaveCount(0)}),i("routes an expired session back to sign-in with recovery copy",async({page:t})=>{await t.addInitScript(()=>{const a={sub:"pm-1",tenant_id:"tenant-a",roles:["pm","reader"],exp:Math.floor(Date.now()/1e3)-60},n=btoa(JSON.stringify(a)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");window.sessionStorage.setItem("engineering-team.task-browser-session",JSON.stringify({bearerToken:`header.${n}.signature`,apiBaseUrl:"/api",expiresAt:new Date(Date.now()-6e4).toISOString()}))}),await t.goto("/tasks",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Sign in to the workflow app"})).toBeVisible(),await e(t.getByRole("status")).toContainText("Your session expired. Sign in again to continue.")}),i("restores a protected SRE inbox route after sign-in",async({page:t})=>{await t.goto("/inbox/sre",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Sign in to the workflow app"})).toBeVisible(),await t.getByLabel("Trusted auth code").fill("signed-browser-auth-code"),await t.getByLabel("API base URL").fill("/api"),await t.getByRole("button",{name:"Use internal bootstrap fallback"}).click(),await e(t.getByRole("heading",{name:"SRE Inbox",exact:!0})).toBeVisible(),await e(t).toHaveURL(/\/inbox\/sre/),await e(t.locator(".lede")).toContainText("Read-only monitoring inbox")}),i("restores a protected human inbox route after sign-in",async({page:t})=>{await t.goto("/inbox/human",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Sign in to the workflow app"})).toBeVisible(),await t.getByLabel("Trusted auth code").fill("signed-browser-auth-code"),await t.getByLabel("API base URL").fill("/api"),await t.getByRole("button",{name:"Use internal bootstrap fallback"}).click(),await e(t.getByRole("heading",{name:"Human Stakeholder inbox routing",exact:!0})).toBeVisible(),await e(t).toHaveURL(/\/inbox\/human/),await e(t.locator(".role-inbox-toolbar__cue")).toContainText("Decision-ready items appear here only when governed close review or escalation handling is explicitly waiting on a human stakeholder decision."),await e(t.locator(".role-inbox-toolbar__cue")).toContainText("Decision-ready")}),i("renders the configured registration sign-in form",async({page:t})=>{await t.addInitScript(()=>{window.__ENGINEERING_TEAM_RUNTIME_CONFIG__={productionAuthStrategy:"registration",internalAuthBootstrapEnabled:!1}}),await t.goto("/sign-in",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Sign in to the workflow app"})).toBeVisible(),await e(t.getByLabel("Email address")).toBeVisible();const a=await t.locator(".auth-card").evaluate(n=>{const o=window.getComputedStyle(n),l=window.getComputedStyle(document.querySelector(".app-shell--auth")),u=window.getComputedStyle(document.body);return{borderRadius:o.borderRadius,paddingTop:o.paddingTop,backgroundImage:o.backgroundImage,color:o.color,shellMaxWidth:l.maxWidth,shellPaddingTop:l.paddingTop,shellBackgroundImage:l.backgroundImage,bodyBackgroundImage:u.backgroundImage,bodyColor:u.color}});e(a.borderRadius).toBe("24px"),e(a.paddingTop).toBe("28px"),e(a.backgroundImage).toContain("linear-gradient"),e(a.color).toBe("rgb(15, 23, 42)"),e(a.shellMaxWidth).toBe("1120px"),e(a.shellPaddingTop).toBe("48px"),e(a.shellBackgroundImage).toBe("none"),e(a.bodyBackgroundImage).toContain("radial-gradient"),e(a.bodyColor).toBe("rgb(15, 23, 42)"),await e(t.getByRole("button",{name:"Sign in"})).toBeVisible(),await e(t.getByRole("button",{name:"Continue with enterprise sign-in"})).toHaveCount(0),await e(t.getByLabel("Trusted auth code")).toHaveCount(0)}),i("completes an enterprise callback and restores the deep-linked board route",async({page:t})=>{await t.addInitScript(()=>{window.sessionStorage.setItem("engineering-team.oidc-transaction",JSON.stringify({state:"callback-state",codeVerifier:"callback-verifier",nonce:"callback-nonce",next:"/tasks?view=board",apiBaseUrl:"/api"}))}),await t.goto("/auth/callback?code=oidc-code&state=callback-state",{waitUntil:"domcontentloaded"}),await e(t.getByRole("heading",{name:"Task workspace"})).toBeVisible(),await e(t).toHaveURL(/\/tasks\?view=board/),await e(t.getByRole("tab",{name:"Kanban board"})).toHaveAttribute("aria-selected","true")})});
+import { expect, test } from '@playwright/test';
+
+const tasksFixture = {
+  items: [
+    {
+      task_id: 'TSK-42',
+      tenant_id: 'tenant-a',
+      title: 'Wire task detail',
+      priority: 'P1',
+      current_stage: 'IMPLEMENT',
+      current_owner: 'engineer',
+      owner: { actor_id: 'engineer', display_name: 'Engineer' },
+      blocked: false,
+      closed: false,
+      waiting_state: null,
+      next_required_action: null,
+      queue_entered_at: '2026-04-01T15:00:00.000Z',
+      freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
+    },
+  ],
+};
+const discoveryUrl = 'https://idp.example/.well-known/openid-configuration';
+const authorizeUrl = 'https://idp.example/oauth2/authorize';
+const tokenUrl = 'https://idp.example/oauth2/token';
+
+function buildSessionClaims() {
+  return {
+    sub: 'pm-1',
+    tenant_id: 'tenant-a',
+    roles: ['pm', 'reader'],
+    exp: Math.floor(Date.now() / 1e3) + 3600,
+  };
+}
+
+function buildBearerToken() {
+  const payload = Buffer.from(JSON.stringify(buildSessionClaims())).toString('base64url');
+  return `header.${payload}.signature`;
+}
+
+async function mockOidcRoutes(page) {
+  await page.route(discoveryUrl, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      json: { authorization_endpoint: authorizeUrl, token_endpoint: tokenUrl },
+    });
+  });
+  await page.route(tokenUrl, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      json: { access_token: buildBearerToken(), expires_in: 3600, token_type: 'Bearer' },
+    });
+  });
+}
+
+async function mockInternalSessionRoute(page) {
+  await page.route('**/auth/session', async (route) => {
+    if (route.request().postDataJSON()?.authCode !== 'signed-browser-auth-code') {
+      await route.fulfill({
+        status: 401,
+        json: { error: { code: 'invalid_auth_code', message: 'The sign-in code was rejected.' } },
+      });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          accessToken: buildBearerToken(),
+          expiresAt: new Date(Date.now() + 3600 * 1e3).toISOString(),
+          claims: { tenant_id: 'tenant-a', actor_id: 'pm-1', roles: ['pm', 'reader'] },
+        },
+      },
+    });
+  });
+}
+
+async function mockTaskRoutes(page) {
+  await page.route('**/api/tasks', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ json: tasksFixture });
+  });
+}
+
+async function mockAgentRoutes(page) {
+  await page.route('**/api/ai-agents', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          { id: 'architect', display_name: 'Architect', role: 'Architect', active: true },
+          { id: 'qa', display_name: 'QA Engineer', role: 'QA', active: true },
+          { id: 'engineer', display_name: 'Engineer', role: 'Engineering', active: true },
+          { id: 'sre', display_name: 'SRE', role: 'SRE', active: true },
+        ],
+      },
+    });
+  });
+}
+
+async function mockAuthenticatedRoutes(page) {
+  await mockOidcRoutes(page);
+  await mockInternalSessionRoute(page);
+  await mockTaskRoutes(page);
+  await mockAgentRoutes(page);
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(
+    ({ discoveryUrl: runtimeDiscoveryUrl, clientId, redirectUri }) => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        oidcDiscoveryUrl: runtimeDiscoveryUrl,
+        oidcClientId: clientId,
+        oidcRedirectUri: redirectUri,
+        internalAuthBootstrapEnabled: true,
+      };
+    },
+    {
+      discoveryUrl,
+      clientId: 'browser-client',
+      redirectUri: 'http://127.0.0.1:4174/auth/callback',
+    }
+  );
+  await mockAuthenticatedRoutes(page);
+});
+
+  test('redirects a protected deep link to sign-in and restores it after successful sign-in', async ({ page }) => {
+    await page.goto('/tasks?view=board', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page).toHaveURL(/\/sign-in\?/);
+    await expect(page.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeVisible();
+    await expect(page.getByLabel('Trusted auth code')).toBeEditable();
+
+    await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
+    await page.getByLabel('API base URL').fill('/api');
+    await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page).toHaveURL(/\/tasks\?view=board/);
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  });
+
+  test('shows a safe no-login-path configuration state when preview auth is unavailable', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = { internalAuthBootstrapEnabled: false };
+    });
+
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with enterprise sign-in' })).toBeDisabled();
+    await expect(page.getByRole('alert')).toContainText('This deployment has no enabled sign-in method.');
+    await expect(page.getByLabel('Trusted auth code')).toHaveCount(0);
+  });
+
+  test('routes an expired session back to sign-in with recovery copy', async ({ page }) => {
+    await page.addInitScript(() => {
+      const claims = {
+        sub: 'pm-1',
+        tenant_id: 'tenant-a',
+        roles: ['pm', 'reader'],
+        exp: Math.floor(Date.now() / 1e3) - 60,
+      };
+      const payload = btoa(JSON.stringify(claims))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+      window.sessionStorage.setItem(
+        'engineering-team.task-browser-session',
+        JSON.stringify({
+          bearerToken: `header.${payload}.signature`,
+          apiBaseUrl: '/api',
+          expiresAt: new Date(Date.now() - 6e4).toISOString(),
+        })
+      );
+    });
+
+    await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page.getByRole('status')).toContainText('Your session expired. Sign in again to continue.');
+  });
+
+  test('restores a protected SRE inbox route after sign-in', async ({ page }) => {
+    await page.goto('/inbox/sre', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+
+    await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
+    await page.getByLabel('API base URL').fill('/api');
+    await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
+
+    await expect(page.getByRole('heading', { name: 'SRE Inbox', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/inbox\/sre/);
+    await expect(page.locator('.lede')).toContainText('Read-only monitoring inbox');
+  });
+
+  test('restores a protected human inbox route after sign-in', async ({ page }) => {
+    await page.goto('/inbox/human', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+
+    await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
+    await page.getByLabel('API base URL').fill('/api');
+    await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Human Stakeholder inbox routing', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/inbox\/human/);
+    await expect(page.locator('.role-inbox-toolbar__cue')).toContainText(
+      'Decision-ready items appear here only when governed close review or escalation handling is explicitly waiting on a human stakeholder decision.'
+    );
+    await expect(page.locator('.role-inbox-toolbar__cue')).toContainText('Decision-ready');
+  });
+
+  test('renders the configured registration sign-in form', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        productionAuthStrategy: 'registration',
+        internalAuthBootstrapEnabled: false,
+      };
+    });
+
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page.getByText('Access your task workspace and inboxes.')).toBeVisible();
+    await expect(page.getByLabel('Email address')).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Show password' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Forgot password?' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create an account' })).toBeVisible();
+    await expect(page.getByLabel('API base URL')).toHaveCount(0);
+
+    const styles = await page.locator('.auth-card').evaluate((node) => {
+      const card = window.getComputedStyle(node);
+      const shell = window.getComputedStyle(document.querySelector('.app-shell--auth'));
+      const body = window.getComputedStyle(document.body);
+      return {
+        borderRadius: card.borderRadius,
+        paddingTop: card.paddingTop,
+        backgroundImage: card.backgroundImage,
+        color: card.color,
+        shellMaxWidth: shell.maxWidth,
+        shellPaddingTop: shell.paddingTop,
+        shellBackgroundImage: shell.backgroundImage,
+        bodyBackgroundImage: body.backgroundImage,
+        bodyColor: body.color,
+      };
+    });
+
+    expect(styles.borderRadius).toBe('12px');
+    expect(['18px', '24px']).toContain(styles.paddingTop);
+    expect(styles.backgroundImage).toBe('none');
+    expect(styles.color).toBe('rgb(15, 23, 42)');
+    expect(styles.shellMaxWidth).toBe('1120px');
+    expect(styles.shellPaddingTop).toBe('48px');
+    expect(styles.shellBackgroundImage).toBe('none');
+    expect(styles.bodyBackgroundImage).toBe('none');
+    expect(styles.bodyColor).toBe('rgb(15, 23, 42)');
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with enterprise sign-in' })).toHaveCount(0);
+    await expect(page.getByLabel('Trusted auth code')).toHaveCount(0);
+  });
+
+  test('supports public signup with approval copy and reset modes', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        productionAuthStrategy: 'registration',
+        internalAuthBootstrapEnabled: false,
+      };
+    });
+
+    await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });
+    await page.getByLabel('Email address').fill('person@example.com');
+    await page.getByRole('button', { name: 'Create an account' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+    await expect(
+      page.getByText('Create an account. An admin will approve access before you can use Engineering Team.')
+    ).toBeVisible();
+    await expect(page.getByLabel('Email address')).toHaveValue('person@example.com');
+    await expect(page.getByText('At least 12 characters with one letter and one number.')).toBeVisible();
+    await expect(page.getByLabel('Invite code')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page.getByLabel('Email address')).toHaveValue('person@example.com');
+    await expect(page.getByRole('button', { name: 'Create an account' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Forgot password?' }).click();
+    await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
+    await expect(page.getByLabel('Email address')).toHaveValue('person@example.com');
+    await expect(page.getByRole('button', { name: 'Send reset instructions' })).toBeVisible();
+  });
+
+  test('completes an enterprise callback and restores the deep-linked board route', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.sessionStorage.setItem(
+        'engineering-team.oidc-transaction',
+        JSON.stringify({
+          state: 'callback-state',
+          codeVerifier: 'callback-verifier',
+          nonce: 'callback-nonce',
+          next: '/tasks?view=board',
+          apiBaseUrl: '/api',
+        })
+      );
+    });
+
+    await page.goto('/auth/callback?code=oidc-code&state=callback-state', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page).toHaveURL(/\/tasks\?view=board/);
+    await expect(page.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+  });
