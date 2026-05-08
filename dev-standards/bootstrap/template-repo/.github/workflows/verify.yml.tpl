@@ -104,6 +104,7 @@ jobs:
               "commit_sha": pull["head"]["sha"],
               "source_system": "github",
               "source_record_id": f"pull:{pr_number}",
+              "workflow_run_id": os.environ["RUN_ID"],
               "environment": "pull_request",
               "scope": "traceability",
               "provider": "github",
