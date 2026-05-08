@@ -12,6 +12,8 @@ Registration auth replaces the durable no-IdP magic-link path. Production must e
 
 Issue #151 is superseded by the registration cutover work in Issues #160-#167. The production status gate still exists, but its selected strategy and smoke evidence are now registration-based. Magic-link evidence is historical only and cannot satisfy the ship gate.
 
+PR #159 is the prior Issue #151 production-auth evidence path and is reconciled as historical. Its magic-link/OIDC status evidence is superseded by PR #168, the registration smoke artifact, and this runbook's registration-only production gate.
+
 Registration mode must be explicit:
 
 - `open`: public registration creates active or pending-verification accounts based on email-verification policy.
@@ -84,6 +86,19 @@ If registration must be rolled back before full removal is complete, use the doc
 - Post-logout `/auth/me` is rejected.
 - Monitoring evidence contains counts and classifications only.
 - Rollback target is identified.
+
+## Conceptual Flag Mapping
+
+The registration issues used `ff_registration_*` labels for rollout decisions. Production uses explicit environment gates and status checks instead of standalone feature-flag rows:
+
+| Issue label | Production gate |
+|---|---|
+| `ff_registration_auth_strategy` | `AUTH_PRODUCTION_AUTH_STRATEGY=registration` and browser runtime strategy evidence |
+| `ff_registration_credentials` | `AUTH_REGISTRATION_MODE` plus applied credential migration |
+| `ff_registration_email_verification` | `AUTH_REQUIRE_EMAIL_VERIFICATION` and `AUTH_EMAIL_VERIFICATION_TTL_HOURS` |
+| `ff_registration_password_reset` | `AUTH_PASSWORD_RESET_TTL_MINUTES` and reset endpoint smoke evidence |
+| `ff_registration_abuse_controls` | login, registration, reset throttling and redacted monitoring evidence |
+| `ff_registration_magic_link_removed` | `/auth/magic-link/request` returns `410`, consume redirects without a session, and magic-link evidence is rejected |
 
 ## Monitoring And Alerts
 

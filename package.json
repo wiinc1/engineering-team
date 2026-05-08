@@ -51,7 +51,7 @@
     "test:performance": "node --test tests/performance/*.test.js",
     "test:security": "node --test tests/security/*.test.js",
     "test:chaos": "node --test chaos/*.test.js",
-    "test:integration:postgres": "node --test tests/integration/audit-postgres-e2e.test.js",
+    "test:integration:postgres": "node --test tests/integration/audit-postgres-e2e.test.js tests/integration/registration-auth-migration-postgres.integration.test.js",
     "test:integration:api": "node --test tests/integration/audit-migrations.integration.test.js tests/integration/role-inbox-filtering.integration.test.js tests/integration/pm-overview-filtering.integration.test.js tests/integration/task-list-owner-filters.integration.test.js tests/integration/task-assignment-integration.test.js tests/integration/task-platform-source-policy.integration.test.js tests/integration/task-platform-github-check.integration.test.js tests/integration/task-platform-branch-protection.integration.test.js tests/integration/task-platform-pr-summary.integration.test.js tests/integration/specialist-delegation.integration.test.js",
     "test:integration:role-inbox": "node --test tests/integration/role-inbox-filtering.integration.test.js",
     "test:integration:pm-overview": "node --test tests/integration/pm-overview-filtering.integration.test.js",
