@@ -35,6 +35,7 @@ TEST_MODULES = [
     "tests.test_config_boundaries_validator",
     "tests.test_agent_intent_validator",
     "tests.test_standards_init",
+    "tests.test_visual_identity_validator",
 ]
 ARTIFACTS_DIR = Path(".artifacts")
 TEST_RESULTS_PATH = ARTIFACTS_DIR / "test-results.json"
