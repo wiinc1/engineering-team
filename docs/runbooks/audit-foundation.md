@@ -30,6 +30,7 @@ Supabase Postgres is the canonical production/staging database. Dockerized Postg
 - `audit_task_current_state` — projected current-state read model
 - `audit_task_relationships` — projected relationship read model
 - `audit_metrics` — persisted telemetry counters/gauges
+- `schema_migrations` — forward migration ledger; normal migration apply skips `*.down.sql` rollback files so rollback scripts must be executed only by an explicit operator rollback procedure.
 
 ## HTTP authz model in this slice
 Default auth contract: bearer JWT with tenant + actor claims.

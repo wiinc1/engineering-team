@@ -1,0 +1,14 @@
+flowchart TD
+  A[Issue 151 magic-link evidence gate] --> B[Issues 160-167 registration cutover]
+  B --> C{AUTH_REGISTRATION_MODE}
+  C -->|open| D[Self-service registration]
+  C -->|invite-only| E[Invited or invite-code registration]
+  C -->|admin-approved| F[Pending approval queue]
+  D --> G[Email verification policy]
+  E --> G
+  F --> H[Admin activation]
+  G --> I[Credential login]
+  H --> I
+  I --> J[Cookie session plus CSRF]
+  J --> K[Production status gate]
+  K --> L[Rollback: last-known-good registration deployment]

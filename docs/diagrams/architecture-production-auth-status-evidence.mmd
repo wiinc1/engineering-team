@@ -1,18 +1,18 @@
 flowchart LR
   Owner[Production configuration owner] --> Vercel[Vercel production env and deployment]
-  Owner --> Resend[Resend delivery evidence]
+  Owner --> Email[Verification and reset delivery evidence]
   Owner --> IdP[OIDC provider evidence when selected]
   Vercel --> Browser[Browser /sign-in]
   Browser --> AuthAPI[Auth API routes]
   AuthAPI --> DB[(Postgres auth/session data)]
-  AuthAPI --> Evidence[observability/magic-link-production-smoke.json]
+  AuthAPI --> Evidence[observability/registration-auth-production-smoke.json]
   AuthAPI --> OidcEvidence[observability/oidc-production-smoke.json]
-  Resend --> Evidence
+  Email --> Evidence
   IdP --> OidcEvidence
   Evidence --> Validator[Status validator npm run auth:status:check]
   OidcEvidence --> Validator
-  Docs[README + production auth runbooks + Issue #137 evidence doc] --> Validator
-  Validator --> ShipGate{Issue #151 ship gate}
+  Docs[README + production auth runbooks + Issues #160-#167 audit] --> Validator
+  Validator --> ShipGate{Registration auth ship gate}
   ShipGate -->|pass| Ship[Ship / close with fresh evidence]
   ShipGate -->|fail| Block[Block ship and report missing evidence]
 

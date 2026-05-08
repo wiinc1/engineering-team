@@ -12,7 +12,7 @@ function hasFlag(name) {
   return process.argv.includes(name);
 }
 
-const selectedStrategy = readArg('--strategy', process.env.AUTH_PROD_AUTH_STRATEGY || 'magic-link');
+const selectedStrategy = readArg('--strategy', process.env.AUTH_PROD_AUTH_STRATEGY || 'registration');
 const evidencePath = readArg('--evidence', process.env.AUTH_PROD_EVIDENCE_OUT || '');
 const requireComplete = hasFlag('--require-complete');
 const options = {

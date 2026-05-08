@@ -4,37 +4,35 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const {
-  ISSUE_151_MIN_SMOKE_AT,
+  ISSUE_REGISTRATION_MIN_SMOKE_AT,
   validateMagicLinkEvidence,
   validateOidcEvidence,
   validateProductionAuthStatus,
+  validateRegistrationEvidence,
   validateStatusDocs,
 } = require('../../lib/auth/production-status');
 
-function completeEvidence(overrides = {}) {
+function completeRegistrationEvidence(overrides = {}) {
   return {
-    generatedAt: '2026-05-07T12:00:00.000Z',
+    generatedAt: '2026-05-08T12:00:00.000Z',
     baseUrl: 'https://app.example',
     deployment: {
-      selectedAuthStrategy: 'magic-link',
-      id: 'dpl_123',
+      selectedAuthStrategy: 'registration',
+      id: 'dpl_registration',
       url: 'https://app.example',
-      status: 'Ready',
       commitSha: 'abc1234',
-      buildTimestamp: '2026-05-07T11:55:00.000Z',
-      rollbackTarget: 'last-known-good-magic-link-config',
+      rollbackTarget: 'last-known-good-registration-config',
     },
-    invitedEmailHash: 'hash-admin',
-    unknownEmailHash: 'hash-unknown',
-    consume: {
-      status: 302,
-      location: '/tasks',
-      tokenHash: 'hash-token',
+    registrationEmailHash: 'hash-admin',
+    passwordResetEmailHash: 'hash-reset',
+    magicLink: { requestStatus: 410, removed: true },
+    login: {
+      status: 200,
+      ok: true,
       sessionCookieSet: true,
       csrfCookieSet: true,
+      next: '/tasks',
     },
-    request: { status: 200, genericResponse: true },
-    unknownEmail: { status: 200, genericResponse: true },
     session: {
       actorId: 'admin-1',
       tenantId: 'tenant-int',
@@ -42,19 +40,21 @@ function completeEvidence(overrides = {}) {
       expiresAtPresent: true,
     },
     protectedRoutes: [{ route: '/tasks', status: 200, ok: true, redirectedToSignIn: false }],
-    replay: { status: 302, rejected: true, locationClassification: 'replayed_magic_link' },
-    logout: { status: 200, ok: true, clearsSessionCookie: true },
+    passwordResetRequest: { status: 200, ok: true, genericResponse: true },
+    logout: { status: 200, ok: true },
     afterLogout: { status: 401, authRejected: true },
     summary: {
-      requestGeneric: true,
-      consumeRedirected: true,
+      registrationStrategySelected: true,
+      loginAccepted: true,
       sessionCookieSet: true,
       csrfCookieSet: true,
       meReturnedIdentity: true,
       protectedRoutesLoaded: true,
+      passwordResetGeneric: true,
       logoutRevoked: true,
-      unknownEmailGeneric: true,
-      replayRejected: true,
+      afterLogoutRejected: true,
+      magicLinkRemoved: true,
+      rollbackTargetPresent: true,
       evidenceRedacted: true,
       passed: true,
     },
@@ -64,7 +64,7 @@ function completeEvidence(overrides = {}) {
 
 function completeOidcEvidence(overrides = {}) {
   return {
-    generatedAt: '2026-05-07T12:00:00.000Z',
+    generatedAt: '2026-05-08T12:00:00.000Z',
     baseUrl: 'https://app.example',
     deployment: {
       selectedAuthStrategy: 'oidc',
@@ -96,80 +96,74 @@ function completeOidcEvidence(overrides = {}) {
       protectedRoutesLoaded: true,
       logoutValidated: true,
       rollbackTargetPresent: true,
-      evidenceRedacted: true,
       passed: true,
+      evidenceRedacted: true,
     },
     ...overrides,
   };
 }
 
-test('production auth status docs include canonical issue 151 references', () => {
+test('production auth status docs include registration cutover references', () => {
   const result = validateStatusDocs();
 
   assert.equal(result.ok, true, result.failures.join('\n'));
 });
 
-test('complete issue 151 magic-link evidence passes validation', () => {
-  const result = validateMagicLinkEvidence(completeEvidence());
+test('complete registration evidence passes validation', () => {
+  const result = validateRegistrationEvidence(completeRegistrationEvidence());
 
   assert.equal(result.ok, true, result.failures.join('\n'));
 });
 
-test('complete issue 151 OIDC evidence passes validation when that strategy is selected', () => {
+test('complete OIDC evidence still passes validation when OIDC is selected', () => {
   const result = validateOidcEvidence(completeOidcEvidence());
 
   assert.equal(result.ok, true, result.failures.join('\n'));
 });
 
-test('issue 151 OIDC evidence requires fresh redacted rollback evidence', () => {
-  const stale = validateOidcEvidence(completeOidcEvidence({ generatedAt: '2026-04-28T01:26:34.197Z' }));
+test('registration evidence rejects stale, dry-run, leaked, and magic-link-active artifacts', () => {
+  const stale = validateRegistrationEvidence(completeRegistrationEvidence({ generatedAt: '2026-05-07T01:26:34.197Z' }));
   assert.equal(stale.ok, false);
-  assert.match(stale.failures.join('\n'), /generatedAt/);
+  assert.match(stale.failures.join('\n'), new RegExp(ISSUE_REGISTRATION_MIN_SMOKE_AT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 
-  const leaked = validateOidcEvidence(completeOidcEvidence({ leaked: 'access_token=raw-token' }));
-  assert.equal(leaked.ok, false);
-  assert.match(leaked.failures.join('\n'), /secret-bearing material/);
-});
-
-test('issue 151 magic-link evidence rejects stale or dry-run artifacts', () => {
-  const stale = validateMagicLinkEvidence(completeEvidence({ generatedAt: '2026-04-28T01:26:34.197Z' }));
-  assert.equal(stale.ok, false);
-  assert.match(stale.failures.join('\n'), new RegExp(ISSUE_151_MIN_SMOKE_AT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-
-  const dryRun = validateMagicLinkEvidence(completeEvidence({ dryRun: true }));
+  const dryRun = validateRegistrationEvidence(completeRegistrationEvidence({ dryRun: true }));
   assert.equal(dryRun.ok, false);
   assert.match(dryRun.failures.join('\n'), /Dry-run evidence/);
-});
 
-test('issue 151 magic-link evidence requires deployment metadata and redaction', () => {
-  const missingDeployment = validateMagicLinkEvidence(
-    completeEvidence({ deployment: { selectedAuthStrategy: 'magic-link' } })
-  );
-  assert.equal(missingDeployment.ok, false);
-  assert.match(missingDeployment.failures.join('\n'), /deployment URL or ID/);
-  assert.match(missingDeployment.failures.join('\n'), /rollbackTarget/);
-
-  const leaked = validateMagicLinkEvidence(
-    completeEvidence({ leakedUrl: 'https://app.example/auth/magic-link/consume?token=raw-token' })
-  );
+  const leaked = validateRegistrationEvidence(completeRegistrationEvidence({ raw: 'engineering_team_session=raw-cookie' }));
   assert.equal(leaked.ok, false);
   assert.match(leaked.failures.join('\n'), /secret-bearing material/);
+
+  const magicLinkActive = validateRegistrationEvidence(
+    completeRegistrationEvidence({ magicLink: { requestStatus: 200, removed: false } })
+  );
+  assert.equal(magicLinkActive.ok, false);
+  assert.match(magicLinkActive.failures.join('\n'), /magic-link\/request returns 410/);
 });
 
-test('default production auth status check allows pending fresh evidence but require-complete blocks it', () => {
-  const advisory = validateProductionAuthStatus();
+test('magic-link evidence is no longer accepted after registration cutover', () => {
+  const result = validateMagicLinkEvidence({});
+
+  assert.equal(result.ok, false);
+  assert.match(result.failures.join('\n'), /no longer satisfies/);
+});
+
+test('default production auth status check allows pending evidence but require-complete blocks it', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'registration-status-missing-'));
+  const evidencePath = path.join(dir, 'missing-registration-auth-production-smoke.json');
+  const advisory = validateProductionAuthStatus({ evidencePath });
   assert.equal(advisory.docs.ok, true);
   assert.equal(advisory.ok, true);
 
-  const shipGate = validateProductionAuthStatus({ requireComplete: true });
+  const shipGate = validateProductionAuthStatus({ evidencePath, requireComplete: true });
   assert.equal(shipGate.ok, false);
   assert.equal(shipGate.evidence.ok, false);
 });
 
-test('production auth status check accepts absolute evidence paths', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'issue-151-status-'));
-  const evidencePath = path.join(dir, 'magic-link-production-smoke.json');
-  fs.writeFileSync(evidencePath, `${JSON.stringify(completeEvidence())}\n`);
+test('production auth status check accepts absolute registration evidence paths', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'registration-status-'));
+  const evidencePath = path.join(dir, 'registration-auth-production-smoke.json');
+  fs.writeFileSync(evidencePath, `${JSON.stringify(completeRegistrationEvidence())}\n`);
 
   const result = validateProductionAuthStatus({ evidencePath, requireComplete: true });
 

@@ -1,1 +1,489 @@
-const y="engineering-team.task-browser-session",l="/tasks",E="engineering-team.oidc-transaction";function p(e=globalThis.sessionStorage){return e}function B(e,r=!1){if(typeof e=="boolean")return e;const t=String(e||"").trim().toLowerCase();return t?["1","true","yes","on"].includes(t)?!0:["0","false","no","off"].includes(t)?!1:r:r}function w(e){let r="";return e.forEach(t=>{r+=String.fromCharCode(t)}),globalThis.btoa(r).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}function N(){return globalThis.__ENGINEERING_TEAM_RUNTIME_CONFIG__||{}}function f(e={},...r){for(const t of r){const i=e?.[t],n=String(i??"").trim();if(n)return n}return""}function L(e=p()){try{const r=e?.getItem(y);if(!r)return{bearerToken:"",apiBaseUrl:"",expiresAt:""};const t=JSON.parse(r),i={bearerToken:typeof t?.bearerToken=="string"?t.bearerToken:"",apiBaseUrl:typeof t?.apiBaseUrl=="string"?t.apiBaseUrl:"",expiresAt:typeof t?.expiresAt=="string"?t.expiresAt:""};return typeof t?.actorId=="string"&&(i.actorId=t.actorId),typeof t?.tenantId=="string"&&(i.tenantId=t.tenantId),Array.isArray(t?.roles)&&(i.roles=t.roles),typeof t?.authType=="string"&&(i.authType=t.authType),i}catch{return{bearerToken:"",apiBaseUrl:"",expiresAt:""}}}function S(e,r=p()){const t={bearerToken:typeof e?.bearerToken=="string"?e.bearerToken.trim():"",apiBaseUrl:typeof e?.apiBaseUrl=="string"?e.apiBaseUrl.trim().replace(/\/+$/,""):"",expiresAt:typeof e?.expiresAt=="string"?e.expiresAt.trim():""};return typeof e?.actorId=="string"&&(t.actorId=e.actorId.trim()),typeof e?.tenantId=="string"&&(t.tenantId=e.tenantId.trim()),Array.isArray(e?.roles)&&(t.roles=e.roles.map(i=>String(i||"").trim()).filter(Boolean)),typeof e?.authType=="string"&&(t.authType=e.authType.trim()),r?.setItem(y,JSON.stringify(t)),t}function V(e=p()){return e?.removeItem(y),{bearerToken:"",apiBaseUrl:"",expiresAt:""}}function P(e,r=globalThis.document?.cookie||""){const t=`${e}=`;return String(r||"").split(";").map(i=>i.trim()).find(i=>i.startsWith(t))?.slice(t.length)||""}function A(e=p()){try{const r=e?.getItem(E);if(!r)return null;const t=JSON.parse(r);return{state:typeof t?.state=="string"?t.state:"",codeVerifier:typeof t?.codeVerifier=="string"?t.codeVerifier:"",nonce:typeof t?.nonce=="string"?t.nonce:"",next:_(t?.next),apiBaseUrl:typeof t?.apiBaseUrl=="string"?t.apiBaseUrl.trim().replace(/\/+$/,""):""}}catch{return null}}function R(e,r=p()){const t={state:typeof e?.state=="string"?e.state.trim():"",codeVerifier:typeof e?.codeVerifier=="string"?e.codeVerifier.trim():"",nonce:typeof e?.nonce=="string"?e.nonce.trim():"",next:_(e?.next),apiBaseUrl:typeof e?.apiBaseUrl=="string"?e.apiBaseUrl.trim().replace(/\/+$/,""):""};return r?.setItem(E,JSON.stringify(t)),t}function T(e=p()){e?.removeItem(E)}function x(e={}){const r={},t=typeof e?.bearerToken=="string"?e.bearerToken.trim():"";if(t&&(r.authorization=`Bearer ${t}`),!t){const i=decodeURIComponent(P("engineering_team_csrf")||"");i&&(r["x-csrf-token"]=i)}return r}function G(e={},r=""){return typeof e?.apiBaseUrl=="string"&&e.apiBaseUrl.trim()||r.trim()||""}function H(e={},r=N(),t=globalThis.location){const i=t?.origin?`${t.origin}/auth/callback`:"/auth/callback",n=t?.origin?`${t.origin}/sign-in?reason=signed_out`:"/sign-in?reason=signed_out",d=!!(e?.DEV||e?.MODE==="test"),a=String(f(r,"oidcDiscoveryUrl","VITE_OIDC_DISCOVERY_URL")||e?.VITE_OIDC_DISCOVERY_URL||"").trim(),c=String(f(r,"oidcClientId","VITE_OIDC_CLIENT_ID")||e?.VITE_OIDC_CLIENT_ID||"").trim(),u=String(f(r,"oidcRedirectUri","VITE_OIDC_REDIRECT_URI")||e?.VITE_OIDC_REDIRECT_URI||i).trim(),s=String(f(r,"oidcScope","VITE_OIDC_SCOPE")||e?.VITE_OIDC_SCOPE||"openid profile email").trim(),g=String(f(r,"oidcLogoutUrl","VITE_OIDC_LOGOUT_URL")||e?.VITE_OIDC_LOGOUT_URL||"").trim(),o=String(f(r,"oidcLogoutRedirectUri","VITE_OIDC_LOGOUT_REDIRECT_URI")||e?.VITE_OIDC_LOGOUT_REDIRECT_URI||n).trim(),m=B(f(r,"internalAuthBootstrapEnabled","VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED")||e?.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED,d),h=String(f(r,"productionAuthStrategy","VITE_AUTH_PRODUCTION_AUTH_STRATEGY","AUTH_PRODUCTION_AUTH_STRATEGY")||e?.VITE_AUTH_PRODUCTION_AUTH_STRATEGY||e?.AUTH_PRODUCTION_AUTH_STRATEGY||"").trim().toLowerCase()||(a&&c?"oidc":m?"internal-bootstrap":"");return{productionAuthStrategy:h,oidcDiscoveryUrl:a,oidcClientId:c,oidcRedirectUri:u,oidcScope:s,oidcLogoutUrl:g,oidcLogoutRedirectUri:o,internalAuthBootstrapEnabled:m,isOidcConfigured:!!(a&&c),isMagicLinkConfigured:h==="magic-link"}}function U(e=""){const[,r]=e.split(".");if(!r)return null;try{const t=r.replace(/-/g,"+").replace(/_/g,"/"),i=t+"=".repeat((4-(t.length%4||4))%4),n=globalThis.atob(i);return JSON.parse(n)}catch{return null}}function b(e={}){return e?.actorId&&e?.tenantId?{sub:e.actorId,tenant_id:e.tenantId,roles:e.roles||[],exp:Number.isFinite(Date.parse(e.expiresAt))?Math.floor(Date.parse(e.expiresAt)/1e3):void 0}:U(e?.bearerToken||"")||null}function C(e={},r=new Date){const t=typeof e?.expiresAt=="string"?e.expiresAt.trim():"";if(t){const n=Date.parse(t);if(Number.isFinite(n))return r.valueOf()>=n}const i=b(e);return Number.isFinite(i?.exp)?r.valueOf()>=i.exp*1e3:!1}function j(e={},r=new Date){const t=b(e);return!t?.sub||!t?.tenant_id||!String(e?.bearerToken||"").trim()&&e.authType!=="cookie-session"?!1:!C(e,r)}function _(e){if(!e||typeof e!="string")return l;const r=e.trim();if(!r.startsWith("/")||r.startsWith("//"))return l;const t=r.indexOf("#"),i=t>=0?r.slice(0,t):r;return!i||i.startsWith("/sign-in")?l:i||l}function $(e){const r=_(e),t=r.indexOf("?");return t>=0?{pathname:r.slice(0,t)||l,search:r.slice(t)}:{pathname:r,search:""}}async function k(e,r){if(!e?.oidcDiscoveryUrl)throw new Error("Enterprise sign-in is not configured for this environment.");const t=await r(e.oidcDiscoveryUrl,{headers:{accept:"application/json"}});if(!t.ok)throw new Error("Failed to load enterprise sign-in configuration.");const i=await t.json();if(!i?.authorization_endpoint||!i?.token_endpoint)throw new Error("Enterprise sign-in metadata is incomplete.");return i}async function z(e){const r=await globalThis.crypto.subtle.digest("SHA-256",new TextEncoder().encode(e));return w(new Uint8Array(r))}function O(e=32){const r=new Uint8Array(e);return globalThis.crypto.getRandomValues(r),w(r)}function F(e,r){const t=Number(r);if(Number.isFinite(t)&&t>0)return new Date(Date.now()+t*1e3).toISOString();const i=U(e);return Number.isFinite(i?.exp)?new Date(i.exp*1e3).toISOString():""}async function M({config:e,next:r=l,apiBaseUrl:t="",fetchImpl:i=globalThis.fetch.bind(globalThis),storage:n=p(),redirect:d=a=>globalThis.location.assign(a)}={}){if(!e?.isOidcConfigured)throw new Error("Enterprise sign-in is not configured for this environment.");const a=await k(e,i),c=O(32),u=O(24),s=O(24),g=await z(c);R({state:u,codeVerifier:c,nonce:s,next:r,apiBaseUrl:t},n);const o=new URL(a.authorization_endpoint);return o.searchParams.set("client_id",e.oidcClientId),o.searchParams.set("redirect_uri",e.oidcRedirectUri),o.searchParams.set("response_type","code"),o.searchParams.set("scope",e.oidcScope),o.searchParams.set("state",u),o.searchParams.set("nonce",s),o.searchParams.set("code_challenge",g),o.searchParams.set("code_challenge_method","S256"),d(o.toString()),{state:u,nonce:s}}async function Y({config:e,search:r=globalThis.location?.search||"",fetchImpl:t=globalThis.fetch.bind(globalThis),storage:i=p()}={}){if(!e?.isOidcConfigured)throw new Error("Enterprise sign-in is not configured for this environment.");const n=new URLSearchParams(r),d=String(n.get("error")||"").trim(),a=String(n.get("error_description")||"").trim();if(d)throw T(i),new Error(a||"Enterprise sign-in failed.");const c=String(n.get("code")||"").trim(),u=String(n.get("state")||"").trim(),s=A(i);if(!c||!u||!s?.state||!s.codeVerifier)throw T(i),new Error("The enterprise sign-in callback is missing required state.");if(s.state!==u)throw T(i),new Error("The enterprise sign-in callback could not be validated.");const g=await k(e,t),o=new URLSearchParams;o.set("grant_type","authorization_code"),o.set("client_id",e.oidcClientId),o.set("code",c),o.set("redirect_uri",e.oidcRedirectUri),o.set("code_verifier",s.codeVerifier);const m=await t(g.token_endpoint,{method:"POST",headers:{accept:"application/json","content-type":"application/x-www-form-urlencoded"},body:o.toString()}),h=await m.json().catch(()=>({}));if(!m.ok)throw T(i),new Error(h?.error_description||h?.error||"Enterprise sign-in token exchange failed.");const I=String(h?.access_token||"").trim();if(!I)throw T(i),new Error("Enterprise sign-in did not return an access token.");const D=S({bearerToken:I,apiBaseUrl:s.apiBaseUrl,expiresAt:F(I,h?.expires_in)},i);return T(i),{sessionConfig:D,next:s.next||l,claims:U(I)}}async function J({apiBaseUrl:e="",email:r,next:t=l,fetchImpl:i=globalThis.fetch.bind(globalThis)}={}){const n=await i(`${e}/auth/magic-link/request`,{method:"POST",credentials:"same-origin",headers:{accept:"application/json","content-type":"application/json"},body:JSON.stringify({email:r,next:_(t)})}),d=await n.json().catch(()=>({}));if(!n.ok)throw new Error(d?.error?.message||"Magic-link request failed.");return d}async function q({apiBaseUrl:e="",fetchImpl:r=globalThis.fetch.bind(globalThis)}={}){const t=await r(`${e}/auth/me`,{method:"GET",credentials:"same-origin",headers:{accept:"application/json"}});if(!t.ok)return null;const n=(await t.json())?.data;return!n?.actorId||!n?.tenantId?null:S({apiBaseUrl:e,actorId:n.actorId,tenantId:n.tenantId,roles:n.roles||[],authType:n.authType||"cookie-session",expiresAt:n.expiresAt||""})}async function W({apiBaseUrl:e="",fetchImpl:r=globalThis.fetch.bind(globalThis)}={}){const t=await r(`${e}/auth/logout`,{method:"POST",credentials:"same-origin",headers:x({authType:"cookie-session"})});if(!t.ok){const i=await t.json().catch(()=>({}));throw new Error(i?.error?.message||"Sign-out failed.")}return!0}function K(e){const r=String(e?.oidcLogoutUrl||"").trim();if(!r)return"";const t=new URL(r);return e?.oidcLogoutRedirectUri&&t.searchParams.set("post_logout_redirect_uri",e.oidcLogoutRedirectUri),e?.oidcClientId&&t.searchParams.set("client_id",e.oidcClientId),t.toString()}export{l as DEFAULT_POST_SIGN_IN_ROUTE,E as OIDC_TRANSACTION_STORAGE_KEY,M as beginOidcSignIn,K as buildOidcLogoutUrl,y as STORAGE_KEY,x as buildAuthHeaders,V as clearBrowserSessionConfig,T as clearOidcTransaction,Y as completeOidcSignIn,U as decodeJwtPayload,q as fetchCurrentSession,C as hasSessionExpired,j as isAuthenticatedSession,H as readAuthRuntimeConfig,A as readOidcTransaction,b as readSessionClaims,J as requestMagicLinkSignIn,L as readBrowserSessionConfig,G as resolveApiBaseUrl,_ as sanitizeNextRoute,$ as splitRouteTarget,W as logoutSession,R as writeOidcTransaction,S as writeBrowserSessionConfig};
+const STORAGE_KEY = 'engineering-team.task-browser-session';
+const DEFAULT_POST_SIGN_IN_ROUTE = '/tasks';
+const OIDC_TRANSACTION_STORAGE_KEY = 'engineering-team.oidc-transaction';
+
+function defaultStorage(storage = globalThis.sessionStorage) {
+  return storage;
+}
+
+function parseBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function base64Url(bytes) {
+  let raw = '';
+  bytes.forEach((byte) => {
+    raw += String.fromCharCode(byte);
+  });
+  return globalThis.btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function runtimeConfig() {
+  return globalThis.__ENGINEERING_TEAM_RUNTIME_CONFIG__ || {};
+}
+
+function firstValue(source = {}, ...keys) {
+  for (const key of keys) {
+    const value = source?.[key];
+    const normalized = String(value ?? '').trim();
+    if (normalized) return normalized;
+  }
+  return '';
+}
+
+function readBrowserSessionConfig(storage = defaultStorage()) {
+  try {
+    const raw = storage?.getItem(STORAGE_KEY);
+    if (!raw) return { bearerToken: '', apiBaseUrl: '', expiresAt: '' };
+    const parsed = JSON.parse(raw);
+    const config = {
+      bearerToken: typeof parsed?.bearerToken === 'string' ? parsed.bearerToken : '',
+      apiBaseUrl: typeof parsed?.apiBaseUrl === 'string' ? parsed.apiBaseUrl : '',
+      expiresAt: typeof parsed?.expiresAt === 'string' ? parsed.expiresAt : '',
+    };
+    if (typeof parsed?.actorId === 'string') config.actorId = parsed.actorId;
+    if (typeof parsed?.tenantId === 'string') config.tenantId = parsed.tenantId;
+    if (Array.isArray(parsed?.roles)) config.roles = parsed.roles;
+    if (typeof parsed?.authType === 'string') config.authType = parsed.authType;
+    return config;
+  } catch {
+    return { bearerToken: '', apiBaseUrl: '', expiresAt: '' };
+  }
+}
+
+function writeBrowserSessionConfig(config, storage = defaultStorage()) {
+  const next = {
+    bearerToken: typeof config?.bearerToken === 'string' ? config.bearerToken.trim() : '',
+    apiBaseUrl: typeof config?.apiBaseUrl === 'string' ? config.apiBaseUrl.trim().replace(/\/+$/, '') : '',
+    expiresAt: typeof config?.expiresAt === 'string' ? config.expiresAt.trim() : '',
+  };
+  if (typeof config?.actorId === 'string') next.actorId = config.actorId.trim();
+  if (typeof config?.tenantId === 'string') next.tenantId = config.tenantId.trim();
+  if (Array.isArray(config?.roles)) next.roles = config.roles.map((role) => String(role || '').trim()).filter(Boolean);
+  if (typeof config?.authType === 'string') next.authType = config.authType.trim();
+  storage?.setItem(STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+
+function clearBrowserSessionConfig(storage = defaultStorage()) {
+  storage?.removeItem(STORAGE_KEY);
+  return { bearerToken: '', apiBaseUrl: '', expiresAt: '' };
+}
+
+function readCookie(name, cookieHeader = globalThis.document?.cookie || '') {
+  const prefix = `${name}=`;
+  return String(cookieHeader || '')
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix))
+    ?.slice(prefix.length) || '';
+}
+
+function readOidcTransaction(storage = defaultStorage()) {
+  try {
+    const raw = storage?.getItem(OIDC_TRANSACTION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return {
+      state: typeof parsed?.state === 'string' ? parsed.state : '',
+      codeVerifier: typeof parsed?.codeVerifier === 'string' ? parsed.codeVerifier : '',
+      nonce: typeof parsed?.nonce === 'string' ? parsed.nonce : '',
+      next: sanitizeNextRoute(parsed?.next),
+      apiBaseUrl: typeof parsed?.apiBaseUrl === 'string' ? parsed.apiBaseUrl.trim().replace(/\/+$/, '') : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeOidcTransaction(transaction, storage = defaultStorage()) {
+  const next = {
+    state: typeof transaction?.state === 'string' ? transaction.state.trim() : '',
+    codeVerifier: typeof transaction?.codeVerifier === 'string' ? transaction.codeVerifier.trim() : '',
+    nonce: typeof transaction?.nonce === 'string' ? transaction.nonce.trim() : '',
+    next: sanitizeNextRoute(transaction?.next),
+    apiBaseUrl: typeof transaction?.apiBaseUrl === 'string' ? transaction.apiBaseUrl.trim().replace(/\/+$/, '') : '',
+  };
+  storage?.setItem(OIDC_TRANSACTION_STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+
+function clearOidcTransaction(storage = defaultStorage()) {
+  storage?.removeItem(OIDC_TRANSACTION_STORAGE_KEY);
+}
+
+function buildAuthHeaders(sessionConfig = {}) {
+  const headers = {};
+  const bearerToken = typeof sessionConfig?.bearerToken === 'string' ? sessionConfig.bearerToken.trim() : '';
+  if (bearerToken) headers.authorization = `Bearer ${bearerToken}`;
+  if (!bearerToken) {
+    const csrf = decodeURIComponent(readCookie('engineering_team_csrf') || '');
+    if (csrf) headers['x-csrf-token'] = csrf;
+  }
+  return headers;
+}
+
+function resolveApiBaseUrl(sessionConfig = {}, envBaseUrl = '') {
+  return typeof sessionConfig?.apiBaseUrl === 'string' && sessionConfig.apiBaseUrl.trim()
+    ? sessionConfig.apiBaseUrl.trim()
+    : envBaseUrl.trim() || '';
+}
+
+function readAuthRuntimeConfig(env = {}, config = runtimeConfig(), location = globalThis.location) {
+  const callback = location?.origin ? `${location.origin}/auth/callback` : '/auth/callback';
+  const signedOut = location?.origin ? `${location.origin}/sign-in?reason=signed_out` : '/sign-in?reason=signed_out';
+  const localDefault = !!(env?.DEV || env?.MODE === 'test');
+  const oidcDiscoveryUrl = String(firstValue(config, 'oidcDiscoveryUrl', 'VITE_OIDC_DISCOVERY_URL') || env?.VITE_OIDC_DISCOVERY_URL || '').trim();
+  const oidcClientId = String(firstValue(config, 'oidcClientId', 'VITE_OIDC_CLIENT_ID') || env?.VITE_OIDC_CLIENT_ID || '').trim();
+  const oidcRedirectUri = String(firstValue(config, 'oidcRedirectUri', 'VITE_OIDC_REDIRECT_URI') || env?.VITE_OIDC_REDIRECT_URI || callback).trim();
+  const oidcScope = String(firstValue(config, 'oidcScope', 'VITE_OIDC_SCOPE') || env?.VITE_OIDC_SCOPE || 'openid profile email').trim();
+  const oidcLogoutUrl = String(firstValue(config, 'oidcLogoutUrl', 'VITE_OIDC_LOGOUT_URL') || env?.VITE_OIDC_LOGOUT_URL || '').trim();
+  const oidcLogoutRedirectUri = String(
+    firstValue(config, 'oidcLogoutRedirectUri', 'VITE_OIDC_LOGOUT_REDIRECT_URI') || env?.VITE_OIDC_LOGOUT_REDIRECT_URI || signedOut
+  ).trim();
+  const internalAuthBootstrapEnabled = parseBoolean(
+    firstValue(config, 'internalAuthBootstrapEnabled', 'VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED') ||
+      env?.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED,
+    localDefault
+  );
+  const configuredStrategy = String(
+    firstValue(config, 'productionAuthStrategy', 'VITE_AUTH_PRODUCTION_AUTH_STRATEGY', 'AUTH_PRODUCTION_AUTH_STRATEGY') ||
+      env?.VITE_AUTH_PRODUCTION_AUTH_STRATEGY ||
+      env?.AUTH_PRODUCTION_AUTH_STRATEGY ||
+      ''
+  ).trim().toLowerCase();
+  const productionAuthStrategy =
+    configuredStrategy === 'magic-link'
+      ? 'registration'
+      : configuredStrategy || (oidcDiscoveryUrl && oidcClientId ? 'oidc' : internalAuthBootstrapEnabled ? 'internal-bootstrap' : '');
+
+  return {
+    productionAuthStrategy,
+    oidcDiscoveryUrl,
+    oidcClientId,
+    oidcRedirectUri,
+    oidcScope,
+    oidcLogoutUrl,
+    oidcLogoutRedirectUri,
+    internalAuthBootstrapEnabled,
+    isOidcConfigured: !!(oidcDiscoveryUrl && oidcClientId),
+    isRegistrationConfigured: productionAuthStrategy === 'registration',
+    isMagicLinkConfigured: false,
+  };
+}
+
+function decodeJwtPayload(token = '') {
+  const [, payload] = token.split('.');
+  if (!payload) return null;
+  try {
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4 || 4)) % 4);
+    return JSON.parse(globalThis.atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function readSessionClaims(config = {}) {
+  if (config?.actorId && config?.tenantId) {
+    return {
+      sub: config.actorId,
+      tenant_id: config.tenantId,
+      roles: config.roles || [],
+      exp: Number.isFinite(Date.parse(config.expiresAt)) ? Math.floor(Date.parse(config.expiresAt) / 1000) : undefined,
+    };
+  }
+  return decodeJwtPayload(config?.bearerToken || '') || null;
+}
+
+function hasSessionExpired(config = {}, now = new Date()) {
+  const expiresAt = typeof config?.expiresAt === 'string' ? config.expiresAt.trim() : '';
+  if (expiresAt) {
+    const time = Date.parse(expiresAt);
+    if (Number.isFinite(time)) return now.valueOf() >= time;
+  }
+  const claims = readSessionClaims(config);
+  return Number.isFinite(claims?.exp) ? now.valueOf() >= claims.exp * 1000 : false;
+}
+
+function isAuthenticatedSession(config = {}, now = new Date()) {
+  const claims = readSessionClaims(config);
+  const hasCredential = String(config?.bearerToken || '').trim() || config.authType === 'cookie-session';
+  return !!(claims?.sub && claims?.tenant_id && hasCredential && !hasSessionExpired(config, now));
+}
+
+function sanitizeNextRoute(value) {
+  if (!value || typeof value !== 'string') return DEFAULT_POST_SIGN_IN_ROUTE;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//')) return DEFAULT_POST_SIGN_IN_ROUTE;
+  const hashIndex = trimmed.indexOf('#');
+  const route = hashIndex >= 0 ? trimmed.slice(0, hashIndex) : trimmed;
+  if (
+    !route ||
+    route.startsWith('/sign-in') ||
+    route.startsWith('/auth/register') ||
+    route.startsWith('/auth/login') ||
+    route.startsWith('/auth/email/verify') ||
+    route.startsWith('/auth/password-reset') ||
+    route.startsWith('/auth/magic-link')
+  ) {
+    return DEFAULT_POST_SIGN_IN_ROUTE;
+  }
+  return route || DEFAULT_POST_SIGN_IN_ROUTE;
+}
+
+function splitRouteTarget(value) {
+  const route = sanitizeNextRoute(value);
+  const index = route.indexOf('?');
+  return index >= 0
+    ? { pathname: route.slice(0, index) || DEFAULT_POST_SIGN_IN_ROUTE, search: route.slice(index) }
+    : { pathname: route, search: '' };
+}
+
+async function loadOidcMetadata(config, fetchImpl) {
+  if (!config?.oidcDiscoveryUrl) throw new Error('Enterprise sign-in is not configured for this environment.');
+  const response = await fetchImpl(config.oidcDiscoveryUrl, { headers: { accept: 'application/json' } });
+  if (!response.ok) throw new Error('Failed to load enterprise sign-in configuration.');
+  const metadata = await response.json();
+  if (!metadata?.authorization_endpoint || !metadata?.token_endpoint) {
+    throw new Error('Enterprise sign-in metadata is incomplete.');
+  }
+  return metadata;
+}
+
+async function sha256Base64Url(value) {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return base64Url(new Uint8Array(digest));
+}
+
+function randomBase64Url(bytes = 32) {
+  const values = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(values);
+  return base64Url(values);
+}
+
+function tokenExpiresAt(token, expiresIn) {
+  const seconds = Number(expiresIn);
+  if (Number.isFinite(seconds) && seconds > 0) return new Date(Date.now() + seconds * 1000).toISOString();
+  const claims = decodeJwtPayload(token);
+  return Number.isFinite(claims?.exp) ? new Date(claims.exp * 1000).toISOString() : '';
+}
+
+async function beginOidcSignIn({
+  config,
+  next = DEFAULT_POST_SIGN_IN_ROUTE,
+  apiBaseUrl = '',
+  fetchImpl = globalThis.fetch.bind(globalThis),
+  storage = defaultStorage(),
+  redirect = (url) => globalThis.location.assign(url),
+} = {}) {
+  if (!config?.isOidcConfigured) throw new Error('Enterprise sign-in is not configured for this environment.');
+  const metadata = await loadOidcMetadata(config, fetchImpl);
+  const codeVerifier = randomBase64Url(32);
+  const state = randomBase64Url(24);
+  const nonce = randomBase64Url(24);
+  const codeChallenge = await sha256Base64Url(codeVerifier);
+  writeOidcTransaction({ state, codeVerifier, nonce, next, apiBaseUrl }, storage);
+  const url = new URL(metadata.authorization_endpoint);
+  url.searchParams.set('client_id', config.oidcClientId);
+  url.searchParams.set('redirect_uri', config.oidcRedirectUri);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', config.oidcScope);
+  url.searchParams.set('state', state);
+  url.searchParams.set('nonce', nonce);
+  url.searchParams.set('code_challenge', codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  redirect(url.toString());
+  return { state, nonce };
+}
+
+async function completeOidcSignIn({
+  config,
+  search = globalThis.location?.search || '',
+  fetchImpl = globalThis.fetch.bind(globalThis),
+  storage = defaultStorage(),
+} = {}) {
+  if (!config?.isOidcConfigured) throw new Error('Enterprise sign-in is not configured for this environment.');
+  const params = new URLSearchParams(search);
+  const error = String(params.get('error') || '').trim();
+  const description = String(params.get('error_description') || '').trim();
+  if (error) {
+    clearOidcTransaction(storage);
+    throw new Error(description || 'Enterprise sign-in failed.');
+  }
+  const code = String(params.get('code') || '').trim();
+  const state = String(params.get('state') || '').trim();
+  const transaction = readOidcTransaction(storage);
+  if (!code || !state || !transaction?.state || !transaction.codeVerifier) {
+    clearOidcTransaction(storage);
+    throw new Error('The enterprise sign-in callback is missing required state.');
+  }
+  if (transaction.state !== state) {
+    clearOidcTransaction(storage);
+    throw new Error('The enterprise sign-in callback could not be validated.');
+  }
+  const metadata = await loadOidcMetadata(config, fetchImpl);
+  const body = new URLSearchParams();
+  body.set('grant_type', 'authorization_code');
+  body.set('client_id', config.oidcClientId);
+  body.set('code', code);
+  body.set('redirect_uri', config.oidcRedirectUri);
+  body.set('code_verifier', transaction.codeVerifier);
+  const response = await fetchImpl(metadata.token_endpoint, {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    clearOidcTransaction(storage);
+    throw new Error(payload?.error_description || payload?.error || 'Enterprise sign-in token exchange failed.');
+  }
+  const accessToken = String(payload?.access_token || '').trim();
+  if (!accessToken) {
+    clearOidcTransaction(storage);
+    throw new Error('Enterprise sign-in did not return an access token.');
+  }
+  const sessionConfig = writeBrowserSessionConfig(
+    { bearerToken: accessToken, apiBaseUrl: transaction.apiBaseUrl, expiresAt: tokenExpiresAt(accessToken, payload?.expires_in) },
+    storage
+  );
+  clearOidcTransaction(storage);
+  return { sessionConfig, next: transaction.next || DEFAULT_POST_SIGN_IN_ROUTE, claims: decodeJwtPayload(accessToken) };
+}
+
+async function requestJson(url, body, fetchImpl) {
+  const response = await fetchImpl(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error?.message || 'Request failed.');
+  return payload;
+}
+
+async function loginWithPassword({
+  apiBaseUrl = '',
+  email,
+  password,
+  next = DEFAULT_POST_SIGN_IN_ROUTE,
+  fetchImpl = globalThis.fetch.bind(globalThis),
+  storage = defaultStorage(),
+} = {}) {
+  const payload = await requestJson(`${apiBaseUrl}/auth/login`, { email, password, next: sanitizeNextRoute(next) }, fetchImpl);
+  const data = payload?.data || {};
+  return writeBrowserSessionConfig(
+    {
+      apiBaseUrl,
+      actorId: data.actorId,
+      tenantId: data.tenantId,
+      roles: data.roles || [],
+      authType: data.authType || 'cookie-session',
+      expiresAt: data.expiresAt || '',
+    },
+    storage
+  );
+}
+
+async function registerAccount({ apiBaseUrl = '', email, password, displayName = '', inviteCode = '', fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  return requestJson(`${apiBaseUrl}/auth/register`, { email, password, displayName, inviteCode }, fetchImpl);
+}
+
+async function requestEmailVerification({ apiBaseUrl = '', email, fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  return requestJson(`${apiBaseUrl}/auth/email/verify/request`, { email }, fetchImpl);
+}
+
+async function confirmEmailVerification({ apiBaseUrl = '', token, fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  return requestJson(`${apiBaseUrl}/auth/email/verify/confirm`, { token }, fetchImpl);
+}
+
+async function requestPasswordReset({ apiBaseUrl = '', email, fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  return requestJson(`${apiBaseUrl}/auth/password-reset/request`, { email }, fetchImpl);
+}
+
+async function confirmPasswordReset({ apiBaseUrl = '', token, password, fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  return requestJson(`${apiBaseUrl}/auth/password-reset/confirm`, { token, password }, fetchImpl);
+}
+
+async function fetchCurrentSession({ apiBaseUrl = '', fetchImpl = globalThis.fetch.bind(globalThis), storage = defaultStorage() } = {}) {
+  const response = await fetchImpl(`${apiBaseUrl}/auth/me`, {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { accept: 'application/json' },
+  });
+  if (!response.ok) return null;
+  const data = (await response.json())?.data;
+  if (!data?.actorId || !data?.tenantId) return null;
+  return writeBrowserSessionConfig(
+    {
+      apiBaseUrl,
+      actorId: data.actorId,
+      tenantId: data.tenantId,
+      roles: data.roles || [],
+      authType: data.authType || 'cookie-session',
+      expiresAt: data.expiresAt || '',
+    },
+    storage
+  );
+}
+
+async function logoutSession({ apiBaseUrl = '', fetchImpl = globalThis.fetch.bind(globalThis) } = {}) {
+  const response = await fetchImpl(`${apiBaseUrl}/auth/logout`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: buildAuthHeaders({ authType: 'cookie-session' }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.error?.message || 'Sign-out failed.');
+  }
+  return true;
+}
+
+function buildOidcLogoutUrl(config) {
+  const logoutUrl = String(config?.oidcLogoutUrl || '').trim();
+  if (!logoutUrl) return '';
+  const url = new URL(logoutUrl);
+  if (config?.oidcLogoutRedirectUri) url.searchParams.set('post_logout_redirect_uri', config.oidcLogoutRedirectUri);
+  if (config?.oidcClientId) url.searchParams.set('client_id', config.oidcClientId);
+  return url.toString();
+}
+
+export {
+  DEFAULT_POST_SIGN_IN_ROUTE,
+  OIDC_TRANSACTION_STORAGE_KEY,
+  beginOidcSignIn,
+  buildOidcLogoutUrl,
+  STORAGE_KEY,
+  buildAuthHeaders,
+  clearBrowserSessionConfig,
+  clearOidcTransaction,
+  completeOidcSignIn,
+  confirmEmailVerification,
+  confirmPasswordReset,
+  decodeJwtPayload,
+  fetchCurrentSession,
+  hasSessionExpired,
+  isAuthenticatedSession,
+  loginWithPassword,
+  logoutSession,
+  readAuthRuntimeConfig,
+  readBrowserSessionConfig,
+  readOidcTransaction,
+  readSessionClaims,
+  registerAccount,
+  requestEmailVerification,
+  requestPasswordReset,
+  resolveApiBaseUrl,
+  sanitizeNextRoute,
+  splitRouteTarget,
+  writeBrowserSessionConfig,
+  writeOidcTransaction,
+};

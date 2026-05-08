@@ -1,0 +1,10 @@
+flowchart TD
+  A[Unauthenticated protected route] --> B[/sign-in]
+  B --> C{productionAuthStrategy}
+  C -->|registration| D[Email/password login]
+  D --> E[Create account form]
+  D --> F[Password reset form]
+  D --> G[POST /auth/login]
+  G --> H[Restore next route]
+  C -->|oidc| I[Enterprise sign-in]
+  C -->|local internal| J[Trusted auth code fallback]

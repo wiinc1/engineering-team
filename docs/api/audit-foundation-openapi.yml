@@ -5,6 +5,7 @@ info:
   version: 0.1.0
   description: |
     Canonical audit and workflow HTTP contract.
+    PostgreSQL audit migrations record only forward `*.sql` files in `schema_migrations`; rollback `*.down.sql` files are operational artifacts and are not applied by the normal migration runner.
     The task-list projection now also carries additive queue/WIP metadata, optional SRE monitoring preview data, and close-governance escalation previews used by the human decision inbox.
     Human close decisions are accepted only when governed close review is decision-ready: either both PM and Architect cancellation recommendations exist or an active human escalation is present.
     Close-review backtrack now uses a dual-party agreement handshake: the first PM/Architect request records a recommendation and the counterpart request completes the stage change to `IMPLEMENTATION`.

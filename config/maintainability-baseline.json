@@ -5,5 +5,141 @@
     "testFileLines": 500,
     "functionLines": 50
   },
-  "entries": []
+  "entries": [
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:function-lines",
+      "line": 725,
+      "ordinal": 91,
+      "name": "createRegistrationAuthService",
+      "actual": 484,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:function-lines",
+      "line": 391,
+      "ordinal": 59,
+      "name": "createPostgresRegistrationStore",
+      "actual": 244,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:function-lines",
+      "line": 137,
+      "ordinal": 18,
+      "name": "createMemoryRegistrationStore",
+      "actual": 174,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration-production-smoke.js",
+      "rule": "maintainability:function-lines",
+      "line": 66,
+      "ordinal": 14,
+      "name": "runRegistrationProductionSmoke",
+      "actual": 136,
+      "cap": 50
+    },
+    {
+      "path": "src/app/session-browser-registration.test.tsx",
+      "rule": "maintainability:function-lines",
+      "line": 24,
+      "ordinal": 3,
+      "name": "<arrow>",
+      "actual": 108,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:function-lines",
+      "line": 829,
+      "ordinal": 99,
+      "name": "register",
+      "actual": 91,
+      "cap": 50
+    },
+    {
+      "path": "src/app/session-browser-registration.test.tsx",
+      "rule": "maintainability:function-lines",
+      "line": 31,
+      "ordinal": 5,
+      "name": "<arrow>",
+      "actual": 81,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:function-lines",
+      "line": 920,
+      "ordinal": 100,
+      "name": "login",
+      "actual": 77,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/config-check.js",
+      "rule": "maintainability:function-lines",
+      "line": 69,
+      "ordinal": 9,
+      "name": "buildAuthDiagnostics",
+      "actual": 68,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:function-lines",
+      "line": 636,
+      "ordinal": 85,
+      "name": "createEmailTransport",
+      "actual": 59,
+      "cap": 50
+    },
+    {
+      "path": "src/app/registration-auth-flows.test.tsx",
+      "rule": "maintainability:function-lines",
+      "line": 15,
+      "ordinal": 3,
+      "name": "<arrow>",
+      "actual": 58,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/registration-production-smoke.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 23,
+      "ordinal": 5,
+      "name": "<arrow>",
+      "actual": 57,
+      "cap": 50
+    },
+    {
+      "path": "src/app/session.browser.js",
+      "rule": "maintainability:function-lines",
+      "line": 305,
+      "ordinal": 32,
+      "name": "completeOidcSignIn",
+      "actual": 54,
+      "cap": 50
+    },
+    {
+      "path": "lib/auth/registration.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 1229,
+      "cap": 400
+    },
+    {
+      "path": "src/app/session.browser.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 489,
+      "cap": 400
+    }
+  ]
 }

@@ -1,5 +1,7 @@
 # Issue 92 Production Evidence
 
+Historical note: this report is retained as pre-registration magic-link audit evidence. Issues #160-#167 replace the active production path with registration auth, and magic-link evidence no longer satisfies the production ship gate.
+
 - Date: 2026-04-27
 - Issue: #92 Replace internal auth bootstrap with magic-link session auth
 - Status: Complete

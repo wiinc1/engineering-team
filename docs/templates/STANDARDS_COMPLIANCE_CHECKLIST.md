@@ -42,6 +42,15 @@ Use this file when creating or updating a task, ADR, PRD, or implementation repo
 - Gap observed:
 - Documented rationale and source:
 
+## Authentication and Secret Handling
+- Applicable:
+- AuthN/AuthZ surfaces changed:
+- Secret, token, cookie, password, or PII redaction evidence:
+- Abuse-control or rate-limit evidence:
+- Rollback or removal impact:
+- Gap observed:
+- Documented rationale and source:
+
 ## Team and Process
 - Applicable:
 - Evidence in this change:

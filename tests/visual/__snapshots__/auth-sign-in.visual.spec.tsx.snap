@@ -105,54 +105,6 @@ exports[`auth sign-in visual states > matches the local internal fallback state 
 </section>
 `;
 
-exports[`auth sign-in visual states > matches the magic-link state 1`] = `
-<section
-  aria-label="Sign-in screen"
-  class="auth-card"
->
-  <div
-    class="auth-card__intro"
-  >
-    <p
-      class="eyebrow"
-    >
-      Authenticated browser shell for US-002
-    </p>
-    <h1>
-      Sign in to the workflow app
-    </h1>
-    <p
-      class="lede"
-    >
-      Enter your invited email address to receive a secure sign-in link for the workflow app.
-    </p>
-  </div>
-  <form
-    class="session-form auth-form"
-  >
-    <label>
-      Email address
-      <input
-        autocomplete="email"
-        name="email"
-        placeholder="you@example.com"
-        type="email"
-        value=""
-      />
-    </label>
-    <div
-      class="session-form__actions"
-    >
-      <button
-        type="submit"
-      >
-        Send sign-in link
-      </button>
-    </div>
-  </form>
-</section>
-`;
-
 exports[`auth sign-in visual states > matches the no-login-path configuration error state 1`] = `
 <section
   aria-label="Sign-in screen"
@@ -191,5 +143,143 @@ exports[`auth sign-in visual states > matches the no-login-path configuration er
   >
     This deployment has no enabled sign-in method. Contact the production operator to restore the approved login path.
   </p>
+</section>
+`;
+
+exports[`auth sign-in visual states > matches the registration state 1`] = `
+<section
+  aria-label="Sign-in screen"
+  class="auth-card"
+>
+  <div
+    class="auth-card__intro"
+  >
+    <p
+      class="eyebrow"
+    >
+      Authenticated browser shell for US-002
+    </p>
+    <h1>
+      Sign in to the workflow app
+    </h1>
+    <p
+      class="lede"
+    >
+      Use your registered email and password for the task workspace, board, PM overview, inboxes, and task detail routes.
+    </p>
+  </div>
+  <form
+    class="session-form auth-form"
+  >
+    <label>
+      Email address
+      <input
+        autocomplete="email"
+        name="email"
+        placeholder="you@example.com"
+        type="email"
+        value=""
+      />
+    </label>
+    <label>
+      Password
+      <input
+        autocomplete="current-password"
+        name="password"
+        type="password"
+        value=""
+      />
+    </label>
+    <label>
+      API base URL
+      <input
+        name="apiBaseUrl"
+        placeholder="same-origin"
+        value=""
+      />
+    </label>
+    <div
+      class="session-form__actions"
+    >
+      <button
+        type="submit"
+      >
+        Sign in
+      </button>
+    </div>
+  </form>
+  <form
+    class="session-form auth-form"
+  >
+    <label>
+      Name
+      <input
+        autocomplete="name"
+        name="displayName"
+        value=""
+      />
+    </label>
+    <label>
+      Registration email
+      <input
+        autocomplete="email"
+        name="registrationEmail"
+        placeholder="you@example.com"
+        type="email"
+        value=""
+      />
+    </label>
+    <label>
+      Create password
+      <input
+        autocomplete="new-password"
+        name="registrationPassword"
+        type="password"
+        value=""
+      />
+    </label>
+    <label>
+      Invite code
+      <input
+        autocomplete="off"
+        name="inviteCode"
+        value=""
+      />
+    </label>
+    <div
+      class="session-form__actions"
+    >
+      <button
+        class="button-secondary"
+        type="submit"
+      >
+        Create account
+      </button>
+    </div>
+  </form>
+  <form
+    class="session-form auth-form"
+  >
+    <label>
+      Reset email
+      <input
+        autocomplete="email"
+        name="resetEmail"
+        placeholder="you@example.com"
+        type="email"
+        value=""
+      />
+    </label>
+    <div
+      class="session-form__actions"
+    >
+      <button
+        class="button-secondary"
+        type="submit"
+      >
+        Reset password
+      </button>
+    </div>
+  </form>
 </section>
 `;

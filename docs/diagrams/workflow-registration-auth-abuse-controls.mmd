@@ -1,0 +1,9 @@
+flowchart TD
+  A[Login, registration, verification, reset traffic] --> B[Email/IP rate buckets]
+  B --> C{Threshold exceeded?}
+  C -->|yes| D[Generic throttle response]
+  C -->|no| E[Process request]
+  D --> F[auth_audit_events]
+  E --> F
+  F --> G[registration-auth-security dashboard]
+  G --> H[Operator review and rollback decision]

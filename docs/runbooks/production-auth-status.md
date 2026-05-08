@@ -1,83 +1,100 @@
 # Production Auth Status
 
-Last updated: 2026-05-07  
-Tracking issue: Issue #151  
+Last updated: 2026-05-08
+Tracking issues: Issue #151, Issue #160, Issue #166, Issue #167
 Related production remediation issue: Issue #137
 
 ## Current Decision
 
-Active production strategy: `magic-link`
+Active production strategy: `registration`
 
-The current durable no-IdP production login path is invite-only magic-link auth. Production must expose the browser strategy as `magic-link`, keep internal bootstrap disabled, and use the same-origin Vercel `/backend` API rewrite for protected app routes.
+Registration auth replaces the durable no-IdP magic-link path. Production must expose the browser strategy as `registration`, keep internal bootstrap disabled, and use the same-origin Vercel `/backend` API rewrite for protected app routes.
 
-Internal bootstrap is not the production closure path. It remains available only for local/internal use or an explicitly approved emergency exception.
+Issue #151 is superseded by the registration cutover work in Issues #160-#167. The production status gate still exists, but its selected strategy and smoke evidence are now registration-based. Magic-link evidence is historical only and cannot satisfy the ship gate.
+
+Registration mode must be explicit:
+
+- `open`: public registration creates active or pending-verification accounts based on email-verification policy.
+- `invite-only`: only invited users or users with the configured invite code can receive credentials.
+- `admin-approved`: registration creates pending-approval users until an admin activates them.
+
+First-admin creation remains operator-owned through `npm run auth:admin:seed -- --apply`. The seed workflow writes only redacted identifiers and never prints database URLs, raw email addresses, passwords, cookies, or secrets.
 
 ## Deployment State
 
-Repository implementation and deterministic local checks exist for the magic-link path, but Issue #151 cannot ship until a fresh production smoke artifact is captured on or after 2026-05-07 and passes:
+Before moving to the ship portion of the workflow:
 
 ```bash
+npm run auth:config:check:vercel
+npm run auth:config:check
+npm run auth:registration:production-smoke
 npm run auth:status:check -- --require-complete
 ```
 
-The historical April issue #92 smoke artifact proves the earlier remediation path worked at that time. It must not be used to close Issue #137 or Issue #151.
+The status check requires fresh production smoke evidence generated on or after 2026-05-08. The historical April issue #92 smoke and the Issue #151 magic-link smoke artifact remain audit history only.
 
 ## Evidence Artifact
 
 Canonical production smoke artifact:
 
 ```text
-observability/magic-link-production-smoke.json
-```
-
-The artifact must be produced by:
-
-```bash
-npm run auth:magic-link:production-smoke -- --require-complete
+observability/registration-auth-production-smoke.json
 ```
 
 It must contain:
 
 - generated timestamp for the fresh smoke run
-- selected auth strategy: `magic-link`
+- selected auth strategy: `registration`
 - deployment URL or deployment ID
 - rollback target
-- redacted invited-email hash
-- redacted unknown-email hash
-- redacted magic-link token hash
+- redacted registration-email hash
+- redacted password-reset-email hash
+- login/session/CSRF classifications
+- `/auth/me`, protected route, logout, and post-logout classifications
+- password-reset generic-response classification
+- magic-link removal evidence showing `/auth/magic-link/request` returns `410`
 - all smoke summary checks set to `true`
 
-It must not contain raw email addresses, raw magic-link URLs, tokens, cookies, CSRF values, Resend API keys, email bodies, or session secrets.
+It must not contain raw email addresses, passwords, raw tokens, cookies, CSRF values, Resend API keys, email bodies, or session secrets.
 
 ## Rollback Target
 
-Rollback target: restore the last known-good working magic-link deployment and auth configuration for the selected strategy.
+Rollback target: restore the last known-good registration deployment and auth configuration.
 
-Do not switch production auth strategy during rollback unless a separate emergency exception is approved. A rollback record must identify the deployment URL or ID, selected auth strategy, and configuration owner confirmation.
+If registration must be rolled back before full removal is complete, use the documented emergency `internal-bootstrap` strategy only with explicit approval. Do not re-enable magic-link production sign-in without a new security and product decision, because Issue #167 removes magic-link from the active production contract.
 
 ## Required Production Checks
 
-Before Issue #151 can move to the ship portion of the workflow:
-
-- `npm run auth:config:check:vercel` passes with name-only production env evidence.
-- `npm run auth:config:check` passes in an environment containing production auth variables.
-- `/sign-in` shows the email magic-link form.
-- `/sign-in` does not show the trusted auth-code fallback.
-- Link request returns the generic success message.
-- Unknown-email request returns the same generic message and sends no usable login.
-- Resend delivery is confirmed without raw token material.
-- Link consume sets session and CSRF cookies.
-- `/auth/me` returns the seeded admin session.
-- Protected routes load after consume.
-- Replaying the consumed link is rejected.
+- `AUTH_PRODUCTION_AUTH_STRATEGY=registration`.
+- Browser runtime strategy is `registration` through `VITE_AUTH_PRODUCTION_AUTH_STRATEGY` or documented runtime config evidence.
+- `AUTH_PUBLIC_APP_URL` is HTTPS.
+- `AUTH_SESSION_TTL_HOURS=8`.
+- `AUTH_EMAIL_VERIFICATION_TTL_HOURS=24`.
+- `AUTH_PASSWORD_RESET_TTL_MINUTES=30`.
+- `AUTH_REGISTRATION_MODE` is `open`, `invite-only`, or `admin-approved`.
+- `/sign-in` shows email/password login, registration, and password reset controls.
+- `/sign-in` does not show magic-link copy or the trusted auth-code fallback for registration deployments.
+- `/auth/login` sets session and CSRF cookies.
+- `/auth/me` returns the seeded registration smoke principal.
+- Protected routes load after login.
+- `/auth/password-reset/request` returns a generic response.
+- `/auth/magic-link/request` returns `410`.
+- `/auth/magic-link/consume` redirects to `/sign-in?reason=magic_link_removed` and never creates a session.
 - Logout revokes the session.
 - Post-logout `/auth/me` is rejected.
 - Monitoring evidence contains counts and classifications only.
 - Rollback target is identified.
 
+## Monitoring And Alerts
+
+- Dashboard: `monitoring/dashboards/registration-auth-security.json`.
+- Alerts: `monitoring/alerts/registration-auth-security.yml`.
+- Signals covered: registration attempts, login success/failure, password reset requests, lockouts, deprecated magic-link endpoint hits, and registration smoke results.
+- Investigation evidence must contain hashed identifiers, counts, classifications, and runbook links only.
+
 ## OIDC Status
 
-OIDC remains supported when a production identity provider exists. If production switches to `oidc`, update this status document, the production identity provider runbook, and the Issue #151 audit before shipping. The selected OIDC production evidence must include hosted callback, token/session validation, protected route access, logout behavior, IdP allowlist confirmation, and rollback target.
+OIDC remains supported when a production identity provider exists and is selected explicitly. If production switches to `oidc`, update this status document, the production identity provider runbook, and the registration audit before shipping. The selected OIDC production evidence must include hosted callback, token/session validation, protected route access, logout behavior, IdP allowlist confirmation, and rollback target.
 
 OIDC parity command:
 

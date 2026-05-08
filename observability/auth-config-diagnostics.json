@@ -4,14 +4,15 @@
   "missing": [],
   "errors": [],
   "diagnostics": {
-    "generatedAt": "2026-04-27T18:11:38.571Z",
-    "productionAuthStrategy": "magic-link",
-    "browserMagicLinkStrategyConfigured": true,
+    "generatedAt": "2026-05-08T16:32:14.156Z",
+    "productionAuthStrategy": "registration",
     "browserOidcConfigured": false,
     "providerJwtVerifierConfigured": false,
     "internalBootstrapEnabled": false,
     "internalBootstrapConfigured": false,
-    "magicLinkConfigured": true,
+    "browserRegistrationStrategyConfigured": true,
+    "registrationConfigured": true,
+    "magicLinkRemoved": true,
     "requiredBrowserOidcVarsPresent": {
       "VITE_OIDC_DISCOVERY_URL": false,
       "VITE_OIDC_CLIENT_ID": false
@@ -27,11 +28,11 @@
     },
     "requiredInternalBootstrapVarsPresent": {
       "AUTH_PRODUCTION_AUTH_STRATEGY": false,
-      "AUTH_JWT_SECRET": false,
-      "VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED": true,
-      "AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP": true
+      "AUTH_JWT_SECRET": true,
+      "VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED": false,
+      "AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP": false
     },
-    "requiredMagicLinkVarsPresent": {
+    "requiredRegistrationVarsPresent": {
       "DATABASE_URL": true,
       "AUTH_PRODUCTION_AUTH_STRATEGY": true,
       "AUTH_SESSION_SECRET": true,
@@ -39,18 +40,24 @@
       "RESEND_API_KEY": true,
       "AUTH_EMAIL_FROM": true,
       "AUTH_PUBLIC_APP_URL": true,
-      "AUTH_MAGIC_LINK_TTL_MINUTES": true,
-      "AUTH_SESSION_TTL_HOURS": true
+      "AUTH_REGISTRATION_MODE": true,
+      "AUTH_REGISTRATION_DEFAULT_TENANT": true,
+      "AUTH_SESSION_TTL_HOURS": true,
+      "AUTH_EMAIL_VERIFICATION_TTL_HOURS": true,
+      "AUTH_PASSWORD_RESET_TTL_MINUTES": true
     },
-    "browserMagicLinkStrategyVarsPresent": {
+    "browserRegistrationStrategyVarsPresent": {
       "VITE_AUTH_PRODUCTION_AUTH_STRATEGY": true,
       "AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY": false
     },
-    "magicLinkProductionRulesSatisfied": {
+    "registrationProductionRulesSatisfied": {
       "browserStrategy": true,
       "publicAppUrlHttps": true,
-      "magicLinkTtlMinutes15": true,
-      "sessionTtlHours8": true
+      "registrationModeValid": true,
+      "emailProviderResend": true,
+      "sessionTtlHours8": true,
+      "emailVerificationTtlHours24": true,
+      "passwordResetTtlMinutes30": true
     }
   }
 }

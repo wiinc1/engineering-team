@@ -1,5 +1,7 @@
 # US-002 Design
 
+Historical note: this design predates the registration-auth cutover. References to magic-link deployment behavior are retained only as implementation history; registration auth is the active first-party production login path after Issues #160-#167.
+
 ## Research & Context
 ## Evidence
 - The existing browser app is a single React shell in `src/app/App.jsx` that mounts list, inbox, PM overview, task detail, and task creation routes behind a manual session bootstrap panel.

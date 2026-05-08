@@ -3,10 +3,10 @@ const test = require('node:test');
 const {
   buildDryRunOidcEvidence,
   buildOidcDeploymentEvidence,
+  hashEvidence,
   runOidcSmoke,
   summarizeOidcChecks,
 } = require('../../scripts/verify-oidc-production-smoke');
-const { hashEvidence } = require('../../scripts/verify-magic-link-production');
 
 function jsonResponse(body, status = 200, headers = {}) {
   return {

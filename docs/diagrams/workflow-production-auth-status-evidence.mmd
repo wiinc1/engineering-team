@@ -1,6 +1,6 @@
 flowchart TD
   A[Production owner selects auth strategy] --> B{Active strategy}
-  B -->|magic-link| C[Configure magic-link production env names and values]
+  B -->|registration| C[Configure registration production env names and values]
   B -->|oidc| D[Configure OIDC browser and JWKS verifier settings]
   C --> E[Run env-name and local config gates]
   D --> E
@@ -13,12 +13,12 @@ flowchart TD
   K --> L[Fix config, smoke, docs, or rollback evidence]
   L --> G
 
-  subgraph MagicLinkSmoke[Fresh production smoke]
-    G1[Request invited-user link]
-    G2[Confirm unknown email generic response]
-    G3[Consume Resend link]
-    G4[Verify auth/me and protected routes]
-    G5[Verify replay rejection and logout]
+  subgraph RegistrationSmoke[Fresh production smoke]
+    G1[Verify magic-link request is removed]
+    G2[Submit credential login]
+    G3[Verify session cookies and auth/me]
+    G4[Verify protected routes and reset generic response]
+    G5[Verify logout and rejected post-logout auth/me]
   end
 
   subgraph OidcSmoke[OIDC production smoke]

@@ -69,6 +69,7 @@ function trackedFiles() {
     .trim()
     .split('\n')
     .filter(Boolean)
+    .filter(filePath => fs.existsSync(filePath))
     .filter(filePath => CODE_EXTENSIONS.has(path.extname(filePath)))
     .filter(filePath => !EXCLUDED_PREFIXES.some(prefix => filePath.startsWith(prefix)));
 }

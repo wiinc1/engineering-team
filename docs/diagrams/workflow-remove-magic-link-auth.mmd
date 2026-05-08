@@ -1,0 +1,7 @@
+flowchart TD
+  A[Registration auth active] --> B[Magic-link removed from browser UI]
+  B --> C[/auth/magic-link/request returns 410]
+  C --> D[/auth/magic-link/consume redirects to sign-in]
+  D --> E[No session created]
+  E --> F[Docs mark magic-link as historical]
+  F --> G[Production gate requires registration evidence]
