@@ -105,8 +105,8 @@ def ci_context_failures(metadata: dict, policy: dict, mode: str) -> list[str]:
         failures.append("GITHUB_TOKEN is required in CI for github approval validation")
     if os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and not metadata.get("reference"):
         failures.append("CHANGE_REFERENCE is required in CI for github approval validation")
-    if policy["approval_sources"].get("require_current_head_sha", False) and not os.environ.get("GITHUB_SHA"):
-        failures.append("GITHUB_SHA is required in CI when current-head approval validation is enabled")
+    if policy["approval_sources"].get("require_current_head_sha", False) and not ci_head_sha():
+        failures.append("GITHUB_HEAD_SHA or GITHUB_SHA is required in CI when current-head approval validation is enabled")
     return failures
 
 
@@ -115,7 +115,7 @@ def artifact_approval_failures(repo_root: Path, primary_owner: str, sources: dic
     if not payload:
         return [f"missing live approval artifact {sources['live_artifact']!r}"]
 
-    head_sha = os.environ.get("GITHUB_SHA")
+    head_sha = ci_head_sha()
     if head_sha and payload.get("head_sha") != head_sha:
         return [f"live approval artifact head_sha {payload.get('head_sha')!r} does not match {head_sha!r}"]
 
@@ -150,10 +150,14 @@ def github_approval_failures(metadata: dict, policy: dict, primary_owner: str) -
 
 
 def current_head_sha_failures(head_sha: str) -> list[str]:
-    current_sha = os.environ.get("GITHUB_SHA")
+    current_sha = ci_head_sha()
     if current_sha and current_sha != head_sha:
         return [f"pull request head_sha {head_sha!r} does not match current sha {current_sha!r}"]
     return []
+
+
+def ci_head_sha() -> str | None:
+    return os.environ.get("GITHUB_HEAD_SHA") or os.environ.get("GITHUB_SHA")
 
 
 def approved_reviewers(reviews: list[dict], head_sha: str | None, required_state: str = "APPROVED") -> set[str]:

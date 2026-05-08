@@ -64,6 +64,32 @@ class LiveApprovalValidatorTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("PASS  live-approval", result.stdout)
 
+    def test_github_head_sha_overrides_pull_request_merge_sha(self) -> None:
+        self.repo.write(
+            ".artifacts/live-approval.json",
+            json.dumps(
+                {
+                    "head_sha": "abc123",
+                    "reviews": [
+                        {
+                            "user": "wiinc1",
+                            "state": "APPROVED",
+                            "submitted_at": "2099-01-01T00:00:00Z",
+                            "commit_id": "abc123",
+                        }
+                    ],
+                }
+            ),
+        )
+
+        result = run_validator(
+            self.repo.root,
+            env={**base_env("synthetic-merge-sha"), "GITHUB_HEAD_SHA": "abc123"},
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PASS  live-approval", result.stdout)
+
     def test_ci_github_mode_without_token_fails_fast(self) -> None:
         self.repo.write("repo-contract.yaml", CONTRACT_TEXT.replace("mode: artifact", "mode: github"))
 
