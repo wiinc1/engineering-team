@@ -6,6 +6,21 @@ Decision date: 2026-05-08
 
 Use registration auth as the active no-IdP production strategy. Keep OIDC available only when selected explicitly. Keep internal bootstrap as an emergency/local fallback. Treat magic-link as historical after the cutover.
 
+Issue #151 and PR #159 are reconciled by this decision. PR #159 documented the earlier magic-link/OIDC production-auth status evidence path for Issue #151; the registration cutover supersedes that path with registration smoke evidence, registration production gates, and historical-only magic-link evidence.
+
+## Issue Flag Mapping
+
+The issues used `ff_registration_*` names as conceptual rollout controls. The implemented production gates are environment and status-check controls:
+
+| Issue wording | Implemented control | Purpose |
+|---|---|---|
+| `ff_registration_auth_strategy` | `AUTH_PRODUCTION_AUTH_STRATEGY=registration` plus `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration` or runtime-config evidence | selects registration as the active backend and browser auth strategy |
+| `ff_registration_credentials` | `AUTH_REGISTRATION_MODE` plus credential schema and password service | enables credential-backed registration modes |
+| `ff_registration_email_verification` | `AUTH_REQUIRE_EMAIL_VERIFICATION` and `AUTH_EMAIL_VERIFICATION_TTL_HOURS` | controls pending-verification behavior and token expiry |
+| `ff_registration_password_reset` | `AUTH_PASSWORD_RESET_TTL_MINUTES` and the reset endpoints | controls reset token expiry and reset flow availability |
+| `ff_registration_abuse_controls` | registration service rate-limit and audit settings | applies login, registration, and reset abuse controls |
+| `ff_registration_magic_link_removed` | production status checks plus removed `/auth/magic-link/*` behavior | prevents magic-link from satisfying production gates |
+
 ## Registration Modes
 
 | Mode | Registration behavior | Login behavior | Operator requirement |
