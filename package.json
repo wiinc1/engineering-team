@@ -77,7 +77,8 @@
     "dev:audit:up": "docker compose up -d postgres pushgateway audit-api audit-workers",
     "dev:audit:down": "docker compose down --remove-orphans",
     "dev:audit:reset": "docker compose down -v --remove-orphans",
-    "dev:delegation-smoke:down": "docker compose down --remove-orphans"
+    "dev:delegation-smoke:down": "docker compose down --remove-orphans",
+    "design:lint": "design.md lint DESIGN.md"
   },
   "repository": {
     "type": "git",
@@ -107,6 +108,7 @@
     "jsdom": "^26.1.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@google/design.md": "0.1.1"
   }
 }

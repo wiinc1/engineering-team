@@ -1,0 +1,115 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Agent Policy
+type: object
+additionalProperties: false
+required:
+  - schema_version
+  - standards_version
+  - editable_paths
+  - protected_paths
+  - explicit_instruction_paths
+  - forbidden_tasks
+  - allowed_to_automate
+  - unsafe_for_agents
+  - never_automated_change_kinds
+  - path_task_map
+  - change_kind_task_map
+  - review_mode_requirements_by_task
+  - capabilities
+  - ai_safe_change
+properties:
+  schema_version:
+    type: string
+    pattern: "^1\\.0$"
+  standards_version:
+    type: string
+  editable_paths:
+    type: array
+    items: { type: string }
+  protected_paths:
+    type: array
+    items: { type: string }
+  explicit_instruction_paths:
+    type: array
+    items: { type: string }
+  forbidden_tasks:
+    type: array
+    items: { type: string }
+  allowed_to_automate:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [task, mode]
+      properties:
+        task: { type: string }
+        mode:
+          type: string
+          enum: [fully-automated, human-in-the-loop, never-automated]
+  unsafe_for_agents:
+    type: array
+    items: { type: string }
+  never_automated_change_kinds:
+    type: array
+    items: { type: string }
+  path_task_map:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [task, when_paths]
+      properties:
+        task: { type: string }
+        when_paths:
+          type: array
+          items: { type: string }
+  change_kind_task_map:
+    type: object
+    additionalProperties:
+      type: array
+      items: { type: string }
+  review_mode_requirements_by_task:
+    type: object
+    additionalProperties:
+      type: string
+      enum: [automated-only, human-approve, human-plus-evidence]
+  capabilities:
+    type: object
+    additionalProperties: false
+    required: [low, medium, high, critical]
+    properties:
+      low:
+        type: array
+        items: { type: string }
+      medium:
+        type: array
+        items: { type: string }
+      high:
+        type: array
+        items: { type: string }
+      critical:
+        type: array
+        items: { type: string }
+  ai_safe_change:
+    type: object
+    additionalProperties: false
+    required:
+      - max_files
+      - max_lines
+      - forbidden_paths
+      - required_commands
+      - required_evidence
+    properties:
+      max_files:
+        type: integer
+      max_lines:
+        type: integer
+      forbidden_paths:
+        type: array
+        items: { type: string }
+      required_commands:
+        type: array
+        items: { type: string }
+      required_evidence:
+        type: array
+        items: { type: string }

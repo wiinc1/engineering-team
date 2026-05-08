@@ -1,0 +1,15 @@
+id: library
+extends: base
+src_layout:
+  - src/core
+  - src/api
+  - src/adapters
+  - src/shared
+required_test_layers:
+  - unit
+  - integration
+  - compatibility
+required_controls:
+  - public-surface-minimization
+  - support-matrix
+  - deprecation-policy

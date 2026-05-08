@@ -1,0 +1,9 @@
+id: production-affecting
+adds:
+  required_controls:
+    - environment-promotion
+    - progressive-delivery
+    - rollback-verification
+    - post-deploy-verification
+    - observability-baseline
+    - release-evidence-artifacts

@@ -1,0 +1,9 @@
+id: security-sensitive
+adds:
+  required_controls:
+    - secret-scanning
+    - dependency-vulnerability-scanning
+    - signed-artifacts
+    - signed-commits
+    - security-regression-tests
+    - protected-path-hard-fail

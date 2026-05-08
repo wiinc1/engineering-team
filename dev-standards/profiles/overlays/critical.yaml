@@ -1,0 +1,8 @@
+id: critical
+adds:
+  required_controls:
+    - stricter-coverage-thresholds
+    - stronger-review-mode
+    - stop-the-line-on-critical-path-failure
+    - explicit-escalation-rules
+    - lower-health-budget-tolerance

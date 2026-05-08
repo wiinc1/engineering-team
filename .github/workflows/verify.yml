@@ -1,0 +1,153 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install -r requirements-standards.txt
+
+      - name: Collect live GitHub evidence
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          pr_number = os.environ["PR_NUMBER"]
+          pr_url = os.environ["PR_URL"]
+          token = os.environ["GITHUB_TOKEN"]
+          api = "https://api.github.com"
+
+          def fetch(url):
+              request = Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "User-Agent": "engineering-team-verify",
+                  },
+              )
+              with urlopen(request) as response:
+                  return json.load(response)
+
+          pull = fetch(f"{api}/repos/{repo}/pulls/{pr_number}")
+          reviews = fetch(f"{api}/repos/{repo}/pulls/{pr_number}/reviews")
+          issue = fetch(f"{api}/repos/{repo}/issues/{pr_number}")
+          generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+          artifacts = Path(".artifacts")
+          artifacts.mkdir(exist_ok=True)
+
+          live_approval = {
+              "schema_version": "1.0",
+              "generated_by": "github-actions-live-evidence",
+              "generated_at": generated_at,
+              "commit_sha": pull["head"]["sha"],
+              "source_system": "github",
+              "source_record_id": f"pull-review:{pr_number}",
+              "environment": "pull_request",
+              "scope": "approval",
+              "provider": "github",
+              "pr_number": int(pr_number),
+              "workflow_run_id": os.environ["RUN_ID"],
+              "head_sha": pull["head"]["sha"],
+              "reviews": [
+                  {
+                      "user": review.get("user", {}).get("login"),
+                      "state": review.get("state"),
+                      "submitted_at": review.get("submitted_at"),
+                      "commit_id": review.get("commit_id"),
+                  }
+                  for review in reviews
+              ],
+          }
+          (artifacts / "live-approval.json").write_text(json.dumps(live_approval, indent=2, sort_keys=True), encoding="utf-8")
+
+          live_traceability = {
+              "schema_version": "1.0",
+              "generated_by": "github-actions-live-evidence",
+              "generated_at": generated_at,
+              "commit_sha": pull["head"]["sha"],
+              "source_system": "github",
+              "source_record_id": f"pull:{pr_number}",
+              "environment": "pull_request",
+              "scope": "traceability",
+              "provider": "github",
+              "references": [
+                  {
+                      "reference": pr_url,
+                      "kind": "pull",
+                      "exists": True,
+                      "state": "merged" if pull.get("merged_at") else issue.get("state"),
+                  }
+              ],
+          }
+          (artifacts / "live-traceability.json").write_text(json.dumps(live_traceability, indent=2, sort_keys=True), encoding="utf-8")
+          PY
+
+      - name: Seed audit bundle
+        run: python3 dev-standards/tooling/generate_audit_bundle.py --repo-root .
+
+      - name: Run verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          make verify
+          BASE_REF="${{ github.event.pull_request.base.sha || github.event.before }}"
+          CHANGE_KIND=policy
+          CHANGE_RISK=high
+          CHANGE_REVERSIBILITY=reversible
+          CHANGE_REFERENCE="${{ github.event.pull_request.html_url || 'ADR-001' }}"
+          CHANGE_REVIEW_MODE=human-plus-evidence
+          CHANGE_PROVENANCE=human-assisted-agent
+          CHANGE_HUMAN_INSTRUCTION=true
+          CHANGE_COMMANDS="make verify"
+          CHANGE_EVIDENCE="ci-verify,github-actions"
+
+      - name: Refresh audit bundle
+        run: |
+          python3 dev-standards/tooling/generate_audit_bundle.py --repo-root .
+          python3 dev-standards/tooling/validate_artifact_provenance.py --repo-root .
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-audit-bundle
+          path: |
+            .artifacts/audit-bundle.json
+            .artifacts/live-approval.json
+            .artifacts/live-traceability.json
+            .artifacts/test-results.json
+            .artifacts/coverage-summary.json
+            .artifacts/contract-test-report.json

@@ -1,0 +1,19 @@
+id: infrastructure
+extends: base
+src_layout:
+  - src/modules
+  - src/platform
+  - src/integrations
+  - src/policies
+  - src/shared
+required_test_layers:
+  - unit
+  - integration
+  - system
+  - smoke
+  - failure-mode
+required_controls:
+  - immutable-release-artifacts
+  - environment-promotion
+  - rollback-or-compensation-plan
+  - disaster-recovery-drills

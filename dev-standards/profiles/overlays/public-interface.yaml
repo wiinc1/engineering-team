@@ -1,0 +1,7 @@
+id: public-interface
+adds:
+  required_controls:
+    - compatibility-windows
+    - deprecation-policy
+    - support-matrix
+    - public-surface-governance
