@@ -1,0 +1,17 @@
+id: automation
+extends: base
+src_layout:
+  - src/workflows
+  - src/tasks
+  - src/adapters
+  - src/runtime
+  - src/shared
+required_test_layers:
+  - unit
+  - integration
+  - workflow-system
+  - smoke
+required_controls:
+  - idempotency-rules
+  - retry-and-timeout-policy
+  - cancellation-semantics

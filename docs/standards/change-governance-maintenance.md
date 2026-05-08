@@ -14,6 +14,9 @@ Canonical checks:
 - `npm run ownership:lint`
 - `npm run governance:drift`
 
+## Coverage Artifacts
+`npm run standards:check` reads `.artifacts/coverage-summary.json`. That file may be produced by `npm run coverage` with per-suite JavaScript/UI coverage, or by `make verify` with Python coverage totals. The coverage policy checker accepts both schemas so developers can run the verification commands in either order without regenerating coverage only to satisfy a parser shape.
+
 ## How the ownership map works
 Each domain declares:
 - `runtime_patterns`: the code files that belong to the domain

@@ -1,0 +1,17 @@
+id: application
+extends: base
+src_layout:
+  - src/domain
+  - src/application
+  - src/adapters
+  - src/interfaces
+  - src/shared
+required_test_layers:
+  - unit
+  - integration
+  - system
+  - smoke
+required_controls:
+  - feature-flags-for-nontrivial-production-changes
+  - post-deploy-verification
+  - rollback-verification

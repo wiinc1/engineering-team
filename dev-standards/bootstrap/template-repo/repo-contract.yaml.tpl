@@ -1,0 +1,339 @@
+schema_version: "1.0"
+standards_version: "0.1.0"
+repo:
+  name: {{REPO_NAME}}
+  type: {{PROFILE}}
+  primary_deployment_unit: {{PRIMARY_DEPLOYMENT_UNIT}}
+  runtime_model: {{RUNTIME_MODEL}}
+  production_affecting: true
+profile: {{PROFILE}}
+overlays: {{OVERLAYS_INLINE}}
+ownership:
+  primary_owner: {{OWNER}}
+  backup_owner: {{OWNER}}
+runtime:
+  languages:
+    - name: python
+      version: "{{PYTHON_VERSION}}"
+  toolchains: [python3, unittest, make, git]
+  package_managers: [pip]
+commands:
+  lint: make lint
+  typecheck: make typecheck
+  test: make test
+  build: make build
+  verify: make verify
+directories:
+  reserved_paths: [src/, tests/, docs/, scripts/, config/, generated/, third_party/, .artifacts/]
+  classifications:
+    src/: authored
+    tests/: authored
+    docs/: authored
+    dev-standards/: authored
+    generated/: generated
+    third_party/: third_party
+    .artifacts/: artifacts
+  protected_paths: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, dev-standards/, .github/workflows/, Makefile]
+architecture:
+  reference_scan_globs: [src/**/*.py, tests/**/*.py, dev-standards/**/*.py, dev-standards/**/*.md, dev-standards/**/*.yaml, dev-standards/**/*.yml]
+  internal_layout: [src/, tests/, docs/, dev-standards/]
+  dependency_rules:
+    - standards tooling depends on the repo contract, not ad hoc conventions
+  boundary_map: []
+  state_ownership:
+    - resource: standards-policy
+      owner: dev-standards
+  source_of_truth: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, docs/architecture.md]
+  python_layers:
+    - name: standards_tooling
+      paths:
+        - dev-standards/tooling/**/*.py
+      module_prefixes: [check_maintainability, maintainability_core, repo_policy_utils, run_python_tests, standards_init, validate_agent_intent, validate_approval_proof, validate_architecture, validate_artifact_provenance, validate_change_metadata, validate_config_boundaries, validate_docs_freshness, validate_live_approval, validate_policy_files, validate_release_evidence, validate_shell_boundaries, validate_test_policy, validate_traceability, validate_visual_identity, validate_waivers]
+    - name: standards_tests
+      paths:
+        - tests/**/*.py
+      module_prefixes: [tests]
+  allowed_layer_edges:
+    standards_tooling: [standards_tooling]
+    standards_tests: [standards_tests, standards_tooling]
+  python_import_rules: []
+  runtime_boundary_rules:
+    - paths:
+        - tests/**/*.py
+      forbidden_references: [requests.get, requests.post, requests.put, requests.delete]
+      allowed_in: []
+      description: unit and validator tests must stay hermetic
+  shell_command_rules: []
+  config_boundary_rules: []
+  banned_patterns: []
+critical_paths:
+  - name: standards-enforcement
+    description: repo-local standards and maintainability enforcement entrypoints
+    stronger_controls: [protected path policy, deterministic make targets]
+quality_gates:
+  risk_taxonomy: [low, medium, high, critical]
+  review_modes: [automated-only, human-approve, human-plus-evidence]
+  stop_the_line: [broken required verification, secret exposure, protected path violation, expired waiver]
+  test_layers: [unit]
+  documentation_requirements: [standards changes require changelog or runbook updates]
+  coverage_policy:
+    strategy: risk-based
+    global_floor: 0.8
+    critical_path_floor: 0.9
+change_management:
+  metadata_file: .artifacts/change-metadata.json
+  approval_file: .artifacts/approval-record.json
+  approval_sources:
+    mode: github
+    local_artifact: .artifacts/approval-record.json
+    live_artifact: .artifacts/live-approval.json
+    require_live_in_ci: true
+    ci_event_names: [pull_request]
+    required_review_state: APPROVED
+    required_approvers: [{{OWNER}}]
+    require_current_head_sha: true
+  traceability_sources:
+    live_artifact: .artifacts/live-traceability.json
+    ci_event_names: [pull_request]
+  required_fields: [change_kind, risk, reversibility, reference, review_mode, provenance, human_instruction]
+  allowed_change_kinds: [feature, bugfix, refactor, security-fix, policy, docs-only, release, migration]
+  required_when_paths: ["**"]
+  reference_rules:
+    - prefix: "ADR-"
+      pattern: "^ADR-[0-9]+$"
+      source: local
+      allowed_change_kinds: [policy, docs-only, refactor, feature, bugfix, security-fix, migration, release]
+      required_kind: adr
+      require_existing_file_globs: ["docs/adr/{reference}.md"]
+    - prefix: "LOCAL-"
+      pattern: "^LOCAL-[A-Z-]+$"
+    - prefix: "https://github.com/"
+      pattern: "^https://github\\.com/[^/]+/[^/]+/pull/[0-9]+$"
+      source: github
+      allowed_change_kinds: [policy, docs-only, refactor, feature, bugfix, security-fix, migration, release]
+      required_kind: pull
+  stricter_review_rules:
+    - when_paths:
+        - repo-contract.yaml
+        - agent-policy.yaml
+        - check-manifest.yaml
+        - dev-standards/**
+        - .github/workflows/**
+        - Makefile
+      minimum_review_mode: human-plus-evidence
+      minimum_risk: high
+      require_human_instruction: true
+  provenance_rules:
+    - provenance: agent
+      require_evidence: [commands, evidence]
+    - provenance: human-assisted-agent
+      require_evidence: [commands, evidence]
+  approval_rules:
+    - when_paths:
+        - repo-contract.yaml
+        - agent-policy.yaml
+        - check-manifest.yaml
+        - dev-standards/**
+        - .github/workflows/**
+        - Makefile
+      change_kinds: [policy, release, migration]
+      require_fields: [approver, approved_at, scope_paths, reference]
+  change_kind_rules:
+    - change_kind: policy
+      allowed_reference_prefixes: ["ADR-", "LOCAL-", "https://github.com/"]
+release_management:
+  evidence_file: .artifacts/release-evidence.json
+  default_environment: dev
+  freshness_days:
+    dev: 7
+    staging: 3
+    prod: 1
+  irreversible_change_evidence: [rollback-verification]
+  environments:
+    dev:
+      require_live_deploy_proof: false
+      required_live_checks: []
+      require_post_deploy_health: false
+artifact_provenance:
+  schema_version: "1.0"
+  required_fields: [schema_version, generated_by, generated_at, commit_sha]
+  required_ci_fields: [source_system, source_record_id, workflow_run_id]
+  required_live_fields: [environment, scope]
+  artifacts:
+    - path: .artifacts/approval-record.json
+      expected_generator: manual-seed
+    - path: .artifacts/release-evidence.json
+    - path: .artifacts/test-results.json
+      require_current_commit: true
+      expected_generator: run_python_tests.py
+    - path: .artifacts/coverage-summary.json
+      require_current_commit: true
+      expected_generator: run_python_tests.py
+    - path: .artifacts/flaky-test-registry.json
+      require_current_commit: true
+      expected_generator: run_python_tests.py
+    - path: .artifacts/contract-test-report.json
+      require_current_commit: true
+      expected_generator: run_python_tests.py
+    - path: .artifacts/live-approval.json
+      optional: true
+      require_ci_fields: true
+      require_live_fields: true
+      expected_generator: github-actions-live-evidence
+    - path: .artifacts/live-traceability.json
+      optional: true
+      require_ci_fields: true
+      require_live_fields: true
+      expected_generator: github-actions-live-evidence
+    - path: .artifacts/audit-bundle.json
+      required_in_ci: true
+      require_current_commit: true
+      require_ci_fields: true
+      require_live_fields: true
+      expected_generator: generate_audit_bundle.py
+maintainability:
+  include_globs:
+    - src/**/*.py
+    - tests/**/*.py
+    - dev-standards/**/*.py
+    - dev-standards/**/*.md
+    - dev-standards/**/*.yaml
+    - dev-standards/**/*.yml
+    - repo-contract.yaml
+    - agent-policy.yaml
+    - check-manifest.yaml
+    - Makefile
+  exclude_globs:
+    - third_party/**
+    - generated/**
+    - .artifacts/**
+    - dev-standards/schemas/**
+  thresholds:
+    authored_source_file_lines:
+      warning: 300
+      hard_fail: 400
+    test_file_lines:
+      warning: 400
+      hard_fail: 500
+    function_lines:
+      warning: 40
+      hard_fail: 50
+    complexity:
+      warning: 10
+      hard_fail: 15
+    nesting_depth:
+      warning: 4
+      hard_fail: 6
+    public_exports:
+      warning: 12
+      hard_fail: 20
+  ratchet_rule: touched noncompliant files must improve on each change and require a waiver if still over limit
+  protected_signals:
+    - total_file_line_count
+    - over_limit_function_count
+    - maximum_function_length
+    - maximum_complexity
+    - maximum_nesting_depth
+    - public_export_count
+documentation_freshness:
+  rules:
+    - id: standards
+      rule_class: standards
+      when_paths:
+        - dev-standards/**
+        - repo-contract.yaml
+        - agent-policy.yaml
+        - check-manifest.yaml
+        - Makefile
+        - .github/workflows/**
+      require_any_of:
+        - CHANGELOG.md
+        - docs/runbook.md
+      allow_reference_prefix: ADR-
+      requires_doc_update: true
+      when_change_kinds:
+        - policy
+        - docs-only
+        - refactor
+      message: standards changes must update the changelog or runbook
+testing:
+  artifacts:
+    test_results: .artifacts/test-results.json
+    coverage: .artifacts/coverage-summary.json
+    flaky_registry: .artifacts/flaky-test-registry.json
+    contract_report: .artifacts/contract-test-report.json
+  layers:
+    unit:
+      paths:
+        - tests/**/*.py
+      file_patterns:
+        - test_*.py
+    contract:
+      paths:
+        - tests/contract/**/*.py
+      file_patterns:
+        - test_*.py
+  hermeticity:
+    unit:
+      paths:
+        - tests/**/*.py
+      forbidden_references:
+        - requests.get
+        - requests.post
+        - requests.put
+        - requests.delete
+      allow_in_paths: []
+  coverage:
+    global_floor: 0.8
+    changed_lines_floor: 0.8
+    governed_paths:
+      - tests/**/*.py
+  regression_requirements:
+    change_kinds:
+      - bugfix
+      - security-fix
+    test_paths:
+      - tests/**/*.py
+  layer_requirements:
+    - when_paths:
+        - repo-contract.yaml
+        - agent-policy.yaml
+        - check-manifest.yaml
+        - dev-standards/**
+      required_layers:
+        - unit
+  contract_requirements: []
+  flaky_quarantine:
+    waiver_rule: flaky-test-quarantine
+    allow_quarantine_with_valid_waiver: true
+  integration_requirements: []
+  system_requirements: []
+  ephemeral_environment_requirements: []
+  quarantine_policy:
+    max_age_days: 30
+    require_owner: true
+    require_reference: true
+support:
+  tier: active
+  criticality: high
+compatibility:
+  matrix:
+    - os: linux
+      runtime: local-operator
+    - os: macos
+      runtime: local-operator
+  deprecation_policy:
+    minimum_notice_days: 30
+nfrs:
+  reliability:
+    availability_target: "99.9%"
+  latency:
+    verify_runtime_seconds_p95: 60
+  throughput:
+    concurrent_change_validations_supported: 1
+  security:
+    standards_review_days: 30
+  recoverability:
+    rto_minutes: 30
+    rpo_minutes: 15
+waivers: []

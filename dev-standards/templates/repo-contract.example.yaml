@@ -1,0 +1,240 @@
+schema_version: "1.0"
+standards_version: "0.1.0"
+repo:
+  name: example-repo
+  type: infrastructure
+  primary_deployment_unit: pam-vault
+  runtime_model: docker-compose-stack
+  production_affecting: true
+profile: infrastructure
+overlays:
+  - production-affecting
+  - security-sensitive
+  - stateful
+ownership:
+  primary_owner: repo-owner
+  backup_owner: repo-owner
+runtime:
+  languages:
+    - name: python
+      version: "3.12"
+    - name: shell
+      version: "posix-plus-zsh"
+  toolchains:
+    - docker
+    - make
+    - pytest
+  package_managers:
+    - pip
+commands:
+  lint: make lint
+  typecheck: make typecheck
+  test: make test
+  build: make build
+  verify: make verify
+directories:
+  reserved_paths:
+    - src/
+    - tests/
+    - docs/
+    - scripts/
+    - config/
+    - generated/
+    - third_party/
+    - .artifacts/
+  classifications:
+    src/: authored
+    tests/: authored
+    generated/: generated
+    third_party/: third_party
+    .artifacts/: artifacts
+  protected_paths:
+    - repo-contract.yaml
+    - agent-policy.yaml
+    - check-manifest.yaml
+    - .github/workflows/
+architecture:
+  reference_scan_globs:
+    - src/**/*.py
+    - tests/**/*.py
+  internal_layout:
+    - src/modules
+    - src/platform
+    - src/integrations
+    - src/policies
+    - src/shared
+  dependency_rules:
+    - modules may not depend on integrations directly
+    - policies may depend inward only
+  boundary_map:
+    - from: src/modules
+      to: src/integrations
+      rule: forbid
+    - from: src/integrations
+      to: src/modules
+      rule: allow
+  state_ownership:
+    - resource: vault-storage
+      owner: src/modules/vault
+    - resource: teleport-state
+      owner: src/modules/teleport
+  source_of_truth:
+    - repo-contract.yaml
+    - agent-policy.yaml
+    - check-manifest.yaml
+    - docs/architecture.md
+  banned_patterns:
+    - pattern: os\\.environ\\[
+      forbidden_in:
+        - src/domain/**
+        - src/application/**
+      allowed_in:
+        - src/adapters/**
+      description: environment access is forbidden in core layers
+critical_paths:
+  - name: privileged-access-issuance
+    description: short-lived access issuance and renewal flow
+    stronger_controls:
+      - stricter integration tests
+      - rollback verification
+quality_gates:
+  risk_taxonomy:
+    - low
+    - medium
+    - high
+    - critical
+  review_modes:
+    - automated-only
+    - human-approve
+    - human-plus-evidence
+  stop_the_line:
+    - broken main
+    - secret exposure
+    - failed critical path verification
+  test_layers:
+    - unit
+    - integration
+    - system
+    - smoke
+  documentation_requirements:
+    - architecture changes require ADR or architecture doc update
+    - operational changes require runbook update
+  coverage_policy:
+    strategy: risk-based
+    global_floor: 0.8
+    critical_path_floor: 0.9
+change_management:
+  metadata_file: .artifacts/change-metadata.json
+  required_fields:
+    - risk
+    - reversibility
+    - reference
+    - review_mode
+    - provenance
+  required_when_paths:
+    - "**"
+  stricter_review_rules:
+    - when_paths:
+        - repo-contract.yaml
+        - agent-policy.yaml
+        - check-manifest.yaml
+        - dev-standards/**
+        - .github/workflows/**
+      minimum_review_mode: human-plus-evidence
+      minimum_risk: high
+  provenance_rules:
+    - provenance: agent
+      require_evidence:
+        - commands
+        - evidence
+    - provenance: human-assisted-agent
+      require_evidence:
+        - commands
+        - evidence
+release_management:
+  evidence_file: .artifacts/release-evidence.json
+  default_environment: dev
+  freshness_days:
+    dev: 7
+    staging: 3
+    prod: 1
+maintainability:
+  include_globs:
+    - src/**/*.py
+    - tests/**/*.py
+    - scripts/**/*.py
+    - dev-standards/**/*.py
+    - dev-standards/**/*.md
+    - dev-standards/**/*.yaml
+    - dev-standards/**/*.yml
+    - repo-contract.yaml
+    - agent-policy.yaml
+    - check-manifest.yaml
+    - Makefile
+  exclude_globs:
+    - third_party/**
+    - generated/**
+    - .artifacts/**
+  thresholds:
+    authored_source_file_lines:
+      warning: 300
+      hard_fail: 400
+    test_file_lines:
+      warning: 400
+      hard_fail: 500
+    function_lines:
+      warning: 40
+      hard_fail: 50
+    complexity:
+      warning: 10
+      hard_fail: 15
+    nesting_depth:
+      warning: 4
+      hard_fail: 6
+    public_exports:
+      warning: 12
+      hard_fail: 20
+  ratchet_rule: touched noncompliant files must improve on each change and require a waiver if still over limit
+  protected_signals:
+    - total_file_line_count
+    - over_limit_function_count
+    - maximum_function_length
+    - maximum_complexity
+    - maximum_nesting_depth
+    - public_export_count
+documentation_freshness:
+  rules:
+    - id: standards
+      when_paths:
+        - dev-standards/**
+        - repo-contract.yaml
+        - agent-policy.yaml
+        - check-manifest.yaml
+      require_any_of:
+        - CHANGELOG.md
+        - docs/runbook.md
+      message: standards changes must update changelog or runbook
+support:
+  tier: active
+  criticality: high
+compatibility:
+  matrix:
+    - os: linux
+      runtime: docker
+    - os: macos
+      runtime: local-operator
+  deprecation_policy:
+    minimum_notice_days: 30
+nfrs:
+  reliability:
+    availability_target: "99.9%"
+  latency:
+    access_request_issuance_seconds_p95: 30
+  throughput:
+    concurrent_sessions_supported: 10
+  security:
+    secret_rotation_days: 30
+  recoverability:
+    rto_minutes: 30
+    rpo_minutes: 15
+waivers: []

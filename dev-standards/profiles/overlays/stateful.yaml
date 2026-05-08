@@ -1,0 +1,7 @@
+id: stateful
+adds:
+  required_controls:
+    - migration-standards
+    - data-integrity-checks
+    - backfill-ownership
+    - restore-drills

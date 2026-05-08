@@ -7,3 +7,5 @@ data/
 .vercel
 .artifacts/
 .env*.local
+__pycache__/
+*.pyc

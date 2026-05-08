@@ -1,0 +1,903 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: Repo Contract
+type: object
+additionalProperties: false
+required:
+  - schema_version
+  - standards_version
+  - repo
+  - profile
+  - overlays
+  - ownership
+  - runtime
+  - commands
+  - directories
+  - architecture
+  - critical_paths
+  - quality_gates
+  - change_management
+  - release_management
+  - artifact_provenance
+  - maintainability
+  - documentation_freshness
+  - testing
+  - support
+  - compatibility
+  - nfrs
+properties:
+  schema_version:
+    type: string
+    pattern: "^1\\.0$"
+  standards_version:
+    type: string
+  repo:
+    type: object
+    additionalProperties: false
+    required: [name, type, primary_deployment_unit, runtime_model, production_affecting]
+    properties:
+      name:
+        type: string
+      type:
+        type: string
+        enum: [application, library, infrastructure, automation]
+      primary_deployment_unit:
+        type: string
+      runtime_model:
+        type: string
+      production_affecting:
+        type: boolean
+  profile:
+    type: string
+  overlays:
+    type: array
+    items:
+      type: string
+    uniqueItems: true
+  ownership:
+    type: object
+    additionalProperties: false
+    required: [primary_owner, backup_owner]
+    properties:
+      primary_owner:
+        type: string
+      backup_owner:
+        type: string
+  runtime:
+    type: object
+    additionalProperties: false
+    required: [languages, toolchains, package_managers]
+    properties:
+      languages:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, version]
+          properties:
+            name: { type: string }
+            version: { type: string }
+      toolchains:
+        type: array
+        items:
+          type: string
+      package_managers:
+        type: array
+        items:
+          type: string
+  commands:
+    type: object
+    additionalProperties: false
+    required: [lint, typecheck, test, build, verify]
+    properties:
+      lint: { type: string }
+      typecheck: { type: string }
+      test: { type: string }
+      build: { type: string }
+      verify: { type: string }
+  directories:
+    type: object
+    additionalProperties: false
+    required: [reserved_paths, classifications, protected_paths]
+    properties:
+      reserved_paths:
+        type: array
+        items: { type: string }
+      classifications:
+        type: object
+        additionalProperties:
+          type: string
+          enum: [authored, generated, third_party, secrets, artifacts]
+      protected_paths:
+        type: array
+        items: { type: string }
+  architecture:
+    type: object
+    additionalProperties: false
+    required:
+      - internal_layout
+      - dependency_rules
+      - boundary_map
+      - state_ownership
+      - source_of_truth
+    properties:
+      reference_scan_globs:
+        type: array
+        items: { type: string }
+      internal_layout:
+        type: array
+        items: { type: string }
+      dependency_rules:
+        type: array
+        items: { type: string }
+      boundary_map:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [from, to, rule]
+          properties:
+            from: { type: string }
+            to: { type: string }
+            rule:
+              type: string
+              enum: [allow, forbid]
+      state_ownership:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [resource, owner]
+          properties:
+            resource: { type: string }
+            owner: { type: string }
+      source_of_truth:
+        type: array
+        items: { type: string }
+      python_layers:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, paths, module_prefixes]
+          properties:
+            name: { type: string }
+            paths:
+              type: array
+              items: { type: string }
+            module_prefixes:
+              type: array
+              items: { type: string }
+      allowed_layer_edges:
+        type: object
+        additionalProperties:
+          type: array
+          items: { type: string }
+      banned_patterns:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [pattern, forbidden_in, description]
+          properties:
+            pattern: { type: string }
+            forbidden_in:
+              type: array
+              items: { type: string }
+            allowed_in:
+              type: array
+              items: { type: string }
+            description: { type: string }
+      python_import_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [from_paths, forbidden_modules]
+          properties:
+            from_paths:
+              type: array
+              items: { type: string }
+            forbidden_modules:
+              type: array
+              items: { type: string }
+      runtime_boundary_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [paths, forbidden_references, description]
+          properties:
+            paths:
+              type: array
+              items: { type: string }
+            forbidden_references:
+              type: array
+              items: { type: string }
+            allowed_in:
+              type: array
+              items: { type: string }
+            description: { type: string }
+      shell_command_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [paths, forbidden_commands, description]
+          properties:
+            paths:
+              type: array
+              items: { type: string }
+            forbidden_commands:
+              type: array
+              items: { type: string }
+            allowed_in:
+              type: array
+              items: { type: string }
+            description: { type: string }
+      config_boundary_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [paths, owner, forbidden_references]
+          properties:
+            paths:
+              type: array
+              items: { type: string }
+            owner: { type: string }
+            forbidden_references:
+              type: array
+              items: { type: string }
+  critical_paths:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, description, stronger_controls]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        stronger_controls:
+          type: array
+          items: { type: string }
+  quality_gates:
+    type: object
+    additionalProperties: false
+    required:
+      - risk_taxonomy
+      - review_modes
+      - stop_the_line
+      - test_layers
+      - documentation_requirements
+      - coverage_policy
+    properties:
+      risk_taxonomy:
+        type: array
+        items:
+          type: string
+          enum: [low, medium, high, critical]
+      review_modes:
+        type: array
+        items:
+          type: string
+          enum: [automated-only, human-approve, human-plus-evidence]
+      stop_the_line:
+        type: array
+        items: { type: string }
+      test_layers:
+        type: array
+        items: { type: string }
+      documentation_requirements:
+        type: array
+        items: { type: string }
+      coverage_policy:
+        type: object
+        additionalProperties: false
+        required: [strategy]
+        properties:
+          strategy:
+            type: string
+            enum: [risk-based]
+          global_floor:
+            type: number
+          critical_path_floor:
+            type: number
+  change_management:
+    type: object
+    additionalProperties: false
+    required:
+      - metadata_file
+      - approval_file
+      - allowed_change_kinds
+      - required_fields
+      - required_when_paths
+      - reference_rules
+      - stricter_review_rules
+      - provenance_rules
+      - approval_rules
+      - change_kind_rules
+      - approval_sources
+      - traceability_sources
+    properties:
+      metadata_file:
+        type: string
+      approval_file:
+        type: string
+      approval_sources:
+        type: object
+        additionalProperties: false
+        required: [mode, local_artifact, live_artifact, require_live_in_ci, ci_event_names]
+        properties:
+          mode:
+            type: string
+            enum: [local, artifact, github]
+          local_artifact: { type: string }
+          live_artifact: { type: string }
+          require_live_in_ci: { type: boolean }
+          ci_event_names:
+            type: array
+            items: { type: string }
+          required_review_state: { type: string }
+          required_approvers:
+            type: array
+            items: { type: string }
+          require_current_head_sha: { type: boolean }
+      traceability_sources:
+        type: object
+        additionalProperties: false
+        required: [live_artifact, ci_event_names]
+        properties:
+          live_artifact: { type: string }
+          ci_event_names:
+            type: array
+            items: { type: string }
+      allowed_change_kinds:
+        type: array
+        items: { type: string }
+      required_fields:
+        type: array
+        items: { type: string }
+      required_when_paths:
+        type: array
+        items: { type: string }
+      reference_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [pattern]
+          properties:
+            prefix: { type: string }
+            pattern: { type: string }
+            source:
+              type: string
+              enum: [local, github]
+            live_in_ci: { type: boolean }
+            allowed_change_kinds:
+              type: array
+              items: { type: string }
+            allowed_kinds:
+              type: array
+              items: { type: string }
+            required_kind:
+              type: string
+            required_states:
+              type: array
+              items: { type: string }
+            require_existing_file_globs:
+              type: array
+              items: { type: string }
+      stricter_review_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, minimum_review_mode, minimum_risk]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            minimum_review_mode:
+              type: string
+              enum: [automated-only, human-approve, human-plus-evidence]
+            minimum_risk:
+              type: string
+              enum: [low, medium, high, critical]
+            require_human_instruction:
+              type: boolean
+      provenance_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [provenance, require_evidence]
+          properties:
+            provenance:
+              type: string
+            require_evidence:
+              type: array
+              items: { type: string }
+      approval_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, change_kinds, require_fields]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            change_kinds:
+              type: array
+              items: { type: string }
+            require_fields:
+              type: array
+              items: { type: string }
+      change_kind_rules:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [change_kind, allowed_reference_prefixes]
+          properties:
+            change_kind: { type: string }
+            allowed_reference_prefixes:
+              type: array
+              items: { type: string }
+            required_release_evidence:
+              type: array
+              items: { type: string }
+  release_management:
+    type: object
+    additionalProperties: false
+    required: [evidence_file, default_environment, freshness_days, irreversible_change_evidence, environments]
+    properties:
+      evidence_file:
+        type: string
+      default_environment:
+        type: string
+        enum: [dev, staging, prod]
+      freshness_days:
+        type: object
+        additionalProperties:
+          type: integer
+      irreversible_change_evidence:
+        type: array
+        items: { type: string }
+      environments:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [require_live_deploy_proof, required_live_checks, require_post_deploy_health]
+          properties:
+            require_live_deploy_proof: { type: boolean }
+            required_live_checks:
+              type: array
+              items: { type: string }
+            require_post_deploy_health: { type: boolean }
+            required_artifact_fields:
+              type: array
+              items: { type: string }
+  artifact_provenance:
+    type: object
+    additionalProperties: false
+    required: [schema_version, required_fields, artifacts]
+    properties:
+      schema_version: { type: string }
+      required_fields:
+        type: array
+        items: { type: string }
+      required_ci_fields:
+        type: array
+        items: { type: string }
+      required_live_fields:
+        type: array
+        items: { type: string }
+      artifacts:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [path]
+          properties:
+            path: { type: string }
+            optional: { type: boolean }
+            required_in_ci: { type: boolean }
+            require_current_commit: { type: boolean }
+            expected_generator: { type: string }
+            require_ci_fields: { type: boolean }
+            require_live_fields: { type: boolean }
+            required_fields:
+              type: array
+              items: { type: string }
+  maintainability:
+    type: object
+    additionalProperties: false
+    required:
+      - thresholds
+      - ratchet_rule
+      - protected_signals
+    properties:
+      include_globs:
+        type: array
+        items: { type: string }
+      exclude_globs:
+        type: array
+        items: { type: string }
+      thresholds:
+        type: object
+        additionalProperties: false
+        required:
+          - authored_source_file_lines
+          - test_file_lines
+          - function_lines
+          - complexity
+          - nesting_depth
+          - public_exports
+        properties:
+          authored_source_file_lines:
+            $ref: "#/$defs/thresholdRange"
+          test_file_lines:
+            $ref: "#/$defs/thresholdRange"
+          function_lines:
+            $ref: "#/$defs/thresholdRange"
+          complexity:
+            $ref: "#/$defs/thresholdRange"
+          nesting_depth:
+            $ref: "#/$defs/thresholdRange"
+          public_exports:
+            $ref: "#/$defs/thresholdRange"
+      ratchet_rule:
+        type: string
+      protected_signals:
+        type: array
+        items: { type: string }
+      duplication:
+        type: object
+        additionalProperties: false
+        required: [warning_block_lines]
+        properties:
+          warning_block_lines: { type: integer }
+          hard_fail_block_lines: { type: integer }
+      hotspots:
+        type: object
+        additionalProperties: false
+        required: [history_window, warning_touches]
+        properties:
+          history_window: { type: integer }
+          warning_touches: { type: integer }
+          hard_fail_touches: { type: integer }
+      repeated_waiver_limits:
+        type: object
+        additionalProperties: false
+        required: [warning_count]
+        properties:
+          warning_count: { type: integer }
+          hard_fail_count: { type: integer }
+  documentation_freshness:
+    type: object
+    additionalProperties: false
+    required: [rules]
+    properties:
+      rules:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [id, when_paths, require_any_of, message]
+          properties:
+            id:
+              type: string
+            when_paths:
+              type: array
+              items: { type: string }
+            require_any_of:
+              type: array
+              items: { type: string }
+            allow_reference_prefix:
+              type: string
+            rule_class:
+              type: string
+            requires_doc_update:
+              type: boolean
+            allow_adr_only:
+              type: boolean
+            requires_adr:
+              type: boolean
+            when_change_kinds:
+              type: array
+              items: { type: string }
+            message:
+              type: string
+  testing:
+    type: object
+    additionalProperties: false
+    required:
+      - artifacts
+      - layers
+      - hermeticity
+      - coverage
+      - regression_requirements
+      - layer_requirements
+      - contract_requirements
+      - flaky_quarantine
+    properties:
+      artifacts:
+        type: object
+        additionalProperties: false
+        required: [test_results, coverage, flaky_registry, contract_report]
+        properties:
+          test_results: { type: string }
+          coverage: { type: string }
+          flaky_registry: { type: string }
+          contract_report: { type: string }
+      layers:
+        type: object
+        additionalProperties: false
+        required: [unit, contract]
+        properties:
+          unit:
+            type: object
+            additionalProperties: false
+            required: [paths, file_patterns]
+            properties:
+              paths:
+                type: array
+                items: { type: string }
+              file_patterns:
+                type: array
+                items: { type: string }
+          contract:
+            type: object
+            additionalProperties: false
+            required: [paths, file_patterns]
+            properties:
+              paths:
+                type: array
+                items: { type: string }
+              file_patterns:
+                type: array
+                items: { type: string }
+      hermeticity:
+        type: object
+        additionalProperties: false
+        required: [unit]
+        properties:
+          unit:
+            type: object
+            additionalProperties: false
+            required: [paths, forbidden_references]
+            properties:
+              paths:
+                type: array
+                items: { type: string }
+              forbidden_references:
+                type: array
+                items: { type: string }
+              allow_in_paths:
+                type: array
+                items: { type: string }
+      coverage:
+        type: object
+        additionalProperties: false
+        required: [global_floor, changed_lines_floor, governed_paths]
+        properties:
+          global_floor: { type: number }
+          changed_lines_floor: { type: number }
+          governed_paths:
+            type: array
+            items: { type: string }
+      regression_requirements:
+        type: object
+        additionalProperties: false
+        required: [change_kinds, test_paths]
+        properties:
+          change_kinds:
+            type: array
+            items: { type: string }
+          test_paths:
+            type: array
+            items: { type: string }
+      layer_requirements:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, required_layers]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            required_layers:
+              type: array
+              items: { type: string }
+      contract_requirements:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, required_evidence]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            required_evidence:
+              type: array
+              items: { type: string }
+      flaky_quarantine:
+        type: object
+        additionalProperties: false
+        required: [waiver_rule, allow_quarantine_with_valid_waiver]
+        properties:
+          waiver_rule: { type: string }
+          allow_quarantine_with_valid_waiver: { type: boolean }
+      integration_requirements:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, artifact]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            change_kinds:
+              type: array
+              items: { type: string }
+            artifact: { type: string }
+      system_requirements:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, artifact]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            change_kinds:
+              type: array
+              items: { type: string }
+            artifact: { type: string }
+      ephemeral_environment_requirements:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [when_paths, artifact]
+          properties:
+            when_paths:
+              type: array
+              items: { type: string }
+            change_kinds:
+              type: array
+              items: { type: string }
+            artifact: { type: string }
+      quarantine_policy:
+        type: object
+        additionalProperties: false
+        required: [max_age_days, require_owner, require_reference]
+        properties:
+          max_age_days: { type: integer }
+          require_owner: { type: boolean }
+          require_reference: { type: boolean }
+  support:
+    type: object
+    additionalProperties: false
+    required: [tier, criticality]
+    properties:
+      tier:
+        type: string
+      criticality:
+        type: string
+        enum: [low, medium, high, critical]
+  compatibility:
+    type: object
+    additionalProperties: false
+    required: [matrix, deprecation_policy]
+    properties:
+      matrix:
+        type: array
+        items:
+          type: object
+          additionalProperties: true
+      deprecation_policy:
+        type: object
+        additionalProperties: true
+  nfrs:
+    type: object
+    additionalProperties: false
+    required: [reliability, security, recoverability]
+    properties:
+      reliability:
+        type: object
+        additionalProperties: true
+      latency:
+        type: object
+        additionalProperties: true
+      throughput:
+        type: object
+        additionalProperties: true
+      security:
+        type: object
+        additionalProperties: true
+      recoverability:
+        type: object
+        additionalProperties: true
+  visual_identity:
+    type: object
+    additionalProperties: false
+    required: [required]
+    properties:
+      required:
+        type: boolean
+      file:
+        type: string
+      validator_command:
+        type: string
+      owner:
+        type: string
+      reviewers:
+        type: array
+        items: { type: string }
+        uniqueItems: true
+      review:
+        type: object
+        additionalProperties: false
+        required: [cadence_days, last_reviewed]
+        properties:
+          cadence_days:
+            type: integer
+            minimum: 1
+          last_reviewed:
+            type: string
+            pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      generated_outputs:
+        type: object
+        additionalProperties: false
+        required: [strategy]
+        properties:
+          strategy:
+            type: string
+            enum: [committed, build-time]
+          paths:
+            type: array
+            items: { type: string }
+          drift_check_command:
+            type: string
+          build_command:
+            type: string
+  waivers:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [rule, path, owner, created_at, expires_at, mitigation, reference]
+      properties:
+        rule: { type: string }
+        path: { type: string }
+        owner: { type: string }
+        created_at: { type: string }
+        expires_at: { type: string }
+        mitigation: { type: string }
+        reference: { type: string }
+  waiver_policy:
+    type: object
+    additionalProperties: false
+    required: [max_active_same_rule_path]
+    properties:
+      max_active_same_rule_path:
+        type: integer
+$defs:
+  thresholdRange:
+    type: object
+    additionalProperties: false
+    required: [warning, hard_fail]
+    properties:
+      warning:
+        type: number
+      hard_fail:
+        type: number

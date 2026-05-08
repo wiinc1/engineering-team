@@ -1,0 +1,46 @@
+id: base
+description: Universal baseline applied to every repo.
+requires:
+  reserved_paths:
+    - src/
+    - tests/
+    - docs/
+    - scripts/
+    - config/
+    - generated/
+    - third_party/
+    - .artifacts/
+  commands:
+    - make lint
+    - make typecheck
+    - make test
+    - make build
+    - make verify
+  required_files:
+    - repo-contract.yaml
+    - agent-policy.yaml
+    - check-manifest.yaml
+    - README.md
+    - docs/architecture.md
+    - docs/runbook.md
+  protected_paths:
+    - repo-contract.yaml
+    - agent-policy.yaml
+    - check-manifest.yaml
+    - .github/workflows/
+    - .ci/
+  file_classes:
+    - authored
+    - generated
+    - third_party
+    - secrets
+    - artifacts
+  review_modes:
+    - automated-only
+    - human-approve
+    - human-plus-evidence
+  risk_levels:
+    - low
+    - medium
+    - high
+    - critical

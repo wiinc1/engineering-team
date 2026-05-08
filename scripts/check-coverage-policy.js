@@ -23,10 +23,37 @@ function suiteFailures(suites = []) {
     .map((suite) => `${suite.name} line coverage ${suite.lines.pct}% is below ${REQUIRED_LINE_FLOOR}%`);
 }
 
+function normalizeCoverageArtifact(artifact) {
+  if (Array.isArray(artifact.suites) && artifact?.overall?.minimum_line_pct !== undefined) {
+    return {
+      label: 'minimum suite line coverage',
+      minimumLinePct: Number(artifact.overall.minimum_line_pct),
+      suites: artifact.suites,
+    };
+  }
+
+  if (artifact?.totals?.percent_covered !== undefined) {
+    const totalLinePct = Number(artifact.totals.percent_covered);
+    return {
+      label: 'total line coverage',
+      minimumLinePct: totalLinePct,
+      suites: [
+        {
+          name: artifact.generated_by || 'coverage',
+          lines: { pct: totalLinePct },
+        },
+      ],
+    };
+  }
+
+  fail(`coverage artifact has unsupported schema: regenerate ${ARTIFACT_PATH}`);
+}
+
 const artifact = readArtifact();
-const failures = suiteFailures(artifact.suites);
-if (Number(artifact?.overall?.minimum_line_pct) < REQUIRED_LINE_FLOOR) {
-  failures.push(`minimum suite line coverage ${artifact.overall.minimum_line_pct}% is below ${REQUIRED_LINE_FLOOR}%`);
+const coverage = normalizeCoverageArtifact(artifact);
+const failures = suiteFailures(coverage.suites);
+if (coverage.minimumLinePct < REQUIRED_LINE_FLOOR) {
+  failures.push(`${coverage.label} ${coverage.minimumLinePct}% is below ${REQUIRED_LINE_FLOOR}%`);
 }
 
 if (failures.length) {
@@ -34,5 +61,5 @@ if (failures.length) {
 }
 
 process.stdout.write(
-  `coverage policy passed (${artifact.overall.minimum_line_pct}% minimum suite line coverage)\n`,
+  `coverage policy passed (${coverage.minimumLinePct}% ${coverage.label})\n`,
 );
