@@ -107,6 +107,11 @@ change_management:
       require_existing_file_globs: ["docs/adr/{reference}.md"]
     - prefix: "LOCAL-"
       pattern: "^LOCAL-[A-Z-]+$"
+    - prefix: "https://github.com/"
+      pattern: "^https://github\\.com/[^/]+/[^/]+/pull/[0-9]+$"
+      source: github
+      allowed_change_kinds: [policy, docs-only, refactor, feature, bugfix, security-fix, migration, release]
+      required_kind: pull
   stricter_review_rules:
     - when_paths:
         - repo-contract.yaml
@@ -135,7 +140,7 @@ change_management:
       require_fields: [approver, approved_at, scope_paths, reference]
   change_kind_rules:
     - change_kind: policy
-      allowed_reference_prefixes: ["ADR-", "LOCAL-"]
+      allowed_reference_prefixes: ["ADR-", "LOCAL-", "https://github.com/"]
 release_management:
   evidence_file: .artifacts/release-evidence.json
   default_environment: dev
