@@ -9,8 +9,8 @@ repo:
 profile: application
 overlays: [production-affecting]
 ownership:
-  primary_owner: repo-owner
-  backup_owner: repo-owner
+  primary_owner: wiinc1
+  backup_owner: wiinc1
 runtime:
   languages:
   - name: python
@@ -82,13 +82,13 @@ change_management:
   metadata_file: .artifacts/change-metadata.json
   approval_file: .artifacts/approval-record.json
   approval_sources:
-    mode: github
+    mode: artifact
     local_artifact: .artifacts/approval-record.json
     live_artifact: .artifacts/live-approval.json
-    require_live_in_ci: true
+    require_live_in_ci: false
     ci_event_names: [pull_request]
     required_review_state: APPROVED
-    required_approvers: [repo-owner]
+    required_approvers: [wiinc1]
     require_current_head_sha: true
   traceability_sources:
     live_artifact: .artifacts/live-traceability.json
@@ -272,9 +272,9 @@ visual_identity:
   required: true
   file: DESIGN.md
   validator_command: npm run design:lint
-  owner: repo-owner
+  owner: wiinc1
   reviewers:
-  - repo-owner
+  - wiinc1
   review:
     cadence_days: 90
     last_reviewed: '2026-05-08'

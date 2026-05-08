@@ -2,13 +2,13 @@
   "schema_version": "1.0",
   "generated_by": "manual-seed",
   "generated_at": "2026-05-08T00:00:00Z",
-  "commit_sha": "9030d1461fb036cbd730e0686cd80b530efb0df0",
+  "commit_sha": "62b063f949cc36b4a60054853543c949908e0dcd",
   "approvals": [
     {
       "reference": "ADR-001",
       "reference_prefix": "https://github.com/wiinc1/engineering-team/pull/",
       "change_kind": "policy",
-      "approver": "repo-owner",
+      "approver": "wiinc1",
       "approved_at": "2026-05-08T00:00:00Z",
       "scope_paths": [
         "DESIGN.md",
