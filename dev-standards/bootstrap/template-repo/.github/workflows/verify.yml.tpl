@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: "{{VERIFY_PYTHON_VERSION}}"
           cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-standards.txt
 
       - name: Install dependencies
         run: |

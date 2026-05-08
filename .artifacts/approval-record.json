@@ -2,10 +2,11 @@
   "schema_version": "1.0",
   "generated_by": "manual-seed",
   "generated_at": "2026-05-08T00:00:00Z",
-  "commit_sha": "ac00379e80c31ba228238cebfa9a59c97eec8e87",
+  "commit_sha": "32f21ba2b896315ee113f1aaff4155ecc56bd525",
   "approvals": [
     {
       "reference": "ADR-001",
+      "reference_prefix": "https://github.com/wiinc1/engineering-team/pull/",
       "change_kind": "policy",
       "approver": "repo-owner",
       "approved_at": "2026-05-08T00:00:00Z",
@@ -15,6 +16,7 @@
         "agent-policy.yaml",
         "check-manifest.yaml",
         "Makefile",
+        "docs/adr/**",
         ".github/workflows/**",
         "dev-standards/**"
       ]
