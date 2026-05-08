@@ -4,7 +4,7 @@ Decision date: 2026-05-08
 
 ## Decision
 
-Use registration auth as the active no-IdP production strategy. Keep OIDC available only when selected explicitly. Keep internal bootstrap as an emergency/local fallback. Treat magic-link as historical after the cutover.
+Use registration auth as the active no-IdP production strategy. Production registration mode is `admin-approved`: anyone can create an account, but an admin must activate the account before it can use the app. Keep OIDC available only when selected explicitly. Keep internal bootstrap as an emergency/local fallback. Treat magic-link as historical after the cutover.
 
 Issue #151 and PR #159 are reconciled by this decision. PR #159 documented the earlier magic-link/OIDC production-auth status evidence path for Issue #151; the registration cutover supersedes that path with registration smoke evidence, registration production gates, and historical-only magic-link evidence.
 
@@ -25,9 +25,9 @@ The issues used `ff_registration_*` names as conceptual rollout controls. The im
 
 | Mode | Registration behavior | Login behavior | Operator requirement |
 |---|---|---|---|
-| `open` | creates an active or pending-verification user | active users can login | monitor registration spikes |
-| `invite-only` | requires an existing invite or configured invite code | active invited users can login after credential creation | operator owns invite source |
-| `admin-approved` | creates a pending-approval user | admin must activate before login | admin review queue required |
+| `admin-approved` | creates a pending-approval user | admin must activate before login | production-required admin review queue |
+| `open` | creates an active or pending-verification user | active users can login | supported only for non-production/local use |
+| `invite-only` | requires an existing invite or configured invite code | active invited users can login after credential creation | legacy mode; not the selected production policy |
 
 ## First Admin
 

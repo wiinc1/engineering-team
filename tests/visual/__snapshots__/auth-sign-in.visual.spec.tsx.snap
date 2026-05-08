@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`auth sign-in visual states > matches the configured enterprise OIDC state 1`] = `
+exports[`matches the configured enterprise OIDC state 1`] = `
 <section
   aria-label="Sign-in screen"
   class="auth-card"
@@ -11,15 +11,15 @@ exports[`auth sign-in visual states > matches the configured enterprise OIDC sta
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Engineering Team
     </p>
     <h1>
-      Sign in to the workflow app
+      Sign in to Engineering Team
     </h1>
     <p
       class="lede"
     >
-      Use the configured enterprise identity provider to start a browser session for the task workspace, board, PM overview, inboxes, and task detail routes.
+      Use the configured enterprise identity provider to access Engineering Team.
     </p>
   </div>
   <div
@@ -34,7 +34,7 @@ exports[`auth sign-in visual states > matches the configured enterprise OIDC sta
 </section>
 `;
 
-exports[`auth sign-in visual states > matches the local internal fallback state 1`] = `
+exports[`matches the local internal fallback state 1`] = `
 <section
   aria-label="Sign-in screen"
   class="auth-card"
@@ -45,15 +45,15 @@ exports[`auth sign-in visual states > matches the local internal fallback state 
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Engineering Team
     </p>
     <h1>
-      Sign in to the workflow app
+      Sign in to Engineering Team
     </h1>
     <p
       class="lede"
     >
-      Use the configured enterprise identity provider to start a browser session for the task workspace, board, PM overview, inboxes, and task detail routes.
+      Use the configured enterprise identity provider to access Engineering Team.
     </p>
   </div>
   <div
@@ -105,7 +105,7 @@ exports[`auth sign-in visual states > matches the local internal fallback state 
 </section>
 `;
 
-exports[`auth sign-in visual states > matches the no-login-path configuration error state 1`] = `
+exports[`matches the no-login-path configuration error state 1`] = `
 <section
   aria-label="Sign-in screen"
   class="auth-card"
@@ -116,15 +116,15 @@ exports[`auth sign-in visual states > matches the no-login-path configuration er
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Engineering Team
     </p>
     <h1>
-      Sign in to the workflow app
+      Sign in to Engineering Team
     </h1>
     <p
       class="lede"
     >
-      Use the configured enterprise identity provider to start a browser session for the task workspace, board, PM overview, inboxes, and task detail routes.
+      Use the configured enterprise identity provider to access Engineering Team.
     </p>
   </div>
   <div
@@ -146,7 +146,7 @@ exports[`auth sign-in visual states > matches the no-login-path configuration er
 </section>
 `;
 
-exports[`auth sign-in visual states > matches the registration state 1`] = `
+exports[`matches the registration create-account state 1`] = `
 <section
   aria-label="Sign-in screen"
   class="auth-card"
@@ -157,57 +157,17 @@ exports[`auth sign-in visual states > matches the registration state 1`] = `
     <p
       class="eyebrow"
     >
-      Authenticated browser shell for US-002
+      Engineering Team
     </p>
     <h1>
-      Sign in to the workflow app
+      Create your account
     </h1>
     <p
       class="lede"
     >
-      Use your registered email and password for the task workspace, board, PM overview, inboxes, and task detail routes.
+      Create an account. An admin will approve access before you can use Engineering Team.
     </p>
   </div>
-  <form
-    class="session-form auth-form"
-  >
-    <label>
-      Email address
-      <input
-        autocomplete="email"
-        name="email"
-        placeholder="you@example.com"
-        type="email"
-        value=""
-      />
-    </label>
-    <label>
-      Password
-      <input
-        autocomplete="current-password"
-        name="password"
-        type="password"
-        value=""
-      />
-    </label>
-    <label>
-      API base URL
-      <input
-        name="apiBaseUrl"
-        placeholder="same-origin"
-        value=""
-      />
-    </label>
-    <div
-      class="session-form__actions"
-    >
-      <button
-        type="submit"
-      >
-        Sign in
-      </button>
-    </div>
-  </form>
   <form
     class="session-form auth-form"
   >
@@ -220,50 +180,109 @@ exports[`auth sign-in visual states > matches the registration state 1`] = `
       />
     </label>
     <label>
-      Registration email
+      Email address
       <input
         autocomplete="email"
+        inputmode="email"
         name="registrationEmail"
         placeholder="you@example.com"
         type="email"
         value=""
       />
     </label>
-    <label>
-      Create password
-      <input
-        autocomplete="new-password"
-        name="registrationPassword"
-        type="password"
-        value=""
-      />
-    </label>
-    <label>
-      Invite code
-      <input
-        autocomplete="off"
-        name="inviteCode"
-        value=""
-      />
-    </label>
+    <div
+      class="auth-field auth-password-field"
+    >
+      <label
+        for="registrationPassword"
+      >
+        Password
+      </label>
+      <div
+        class="auth-password-input"
+      >
+        <input
+          aria-describedby="registrationPassword-hint"
+          autocapitalize="none"
+          autocomplete="new-password"
+          id="registrationPassword"
+          name="registrationPassword"
+          spellcheck="false"
+          type="password"
+          value=""
+        />
+        <button
+          aria-controls="registrationPassword"
+          aria-label="Show password"
+          class="auth-password-toggle"
+          type="button"
+        >
+          Show
+        </button>
+      </div>
+      <p
+        class="auth-field-hint"
+        id="registrationPassword-hint"
+      >
+        At least 12 characters with one letter and one number.
+      </p>
+    </div>
     <div
       class="session-form__actions"
     >
       <button
-        class="button-secondary"
         type="submit"
       >
         Create account
       </button>
     </div>
+    <p
+      class="auth-form__footer"
+    >
+      <span>
+        Already have an account?
+      </span>
+      <button
+        class="auth-link-button"
+        type="button"
+      >
+        Sign in
+      </button>
+    </p>
   </form>
+</section>
+`;
+
+exports[`matches the registration reset-request state 1`] = `
+<section
+  aria-label="Sign-in screen"
+  class="auth-card"
+>
+  <div
+    class="auth-card__intro"
+  >
+    <p
+      class="eyebrow"
+    >
+      Engineering Team
+    </p>
+    <h1>
+      Reset your password
+    </h1>
+    <p
+      class="lede"
+    >
+      Enter your account email and we will send reset instructions.
+    </p>
+  </div>
   <form
     class="session-form auth-form"
   >
     <label>
-      Reset email
+      Email address
       <input
         autocomplete="email"
+        inputmode="email"
         name="resetEmail"
         placeholder="you@example.com"
         type="email"
@@ -274,12 +293,123 @@ exports[`auth sign-in visual states > matches the registration state 1`] = `
       class="session-form__actions"
     >
       <button
-        class="button-secondary"
         type="submit"
       >
-        Reset password
+        Send reset instructions
       </button>
     </div>
+    <p
+      class="auth-form__footer"
+    >
+      <button
+        class="auth-link-button"
+        type="button"
+      >
+        Back to sign in
+      </button>
+    </p>
+  </form>
+</section>
+`;
+
+exports[`matches the registration sign-in state 1`] = `
+<section
+  aria-label="Sign-in screen"
+  class="auth-card"
+>
+  <div
+    class="auth-card__intro"
+  >
+    <p
+      class="eyebrow"
+    >
+      Engineering Team
+    </p>
+    <h1>
+      Sign in to Engineering Team
+    </h1>
+    <p
+      class="lede"
+    >
+      Access your task workspace and inboxes.
+    </p>
+  </div>
+  <form
+    class="session-form auth-form"
+  >
+    <label>
+      Email address
+      <input
+        autocomplete="email"
+        inputmode="email"
+        name="email"
+        placeholder="you@example.com"
+        type="email"
+        value=""
+      />
+    </label>
+    <div
+      class="auth-field auth-password-field"
+    >
+      <label
+        for="password"
+      >
+        Password
+      </label>
+      <div
+        class="auth-password-input"
+      >
+        <input
+          autocapitalize="none"
+          autocomplete="current-password"
+          id="password"
+          name="password"
+          spellcheck="false"
+          type="password"
+          value=""
+        />
+        <button
+          aria-controls="password"
+          aria-label="Show password"
+          class="auth-password-toggle"
+          type="button"
+        >
+          Show
+        </button>
+      </div>
+    </div>
+    <div
+      class="auth-password-links"
+    >
+      <button
+        class="auth-link-button"
+        type="button"
+      >
+        Forgot password?
+      </button>
+    </div>
+    <div
+      class="session-form__actions"
+    >
+      <button
+        type="submit"
+      >
+        Sign in
+      </button>
+    </div>
+    <p
+      class="auth-form__footer"
+    >
+      <span>
+        New here?
+      </span>
+      <button
+        class="auth-link-button"
+        type="button"
+      >
+        Create an account
+      </button>
+    </p>
   </form>
 </section>
 `;

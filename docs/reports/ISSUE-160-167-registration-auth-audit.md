@@ -5,11 +5,9 @@ Scope: Replace the magic-link production path with registration auth, credential
 
 ## Product Policy
 
-Registration auth is the no-IdP production strategy. The active registration mode is explicit through `AUTH_REGISTRATION_MODE`:
+Registration auth is the no-IdP production strategy. The active production registration mode is explicit through `AUTH_REGISTRATION_MODE=admin-approved`: anyone can create an account, but an admin must activate the account before it can use the app.
 
-- `open`
-- `invite-only`
-- `admin-approved`
+The service still recognizes `open` and `invite-only` for non-production/local compatibility, but they are not the selected production policy.
 
 Magic-link is historical after cutover. `/auth/magic-link/request` returns `410`, and `/auth/magic-link/consume` redirects to `/sign-in?reason=magic_link_removed` without creating a session.
 

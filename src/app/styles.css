@@ -40,9 +40,7 @@ body {
 
 body:has(.app-shell--auth) {
   color: #0f172a;
-  background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 30%),
-    #f8fafc;
+  background: #f8fafc;
 }
 
 button,
@@ -214,15 +212,14 @@ button {
 }
 
 .auth-card {
-  width: min(100%, 560px);
+  width: min(100%, 480px);
   display: grid;
-  gap: 18px;
-  padding: 28px;
+  gap: 20px;
+  padding: 24px;
   border: 1px solid #cbd5e1;
-  border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.1);
 }
 
 .auth-card__intro {
@@ -265,24 +262,88 @@ button {
 }
 
 .app-shell--auth .session-form {
-  padding: 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+  gap: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .app-shell--auth .session-form input,
 .app-shell--auth .session-form textarea,
 .app-shell--auth .session-form select {
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #ffffff;
 }
 
 .app-shell--auth .session-form button {
-  border-radius: 10px;
+  border-radius: 8px;
   background: #2563eb;
+}
+
+.auth-field {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.auth-password-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.auth-password-input input {
+  min-width: 0;
+}
+
+.app-shell--auth .auth-password-toggle,
+.app-shell--auth .auth-link-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.app-shell--auth .auth-password-toggle {
+  min-height: 41px;
+  padding-inline: 12px;
+  font-weight: 650;
+}
+
+.auth-field-hint,
+.auth-form__footer,
+.auth-password-links {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.auth-password-links,
+.auth-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-form__footer {
+  justify-content: center;
+}
+
+.app-shell--auth .auth-link-button {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 650;
 }
 
 .app-shell--auth .button-secondary {
@@ -1764,11 +1825,19 @@ button {
 
 @media (max-width: 480px) {
   .app-shell--auth .auth-card {
-    padding: 28px;
+    padding: 18px;
   }
 
   .app-shell--auth .session-form {
-    padding: 16px;
+    padding: 0;
+  }
+
+  .auth-password-input {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell--auth .auth-password-toggle {
+    width: 100%;
   }
 }
 

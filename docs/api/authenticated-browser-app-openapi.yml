@@ -14,6 +14,7 @@ info:
     Production supports registration auth, OIDC when explicitly selected, or the explicitly selected temporary internal-bootstrap strategy.
     Production registration requires the browser-visible strategy to be `registration` through `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
     or injected runtime config `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy`.
+    Public self-service signup is available when registration auth is selected; new accounts remain pending until an admin approves them.
     Its public app URL must be HTTPS, session TTL must be 8 hours, email verification TTL must be 24 hours, and password reset TTL must be 30 minutes.
     Authenticated shell routes present compact primary navigation plus a task-id route utility while preserving first-screen status context on task detail.
     Initial production admin access is seeded out-of-band by the operator-only `npm run auth:admin:seed -- --apply`
@@ -23,7 +24,8 @@ paths:
     get:
       summary: Browser entry route for registration sign-in
       description: |
-        The SPA renders the sign-in screen. Registration deployments show email/password login, registration, and password reset forms.
+        The SPA renders the sign-in screen. Registration deployments show email/password login, public registration, and password reset forms.
+        Registration does not require an invite link in the production admin-approved policy.
         The route also accepts `next` and `reason` query parameters for protected-route restore and recovery messaging.
         OIDC deployments start hosted OIDC Authorization Code + PKCE when the user selects the enterprise sign-in action.
         When no configured login path is available, the SPA renders a safe deployment-configuration error without raw env values, provider URLs, client IDs, tokens, authorization codes, or secrets.
@@ -71,7 +73,9 @@ paths:
   /auth/register:
     post:
       summary: Register a credential account
-      description: Creates a credential account according to the configured registration policy and returns generic success for duplicate or ineligible identities where safe.
+      description: |
+        Creates a credential account according to the configured registration policy and returns generic success for duplicate or ineligible identities where safe.
+        The production admin-approved policy allows public signup and creates pending accounts that cannot use the app until admin approval.
       requestBody:
         required: true
         content:
@@ -90,6 +94,7 @@ paths:
                   type: string
                 inviteCode:
                   type: string
+                  description: Legacy non-production invite-only policy input; not required or shown by the production admin-approved browser signup flow.
       responses:
         '201':
           description: Generic registration response.

@@ -96,6 +96,38 @@ test('registration requires email verification and rejects replayed verification
   assert.ok(login.sessionToken);
 });
 
+test('default public registration requires admin approval before app access', async () => {
+  const service = createRegistrationAuthService({
+    publicAppUrl: 'https://app.example',
+    sessionSecret: 'test-secret',
+    requireEmailVerification: false,
+  });
+
+  const result = await service.register({ email: 'pending@example.com', password: 'CorrectHorse123!' });
+  const user = await service.store.findUserByEmail('pending@example.com');
+
+  assert.equal(result.status, 'pending_approval');
+  assert.equal(user.status, 'pending_approval');
+  await assert.rejects(
+    () => service.login({ email: 'pending@example.com', password: 'CorrectHorse123!' }),
+    /not active yet/
+  );
+
+  await service.upsertUser(
+    {
+      email: 'pending@example.com',
+      tenantId: user.tenantId,
+      actorId: user.actorId,
+      roles: user.roles,
+      status: 'active',
+    },
+    { actorId: 'admin-1', tenantId: user.tenantId }
+  );
+  const login = await service.login({ email: 'pending@example.com', password: 'CorrectHorse123!' });
+  assert.equal(login.user.status, 'active');
+  assert.ok(login.sessionToken);
+});
+
 test('login creates cookie sessions, enforces CSRF, and rate-limits repeated failures', async () => {
   const service = createRegistrationAuthService({
     publicAppUrl: 'https://app.example',
