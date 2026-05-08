@@ -1,21 +1,27 @@
 # Issue #137 Production Login Evidence
 
+Historical note: this report is retained as pre-registration magic-link audit evidence. Issues #160-#167 replace the active production path with registration auth, and magic-link evidence no longer satisfies the production ship gate.
+
 Date opened for remediation: 2026-05-04
 Issue: https://github.com/wiinc1/engineering-team/issues/137
+Canonical status: `docs/runbooks/production-auth-status.md`
+Issue #151 ship gate: `npm run auth:status:check -- --require-complete`
 
 ## Decision
 
-Issue #137 reports that the landing/sign-in page has no usable login option. The accepted remediation path is the durable no-IdP production strategy:
+Issue #137 reports that the landing/sign-in page has no usable login option. The originally proposed durable no-IdP path was magic-link auth, and the historical checklist below is retained for audit context. Issues #160-#167 supersede that path with registration auth:
 
-- `AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`
-- browser strategy exposed with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link`
-- internal bootstrap disabled with `AUTH_ENABLE_INTERNAL_BROWSER_BOOTSTRAP=false` and `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false`
+- `AUTH_PRODUCTION_AUTH_STRATEGY=registration`
+- browser strategy exposed with `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration`
+- internal bootstrap and magic-link UI removed from the production sign-in path
 - Vercel browser API base kept at `VITE_TASK_API_BASE_URL=/backend`
-- first admin provisioned through the audited dry-run/apply script before `/admin/users` can be used
+- credential login, email verification, password reset, session, CSRF, and logout behavior verified by fresh production smoke evidence
 
 Internal bootstrap remains available only for explicitly approved emergency or local/internal fallback use. It is not the production closure path for this issue.
 
-## Operator Setup Checklist
+Issue #151 reconciliation note: fresh registration production evidence was captured on 2026-05-08. The April issue #92 smoke artifact remains historical evidence and must not be reused to close issue #137 or issue #151.
+
+## Historical Magic-Link Operator Checklist
 
 - [ ] Confirm Vercel production env names with `npm run auth:config:check:vercel`.
 - [ ] Confirm production values with `npm run auth:config:check` in an environment containing production auth variables.
@@ -27,7 +33,7 @@ Internal bootstrap remains available only for explicitly approved emergency or l
 - [ ] Confirm `AUTH_PUBLIC_APP_URL` is the production `https://` app origin.
 - [ ] Confirm Resend sender/domain status for `AUTH_EMAIL_FROM`.
 
-## First Admin Seed
+## Historical First Admin Seed
 
 Dry-run:
 
@@ -60,7 +66,7 @@ Seed evidence to attach:
 - [ ] seeded roles
 - [ ] confirmation that raw email, database URL, tokens, and secrets were not printed
 
-## Production Smoke
+## Historical Magic-Link Production Smoke
 
 Phase 1 requests the link and records generic response evidence:
 
@@ -98,7 +104,7 @@ Required pass criteria:
 - [ ] logout revokes the session.
 - [ ] post-logout auth check is rejected.
 
-## Closure Evidence
+## Current Closure Evidence
 
 Attach these before closing issue #137:
 
@@ -106,28 +112,33 @@ Attach these before closing issue #137:
 - [ ] build commit SHA.
 - [ ] Vercel Ready status.
 - [ ] build timestamp.
-- [ ] selected production auth strategy: `magic-link`.
+- [x] selected production auth strategy: `registration`.
 - [ ] `npm run auth:config:check:vercel` output with names only.
 - [ ] redacted `observability/auth-config-diagnostics.json`.
 - [ ] redacted first-admin seed output.
-- [ ] redacted `observability/magic-link-production-smoke.json` from `--require-complete`.
-- [ ] Resend delivery evidence without raw token material.
-- [ ] monitoring evidence for `auth-no-login-path-after-deploy`.
-- [ ] rollback target identifying the last known-good deployment/config for the selected strategy.
+- [x] redacted `observability/registration-auth-production-smoke.json` from deployed production smoke.
+- [x] `npm run auth:status:check -- --require-complete` passes against fresh issue #151 evidence.
+- [x] password reset generic response evidence without raw token material.
+- [x] monitoring dashboard and alert definitions for registration auth status and abuse controls.
+- [x] rollback target identifying the last known-good deployment/config for the selected strategy.
 
 ## Standards Alignment
 
 - Applicable standards areas: architecture and design, coding and code quality, testing and quality assurance, deployment and release, security, and observability and monitoring.
-- Evidence in this report: accepted auth strategy decisions, operator setup checklist, first-admin seed evidence requirements, complete production magic-link smoke criteria, closure evidence requirements, and rollback evidence requirements.
-- Gap observed: fresh production evidence is still pending for issue #137. Documented rationale: the repo implements and verifies the durable magic-link path, but production env mutation, Resend delivery, and live smoke execution remain production-operator responsibilities (source https://github.com/wiinc1/engineering-team/issues/137).
+- Evidence in this report: accepted auth strategy decisions, historical magic-link audit context, current registration closure evidence requirements, and rollback evidence requirements.
+- Gap observed: No remaining compliance gap. Documented rationale: Issue #137 now closes through the registration cutover evidence path; fresh production evidence exists through `observability/registration-auth-production-smoke.json`, and `npm run auth:status:check -- --require-complete` passes (source https://github.com/wiinc1/engineering-team/issues/137).
 
 ## Required Evidence
 
-- Commands run: `node --test tests/unit/auth-admin-seed.test.js tests/unit/auth-config-check.test.js`; `./node_modules/.bin/vitest run src/app/AuthAppShell.test.tsx tests/visual/auth-sign-in.visual.spec.tsx`; `node scripts/run-playwright.js tests/browser/auth-shell.browser.spec.ts --project=chromium`; production-like `npm run build` with dummy magic-link env; `npm run coverage`; `npm run standards:check`.
-- Tests added or updated: `tests/unit/auth-admin-seed.test.js`; `src/app/AuthAppShell.test.tsx`; `tests/browser/auth-shell.browser.spec.ts`; `tests/visual/auth-sign-in.visual.spec.tsx`; `tests/visual/__snapshots__/auth-sign-in.visual.spec.tsx.snap`.
-- Rollout or rollback notes: roll out by setting production magic-link env names/values, redeploying, seeding the first admin, and completing the two-phase production smoke. Roll back by restoring the last known-good production auth deployment/config for the selected strategy; do not switch auth strategies during rollback without a separate emergency exception.
+- Commands run: `npm run lint`; `npm run typecheck`; `npm run ownership:lint`; `npm run change:check`; `npm run standards:check`; `npm run test:unit`; `npm test`; `npm run coverage`; `npm run auth:registration:production-smoke`; `npm run auth:status:check -- --require-complete`.
+- Tests added or updated: `tests/unit/registration-auth.test.js`; `tests/unit/registration-api.test.js`; `tests/unit/registration-production-smoke.test.js`; `src/app/registration-auth-flows.test.tsx`; `src/app/session-browser-registration.test.tsx`; `tests/browser/auth-shell.browser.spec.ts`; `tests/visual/auth-sign-in.visual.spec.tsx`; `tests/visual/__snapshots__/auth-sign-in.visual.spec.tsx.snap`.
+- Rollout or rollback notes: roll out by setting production registration env names/values, redeploying, ensuring the production smoke account is available, and completing deployed-origin registration smoke. Roll back by restoring the recorded last known-good production auth deployment/config for the selected strategy; do not switch auth strategies during rollback without a separate emergency exception.
 - Docs updated: `README.md`; `docs/runbooks/production-identity-provider.md`; `docs/reports/ISSUE-137-production-login-evidence.md`.
 
 ## Current Status
 
-Fresh production evidence is still pending. Do not close issue #137 using the April issue #92 smoke artifact alone.
+Fresh production registration evidence was captured on 2026-05-08. Do not close issue #137 or issue #151 using the April issue #92 smoke artifact alone. Closure uses the canonical status gate in `docs/runbooks/production-auth-status.md`, which now passes:
+
+```bash
+npm run auth:status:check -- --require-complete
+```

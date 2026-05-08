@@ -1,0 +1,43 @@
+{
+  "title": "Registration Auth Security",
+  "description": "Registration auth abuse controls, token flow, and credential-session observability.",
+  "panels": [
+    {
+      "title": "Login failures",
+      "metric": "auth_login_failures{reason}",
+      "type": "timeseries",
+      "alert": "spike above baseline triggers operator review"
+    },
+    {
+      "title": "Rate limit buckets",
+      "metric": "auth_rate_limit_buckets{bucket_type}",
+      "type": "stat",
+      "alert": "sustained growth indicates credential stuffing or reset abuse"
+    },
+    {
+      "title": "Password reset requests",
+      "metric": "auth_password_reset_requests{status}",
+      "type": "timeseries"
+    },
+    {
+      "title": "Email verification requests",
+      "metric": "auth_email_verification_requests{status}",
+      "type": "timeseries"
+    },
+    {
+      "title": "Registration attempts",
+      "metric": "auth_registration_attempts{mode,status}",
+      "type": "timeseries"
+    }
+  ],
+  "links": [
+    {
+      "title": "Production auth status",
+      "url": "docs/runbooks/production-auth-status.md"
+    },
+    {
+      "title": "Registration auth audit",
+      "url": "docs/reports/ISSUE-160-167-registration-auth-audit.md"
+    }
+  ]
+}

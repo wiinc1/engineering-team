@@ -90,7 +90,7 @@ function runVercelCheck() {
     console.error('Vercel production env-name validation failed.');
     console.error(`Missing OIDC env names: ${result.oidcMissing.join(', ')}`);
     console.error(`Missing internal-bootstrap env names: ${result.internalBootstrapMissing.join(', ')}`);
-    console.error(`Missing magic-link env names: ${result.magicLinkMissing.join(', ')}`);
+    console.error(`Missing registration env names: ${result.registrationMissing.join(', ')}`);
   }
   for (const warning of result.warnings) {
     console.warn(`Warning: ${warning}`);
@@ -100,8 +100,8 @@ function runVercelCheck() {
     oidcPresent: result.present,
     internalBootstrapPresent: result.internalBootstrapPresent,
     internalBootstrapVarsDeclared: result.internalBootstrapVarsDeclared,
-    magicLinkPresent: result.magicLinkPresent,
-    browserMagicLinkStrategyPresent: result.browserMagicLinkStrategyPresent,
+    registrationPresent: result.registrationPresent,
+    browserRegistrationStrategyPresent: result.browserRegistrationStrategyPresent,
   }, null, 2));
   process.exitCode = result.ok ? 0 : 1;
 }

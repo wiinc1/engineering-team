@@ -8,24 +8,24 @@ info:
     Governance note: browser-shell session and route changes should update this spec in the same pull request.
     Protected browser-shell routes in the current client include `/tasks`, `/tasks?view=board`, `/tasks/create`,
     `/overview/pm`, `/overview/governance`, `/inbox/{role}`, and `/tasks/{taskId}`.
-    Production sign-in supports hosted OIDC Authorization Code + PKCE or first-party invite-only magic-link sessions.
+    Production sign-in supports the registration credential flow, with hosted OIDC retained only when explicitly selected.
     The internal browser bootstrap endpoint remains a compatibility fallback for local/internal environments only.
     Preview environments without an approved auth strategy may render a no-login-path configuration state.
-    Production supports OIDC, durable magic-link auth when no IdP exists, or the explicitly selected temporary internal-bootstrap strategy.
-    Production magic-link requires the browser-visible strategy to be `magic-link` through `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
+    Production supports registration auth, OIDC when explicitly selected, or the explicitly selected temporary internal-bootstrap strategy.
+    Production registration requires the browser-visible strategy to be `registration` through `VITE_AUTH_PRODUCTION_AUTH_STRATEGY`
     or injected runtime config `window.__ENGINEERING_TEAM_RUNTIME_CONFIG__.productionAuthStrategy`.
-    Its public app URL must be HTTPS, magic-link TTL must be 15 minutes, and session TTL must be 8 hours.
+    Its public app URL must be HTTPS, session TTL must be 8 hours, email verification TTL must be 24 hours, and password reset TTL must be 30 minutes.
     Authenticated shell routes present compact primary navigation plus a task-id route utility while preserving first-screen status context on task detail.
     Initial production admin access is seeded out-of-band by the operator-only `npm run auth:admin:seed -- --apply`
     workflow; the browser contract never exposes the seed inputs, database URL, raw email address, or generated session secrets.
 paths:
   /sign-in:
     get:
-      summary: Browser entry route for enterprise sign-in
+      summary: Browser entry route for registration sign-in
       description: |
-        The SPA renders the sign-in screen and starts hosted OIDC Authorization Code + PKCE when the user selects the enterprise sign-in action.
+        The SPA renders the sign-in screen. Registration deployments show email/password login, registration, and password reset forms.
         The route also accepts `next` and `reason` query parameters for protected-route restore and recovery messaging.
-        Production magic-link bundles render an email-entry form when `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=magic-link` or runtime config selects the magic-link strategy.
+        OIDC deployments start hosted OIDC Authorization Code + PKCE when the user selects the enterprise sign-in action.
         When no configured login path is available, the SPA renders a safe deployment-configuration error without raw env values, provider URLs, client IDs, tokens, authorization codes, or secrets.
       parameters:
         - in: query
@@ -37,7 +37,7 @@ paths:
           name: reason
           schema:
             type: string
-            enum: [expired, signed_out, oidc_error]
+            enum: [expired, signed_out, oidc_error, magic_link_removed]
           description: Optional user-facing recovery reason shown by the SPA.
       responses:
         '200':
@@ -68,43 +68,105 @@ paths:
       responses:
         '200':
           description: Callback route rendered by the browser app.
-  /auth/magic-link/request:
+  /auth/register:
     post:
-      summary: Request an invite-only magic sign-in link
-      description: Returns generic success for eligible, unknown, inactive, and throttled identities where safe.
+      summary: Register a credential account
+      description: Creates a credential account according to the configured registration policy and returns generic success for duplicate or ineligible identities where safe.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [email]
+              required: [email, password]
               properties:
                 email:
                   type: string
                   format: email
+                password:
+                  type: string
+                  format: password
+                displayName:
+                  type: string
+                inviteCode:
+                  type: string
+      responses:
+        '201':
+          description: Generic registration response.
+        '503':
+          description: Registration is disabled for this deployment.
+  /auth/login:
+    post:
+      summary: Create a registration-auth cookie session
+      description: Validates email and password, creates an httpOnly session cookie plus readable CSRF cookie, and returns the current principal without exposing credential material.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
                 next:
                   type: string
                   description: Sanitized same-origin route to restore after sign-in.
       responses:
         '200':
-          description: Generic magic-link request response.
+          description: Cookie session created.
+        '401':
+          description: Generic invalid credentials response.
+        '403':
+          description: Account requires verification or approval.
+        '429':
+          description: Login attempts are temporarily throttled.
+  /auth/email/verify/request:
+    post:
+      summary: Request a new email verification token
+      responses:
+        '200':
+          description: Generic email verification response.
+  /auth/email/verify/confirm:
+    post:
+      summary: Confirm an email verification token
+      responses:
+        '200':
+          description: Email verified.
+        '401':
+          description: Token invalid, expired, or replayed.
+  /auth/password-reset/request:
+    post:
+      summary: Request password reset instructions
+      responses:
+        '200':
+          description: Generic password reset response.
+  /auth/password-reset/confirm:
+    post:
+      summary: Confirm password reset and rotate credentials
+      responses:
+        '200':
+          description: Password reset completed and existing sessions revoked.
+        '401':
+          description: Token invalid, expired, or replayed.
+  /auth/magic-link/request:
+    post:
+      summary: Removed magic-link request endpoint
+      description: Magic-link sign-in is removed after registration cutover.
+      responses:
+        '410':
+          description: Magic-link sign-in has been removed.
   /auth/magic-link/consume:
     get:
-      summary: Consume a single-use magic-link token
-      description: Creates an httpOnly cookie session, sets a readable CSRF cookie, and redirects to the sanitized next route.
-      parameters:
-        - in: query
-          name: token
-          schema:
-            type: string
-        - in: query
-          name: next
-          schema:
-            type: string
+      summary: Removed magic-link consume endpoint
+      description: Redirects to sign-in with a removed-flow reason and never creates a session.
       responses:
         '302':
-          description: Redirects to the restored browser route or back to sign-in on failure.
+          description: Redirects to /sign-in?reason=magic_link_removed.
   /tasks/create:
     get:
       summary: Browser route for creating an intake draft

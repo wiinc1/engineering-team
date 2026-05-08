@@ -1,0 +1,25 @@
+erDiagram
+  auth_rate_limits {
+    text bucket_key PK
+    text bucket_type
+    int count
+    timestamptz window_start
+    timestamptz updated_at
+  }
+  auth_audit_events {
+    uuid event_id PK
+    text event_type
+    uuid user_id
+    text actor_id
+    text tenant_id
+    text email_hash
+    jsonb metadata
+    timestamptz created_at
+  }
+  auth_login_failures {
+    uuid failure_id PK
+    text email_hash
+    text requested_ip_hash
+    text reason
+    timestamptz created_at
+  }

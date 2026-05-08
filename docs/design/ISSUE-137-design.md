@@ -1,5 +1,7 @@
 # Issue 137 Design
 
+Historical note: this document records the pre-registration magic-link remediation. Issues #160-#167 supersede the active production auth strategy with registration auth, so magic-link instructions below are retained only as historical audit context.
+
 ## Context
 
 Issue #137 restores a production-usable login path for deployments that do not

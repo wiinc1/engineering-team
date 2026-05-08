@@ -1,0 +1,8 @@
+flowchart TD
+  A[Production env names] --> B[auth:config:check:vercel]
+  B --> C[auth:config:check]
+  C --> D[Registration production smoke]
+  D --> E[observability/registration-auth-production-smoke.json]
+  E --> F[auth:status:check -- --require-complete]
+  F -->|pass| G[Ship and merge]
+  F -->|fail| H[Resolve gaps and rerun]

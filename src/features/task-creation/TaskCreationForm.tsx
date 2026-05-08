@@ -35,6 +35,47 @@ function validatePayload(payload: TaskCreationPayload): ValidationResult {
   return { valid: errors.length === 0, errors };
 }
 
+function RequirementsField({ loading }: { loading: boolean }) {
+  return (
+    <div className={styles.field}>
+      <label htmlFor="raw_requirements">Requirements *</label>
+      <textarea
+        id="raw_requirements"
+        name="raw_requirements"
+        required
+        disabled={loading}
+        placeholder="Paste the request, acceptance notes, links, and context exactly as received."
+      />
+      <p id="task-create-guidance" className={styles.help}>
+        Include the operator request, acceptance notes, links, risks, and any known constraints.
+      </p>
+    </div>
+  );
+}
+
+function TitleField({ loading }: { loading: boolean }) {
+  return (
+    <div className={styles.field}>
+      <label htmlFor="title">Title</label>
+      <input id="title" name="title" maxLength={TITLE_MAX_LENGTH} disabled={loading} placeholder="Optional short title" />
+    </div>
+  );
+}
+
+function ValidationErrors({ messages }: { messages: string[] }) {
+  if (messages.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className={styles.validationErrors}>
+      {messages.map((message, index) => (
+        <li key={index}>{message}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function TaskCreationForm({ onSubmit, loading, error, resetToken = 0 }: TaskCreationFormProps) {
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const [validationErrors, setValidationErrors] = React.useState<string[]>([]);
@@ -64,36 +105,9 @@ export function TaskCreationForm({ onSubmit, loading, error, resetToken = 0 }: T
 
   return (
     <form ref={formRef} className={styles.form} onSubmit={handleSubmit} aria-describedby="task-create-guidance">
-      <div className={styles.field}>
-        <label htmlFor="raw_requirements">Requirements *</label>
-        <textarea
-          id="raw_requirements"
-          name="raw_requirements"
-          required
-          disabled={loading}
-          placeholder="Paste the request, acceptance notes, links, and context exactly as received."
-        />
-        <p id="task-create-guidance" className={styles.help}>
-          Include the operator request, acceptance notes, links, risks, and any known constraints.
-        </p>
-      </div>
-      <div className={styles.field}>
-        <label htmlFor="title">Title</label>
-        <input
-          id="title"
-          name="title"
-          maxLength={TITLE_MAX_LENGTH}
-          disabled={loading}
-          placeholder="Optional short title"
-        />
-      </div>
-      {validationErrors.length > 0 ? (
-        <ul className={styles.validationErrors}>
-          {validationErrors.map((message, index) => (
-            <li key={index}>{message}</li>
-          ))}
-        </ul>
-      ) : null}
+      <RequirementsField loading={loading} />
+      <TitleField loading={loading} />
+      <ValidationErrors messages={validationErrors} />
       {error ? <p className={styles.error}>{error}</p> : null}
       <div className={styles.actions}>
         <Button type="submit" loading={loading} onClick={undefined}>

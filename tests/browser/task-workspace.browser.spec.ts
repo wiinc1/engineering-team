@@ -61,62 +61,80 @@ function createdTaskDetailPayload(rawRequirements: string) {
       stage: 'DRAFT',
       status: 'waiting',
     },
-    summary: {
-      owner: { id: 'pm', label: 'PM', kind: 'assigned' },
-      workflowStage: { value: 'DRAFT', label: 'Draft' },
-      nextAction: { label: 'PM refinement required', source: 'system', overdue: false, waitingOn: 'Task refinement' },
-      prStatus: { label: 'No linked PRs', state: 'empty', total: 0, openCount: 0, mergedCount: 0, draftCount: 0 },
-      childStatus: { label: 'No child tasks', state: 'empty', total: 0, blockedCount: 0 },
-      timers: { queueAgeLabel: 'Just now', lastUpdatedAt: '2026-05-05T12:04:00.000Z', freshness: 'fresh' },
-      blockedState: { isBlocked: false, label: 'Waiting', waitingOn: 'Task refinement' },
-    },
+    summary: createdTaskSummaryPayload(),
     blockers: [],
-    context: {
-      intakeDraft: true,
-      operatorIntakeRequirements: rawRequirements,
-      businessContext: null,
-      acceptanceCriteria: [],
-      definitionOfDone: [],
-      technicalSpec: null,
-      monitoringSpec: null,
-    },
+    context: createdTaskContextPayload(rawRequirements),
     relations: { linkedPrs: [], childTasks: [] },
-    activity: {
-      comments: [],
-      auditLog: [
-        {
-          id: 'evt-intake',
-          type: 'task.created',
-          summary: 'Task created',
-          actor: { id: 'pm-1', label: 'PM 1' },
-          occurredAt: '2026-05-05T12:04:00.000Z',
-        },
-      ],
-      auditLogPageInfo: { limit: 25, next_cursor: null, has_more: false },
-    },
-    telemetry: {
-      availability: 'empty',
-      lastUpdatedAt: null,
-      summary: {},
-      emptyStateReason: 'No telemetry signals are linked to this task yet.',
-      access: { restricted: false, omission_applied: false, omitted_fields: [] },
-    },
-    meta: {
-      permissions: {
-        canViewComments: true,
-        canViewAuditLog: true,
-        canViewTelemetry: true,
-        canViewChildTasks: true,
-        canViewLinkedPrMetadata: true,
-      },
-      freshness: { status: 'fresh', lastUpdatedAt: '2026-05-05T12:04:00.000Z' },
-    },
+    activity: createdTaskActivityPayload(),
+    telemetry: createdTaskTelemetryPayload(),
+    meta: createdTaskMetaPayload(),
   };
 }
 
-async function mockWorkspaceApi(page) {
-  let createdRequirements = '';
+function createdTaskSummaryPayload() {
+  return {
+    owner: { id: 'pm', label: 'PM', kind: 'assigned' },
+    workflowStage: { value: 'DRAFT', label: 'Draft' },
+    nextAction: { label: 'PM refinement required', source: 'system', overdue: false, waitingOn: 'Task refinement' },
+    prStatus: { label: 'No linked PRs', state: 'empty', total: 0, openCount: 0, mergedCount: 0, draftCount: 0 },
+    childStatus: { label: 'No child tasks', state: 'empty', total: 0, blockedCount: 0 },
+    timers: { queueAgeLabel: 'Just now', lastUpdatedAt: '2026-05-05T12:04:00.000Z', freshness: 'fresh' },
+    blockedState: { isBlocked: false, label: 'Waiting', waitingOn: 'Task refinement' },
+  };
+}
 
+function createdTaskContextPayload(rawRequirements: string) {
+  return {
+    intakeDraft: true,
+    operatorIntakeRequirements: rawRequirements,
+    businessContext: null,
+    acceptanceCriteria: [],
+    definitionOfDone: [],
+    technicalSpec: null,
+    monitoringSpec: null,
+  };
+}
+
+function createdTaskActivityPayload() {
+  return {
+    comments: [],
+    auditLog: [
+      {
+        id: 'evt-intake',
+        type: 'task.created',
+        summary: 'Task created',
+        actor: { id: 'pm-1', label: 'PM 1' },
+        occurredAt: '2026-05-05T12:04:00.000Z',
+      },
+    ],
+    auditLogPageInfo: { limit: 25, next_cursor: null, has_more: false },
+  };
+}
+
+function createdTaskTelemetryPayload() {
+  return {
+    availability: 'empty',
+    lastUpdatedAt: null,
+    summary: {},
+    emptyStateReason: 'No telemetry signals are linked to this task yet.',
+    access: { restricted: false, omission_applied: false, omitted_fields: [] },
+  };
+}
+
+function createdTaskMetaPayload() {
+  return {
+    permissions: {
+      canViewComments: true,
+      canViewAuditLog: true,
+      canViewTelemetry: true,
+      canViewChildTasks: true,
+      canViewLinkedPrMetadata: true,
+    },
+    freshness: { status: 'fresh', lastUpdatedAt: '2026-05-05T12:04:00.000Z' },
+  };
+}
+
+async function routeAgents(page) {
   await page.route('**/api/ai-agents', async (route) => {
     await route.fulfill({
       json: {
@@ -127,14 +145,16 @@ async function mockWorkspaceApi(page) {
       },
     });
   });
+}
 
+async function routeTaskList(page, state: { createdRequirements: string }) {
   await page.route('**/api/tasks', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({ json: { items: workspaceTasks } });
       return;
     }
 
-    createdRequirements = String((await route.request().postDataJSON())?.raw_requirements || '');
+    state.createdRequirements = String((await route.request().postDataJSON())?.raw_requirements || '');
     await route.fulfill({
       status: 201,
       json: {
@@ -145,15 +165,21 @@ async function mockWorkspaceApi(page) {
       },
     });
   });
+}
 
+async function routeCreatedTaskDetail(page, state: { createdRequirements: string }) {
   await page.route('**/api/tasks/TSK-UX/detail**', async (route) => {
-    await route.fulfill({ json: createdTaskDetailPayload(createdRequirements) });
+    await route.fulfill({ json: createdTaskDetailPayload(state.createdRequirements) });
   });
+}
 
+async function routeCreatedTaskHistory(page) {
   await page.route('**/api/tasks/TSK-UX/history**', async (route) => {
     await route.fulfill({ json: { items: [], page_info: { next_cursor: null } } });
   });
+}
 
+async function routeCreatedTaskObservability(page) {
   await page.route('**/api/tasks/TSK-UX/observability-summary', async (route) => {
     await route.fulfill({
       json: {
@@ -168,7 +194,9 @@ async function mockWorkspaceApi(page) {
       },
     });
   });
+}
 
+async function routeCreatedTaskSummary(page) {
   await page.route('**/api/tasks/TSK-UX', async (route) => {
     await route.fulfill({
       json: {
@@ -189,93 +217,119 @@ async function mockWorkspaceApi(page) {
   });
 }
 
-test.describe('task workspace UX', () => {
-  test.beforeEach(async ({ page }) => {
-    await installSession(page);
-    await mockWorkspaceApi(page);
-  });
+async function mockWorkspaceApi(page) {
+  const state = { createdRequirements: '' };
+  await routeAgents(page);
+  await routeTaskList(page, state);
+  await routeCreatedTaskDetail(page, state);
+  await routeCreatedTaskHistory(page);
+  await routeCreatedTaskObservability(page);
+  await routeCreatedTaskSummary(page);
+}
 
-  test('renders the task workspace board with scannable columns and mobile overflow control', async ({ page }) => {
-    await page.goto('/tasks?view=board', { waitUntil: 'domcontentloaded' });
+async function assertWorkspaceBoard(page) {
+  await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+  await expect(page.getByLabel('Task board')).toBeVisible();
+  await expect(page.getByLabel('Intake Draft column')).toContainText('Shape raw operator notes');
+  await expect(page.getByLabel('SRE Verification column')).toContainText('Verify release telemetry');
+}
 
-    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
-    await expect(page.getByLabel('Task board')).toBeVisible();
-    await expect(page.getByLabel('Intake Draft column')).toContainText('Shape raw operator notes');
-    await expect(page.getByLabel('SRE Verification column')).toContainText('Verify release telemetry');
-    const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
-    const secondaryNav = page.getByRole('group', { name: 'Secondary workspace navigation' });
+async function assertWorkspaceNavigation(page) {
+  const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
+  const secondaryNav = page.getByRole('group', { name: 'Secondary workspace navigation' });
 
-    await expect(primaryNav.getByRole('button', { name: 'New task' })).toBeVisible();
-    await expect(secondaryNav.getByRole('button', { name: 'PM overview' })).toBeVisible();
-    await expect(secondaryNav.getByLabel('Role inboxes')).toBeVisible();
+  await expect(primaryNav.getByRole('button', { name: 'New task' })).toBeVisible();
+  await expect(secondaryNav.getByRole('button', { name: 'PM overview' })).toBeVisible();
+  await expect(secondaryNav.getByLabel('Role inboxes')).toBeVisible();
+}
 
-    const navStyles = await page.locator('.app-nav').evaluate((nav) => {
-      const newTask = nav.querySelector('.app-nav__primary .app-nav__primary-action');
-      const pmOverview = [...nav.querySelectorAll('.app-nav__secondary button')].find(
-        (button) => button.textContent === 'PM overview',
-      );
-      const newTaskStyle = newTask ? window.getComputedStyle(newTask) : null;
-      const pmOverviewStyle = pmOverview ? window.getComputedStyle(pmOverview) : null;
-      return {
-        newTaskBackground: newTaskStyle?.backgroundColor || '',
-        pmOverviewBackground: pmOverviewStyle?.backgroundColor || '',
-        pmOverviewFontSize: pmOverviewStyle?.fontSize || '',
-      };
-    });
-
-    expect(navStyles.newTaskBackground).not.toBe(navStyles.pmOverviewBackground);
-    expect(navStyles.pmOverviewFontSize).toBe('13.44px');
-
-    await page.getByLabel('Owner filter').selectOption('pm');
-    await expect(page.getByText('1 cards shown for PM · PM.')).toBeVisible();
-    const emptySreColumn = page.getByLabel('SRE Verification column').locator('.task-board__empty');
-    await expect(emptySreColumn).toContainText('No matching tasks in this column.');
-    await expect(emptySreColumn.locator('.task-board__empty-guidance')).toHaveText(
-      'Release verification and monitoring readiness.',
+async function readNavigationStyles(page) {
+  return page.locator('.app-nav').evaluate((nav) => {
+    const newTask = nav.querySelector('.app-nav__primary .app-nav__primary-action');
+    const pmOverview = [...nav.querySelectorAll('.app-nav__secondary button')].find(
+      (button) => button.textContent === 'PM overview',
     );
-    await page.getByRole('button', { name: 'Clear all filters' }).click();
+    const newTaskStyle = newTask ? window.getComputedStyle(newTask) : null;
+    const pmOverviewStyle = pmOverview ? window.getComputedStyle(pmOverview) : null;
+    return {
+      newTaskBackground: newTaskStyle?.backgroundColor || '',
+      pmOverviewBackground: pmOverviewStyle?.backgroundColor || '',
+      pmOverviewFontSize: pmOverviewStyle?.fontSize || '',
+    };
+  });
+}
 
-    await page.setViewportSize({ width: 390, height: 844 });
-    const boardMetrics = await page.locator('.task-board__scroll').evaluate((element) => {
-      const firstColumn = element.querySelector('.task-board__column')?.getBoundingClientRect();
-      return {
-        clientWidth: element.clientWidth,
-        scrollWidth: element.scrollWidth,
-        firstColumnWidth: firstColumn?.width || 0,
-      };
-    });
+async function assertOwnerFilterEmptyState(page) {
+  await page.getByLabel('Owner filter').selectOption('pm');
+  await expect(page.getByText('1 cards shown for PM · PM.')).toBeVisible();
+  const emptySreColumn = page.getByLabel('SRE Verification column').locator('.task-board__empty');
+  await expect(emptySreColumn).toContainText('No matching tasks in this column.');
+  await expect(emptySreColumn.locator('.task-board__empty-guidance')).toHaveText(
+    'Release verification and monitoring readiness.',
+  );
+  await page.getByRole('button', { name: 'Clear all filters' }).click();
+}
 
-    expect(boardMetrics.scrollWidth).toBeGreaterThan(boardMetrics.clientWidth);
-    expect(boardMetrics.firstColumnWidth).toBeLessThanOrEqual(330);
+async function assertMobileBoardOverflow(page) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const boardMetrics = await page.locator('.task-board__scroll').evaluate((element) => {
+    const firstColumn = element.querySelector('.task-board__column')?.getBoundingClientRect();
+    return { clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, firstColumnWidth: firstColumn?.width || 0 };
   });
 
-  test('creates an intake draft from the workspace and opens the created task with recovery actions', async ({ page }) => {
-    await page.goto('/tasks/create', { waitUntil: 'domcontentloaded' });
+  expect(boardMetrics.scrollWidth).toBeGreaterThan(boardMetrics.clientWidth);
+  expect(boardMetrics.firstColumnWidth).toBeLessThanOrEqual(330);
+}
 
-    await expect(page.getByRole('heading', { name: 'Add a new task' })).toBeVisible();
-    await page.getByLabel(/requirements/i).fill('Raw operator request from the browser test.');
-    await page.getByRole('button', { name: 'Create task draft' }).click();
+async function assertTaskCreationSuccess(page) {
+  await expect(page).toHaveURL(/\/tasks\/create$/);
+  await expect(page.getByRole('status')).toContainText('TSK-UX is ready for PM refinement');
+  await expect(page.getByRole('link', { name: 'Open task detail' })).toHaveAttribute(
+    'href',
+    '/tasks/TSK-UX?created=intake-draft',
+  );
+  await expect(page.getByRole('link', { name: 'View task workspace' })).toHaveAttribute('href', '/tasks?view=board');
+  await expect(page.getByRole('button', { name: 'Create another task' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create task draft' })).toBeHidden();
+}
 
-    await expect(page).toHaveURL(/\/tasks\/create$/);
-    await expect(page.getByRole('status')).toContainText('TSK-UX is ready for PM refinement');
-    await expect(page.getByRole('link', { name: 'Open task detail' })).toHaveAttribute(
-      'href',
-      '/tasks/TSK-UX?created=intake-draft',
-    );
-    await expect(page.getByRole('link', { name: 'View task workspace' })).toHaveAttribute('href', '/tasks?view=board');
-    await expect(page.getByRole('button', { name: 'Create another task' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create task draft' })).toBeHidden();
+async function assertCreatedTaskDetail(page) {
+  await expect(page).toHaveURL(/\/tasks\/TSK-UX\?created=intake-draft/);
+  await expect(page.getByRole('heading', { name: 'Improve operator task workspace' })).toBeVisible();
+  await expect(page.locator('.task-created-banner')).toContainText('Intake Draft is ready for PM refinement');
+  await expect(page.getByText('Second raw operator request from the browser test.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back to task workspace' })).toBeVisible();
+}
 
-    await page.getByRole('button', { name: 'Create another task' }).click();
-    await expect(page.getByLabel(/requirements/i)).toHaveValue('');
-    await page.getByLabel(/requirements/i).fill('Second raw operator request from the browser test.');
-    await page.getByRole('button', { name: 'Create task draft' }).click();
-    await page.getByRole('link', { name: 'Open task detail' }).click();
+test.beforeEach(async ({ page }) => {
+  await installSession(page);
+  await mockWorkspaceApi(page);
+});
 
-    await expect(page).toHaveURL(/\/tasks\/TSK-UX\?created=intake-draft/);
-    await expect(page.getByRole('heading', { name: 'Improve operator task workspace' })).toBeVisible();
-    await expect(page.locator('.task-created-banner')).toContainText('Intake Draft is ready for PM refinement');
-    await expect(page.getByText('Second raw operator request from the browser test.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Back to task workspace' })).toBeVisible();
-  });
+test('renders the task workspace board with scannable columns and mobile overflow control', async ({ page }) => {
+  await page.goto('/tasks?view=board', { waitUntil: 'domcontentloaded' });
+  await assertWorkspaceBoard(page);
+  await assertWorkspaceNavigation(page);
+
+  const navStyles = await readNavigationStyles(page);
+  expect(navStyles.newTaskBackground).not.toBe(navStyles.pmOverviewBackground);
+  expect(navStyles.pmOverviewFontSize).toBe('13.44px');
+
+  await assertOwnerFilterEmptyState(page);
+  await assertMobileBoardOverflow(page);
+});
+
+test('creates an intake draft from the workspace and opens the created task with recovery actions', async ({ page }) => {
+  await page.goto('/tasks/create', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Add a new task' })).toBeVisible();
+  await page.getByLabel(/requirements/i).fill('Raw operator request from the browser test.');
+  await page.getByRole('button', { name: 'Create task draft' }).click();
+  await assertTaskCreationSuccess(page);
+
+  await page.getByRole('button', { name: 'Create another task' }).click();
+  await expect(page.getByLabel(/requirements/i)).toHaveValue('');
+  await page.getByLabel(/requirements/i).fill('Second raw operator request from the browser test.');
+  await page.getByRole('button', { name: 'Create task draft' }).click();
+  await page.getByRole('link', { name: 'Open task detail' }).click();
+  await assertCreatedTaskDetail(page);
 });

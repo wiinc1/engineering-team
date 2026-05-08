@@ -1,0 +1,53 @@
+{
+  "title": "Production Auth Status",
+  "description": "Registration production auth dashboard for strategy, smoke result, and rollback readiness.",
+  "panels": [
+    {
+      "title": "Production auth smoke result",
+      "metric": "feature_production_auth_smoke_result{check,strategy=\"registration\"}",
+      "type": "stat",
+      "threshold": "all checks must be 1 before ship"
+    },
+    {
+      "title": "Auth request rate by endpoint",
+      "metric": "feature_production_auth_requests_total{status,endpoint,strategy=\"registration\"}",
+      "type": "timeseries"
+    },
+    {
+      "title": "Auth endpoint duration",
+      "metric": "feature_production_auth_duration_seconds{endpoint,strategy=\"registration\"}",
+      "type": "histogram",
+      "slo": "p95 < 300ms excluding provider/email latency"
+    },
+    {
+      "title": "Auth errors by type",
+      "metric": "feature_production_auth_errors_total{type,strategy=\"registration\"}",
+      "type": "timeseries",
+      "alert": "error rate > 0.1% excluding expected invalid/replay requests"
+    },
+    {
+      "title": "No login path after deploy",
+      "metric": "auth-no-login-path-after-deploy",
+      "type": "alert",
+      "source": "monitoring/alerts/auth-availability.yml"
+    }
+  ],
+  "links": [
+    {
+      "title": "Production auth status runbook",
+      "url": "docs/runbooks/production-auth-status.md"
+    },
+    {
+      "title": "Production identity provider runbook",
+      "url": "docs/runbooks/production-identity-provider.md"
+    },
+    {
+      "title": "Registration smoke artifact",
+      "url": "observability/registration-auth-production-smoke.json"
+    },
+    {
+      "title": "OIDC smoke artifact",
+      "url": "observability/oidc-production-smoke.json"
+    }
+  ]
+}

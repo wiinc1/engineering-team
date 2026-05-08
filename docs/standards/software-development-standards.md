@@ -69,7 +69,7 @@ All standards below derive directly from these axioms and have been observed at 
   Rationale: Smaller files and functions reduce review risk, change blast radius, and maintenance cost.  
   Evidence: Repo-template standards control plane, version `0.1.0`.
 
-- Legacy maintainability violations must be tracked in `config/maintainability-baseline.json`; the maintainability gate fails when new violations appear or existing baseline entries regress.  
+- Legacy maintainability violations must be tracked in `config/maintainability-baseline.json`; the maintainability gate fails when new violations appear or existing baseline entries regress. Deleted tracked files are ignored by the gate so removal work is not blocked by stale `git ls-files` entries in an in-progress branch.
   Rationale: A ratchet lets the repo adopt objective thresholds without forcing a high-risk big-bang rewrite of existing runtime and test surfaces.  
   Evidence: Repo-template maintainability ratchet policy, version `0.1.0`.
 

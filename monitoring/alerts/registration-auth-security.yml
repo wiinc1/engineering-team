@@ -1,0 +1,29 @@
+alerts:
+  - name: registration-auth-login-failure-spike
+    severity: P1
+    condition: feature_registration_auth_attempts_total{flow="login",status="failed"} rate_10m > 0.25
+    threshold: gt_25_percent_failed_login_attempts_over_10m
+    route: slack:#incidents
+    runbook: docs/runbooks/production-auth-status.md
+    redaction: hashed_email_ip_and_counts_only
+  - name: registration-auth-registration-spike
+    severity: P1
+    condition: feature_registration_auth_attempts_total{flow="register"} rate_10m > baseline_x3
+    threshold: gt_3x_baseline_registration_attempts_over_10m
+    route: slack:#incidents
+    runbook: docs/runbooks/production-auth-status.md
+    redaction: domain_hash_ip_hash_and_counts_only
+  - name: registration-auth-reset-spike
+    severity: P2
+    condition: auth_password_reset_requests rate_10m > baseline_x3
+    threshold: gt_3x_baseline_password_reset_requests_over_10m
+    route: slack:#incidents
+    runbook: docs/runbooks/production-auth-status.md
+    redaction: hashed_email_ip_and_counts_only
+  - name: registration-auth-smoke-failure
+    severity: P0
+    condition: feature_registration_auth_smoke_result{check="passed"} == 0
+    threshold: two_consecutive_synthetic_failures
+    route: pagerduty
+    runbook: docs/runbooks/production-auth-status.md
+    redaction: smoke_check_names_and_status_only

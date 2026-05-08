@@ -102,7 +102,7 @@ test('auth admin seed dry-run does not open a database pool', async () => {
   assert.match(output.join(''), /Dry-run only/);
 });
 
-test('auth admin seed apply path upserts through the magic-link service and closes the pool', async () => {
+test('auth admin seed apply path upserts through the registration service and closes the pool', async () => {
   let poolClosed = false;
   let receivedUser = null;
   let receivedOperator = null;

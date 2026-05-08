@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-05-08T16:33:24.520Z",
+  "baseUrl": "https://engineering-team-2fvxttcgz-wiinc1-hotmailcoms-projects.vercel.app",
+  "deployment": {
+    "selectedAuthStrategy": "registration",
+    "id": "dpl_EnEg7kdTW8Gad945cqjueAHhpte1",
+    "url": "https://engineering-team-2fvxttcgz-wiinc1-hotmailcoms-projects.vercel.app",
+    "commitSha": null,
+    "rollbackTarget": "https://engineering-team-539eqk6ou-wiinc1-hotmailcoms-projects.vercel.app"
+  },
+  "registrationEmailHash": "5d173b060e75f5fa3039a5065b050ea5fb7f20d81ef69ef7ed98b15411283c85",
+  "passwordResetEmailHash": "1cd4ddeabc04801c8439527936bba763dc990ce26ce03a1252cb9f599978f8d4",
+  "magicLink": {
+    "requestStatus": 410,
+    "removed": true
+  },
+  "login": {
+    "status": 200,
+    "ok": true,
+    "sessionCookieSet": true,
+    "csrfCookieSet": true,
+    "next": "/tasks"
+  },
+  "session": {
+    "actorId": "registration-smoke-20260508162123",
+    "tenantId": "tenant-int",
+    "roles": [
+      "admin",
+      "pm"
+    ],
+    "expiresAtPresent": true
+  },
+  "protectedRoutes": [
+    {
+      "route": "/tasks",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    }
+  ],
+  "passwordResetRequest": {
+    "status": 200,
+    "ok": true,
+    "genericResponse": true
+  },
+  "logout": {
+    "status": 200,
+    "ok": true
+  },
+  "afterLogout": {
+    "status": 401,
+    "authRejected": true
+  },
+  "summary": {
+    "registrationStrategySelected": true,
+    "loginAccepted": true,
+    "sessionCookieSet": true,
+    "csrfCookieSet": true,
+    "meReturnedIdentity": true,
+    "protectedRoutesLoaded": true,
+    "passwordResetGeneric": true,
+    "logoutRevoked": true,
+    "afterLogoutRejected": true,
+    "magicLinkRemoved": true,
+    "rollbackTargetPresent": true,
+    "evidenceRedacted": true,
+    "passed": true
+  }
+}

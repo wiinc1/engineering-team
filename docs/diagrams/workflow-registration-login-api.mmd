@@ -1,0 +1,11 @@
+flowchart TD
+  A[POST /auth/register] --> B[Policy mode check]
+  B --> C[auth_users plus auth_credentials]
+  C --> D[Optional email verification]
+  E[POST /auth/login] --> F[Rate limit check]
+  F --> G[Password verify]
+  G -->|success| H[Set session and CSRF cookies]
+  G -->|failure| I[Generic error and audit]
+  H --> J[GET /auth/me]
+  J --> K[Protected browser routes]
+  K --> L[POST /auth/logout]

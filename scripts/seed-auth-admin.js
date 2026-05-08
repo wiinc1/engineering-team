@@ -2,10 +2,10 @@
 const crypto = require('node:crypto');
 const { createPgPoolFromEnv } = require('../lib/audit');
 const {
-  createMagicLinkAuthService,
+  createRegistrationAuthService,
   normalizeEmail,
   normalizeRoles,
-} = require('../lib/auth/magic-link');
+} = require('../lib/auth/registration');
 
 const DEFAULT_ADMIN_TENANT_ID = 'tenant-int';
 const DEFAULT_ADMIN_ROLES = 'admin,pm';
@@ -49,7 +49,7 @@ function readAdminRoles(env = process.env) {
     errors.push(error.message);
   }
   if (roles.length && !roles.includes('admin')) {
-    errors.push('AUTH_ADMIN_ROLES must include admin for the first production magic-link administrator.');
+    errors.push('AUTH_ADMIN_ROLES must include admin for the first production registration administrator.');
   }
   return { roles, errors };
 }
@@ -143,7 +143,7 @@ function buildAdminSeedPlan(env = process.env, argv = process.argv.slice(2)) {
 
 async function applyAdminSeed(input, dependencies = {}) {
   const poolFactory = dependencies.poolFactory || createPgPoolFromEnv;
-  const serviceFactory = dependencies.serviceFactory || createMagicLinkAuthService;
+  const serviceFactory = dependencies.serviceFactory || createRegistrationAuthService;
   const pool = poolFactory(input.databaseUrl);
   try {
     const service = serviceFactory({ pool });
@@ -170,7 +170,7 @@ async function applyAdminSeed(input, dependencies = {}) {
 function printHelp(stdout = process.stdout) {
   stdout.write(`Usage: npm run auth:admin:seed -- [--apply]
 
-Seeds or updates the first production magic-link admin user.
+Seeds or updates the first production registration admin user.
 
 Required env:
   DATABASE_URL

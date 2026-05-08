@@ -1,0 +1,33 @@
+flowchart TD
+  A[Production owner selects auth strategy] --> B{Active strategy}
+  B -->|registration| C[Configure registration production env names and values]
+  B -->|oidc| D[Configure OIDC browser and JWKS verifier settings]
+  C --> E[Run env-name and local config gates]
+  D --> E
+  E --> F[Deploy production build]
+  F --> G[Run fresh production smoke]
+  G --> H[Write redacted smoke artifact]
+  H --> I[Run auth status ship gate]
+  I -->|passes| J[Attach evidence to issue and move to ship]
+  I -->|fails| K[Keep issue in verification with blocker]
+  K --> L[Fix config, smoke, docs, or rollback evidence]
+  L --> G
+
+  subgraph RegistrationSmoke[Fresh production smoke]
+    G1[Verify magic-link request is removed]
+    G2[Submit credential login]
+    G3[Verify session cookies and auth/me]
+    G4[Verify protected routes and reset generic response]
+    G5[Verify logout and rejected post-logout auth/me]
+  end
+
+  subgraph OidcSmoke[OIDC production smoke]
+    O1[Load provider discovery]
+    O2[Validate hosted callback route]
+    O3[Verify bearer token with auth/me]
+    O4[Verify protected routes]
+    O5[Verify logout route and rollback evidence]
+  end
+
+  G --> G1 --> G2 --> G3 --> G4 --> G5 --> H
+  G --> O1 --> O2 --> O3 --> O4 --> O5 --> H
