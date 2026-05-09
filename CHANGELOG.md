@@ -12,3 +12,6 @@
   test filename gate
 - declared committed visual identity generated outputs and their token drift check
 - migrated app and Button styles to consume generated visual identity tokens
+- added token usage enforcement for migrated CSS and DESIGN-TOKEN-EXCEPTION handling
+- migrated task creation form styling to generated DESIGN.md component tokens
+- documented DESIGN.md UI workflow rules in PR and agent/developer guidance

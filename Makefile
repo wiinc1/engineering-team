@@ -29,6 +29,7 @@ lint:
 	$(PYTHON) dev-standards/tooling/validate_architecture.py --repo-root $(REPO_ROOT) $(if $(BASE_REF),--base-ref $(BASE_REF))
 	$(PYTHON) dev-standards/tooling/validate_visual_identity.py --repo-root $(REPO_ROOT) $(if $(BASE_REF),--base-ref $(BASE_REF))
 	npm run design:tokens:check
+	npm run design:tokens:enforce
 	CHANGE_KIND=$(CHANGE_KIND) CHANGE_REFERENCE=$(CHANGE_REFERENCE) $(PYTHON) dev-standards/tooling/validate_docs_freshness.py --repo-root $(REPO_ROOT) $(if $(BASE_REF),--base-ref $(BASE_REF))
 	CHANGE_KIND=$(CHANGE_KIND) CHANGE_REVERSIBILITY=$(CHANGE_REVERSIBILITY) $(PYTHON) dev-standards/tooling/validate_release_evidence.py --repo-root $(REPO_ROOT) --environment $(RELEASE_ENV)
 	$(PYTHON) dev-standards/tooling/check_maintainability.py --repo-root $(REPO_ROOT)

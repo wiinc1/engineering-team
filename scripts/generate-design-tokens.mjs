@@ -6,6 +6,7 @@ import YAML from 'yaml';
 const DESIGN_PATH = 'DESIGN.md';
 const GLOBAL_OUTPUT_PATH = 'src/app/design-tokens.css';
 const BUTTON_OUTPUT_PATH = 'src/components/Button/Button.tokens.css';
+const TASK_CREATION_FORM_OUTPUT_PATH = 'src/features/task-creation/TaskCreationForm.tokens.css';
 const CHECK_MODE = process.argv.includes('--check');
 const REFERENCE_PATTERN = /\{([^}]+)\}/g;
 
@@ -229,6 +230,69 @@ function buildButtonCss(tokens) {
   return `${lines.join('\n')}\n`;
 }
 
+function buildTaskCreationFormCss(tokens) {
+  const form = tokens.components?.['task-creation-form'] || {};
+  const field = tokens.components?.['task-creation-field'] || {};
+  const label = tokens.components?.['task-creation-label'] || {};
+  const input = tokens.components?.['task-creation-input'] || {};
+  const textarea = tokens.components?.['task-creation-textarea'] || {};
+  const help = tokens.components?.['task-creation-help'] || {};
+  const error = tokens.components?.['task-creation-error'] || {};
+  const validationError = tokens.components?.['task-creation-validation-error'] || error;
+  const formTypography = form.typography || tokens.typography?.['body-md'] || {};
+  const labelTypography = label.typography || tokens.typography?.['label-md'] || {};
+  const inputTypography = input.typography || tokens.typography?.['body-md'] || {};
+  const helpTypography = help.typography || tokens.typography?.['body-sm'] || {};
+  const errorTypography = error.typography || tokens.typography?.['body-sm'] || {};
+
+  const lines = [...generatedHeader(), ':root {'];
+  addVar(lines, 'task-creation-form-gap', form.gap || tokens.spacing?.['4']);
+  addVar(lines, 'task-creation-form-padding', form.padding || tokens.spacing?.['5']);
+  addVar(lines, 'task-creation-form-background', form.backgroundColor || tokens.colors?.surface);
+  addVar(lines, 'task-creation-form-color', form.textColor || tokens.colors?.['on-surface']);
+  addVar(lines, 'task-creation-form-border', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'task-creation-form-radius', form.rounded || tokens.rounded?.panel);
+  addVar(lines, 'task-creation-form-shadow', tokens.shadows?.sm);
+  addVar(lines, 'task-creation-form-font-family', formTypography.fontFamily);
+
+  addVar(lines, 'task-creation-field-gap', field.gap || tokens.spacing?.['2']);
+  addVar(lines, 'task-creation-row-gap', tokens.spacing?.['6']);
+  addVar(lines, 'task-creation-actions-margin-top', tokens.spacing?.['1']);
+
+  addVar(lines, 'task-creation-label-color', label.textColor || tokens.colors?.['on-muted-strong']);
+  addVar(lines, 'task-creation-label-font-size', labelTypography.fontSize);
+  addVar(lines, 'task-creation-label-font-weight', labelTypography.fontWeight);
+
+  addVar(lines, 'task-creation-input-padding', input.padding || tokens.spacing?.['3']);
+  addVar(lines, 'task-creation-input-background', input.backgroundColor || tokens.colors?.surface);
+  addVar(lines, 'task-creation-input-color', input.textColor || tokens.colors?.['on-surface']);
+  addVar(lines, 'task-creation-input-border', borderValue({}, tokens.borders?.default));
+  addVar(lines, 'task-creation-input-radius', input.rounded || tokens.rounded?.control);
+  addVar(lines, 'task-creation-input-font-size', inputTypography.fontSize);
+  addVar(lines, 'task-creation-input-line-height', inputTypography.lineHeight);
+  addVar(lines, 'task-creation-textarea-min-height', textarea.height);
+
+  addVar(lines, 'task-creation-help-color', help.textColor || tokens.colors?.['on-muted']);
+  addVar(lines, 'task-creation-help-font-size', helpTypography.fontSize);
+
+  addVar(lines, 'task-creation-validation-error-color', validationError.textColor || tokens.colors?.['danger-text']);
+  addVar(lines, 'task-creation-validation-error-background', validationError.backgroundColor || tokens.colors?.['danger-soft']);
+  addVar(lines, 'task-creation-validation-error-font-size', validationError.typography?.fontSize || errorTypography.fontSize);
+  addVar(lines, 'task-creation-validation-error-padding', validationError.padding || tokens.spacing?.['2']);
+  addVar(lines, 'task-creation-validation-error-radius', validationError.rounded || tokens.rounded?.['control-sm']);
+  addVar(lines, 'task-creation-validation-error-margin-bottom', tokens.spacing?.['1']);
+
+  addVar(lines, 'task-creation-error-color', error.textColor || tokens.colors?.['danger-text']);
+  addVar(lines, 'task-creation-error-background', error.backgroundColor || tokens.colors?.['danger-soft']);
+  addVar(lines, 'task-creation-error-font-size', errorTypography.fontSize);
+  addVar(lines, 'task-creation-error-padding', error.padding || tokens.spacing?.['3']);
+  addVar(lines, 'task-creation-error-radius', error.rounded || tokens.rounded?.['control-sm']);
+  addVar(lines, 'task-creation-error-border-accent-width', tokens.spacing?.['1']);
+  addVar(lines, 'task-creation-error-border-accent-color', tokens.colors?.danger);
+  lines.push('}', '');
+  return `${lines.join('\n')}\n`;
+}
+
 function addComponentVars(lines, _componentName, component, prefix) {
   if (!component || typeof component !== 'object') return;
   for (const [property, value] of Object.entries(component)) {
@@ -294,6 +358,14 @@ function addVar(lines, name, value) {
   lines.push(`  --${name}: ${cssValue(value)};`);
 }
 
+function borderValue(component, fallback) {
+  const width = component?.borderWidth || fallback?.width;
+  const style = component?.borderStyle || fallback?.style;
+  const color = component?.borderColor || fallback?.color;
+  if (!width || !style || !color) return null;
+  return `${cssValue(width)} ${cssValue(style)} ${cssValue(color)}`;
+}
+
 function cssValue(value) {
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return value;
@@ -339,4 +411,5 @@ const tokens = readDesignTokens();
 writeOrCheck([
   { path: GLOBAL_OUTPUT_PATH, content: buildGlobalCss(tokens) },
   { path: BUTTON_OUTPUT_PATH, content: buildButtonCss(tokens) },
+  { path: TASK_CREATION_FORM_OUTPUT_PATH, content: buildTaskCreationFormCss(tokens) },
 ]);

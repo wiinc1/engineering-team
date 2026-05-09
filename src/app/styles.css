@@ -1194,7 +1194,7 @@ button {
 }
 
 .task-create-page__intake-summary h3 {
-  font-size: 1rem;
+  font-size: var(--design-typography-body-md-font-size);
 }
 
 .task-create-page__intake-summary h4,
@@ -1456,8 +1456,8 @@ button {
 }
 
 .task-board__column-header h2 {
-  font-size: 1rem;
-  line-height: 1.2;
+  font-size: var(--design-typography-body-md-font-size);
+  line-height: var(--design-typography-headline-md-line-height);
 }
 
 .task-board__column-header > span {

@@ -84,3 +84,5 @@
 - Every task file must include `## Standards Alignment` and `## Required Evidence`.
 - Gap statements must use: `Gap observed: X. Documented rationale: Y (source Z).`
 - PRs and implementation notes should point back to `docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md`.
+- For UI work, read `DESIGN.md` before editing styles, change reusable visual tokens in `DESIGN.md` first, regenerate with `npm run design:tokens`, avoid hard-coded visual values in migrated CSS, then run `npm run design:tokens:check`, `npm run design:tokens:enforce`, and `make verify`.
+- One-off migrated CSS exceptions must use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`; reusable exceptions must become `DESIGN.md` tokens.

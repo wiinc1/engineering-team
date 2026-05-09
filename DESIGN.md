@@ -231,6 +231,43 @@ components:
   input-error:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.danger}"
+  task-creation-form:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.panel}"
+    padding: 1.125rem
+  task-creation-label:
+    textColor: "{colors.on-muted-strong}"
+    typography: "{typography.label-md}"
+  task-creation-input:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.control}"
+    padding: "{spacing.3}"
+  task-creation-textarea:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.control}"
+    padding: "{spacing.3}"
+    height: 220px
+  task-creation-help:
+    textColor: "{colors.on-muted}"
+    typography: "{typography.body-sm}"
+  task-creation-error:
+    backgroundColor: "{colors.danger-soft}"
+    textColor: "{colors.danger-text}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.control-sm}"
+    padding: "{spacing.3}"
+  task-creation-validation-error:
+    backgroundColor: "{colors.danger-soft}"
+    textColor: "{colors.danger-text}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.control-sm}"
+    padding: "{spacing.2} {spacing.3}"
   badge-neutral:
     backgroundColor: "{colors.surface-subtle}"
     textColor: "{colors.on-muted-strong}"
@@ -408,6 +445,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Outline button: navigational or non-destructive alternative action where contrast against a surface is required.
 - Destructive button: irreversible or high-risk action only; pair with clear text.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
+- Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - App nav: compact two-region workflow navigation with wrapped links and muted session controls.
 - Board columns and task cards: keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
@@ -426,6 +464,18 @@ Persistent component exceptions must be promoted into this file through the prot
 - Don't use animation as the only state indicator.
 - Don't invent new normative tokens during ordinary feature work.
 - Don't duplicate token values into another design-token file without an ADR and sync check.
+
+## Token Exceptions
+
+Hard-coded visual values are not allowed in migrated UI CSS when the value is represented by `DESIGN.md` tokens.
+
+Use this comment format only for rare one-off values:
+
+```css
+/* DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable> */
+```
+
+Reusable exceptions must become `DESIGN.md` tokens. One-off exceptions must stay local, include a specific reason, and remain rare. The token usage enforcement script fails when the exception comment has no reason.
 
 ## Accessibility
 
@@ -481,6 +531,7 @@ Localization and RTL are not currently product requirements.
 - Treat YAML front matter tokens as the design governance contract.
 - Treat `DESIGN.md` as the authoritative source for reusable visual tokens and design rules.
 - When changing reusable visual tokens, update `DESIGN.md` first, then regenerate or update runtime consumers such as `src/app/styles.css`, component CSS defaults, and generated token files.
+- Regenerate committed token outputs with `npm run design:tokens` and verify with `npm run design:tokens:check` plus `npm run design:tokens:enforce`.
 - Preserve unknown sections when editing.
 - Prefer `DESIGN.md` for standing tokens and design rules; prefer approved issue designs for page-specific composition when they do not contradict these tokens.
 - If `DESIGN.md`, implementation tokens, and approved mockups materially conflict, stop and surface the conflict.
