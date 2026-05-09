@@ -81,6 +81,9 @@
     "design:tokens": "node scripts/generate-design-tokens.mjs",
     "design:tokens:check": "node scripts/generate-design-tokens.mjs --check",
     "design:tokens:enforce": "node scripts/check-design-token-usage.mjs",
+    "design:audit": "node scripts/generate-design-adoption-audit.mjs",
+    "design:audit:check": "node scripts/generate-design-adoption-audit.mjs --check",
+    "design:change-guard": "node scripts/check-design-change-guard.mjs",
     "design:lint": "design.md lint DESIGN.md"
   },
   "repository": {

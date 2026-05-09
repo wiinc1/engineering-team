@@ -13,11 +13,21 @@ Every task file under `tasks/` is expected to carry `## Standards Alignment` and
 
 ## Visual Design Tokens
 
-`DESIGN.md` is the visual design source of truth. Before UI changes, read `DESIGN.md`; change reusable visual tokens there first; regenerate committed CSS outputs with `npm run design:tokens`; do not add hard-coded visual values to migrated CSS. Verify UI token work with `npm run design:tokens:check`, `npm run design:tokens:enforce`, and `make verify`.
+`DESIGN.md` is the visual design source of truth. GitHub Actions is not required for DESIGN.md enforcement; the local source of truth is `make verify`. Before UI changes, read `DESIGN.md`; change reusable visual tokens there first; regenerate committed CSS outputs with `npm run design:tokens`; do not add hard-coded visual values to migrated CSS. Verify UI token work with `npm run design:tokens:check`, `npm run design:tokens:enforce`, `npm run design:audit:check`, `npm run design:change-guard`, and `make verify`.
 
 Rare one-off values in migrated CSS must use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`. Reusable exceptions must become `DESIGN.md` tokens.
 
-The enforced authored CSS scope is tracked in `docs/design/design-md-adoption.config.json` and summarized in `docs/design/DESIGN_MD_ADOPTION_AUDIT.md`. Update both when a new UI component family or authored CSS module enters token enforcement.
+The enforced authored CSS scope is tracked in `docs/design/design-md-adoption.config.json` and generated into `docs/design/DESIGN_MD_ADOPTION_AUDIT.md`. Update the config when a new UI component family or authored CSS module enters token enforcement, then run `npm run design:audit`.
+
+Install local hooks with:
+
+```bash
+scripts/setup-local-hooks.sh
+```
+
+This configures `core.hooksPath` to `scripts/hooks`. The pre-commit hook runs the local DESIGN.md gates, and the pre-push hook runs `make verify`.
+
+If a UI file changes with no design impact, create a local `docs/design/no-design-impact.txt` containing a short reason. Keep the marker local and remove it after the change is complete; reusable visual decisions still belong in `DESIGN.md`.
 
 ## Audit foundation slice
 

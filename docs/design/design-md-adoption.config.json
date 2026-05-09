@@ -2,6 +2,11 @@
   "schema_version": "1.0",
   "source_of_truth": "DESIGN.md",
   "audit_document": "docs/design/DESIGN_MD_ADOPTION_AUDIT.md",
+  "audit": {
+    "date": "2026-05-09",
+    "summary": "`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, TaskCreationForm tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual value enforcement for all authored UI CSS, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards, and screenshot smoke coverage."
+  },
+  "exceptionBudget": 0,
   "generated_outputs": [
     "src/app/design-tokens.css",
     "src/components/Button/Button.tokens.css",
@@ -30,19 +35,22 @@
       "area": "Global styles",
       "uses_design_tokens": "yes",
       "enforcement_covered": true,
-      "paths": ["src/app/styles.css"]
+      "paths": ["src/app/styles.css"],
+      "notes": "`src/app/styles.css` imports `src/app/design-tokens.css` and maps core colors, typography, radius, shadows, focus, navigation, panels, cards, status, table, and list tokens. The enforcement script scans this file."
     },
     {
       "area": "Button",
       "uses_design_tokens": "yes",
       "enforcement_covered": true,
-      "paths": ["src/components/Button/Button.module.css"]
+      "paths": ["src/components/Button/Button.module.css"],
+      "notes": "`src/components/Button/Button.module.css` imports `Button.tokens.css`; the generated token file is declared in `repo-contract.yaml`; enforcement scans the authored module."
     },
     {
       "area": "TaskCreationForm",
       "uses_design_tokens": "yes",
       "enforcement_covered": true,
-      "paths": ["src/features/task-creation/TaskCreationForm.module.css"]
+      "paths": ["src/features/task-creation/TaskCreationForm.module.css"],
+      "notes": "`src/features/task-creation/TaskCreationForm.module.css` imports `TaskCreationForm.tokens.css`; the generated token file is declared in `repo-contract.yaml`; enforcement scans the authored module."
     },
     {
       "area": "Task detail modules",
@@ -53,19 +61,133 @@
         "src/features/task-detail/TaskDetailActivityShell.module.css",
         "src/features/task-detail/TaskHistoryTimeline.module.css",
         "src/features/task-detail/TelemetrySummary.module.css"
-      ]
+      ],
+      "notes": "`StageTransition.module.css`, `TaskDetailActivityShell.module.css`, `TaskHistoryTimeline.module.css`, and `TelemetrySummary.module.css` import `TaskDetail.tokens.css`; enforcement scans every authored task-detail CSS module."
+    },
+    {
+      "area": "Inputs/forms",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": [],
+      "notes": "Global form controls, TaskCreationForm, task-detail filters, and stage-transition fields consume generated variables."
+    },
+    {
+      "area": "Links/nav",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": [],
+      "notes": "App navigation in `src/app/styles.css` consumes generated color, radius, border, and typography variables. Link semantics exist in `DESIGN.md`; no separate authored link module exists."
+    },
+    {
+      "area": "Panels/cards",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": [],
+      "notes": "App panels, cards, auth card, board cards, summary cards, task-detail panels, timeline cards, and telemetry cards use generated variables and are enforcement-covered."
+    },
+    {
+      "area": "Badges/status",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": [],
+      "notes": "Global task status pills, review badges, routing badges, status banners, timeline tones, telemetry tones, and task-detail notices use semantic generated variables."
+    },
+    {
+      "area": "Tables/lists",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": [],
+      "notes": "Global task list and board list styles use generated variables. Task history timeline uses generated `history-*` variables and is enforcement-covered."
     }
   ],
   "optional_areas": {
-    "accessibility": "implemented",
-    "iconography": "implemented",
-    "imagery": "not_applicable",
-    "content_tone": "implemented",
-    "localization": "not_applicable",
-    "navigation": "implemented",
-    "data_visualization": "implemented",
-    "multi_brand_theming": "not_applicable",
-    "motion": "implemented",
-    "visual_regression": "implemented_smoke"
-  }
+    "accessibility": {
+      "status": "implemented",
+      "reason": "`DESIGN.md` includes app-specific requirements for WCAG AA contrast, visible keyboard focus, touch target sizing, disabled/loading state legibility, label/error association, overflow behavior, text wrapping, and reduced motion."
+    },
+    "iconography": {
+      "status": "implemented",
+      "reason": "The product is text-first and has no shipped icon set. `DESIGN.md` allows lightweight status glyphs only as secondary decoration paired with visible text and semantic color, and records that any future icon library must use one consistent style and ADR-backed dependency."
+    },
+    "imagery": {
+      "status": "not_applicable",
+      "reason": "The product has no logo, illustration, or brand-image asset system. `DESIGN.md` directs operational screens toward real product state, tables, task records, charts, logs, and reviewed asset provenance if imagery is introduced."
+    },
+    "content_tone": {
+      "status": "implemented",
+      "reason": "`DESIGN.md` has app-specific UI copy guidance for task actions, empty states, errors, and workflow status labels."
+    },
+    "localization": {
+      "status": "not_applicable",
+      "reason": "Localization and RTL are explicitly not current requirements. `DESIGN.md` still defines text expansion, fixed-height avoidance, readable line length, and explicit RTL declaration expectations."
+    },
+    "navigation": {
+      "status": "implemented",
+      "reason": "`DESIGN.md` includes route and role-surface rules for task workspace, intake, PM overview, governance, deferred considerations, role inboxes, protected-route recovery, and permission-gated controls. Runtime nav styles consume generated variables in `src/app/styles.css`."
+    },
+    "data_visualization": {
+      "status": "implemented",
+      "reason": "`DESIGN.md` defines current telemetry-card, timeline, table, log, label, metadata, task-detail read-model, freshness, redaction, and no-hover-only rules. Rich charting remains blocked until chart-specific tokens are added."
+    },
+    "multi_brand_theming": {
+      "status": "not_applicable",
+      "reason": "The repo has one internal product identity: Engineering Team Software Factory Control Plane. No multi-brand or tenant-brand theming requirement is present. Add an ADR and token strategy before introducing multi-brand runtime theming."
+    },
+    "motion": {
+      "status": "implemented",
+      "reason": "`DESIGN.md` keeps motion intentionally limited: respect reduced motion, never use motion as the only state indicator, keep transitions local and short, and add duration/easing tokens before reusable animation patterns."
+    },
+    "visual_regression": {
+      "status": "implemented_smoke",
+      "reason": "Existing browser screenshots cover task detail. The design-token smoke spec covers the primary app screen, Button states, TaskCreationForm token output, task-detail states, and mobile task-detail layout. This is smoke coverage, not a full pixel-baseline system."
+    }
+  },
+  "acceptance_criteria": [
+    {
+      "criterion": "`DESIGN.md` is declared as source of truth.",
+      "status": "pass",
+      "evidence": "`DESIGN.md` source-of-truth decision and `repo-contract.yaml` `visual_identity.file: DESIGN.md`."
+    },
+    {
+      "criterion": "Generated token files are reproducible.",
+      "status": "pass",
+      "evidence": "`npm run design:tokens` regenerates committed outputs; `npm run design:tokens:check` compares generated content with committed files."
+    },
+    {
+      "criterion": "Drift check fails if generated files are stale.",
+      "status": "pass",
+      "evidence": "`scripts/generate-design-tokens.mjs --check` exits nonzero when an output differs or is missing."
+    },
+    {
+      "criterion": "Enforcement blocks new hard-coded visual values.",
+      "status": "pass",
+      "evidence": "`scripts/check-design-token-usage.mjs` scans all authored UI CSS listed in `docs/design/design-md-adoption.config.json`, rejects forbidden literals unless a reasoned `DESIGN-TOKEN-EXCEPTION:` is present within the configured budget, and fails if authored CSS falls outside enforcement scope."
+    },
+    {
+      "criterion": "Migrated components use generated variables.",
+      "status": "pass",
+      "evidence": "Global styles, Button, TaskCreationForm, and task-detail modules import generated token CSS and use `var(--...)` values. TaskCreationForm and StageTransition preserve label/error associations required by `DESIGN.md`."
+    },
+    {
+      "criterion": "Optional areas are implemented, explicitly N/A, or tracked as follow-up.",
+      "status": "pass",
+      "evidence": "The optional area table above marks implemented, N/A, and smoke-backed items with reasons."
+    },
+    {
+      "criterion": "Screenshot smoke tests cover at least the primary screen and migrated components.",
+      "status": "pass",
+      "evidence": "`tests/browser/design-token-operationalization.browser.spec.ts` captures primary app, Button states, TaskCreationForm token output, task-detail state panels, and mobile task-detail layout."
+    },
+    {
+      "criterion": "`make verify` passes.",
+      "status": "pass",
+      "evidence": "Local verification is the source of truth for DESIGN.md guarantees and runs token drift, token usage, generated audit, and design change guard checks before the rest of the repo verification."
+    }
+  ],
+  "follow_up_backlog": [
+    "Keep `docs/design/design-md-adoption.config.json` synchronized whenever a new authored UI CSS file is added; regenerate `docs/design/DESIGN_MD_ADOPTION_AUDIT.md` with `npm run design:audit`.",
+    "Add chart-specific `DESIGN.md` tokens before introducing richer charting or graph components.",
+    "Add duration/easing tokens before introducing reusable animation patterns.",
+    "Consider full screenshot baseline assertions if the product needs stronger visual regression guarantees than smoke screenshots."
+  ]
 }
