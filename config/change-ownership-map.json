@@ -567,7 +567,9 @@
       "runtime_patterns": [
         "^scripts/lint-repo\\.js$",
         "^scripts/governance-lib\\.js$",
-        "^scripts/(check-design-token-usage|generate-design-tokens)\\.mjs$",
+        "^scripts/(check-design-change-guard|check-design-token-usage|generate-design-adoption-audit|generate-design-tokens)\\.mjs$",
+        "^scripts/(finish-ui-change|setup-local-hooks)\\.sh$",
+        "^scripts/hooks/(pre-commit|pre-push)$",
         "^scripts/(check-coverage-policy|check-maintainability|run-coverage)\\.js$",
         "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
         "^scripts/verify-(standards|pr-body|change-completeness)\\.js$"

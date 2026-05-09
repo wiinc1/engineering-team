@@ -79,6 +79,57 @@ test('check-design-token-usage rejects exception comments without reasons', () =
   assert.match(result.stderr, /requires a short reason/);
 });
 
+test('check-design-token-usage fails when exception budget is exceeded', () => {
+  const root = makeTempDir('governance-token-usage-budget-');
+  writeFile(root, 'docs/design/design-md-adoption.config.json', JSON.stringify({
+    schema_version: '1.0',
+    exceptionBudget: 0,
+    enforcement: {
+      paths: ['src/app/styles.css'],
+      generated_allowlist: [],
+    },
+    component_coverage: [],
+  }));
+  writeFile(root, 'src/app/styles.css', `
+/* DESIGN-TOKEN-EXCEPTION: legacy vendor white border until iframe wrapper is removed */
+.vendor-frame {
+  color: #fff;
+}
+`);
+
+  const result = runScriptWithArgs('check-design-token-usage.mjs', [], root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /exception budget exceeded: 1 exception\(s\), budget 0/);
+});
+
+test('check-design-token-usage fails duplicate exception reasons', () => {
+  const root = makeTempDir('governance-token-usage-duplicate-exception-');
+  writeFile(root, 'docs/design/design-md-adoption.config.json', JSON.stringify({
+    schema_version: '1.0',
+    exceptionBudget: 2,
+    enforcement: {
+      paths: ['src/app/styles.css'],
+      generated_allowlist: [],
+    },
+    component_coverage: [],
+  }));
+  writeFile(root, 'src/app/styles.css', `
+/* DESIGN-TOKEN-EXCEPTION: legacy vendor white border until iframe wrapper is removed */
+.vendor-frame {
+  color: #fff;
+}
+
+/* DESIGN-TOKEN-EXCEPTION: legacy vendor white border until iframe wrapper is removed */
+.vendor-frame-secondary {
+  border-color: #fff;
+}
+`);
+
+  const result = runScriptWithArgs('check-design-token-usage.mjs', [], root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /duplicate DESIGN-TOKEN-EXCEPTION reason/);
+});
+
 test('check-design-token-usage skips generated token outputs', () => {
   const root = makeTempDir('governance-token-usage-generated-');
   writeFile(root, 'src/app/design-tokens.css', `

@@ -169,15 +169,6 @@
       "cap": 50
     },
     {
-      "path": "scripts/check-design-token-usage.mjs",
-      "rule": "maintainability:function-lines",
-      "line": 190,
-      "ordinal": 14,
-      "name": "scanFile",
-      "actual": 55,
-      "cap": 50
-    },
-    {
       "path": "src/app/session.browser.js",
       "rule": "maintainability:function-lines",
       "line": 305,

@@ -141,7 +141,10 @@ function readAdoptionConfig() {
     : DEFAULT_SCAN_PATHS.map(normalizePath);
   const generatedAllowlist = Array.from(new Set([...DEFAULT_GENERATED_ALLOWLIST, ...configuredGeneratedAllowlist]));
   const componentCoverage = Array.isArray(config.component_coverage) ? config.component_coverage : [];
-  return { enforcementPaths, generatedAllowlist, componentCoverage };
+  const exceptionBudget = Number.isInteger(config.exceptionBudget) && config.exceptionBudget >= 0
+    ? config.exceptionBudget
+    : Number.POSITIVE_INFINITY;
+  return { enforcementPaths, generatedAllowlist, componentCoverage, exceptionBudget };
 }
 
 function listCssFiles(root = 'src') {
@@ -187,26 +190,49 @@ function validateAdoptionConfig(config, explicitScanPaths) {
   return findings;
 }
 
+function exceptionReasonFinding(filePath, lineNumber) {
+  return {
+    filePath,
+    lineNumber,
+    ruleId: 'exception-reason',
+    message: `${EXCEPTION_MARKER} requires a short reason`,
+    match: EXCEPTION_MARKER,
+  };
+}
+
+function ruleFinding(filePath, lineNumber, finding) {
+  return {
+    filePath,
+    lineNumber,
+    ruleId: finding.rule.id,
+    message: finding.rule.description,
+    match: finding.match,
+  };
+}
+
+function shouldClearPendingException(line) {
+  const trimmed = line.trim();
+  return trimmed && /[:;]/.test(trimmed) && !trimmed.startsWith('/*') && !trimmed.startsWith('*');
+}
+
 function scanFile(filePath, generatedAllowlist) {
   const normalized = normalizePath(filePath);
-  if (generatedAllowlist.has(normalized)) return [];
-  if (!fs.existsSync(filePath)) return [];
+  if (generatedAllowlist.has(normalized)) return { findings: [], exceptions: [] };
+  if (!fs.existsSync(filePath)) return { findings: [], exceptions: [] };
 
   const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
   const findings = [];
+  const exceptions = [];
   let pendingException = null;
 
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
     const reason = parseExceptionReason(line);
     if (reason !== null && reason.length === 0) {
-      findings.push({
-        filePath,
-        lineNumber,
-        ruleId: 'exception-reason',
-        message: `${EXCEPTION_MARKER} requires a short reason`,
-        match: EXCEPTION_MARKER,
-      });
+      findings.push(exceptionReasonFinding(filePath, lineNumber));
+    }
+    if (reason !== null && reason.length > 0) {
+      exceptions.push({ filePath, lineNumber, reason });
     }
 
     const lineFindings = scanLine(line);
@@ -216,13 +242,7 @@ function scanFile(filePath, generatedAllowlist) {
     if (lineFindings.length > 0) {
       if (!activeException) {
         for (const finding of lineFindings) {
-          findings.push({
-            filePath,
-            lineNumber,
-            ruleId: finding.rule.id,
-            message: finding.rule.description,
-            match: finding.match,
-          });
+          findings.push(ruleFinding(filePath, lineNumber, finding));
         }
       }
       pendingException = null;
@@ -234,13 +254,12 @@ function scanFile(filePath, generatedAllowlist) {
       return;
     }
 
-    const trimmed = line.trim();
-    if (trimmed && /[:;]/.test(trimmed) && !trimmed.startsWith('/*') && !trimmed.startsWith('*')) {
+    if (shouldClearPendingException(line)) {
       pendingException = null;
     }
   });
 
-  return findings;
+  return { findings, exceptions };
 }
 
 function formatFinding(finding) {
@@ -252,11 +271,35 @@ const explicitScanPaths = process.argv.slice(2).length > 0;
 const scanPaths = explicitScanPaths ? process.argv.slice(2).map(normalizePath) : config.enforcementPaths;
 const generatedAllowlist = new Set(config.generatedAllowlist);
 const configFindings = validateAdoptionConfig(config, explicitScanPaths);
-const findings = scanPaths.flatMap((filePath) => scanFile(filePath, generatedAllowlist));
+const scanResults = scanPaths.map((filePath) => scanFile(filePath, generatedAllowlist));
+const findings = scanResults.flatMap((result) => result.findings);
+const exceptions = scanResults.flatMap((result) => result.exceptions);
+const budgetFindings = [];
+const exceptionsByReason = new Map();
 
-if (configFindings.length > 0 || findings.length > 0) {
+if (exceptions.length > config.exceptionBudget) {
+  budgetFindings.push(`exception budget exceeded: ${exceptions.length} exception(s), budget ${config.exceptionBudget}`);
+}
+
+for (const exception of exceptions) {
+  const existing = exceptionsByReason.get(exception.reason) || [];
+  existing.push(exception);
+  exceptionsByReason.set(exception.reason, existing);
+}
+
+for (const [reason, matches] of exceptionsByReason.entries()) {
+  if (matches.length <= 1) continue;
+  budgetFindings.push(
+    `duplicate DESIGN-TOKEN-EXCEPTION reason "${reason}" at ${matches.map((match) => `${match.filePath}:${match.lineNumber}`).join(', ')}`,
+  );
+}
+
+if (configFindings.length > 0 || budgetFindings.length > 0 || findings.length > 0) {
   process.stderr.write('Design token usage enforcement failed:\n');
   for (const finding of configFindings) {
+    process.stderr.write(`- ${finding}\n`);
+  }
+  for (const finding of budgetFindings) {
     process.stderr.write(`- ${finding}\n`);
   }
   for (const finding of findings) {
