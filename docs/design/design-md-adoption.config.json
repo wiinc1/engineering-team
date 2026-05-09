@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "source_of_truth": "DESIGN.md",
+  "audit_document": "docs/design/DESIGN_MD_ADOPTION_AUDIT.md",
+  "generated_outputs": [
+    "src/app/design-tokens.css",
+    "src/components/Button/Button.tokens.css",
+    "src/features/task-creation/TaskCreationForm.tokens.css",
+    "src/features/task-detail/TaskDetail.tokens.css"
+  ],
+  "enforcement": {
+    "paths": [
+      "src/app/styles.css",
+      "src/components/Button/Button.module.css",
+      "src/features/task-creation/TaskCreationForm.module.css",
+      "src/features/task-detail/StageTransition.module.css",
+      "src/features/task-detail/TaskDetailActivityShell.module.css",
+      "src/features/task-detail/TaskHistoryTimeline.module.css",
+      "src/features/task-detail/TelemetrySummary.module.css"
+    ],
+    "generated_allowlist": [
+      "src/app/design-tokens.css",
+      "src/components/Button/Button.tokens.css",
+      "src/features/task-creation/TaskCreationForm.tokens.css",
+      "src/features/task-detail/TaskDetail.tokens.css"
+    ]
+  },
+  "component_coverage": [
+    {
+      "area": "Global styles",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": ["src/app/styles.css"]
+    },
+    {
+      "area": "Button",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": ["src/components/Button/Button.module.css"]
+    },
+    {
+      "area": "TaskCreationForm",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": ["src/features/task-creation/TaskCreationForm.module.css"]
+    },
+    {
+      "area": "Task detail modules",
+      "uses_design_tokens": "yes",
+      "enforcement_covered": true,
+      "paths": [
+        "src/features/task-detail/StageTransition.module.css",
+        "src/features/task-detail/TaskDetailActivityShell.module.css",
+        "src/features/task-detail/TaskHistoryTimeline.module.css",
+        "src/features/task-detail/TelemetrySummary.module.css"
+      ]
+    }
+  ],
+  "optional_areas": {
+    "accessibility": "implemented",
+    "iconography": "implemented",
+    "imagery": "not_applicable",
+    "content_tone": "implemented",
+    "localization": "not_applicable",
+    "navigation": "implemented",
+    "data_visualization": "implemented",
+    "multi_brand_theming": "not_applicable",
+    "motion": "implemented",
+    "visual_regression": "implemented_smoke"
+  }
+}

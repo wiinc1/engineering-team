@@ -11,6 +11,14 @@ This repo now includes a standards enforcement baseline for task planning and ch
 
 Every task file under `tasks/` is expected to carry `## Standards Alignment` and `## Required Evidence` so the repo has a durable record of which standards applied, what evidence was produced, and which gaps remain.
 
+## Visual Design Tokens
+
+`DESIGN.md` is the visual design source of truth. Before UI changes, read `DESIGN.md`; change reusable visual tokens there first; regenerate committed CSS outputs with `npm run design:tokens`; do not add hard-coded visual values to migrated CSS. Verify UI token work with `npm run design:tokens:check`, `npm run design:tokens:enforce`, and `make verify`.
+
+Rare one-off values in migrated CSS must use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`. Reusable exceptions must become `DESIGN.md` tokens.
+
+The enforced authored CSS scope is tracked in `docs/design/design-md-adoption.config.json` and summarized in `docs/design/DESIGN_MD_ADOPTION_AUDIT.md`. Update both when a new UI component family or authored CSS module enters token enforcement.
+
 ## Audit foundation slice
 
 This repo now includes a materially more production-shaped `SF-017` slice:

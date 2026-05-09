@@ -1,53 +1,78 @@
+@import "./TaskCreationForm.tokens.css";
+
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--task-creation-form-gap);
   width: 100%;
-  padding: 1.125rem;
-  background: var(--bg-surface, #fff);
-  border: 1px solid var(--border-soft, #d8dee8);
-  border-radius: 8px;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.08));
+  padding: var(--task-creation-form-padding);
+  color: var(--task-creation-form-color);
+  background: var(--task-creation-form-background);
+  border: var(--task-creation-form-border);
+  border-radius: var(--task-creation-form-radius);
+  box-shadow: var(--task-creation-form-shadow);
+  font-family: var(--task-creation-form-font-family);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--task-creation-field-gap);
 }
 
 .field label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-main, #333);
+  font-weight: var(--task-creation-label-font-weight);
+  font-size: var(--task-creation-label-font-size);
+  color: var(--task-creation-label-color);
 }
 
 .field input,
 .field textarea,
 .field select {
-  padding: 0.75rem;
-  border: 1px solid var(--border-color, #ccc);
-  border-radius: 8px;
+  padding: var(--task-creation-input-padding);
+  border: var(--task-creation-input-border);
+  border-radius: var(--task-creation-input-radius);
   font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.4;
+  font-size: var(--task-creation-input-font-size);
+  line-height: var(--task-creation-input-line-height);
+  color: var(--task-creation-input-color);
+  background: var(--task-creation-input-background);
 }
 
 .field textarea {
-  min-height: 220px;
+  min-height: var(--task-creation-textarea-min-height);
   resize: vertical;
 }
 
 .help {
   margin: 0;
-  color: var(--muted, #526174);
-  font-size: 0.875rem;
+  color: var(--task-creation-help-color);
+  font-size: var(--task-creation-help-font-size);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--task-creation-validation-error-color);
+  font-size: var(--task-creation-validation-error-font-size);
 }
 
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: var(--task-creation-row-gap);
+}
+
+.validation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--task-creation-field-gap);
+}
+
+.validation-summary-title {
+  margin: 0;
+  color: var(--task-creation-validation-error-color);
+  font-size: var(--task-creation-validation-error-font-size);
+  font-weight: var(--task-creation-label-font-weight);
 }
 
 .validationErrors {
@@ -57,25 +82,25 @@
 }
 
 .validationErrors li {
-  color: var(--text-danger, #d32f2f);
-  font-size: 0.875rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(211, 47, 47, 0.05);
-  border-radius: 4px;
-  margin-bottom: 0.25rem;
+  color: var(--task-creation-validation-error-color);
+  font-size: var(--task-creation-validation-error-font-size);
+  padding: var(--task-creation-validation-error-padding);
+  background: var(--task-creation-validation-error-background);
+  border-radius: var(--task-creation-validation-error-radius);
+  margin-bottom: var(--task-creation-validation-error-margin-bottom);
 }
 
 .error {
-  color: var(--text-danger, #d32f2f);
-  font-size: 0.875rem;
-  padding: 0.75rem;
-  background: rgba(211, 47, 47, 0.1);
-  border-radius: 4px;
-  border-left: 4px solid var(--text-danger, #d32f2f);
+  color: var(--task-creation-error-color);
+  font-size: var(--task-creation-error-font-size);
+  padding: var(--task-creation-error-padding);
+  background: var(--task-creation-error-background);
+  border-radius: var(--task-creation-error-radius);
+  border-left: var(--task-creation-error-border-accent-width) solid var(--task-creation-error-border-accent-color);
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.25rem;
+  margin-top: var(--task-creation-actions-margin-top);
 }
