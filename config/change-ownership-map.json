@@ -177,6 +177,7 @@
       "runtime_patterns": [
         "^src/app/App\\.jsx$",
         "^src/app/main\\.jsx$",
+        "^src/app/design-tokens\\.css$",
         "^src/app/styles\\.css$",
         "^src/app/session(\\.browser)?\\.js$",
         "^lib/auth/config-check\\.js$",
@@ -545,6 +546,7 @@
       "runtime_patterns": [
         "^scripts/lint-repo\\.js$",
         "^scripts/governance-lib\\.js$",
+        "^scripts/(check-design-token-usage|generate-design-tokens)\\.mjs$",
         "^scripts/(check-coverage-policy|check-maintainability|run-coverage)\\.js$",
         "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
         "^scripts/verify-(standards|pr-body|change-completeness)\\.js$"

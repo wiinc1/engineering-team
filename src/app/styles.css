@@ -180,7 +180,7 @@ button {
 
 .app-nav__secondary button,
 .app-nav__role-select {
-  font-size: var(--design-typography-label-sm-font-size);
+  font-size: var(--design-component-app-nav-font-size);
 }
 
 .app-nav__secondary .button-secondary {

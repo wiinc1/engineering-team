@@ -118,6 +118,12 @@ typography:
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: 0.05rem
+  app-nav:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 0.84rem
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: 0rem
   button-sm:
     fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     fontSize: 0.8125rem
@@ -402,6 +408,7 @@ components:
   app-nav:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.on-surface}"
+    typography: "{typography.app-nav}"
     rounded: "{rounded.panel}"
     padding: 8px 10px
   panel-default:
@@ -516,7 +523,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
-- App nav: compact two-region workflow navigation with wrapped links and muted session controls.
+- App nav: compact two-region workflow navigation with wrapped links, muted session controls, and the generated `app-nav` typography token.
 - Board columns and task cards: keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.

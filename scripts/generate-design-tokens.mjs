@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import YAML from 'yaml';
 
 const DESIGN_PATH = 'DESIGN.md';
 const GLOBAL_OUTPUT_PATH = 'src/app/design-tokens.css';
@@ -22,7 +21,7 @@ const TYPOGRAPHY_PROPERTIES = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeig
 function readDesignTokens() {
   const markdown = fs.readFileSync(DESIGN_PATH, 'utf8');
   const frontMatter = extractFrontMatter(markdown);
-  const parsed = YAML.parse(frontMatter);
+  const parsed = parseSimpleYaml(frontMatter);
   if (!parsed || typeof parsed !== 'object') {
     throw new Error(`${DESIGN_PATH} front matter did not parse to an object`);
   }
@@ -38,6 +37,54 @@ function extractFrontMatter(markdown) {
     throw new Error(`${DESIGN_PATH} front matter is missing closing delimiter`);
   }
   return markdown.slice(4, end);
+}
+
+function parseSimpleYaml(source) {
+  const root = {};
+  const stack = [{ indent: -1, value: root }];
+
+  for (const [index, rawLine] of source.split(/\r?\n/).entries()) {
+    if (!rawLine.trim() || rawLine.trimStart().startsWith('#')) continue;
+    const indent = rawLine.match(/^\s*/)?.[0].length ?? 0;
+    const line = rawLine.trim();
+    const match = line.match(/^(?:"([^"]+)"|'([^']+)'|([^:]+)):\s*(.*)$/);
+    if (!match) {
+      throw new Error(`${DESIGN_PATH} front matter line ${index + 1} is not supported by the token parser: ${rawLine}`);
+    }
+
+    const key = match[1] ?? match[2] ?? match[3].trim();
+    const rawValue = match[4];
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+      stack.pop();
+    }
+
+    const parent = stack[stack.length - 1].value;
+    if (!parent || typeof parent !== 'object' || Array.isArray(parent)) {
+      throw new Error(`${DESIGN_PATH} front matter line ${index + 1} cannot attach key ${key}`);
+    }
+
+    if (rawValue === '') {
+      const child = {};
+      parent[key] = child;
+      stack.push({ indent, value: child });
+      continue;
+    }
+
+    parent[key] = parseYamlScalar(rawValue);
+  }
+
+  return root;
+}
+
+function parseYamlScalar(rawValue) {
+  const value = rawValue.trim();
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1);
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  return value;
 }
 
 function resolveAll(root) {
