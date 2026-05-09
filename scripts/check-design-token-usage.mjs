@@ -6,15 +6,20 @@ const DEFAULT_SCAN_PATHS = [
   'src/app/styles.css',
   'src/components/Button/Button.module.css',
   'src/features/task-creation/TaskCreationForm.module.css',
+  'src/features/task-detail/StageTransition.module.css',
+  'src/features/task-detail/TaskDetailActivityShell.module.css',
+  'src/features/task-detail/TaskHistoryTimeline.module.css',
+  'src/features/task-detail/TelemetrySummary.module.css',
 ];
 
-const GENERATED_ALLOWLIST = new Set([
+const CONFIG_PATH = 'docs/design/design-md-adoption.config.json';
+const DEFAULT_GENERATED_ALLOWLIST = [
   normalizePath('src/app/design-tokens.css'),
   normalizePath('src/components/Button/Button.tokens.css'),
   normalizePath('src/features/task-creation/TaskCreationForm.tokens.css'),
-]);
+  normalizePath('src/features/task-detail/TaskDetail.tokens.css'),
+];
 
-const COMMON_FONT_SIZE_LITERALS = new Set(['12px', '14px', '16px', '1rem', '0.875rem']);
 const EXCEPTION_MARKER = 'DESIGN-TOKEN-EXCEPTION:';
 
 const RULES = [
@@ -52,13 +57,35 @@ const RULES = [
   },
   {
     id: 'font-size',
-    description: 'common font-size literal',
+    description: 'font-size literal',
     check(line) {
       const match = line.match(/\bfont-size\s*:\s*([^;]+)/i);
       if (!match) return [];
       const value = match[1].trim().toLowerCase();
-      const exactValue = value.match(/^(\d*\.?\d+(?:px|rem))\b/);
-      if (!exactValue || !COMMON_FONT_SIZE_LITERALS.has(exactValue[1])) return [];
+      if (/^(?:var\(|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      if (!/\b\d*\.?\d+(?:px|rem)\b/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
+    id: 'letter-spacing',
+    description: 'letter-spacing literal',
+    check(line) {
+      const match = line.match(/\bletter-spacing\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|normal\b|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
+    id: 'opacity',
+    description: 'opacity literal',
+    check(line) {
+      const match = line.match(/\bopacity\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|inherit\b|initial\b|unset\b)/i.test(value)) return [];
       return [{ match: match[0].trim() }];
     },
   },
@@ -97,9 +124,72 @@ function isCommentOnlyException(line) {
   return beforeMarker === '' || beforeMarker === '/*' || beforeMarker.startsWith('//');
 }
 
-function scanFile(filePath) {
+function readAdoptionConfig() {
+  if (!fs.existsSync(CONFIG_PATH)) {
+    return {
+      enforcementPaths: DEFAULT_SCAN_PATHS.map(normalizePath),
+      generatedAllowlist: DEFAULT_GENERATED_ALLOWLIST,
+      componentCoverage: [],
+    };
+  }
+
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  const configuredEnforcementPaths = (config.enforcement?.paths || []).map(normalizePath);
+  const configuredGeneratedAllowlist = (config.enforcement?.generated_allowlist || config.generated_outputs || []).map(normalizePath);
+  const enforcementPaths = configuredEnforcementPaths.length > 0
+    ? configuredEnforcementPaths
+    : DEFAULT_SCAN_PATHS.map(normalizePath);
+  const generatedAllowlist = Array.from(new Set([...DEFAULT_GENERATED_ALLOWLIST, ...configuredGeneratedAllowlist]));
+  const componentCoverage = Array.isArray(config.component_coverage) ? config.component_coverage : [];
+  return { enforcementPaths, generatedAllowlist, componentCoverage };
+}
+
+function listCssFiles(root = 'src') {
+  if (!fs.existsSync(root)) return [];
+  const results = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const entryPath = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...listCssFiles(entryPath));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith('.css')) {
+      results.push(normalizePath(entryPath));
+    }
+  }
+  return results.sort();
+}
+
+function validateAdoptionConfig(config, explicitScanPaths) {
+  const findings = [];
+  const enforcementSet = new Set(config.enforcementPaths);
+  const generatedSet = new Set(config.generatedAllowlist);
+
+  if (!explicitScanPaths && fs.existsSync(CONFIG_PATH)) {
+    const authoredCss = listCssFiles('src').filter((filePath) => !generatedSet.has(filePath));
+    for (const filePath of authoredCss) {
+      if (!enforcementSet.has(filePath)) {
+        findings.push(`authored UI CSS is missing from enforcement scope: ${filePath}`);
+      }
+    }
+  }
+
+  for (const entry of config.componentCoverage) {
+    if (!entry.enforcement_covered) continue;
+    for (const filePath of entry.paths || []) {
+      const normalized = normalizePath(filePath);
+      if (!enforcementSet.has(normalized)) {
+        findings.push(`adoption audit marks ${entry.area || 'unnamed area'} as enforced, but path is not scanned: ${normalized}`);
+      }
+    }
+  }
+
+  return findings;
+}
+
+function scanFile(filePath, generatedAllowlist) {
   const normalized = normalizePath(filePath);
-  if (GENERATED_ALLOWLIST.has(normalized)) return [];
+  if (generatedAllowlist.has(normalized)) return [];
   if (!fs.existsSync(filePath)) return [];
 
   const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
@@ -157,11 +247,18 @@ function formatFinding(finding) {
   return `${finding.filePath}:${finding.lineNumber}: ${finding.message} (${finding.ruleId}) -> ${finding.match}`;
 }
 
-const scanPaths = process.argv.slice(2).length > 0 ? process.argv.slice(2) : DEFAULT_SCAN_PATHS;
-const findings = scanPaths.flatMap((filePath) => scanFile(filePath));
+const config = readAdoptionConfig();
+const explicitScanPaths = process.argv.slice(2).length > 0;
+const scanPaths = explicitScanPaths ? process.argv.slice(2).map(normalizePath) : config.enforcementPaths;
+const generatedAllowlist = new Set(config.generatedAllowlist);
+const configFindings = validateAdoptionConfig(config, explicitScanPaths);
+const findings = scanPaths.flatMap((filePath) => scanFile(filePath, generatedAllowlist));
 
-if (findings.length > 0) {
+if (configFindings.length > 0 || findings.length > 0) {
   process.stderr.write('Design token usage enforcement failed:\n');
+  for (const finding of configFindings) {
+    process.stderr.write(`- ${finding}\n`);
+  }
   for (const finding of findings) {
     process.stderr.write(`- ${formatFinding(finding)}\n`);
   }

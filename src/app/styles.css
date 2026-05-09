@@ -180,7 +180,7 @@ button {
 
 .app-nav__secondary button,
 .app-nav__role-select {
-  font-size: 0.84rem;
+  font-size: var(--design-typography-label-sm-font-size);
 }
 
 .app-nav__secondary .button-secondary {
@@ -206,7 +206,7 @@ button {
   gap: 6px;
   align-items: center;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: var(--design-typography-body-sm-font-size);
   font-weight: var(--design-typography-label-md-font-weight);
 }
 
@@ -267,7 +267,7 @@ button {
 }
 
 .app-shell--auth .eyebrow {
-  letter-spacing: 0.08em;
+  letter-spacing: var(--design-typography-label-tracked-letter-spacing);
   color: var(--color-on-muted-strong);
 }
 
@@ -303,7 +303,7 @@ button {
 }
 
 .auth-field label {
-  font-size: 0.95rem;
+  font-size: var(--design-typography-label-md-font-size);
   color: var(--color-on-muted-strong);
 }
 
@@ -385,14 +385,14 @@ button {
 
 .page-header h1 {
   margin: 0;
-  font-size: clamp(1.7rem, 2.4vw, 2.35rem);
+  font-size: var(--design-typography-headline-fluid-font-size);
   line-height: 1.08;
 }
 
 .eyebrow {
   margin: 0 0 8px;
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: var(--design-typography-label-sm-letter-spacing);
   font-size: var(--design-typography-label-sm-font-size);
   color: var(--muted);
 }
@@ -428,7 +428,7 @@ button {
 .session-form label {
   display: grid;
   gap: 6px;
-  font-size: 0.95rem;
+  font-size: var(--design-typography-label-md-font-size);
   color: var(--color-on-muted-strong);
 }
 
@@ -706,7 +706,7 @@ button {
 .summary-grid span {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.84rem;
+  font-size: var(--design-typography-label-sm-font-size);
   color: var(--muted);
 }
 
@@ -733,7 +733,7 @@ button {
 
 .orchestration-table__head {
   color: var(--color-on-muted-strong);
-  font-size: 0.84rem;
+  font-size: var(--design-typography-label-sm-font-size);
 }
 
 .orchestration-table__row {
@@ -763,7 +763,7 @@ button {
 
 .assignment-panel__header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--design-typography-headline-sm-font-size);
 }
 
 .review-question-summary-grid {
@@ -963,7 +963,7 @@ button {
   color: var(--muted);
   font-size: var(--design-typography-label-sm-font-size);
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: var(--design-typography-label-sm-letter-spacing);
 }
 
 .review-question-note p {
@@ -996,7 +996,7 @@ button {
   color: var(--muted);
   font-size: var(--design-typography-label-sm-font-size);
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: var(--design-typography-label-sm-letter-spacing);
 }
 
 .qa-package__expanded {
@@ -1073,7 +1073,7 @@ button {
   color: var(--muted);
   font-size: var(--design-typography-label-sm-font-size);
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: var(--design-typography-label-sm-letter-spacing);
 }
 
 .implementation-preview p {
@@ -1112,7 +1112,7 @@ button {
 }
 
 .assignment-form button:disabled {
-  opacity: 0.7;
+  opacity: var(--design-opacity-control-disabled);
   cursor: wait;
 }
 
@@ -1343,7 +1343,7 @@ button {
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  font-size: 0.85rem;
+  font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-sm-font-weight);
   background: var(--color-review-soft);
   color: var(--color-review);
@@ -1466,7 +1466,7 @@ button {
   padding: 3px 8px;
   background: var(--surface-subtle);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-sm-font-weight);
   text-align: center;
 }
@@ -1501,7 +1501,7 @@ button {
 }
 
 .task-board__card--dragging {
-  opacity: 0.68;
+  opacity: var(--design-opacity-board-card-dragging);
 }
 
 .task-board__card a {
@@ -1529,14 +1529,14 @@ button {
   padding: 3px 9px;
   background: var(--surface-subtle);
   color: var(--color-on-muted-strong);
-  font-size: 0.85rem;
+  font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-sm-font-weight);
   text-align: center;
 }
 
 .task-board__label {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--design-typography-label-sm-font-size);
   flex: 0 0 auto;
 }
 
@@ -1554,7 +1554,7 @@ button {
   display: block;
   margin-top: 4px;
   color: var(--color-on-muted-strong);
-  font-size: 0.84rem;
+  font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-md-font-weight);
   line-height: 1.35;
 }
@@ -1594,7 +1594,7 @@ button {
 
 .task-list-meta {
   margin-top: 4px;
-  font-size: 0.85rem;
+  font-size: var(--design-typography-label-sm-font-size);
   color: var(--muted);
 }
 
@@ -1818,7 +1818,7 @@ button {
   }
 
   .page-header h1 {
-    font-size: 1.65rem;
+    font-size: var(--design-typography-headline-mobile-font-size);
   }
 
   .task-board__card-meta {

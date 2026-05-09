@@ -64,6 +64,18 @@ typography:
     fontWeight: 700
     lineHeight: 1.08
     letterSpacing: 0rem
+  headline-fluid:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 2.25rem
+    fontWeight: 700
+    lineHeight: 1.08
+    letterSpacing: 0rem
+  headline-mobile:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 1.65rem
+    fontWeight: 700
+    lineHeight: 1.12
+    letterSpacing: 0rem
   headline-md:
     fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     fontSize: 1.5rem
@@ -100,6 +112,12 @@ typography:
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: 0rem
+  label-tracked:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 0.8rem
+    fontWeight: 700
+    lineHeight: 1.25
+    letterSpacing: 0.05rem
   button-sm:
     fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
     fontSize: 0.8125rem
@@ -148,6 +166,7 @@ rounded:
   panel: 8px
   auth-panel: 12px
   status: 14px
+  detail-panel: 16px
   pill: 999px
 borders:
   default:
@@ -163,6 +182,10 @@ focus:
     color: "{colors.focus-ring}"
     width: 3px
     offset: 2px
+opacity:
+  button-disabled: "0.5"
+  control-disabled: "0.7"
+  board-card-dragging: "0.68"
 layers:
   base: 0
   sticky: 100
@@ -268,6 +291,52 @@ components:
     typography: "{typography.body-sm}"
     rounded: "{rounded.control-sm}"
     padding: "{spacing.2} {spacing.3}"
+  task-detail-shell:
+    backgroundColor: "{colors.page-bg}"
+    textColor: "{colors.on-heading}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.panel}"
+    padding: "{spacing.4}"
+  task-detail-title:
+    textColor: "{colors.on-heading}"
+    typography: "{typography.headline-md}"
+  task-detail-subtitle:
+    textColor: "{colors.on-muted}"
+    typography: "{typography.body-sm}"
+  task-detail-label:
+    textColor: "{colors.on-muted-strong}"
+    typography: "{typography.label-sm}"
+  task-detail-panel:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.detail-panel}"
+    padding: "{spacing.5}"
+  task-detail-input:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.control}"
+    padding: "{spacing.3}"
+    height: 2.5rem
+  task-detail-notice:
+    backgroundColor: "{colors.surface-muted}"
+    textColor: "{colors.on-muted-strong}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.auth-panel}"
+    padding: "{spacing.4}"
+  task-history-card:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.status}"
+    padding: "{spacing.4}"
+  telemetry-card:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.on-surface}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.status}"
+    padding: "{spacing.4}"
   badge-neutral:
     backgroundColor: "{colors.surface-subtle}"
     textColor: "{colors.on-muted-strong}"
@@ -382,7 +451,7 @@ The product identity is **Engineering Team Software Factory Control Plane**: an 
 
 The visual posture is quiet, dense, and work-focused. Screens should read like an operator console: scannable tables and boards, plain status language, restrained depth, and direct controls. Avoid marketing composition, decorative color washes, and oversized hero treatments in product workflows.
 
-Source-of-truth decision: `DESIGN.md` is the authoritative visual design source of truth. Runtime style files and generated token files are derived outputs. Update this file first for reusable visual token, component, accessibility, iconography, imagery, and agent-guidance decisions, then regenerate or update runtime consumers such as `src/app/styles.css` and `src/components/Button/Button.module.css`.
+Source-of-truth decision: `DESIGN.md` is the authoritative visual design source of truth. Runtime style files and generated token files are derived outputs. Update this file first for reusable visual token, component, accessibility, iconography, imagery, UX-state, and agent-guidance decisions, then regenerate runtime consumers such as `src/app/design-tokens.css`, `src/components/Button/Button.tokens.css`, `src/features/task-creation/TaskCreationForm.tokens.css`, and `src/features/task-detail/TaskDetail.tokens.css`.
 
 ## Colors
 
@@ -446,12 +515,25 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Destructive button: irreversible or high-risk action only; pair with clear text.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
+- Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
 - App nav: compact two-region workflow navigation with wrapped links and muted session controls.
 - Board columns and task cards: keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
 
 Persistent component exceptions must be promoted into this file through the protected change path and reflected in implementation tokens.
+
+## UX States
+
+Product screens must make workflow state explicit without adding instructional chrome.
+
+- Empty states say what is missing, name the task area affected, and show the next available action when there is one.
+- Loading states keep layout stable and include readable text such as `Loading task activity` or `Creating task draft`; do not rely on spinners alone.
+- Error states identify the failed operation, preserve user-entered content, and offer retry or next-step language when recovery is possible.
+- Form validation appears next to the relevant field and in a summarized list only when multiple fields need attention.
+- Focus and keyboard behavior must match the control pattern: tabs use arrow keys, forms preserve label associations, buttons and links expose visible focus rings.
+- Responsive layouts favor single-column reading on mobile, wrapped navigation, horizontally scrollable task boards/tables where necessary, and no accidental page-wide overflow.
+- Operational screens should remain dense and scannable: prioritize headings, metadata, status labels, and row/card grouping over narrative copy.
 
 ## Do's and Don'ts
 
@@ -526,12 +608,32 @@ Localization and RTL are not currently product requirements.
 - Do not rely on icon-only labels for unfamiliar actions.
 - Declare RTL support explicitly before implementing RTL-specific layouts.
 
+## Data Visualization
+
+The product currently uses operational summaries, telemetry cards, tables, timelines, and logs instead of a charting system.
+
+- Telemetry cards must use semantic `telemetry-*` tokens and pair values with labels and hints.
+- Timeline and table status cues must pair color with text, event type, timestamp, actor, or source metadata.
+- Do not introduce chart colors, graph legends, or heatmap scales without adding reusable tokens here first.
+- Data displays should prioritize auditability: visible labels, stable sort/grouping, readable timestamps, and no hover-only critical information.
+
+## Motion
+
+Motion is limited to functional state feedback.
+
+- Respect `prefers-reduced-motion` for nonessential animation.
+- Do not use motion as the only indicator for loading, success, failure, or route changes.
+- Transitions should be short, local to the control being changed, and must not move task rows, form fields, or summary cards in a way that harms scanning.
+- Add duration/easing tokens here before introducing reusable animation patterns.
+
 ## Agent Usage
 
 - Treat YAML front matter tokens as the design governance contract.
 - Treat `DESIGN.md` as the authoritative source for reusable visual tokens and design rules.
-- When changing reusable visual tokens, update `DESIGN.md` first, then regenerate or update runtime consumers such as `src/app/styles.css`, component CSS defaults, and generated token files.
+- When changing reusable visual tokens, update `DESIGN.md` first, then regenerate runtime consumers with `npm run design:tokens`.
 - Regenerate committed token outputs with `npm run design:tokens` and verify with `npm run design:tokens:check` plus `npm run design:tokens:enforce`.
+- Do not add hard-coded visual values to authored CSS covered by `docs/design/design-md-adoption.config.json`.
+- Update `docs/design/DESIGN_MD_ADOPTION_AUDIT.md` and `docs/design/design-md-adoption.config.json` whenever a UI component family is migrated into enforcement.
 - Preserve unknown sections when editing.
 - Prefer `DESIGN.md` for standing tokens and design rules; prefer approved issue designs for page-specific composition when they do not contradict these tokens.
 - If `DESIGN.md`, implementation tokens, and approved mockups materially conflict, stop and surface the conflict.

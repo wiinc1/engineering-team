@@ -7,6 +7,7 @@ const DESIGN_PATH = 'DESIGN.md';
 const GLOBAL_OUTPUT_PATH = 'src/app/design-tokens.css';
 const BUTTON_OUTPUT_PATH = 'src/components/Button/Button.tokens.css';
 const TASK_CREATION_FORM_OUTPUT_PATH = 'src/features/task-creation/TaskCreationForm.tokens.css';
+const TASK_DETAIL_OUTPUT_PATH = 'src/features/task-detail/TaskDetail.tokens.css';
 const CHECK_MODE = process.argv.includes('--check');
 const REFERENCE_PATTERN = /\{([^}]+)\}/g;
 
@@ -158,6 +159,11 @@ function buildGlobalCss(tokens) {
     }
   }
 
+  addSection(lines, 'Opacity');
+  for (const [name, value] of Object.entries(tokens.opacity || {})) {
+    addVar(lines, `design-opacity-${name}`, value);
+  }
+
   addSection(lines, 'Layers');
   for (const [name, value] of Object.entries(tokens.layers || {})) {
     addVar(lines, `design-layer-${name}`, value);
@@ -173,7 +179,7 @@ function buildGlobalCss(tokens) {
     addComponentVars(lines, name, component, `design-component-${name}`);
   }
 
-  lines.push('}', '');
+  lines.push('}');
   return `${lines.join('\n')}\n`;
 }
 
@@ -195,6 +201,7 @@ function buildButtonCss(tokens) {
   addVar(lines, 'button-font-weight', buttonTypography.fontWeight);
   addVar(lines, 'button-focus-ring', tokens.focus?.ring ? `${cssValue(tokens.focus.ring.width)} solid ${cssValue(tokens.focus.ring.color)}` : null);
   addVar(lines, 'button-focus-ring-offset', tokens.focus?.ring?.offset);
+  addVar(lines, 'button-disabled-opacity', tokens.opacity?.['button-disabled']);
   addVar(lines, 'button-height-sm', sizeSm.height);
   addVar(lines, 'button-padding-sm', sizeSm.padding);
   addVar(lines, 'button-font-size-sm', sizeSm.typography?.fontSize || sizeSm.fontSize);
@@ -226,7 +233,7 @@ function buildButtonCss(tokens) {
   addComponentVars(lines, 'secondary', secondary, 'button-secondary');
   addComponentVars(lines, 'outline', outline, 'button-outline');
   addComponentVars(lines, 'destructive', destructive, 'button-destructive');
-  lines.push('}', '');
+  lines.push('}');
   return `${lines.join('\n')}\n`;
 }
 
@@ -289,7 +296,141 @@ function buildTaskCreationFormCss(tokens) {
   addVar(lines, 'task-creation-error-radius', error.rounded || tokens.rounded?.['control-sm']);
   addVar(lines, 'task-creation-error-border-accent-width', tokens.spacing?.['1']);
   addVar(lines, 'task-creation-error-border-accent-color', tokens.colors?.danger);
-  lines.push('}', '');
+  lines.push('}');
+  return `${lines.join('\n')}\n`;
+}
+
+function buildTaskDetailCss(tokens) {
+  const shell = tokens.components?.['task-detail-shell'] || {};
+  const title = tokens.components?.['task-detail-title'] || {};
+  const subtitle = tokens.components?.['task-detail-subtitle'] || {};
+  const label = tokens.components?.['task-detail-label'] || {};
+  const panel = tokens.components?.['task-detail-panel'] || {};
+  const input = tokens.components?.['task-detail-input'] || {};
+  const notice = tokens.components?.['task-detail-notice'] || {};
+  const historyCard = tokens.components?.['task-history-card'] || {};
+  const telemetryCard = tokens.components?.['telemetry-card'] || {};
+  const codeTypography = tokens.typography?.['code-md'] || {};
+  const labelTypography = label.typography || tokens.typography?.['label-sm'] || {};
+  const trackedLabelTypography = tokens.typography?.['label-tracked'] || labelTypography;
+  const titleTypography = title.typography || tokens.typography?.['headline-md'] || {};
+  const subtitleTypography = subtitle.typography || tokens.typography?.['body-sm'] || {};
+
+  const lines = [...generatedHeader(), ':root {'];
+  addVar(lines, 'task-detail-text', shell.textColor || tokens.colors?.['on-heading']);
+  addVar(lines, 'task-detail-shell-gap', tokens.spacing?.['5']);
+  addVar(lines, 'task-detail-header-gap', tokens.spacing?.['4']);
+  addVar(lines, 'task-detail-title-gap', tokens.spacing?.['1']);
+  addVar(lines, 'task-detail-section-gap', tokens.spacing?.['4']);
+  addVar(lines, 'task-detail-control-gap', tokens.spacing?.['2']);
+  addVar(lines, 'task-detail-dense-gap', tokens.spacing?.['1']);
+  addVar(lines, 'task-detail-card-gap', tokens.spacing?.['3']);
+  addVar(lines, 'task-detail-eyebrow-font-size', tokens.typography?.['label-sm']?.fontSize);
+  addVar(lines, 'task-detail-eyebrow-font-weight', tokens.typography?.['label-sm']?.fontWeight);
+  addVar(lines, 'task-detail-eyebrow-letter-spacing', trackedLabelTypography.letterSpacing);
+  addVar(lines, 'task-detail-eyebrow', tokens.colors?.['on-muted']);
+  addVar(lines, 'task-detail-title-font-size', titleTypography.fontSize);
+  addVar(lines, 'task-detail-title-line-height', titleTypography.lineHeight);
+  addVar(lines, 'task-detail-subtitle-font-size', subtitleTypography.fontSize);
+  addVar(lines, 'task-detail-subtitle', subtitle.textColor || tokens.colors?.['on-muted']);
+  addVar(lines, 'task-detail-label-font-size', labelTypography.fontSize);
+  addVar(lines, 'task-detail-label-font-weight', labelTypography.fontWeight);
+  addVar(lines, 'task-detail-label', label.textColor || tokens.colors?.['on-muted-strong']);
+  addVar(lines, 'task-detail-border', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'task-detail-border-width', tokens.borders?.default?.width);
+  addVar(lines, 'task-detail-border-color', tokens.colors?.['border-soft']);
+  addVar(lines, 'task-detail-panel-bg', panel.backgroundColor || tokens.colors?.surface);
+  addVar(lines, 'task-detail-panel-radius', panel.rounded || tokens.rounded?.['detail-panel'] || tokens.rounded?.panel);
+  addVar(lines, 'task-detail-panel-padding', panel.padding || tokens.spacing?.['5']);
+  addVar(lines, 'task-detail-tab-bg', tokens.colors?.['surface-subtle']);
+  addVar(lines, 'task-detail-tab-text', tokens.colors?.['on-muted-strong']);
+  addVar(lines, 'task-detail-tab-active-bg', tokens.colors?.surface);
+  addVar(lines, 'task-detail-tab-active-text', tokens.colors?.['on-heading']);
+  addVar(lines, 'task-detail-tab-radius', tokens.rounded?.pill);
+  addVar(lines, 'task-detail-tab-padding', `${cssValue(tokens.spacing?.['2'])} ${cssValue(tokens.spacing?.['4'])}`);
+  addVar(lines, 'task-detail-tab-shell-padding', tokens.spacing?.['1']);
+  addVar(lines, 'task-detail-tab-shadow', tokens.shadows?.sm);
+  addVar(lines, 'task-detail-focus-ring', tokens.focus?.ring ? `${cssValue(tokens.focus.ring.width)} solid ${cssValue(tokens.focus.ring.color)}` : null);
+  addVar(lines, 'task-detail-focus-ring-offset', tokens.focus?.ring?.offset);
+  addVar(lines, 'task-detail-disabled-opacity', tokens.opacity?.['control-disabled']);
+  addVar(lines, 'task-detail-input-bg', input.backgroundColor || tokens.colors?.surface);
+  addVar(lines, 'task-detail-input-border', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'task-detail-input-radius', input.rounded || tokens.rounded?.control);
+  addVar(lines, 'task-detail-input-padding-inline', tokens.spacing?.['3']);
+  addVar(lines, 'task-detail-input-min-height', input.height || '2.5rem');
+  addVar(lines, 'task-detail-button-padding', `${cssValue(tokens.spacing?.['2'])} ${cssValue(tokens.spacing?.['4'])}`);
+  addVar(lines, 'task-detail-notice-bg', notice.backgroundColor || tokens.colors?.['surface-muted']);
+  addVar(lines, 'task-detail-notice-border', tokens.colors?.['border-soft']);
+  addVar(lines, 'task-detail-notice-radius', notice.rounded || tokens.rounded?.['auth-panel']);
+  addVar(lines, 'task-detail-notice-padding', notice.padding || tokens.spacing?.['4']);
+  addVar(lines, 'task-detail-notice-title-font-size', tokens.typography?.['body-md']?.fontSize);
+  addVar(lines, 'task-detail-notice-body-font-size', tokens.typography?.['body-sm']?.fontSize);
+  addVar(lines, 'task-detail-warning-border', tokens.colors?.warning);
+  addVar(lines, 'task-detail-warning-bg', tokens.colors?.['warning-soft']);
+  addVar(lines, 'task-detail-danger-border', tokens.colors?.danger);
+  addVar(lines, 'task-detail-danger-bg', tokens.colors?.['danger-soft']);
+  addVar(lines, 'task-detail-restricted-border', tokens.colors?.review);
+  addVar(lines, 'task-detail-restricted-bg', tokens.colors?.['review-soft']);
+
+  addSection(lines, 'Stage transition');
+  addVar(lines, 'stage-transition-container-bg', tokens.colors?.['surface-muted']);
+  addVar(lines, 'stage-transition-container-border', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'stage-transition-container-radius', tokens.rounded?.panel);
+  addVar(lines, 'stage-transition-container-padding', tokens.spacing?.['4']);
+  addVar(lines, 'stage-transition-container-margin-top', tokens.spacing?.['4']);
+  addVar(lines, 'stage-transition-title-font-size', tokens.typography?.['label-md']?.fontSize);
+  addVar(lines, 'stage-transition-title-font-weight', tokens.typography?.['label-md']?.fontWeight);
+  addVar(lines, 'stage-transition-title-letter-spacing', trackedLabelTypography.letterSpacing);
+  addVar(lines, 'stage-transition-title-color', tokens.colors?.['on-muted']);
+  addVar(lines, 'stage-transition-current-bg', tokens.colors?.['surface-subtle']);
+  addVar(lines, 'stage-transition-current-padding', `${cssValue(tokens.spacing?.['1'])} ${cssValue(tokens.spacing?.['2'])}`);
+  addVar(lines, 'stage-transition-current-radius', tokens.rounded?.['control-sm']);
+  addVar(lines, 'stage-transition-current-font-family', codeTypography.fontFamily);
+  addVar(lines, 'stage-transition-current-font-size', codeTypography.fontSize);
+  addVar(lines, 'stage-transition-label-font-size', tokens.typography?.['label-sm']?.fontSize);
+  addVar(lines, 'stage-transition-input-padding', tokens.spacing?.['2']);
+  addVar(lines, 'stage-transition-error-color', tokens.colors?.['danger-text']);
+
+  addSection(lines, 'History');
+  addVar(lines, 'history-card-bg', historyCard.backgroundColor || tokens.colors?.surface);
+  addVar(lines, 'history-card-border', tokens.colors?.['border-soft']);
+  addVar(lines, 'history-card-border-rule', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'history-card-radius', historyCard.rounded || tokens.rounded?.status);
+  addVar(lines, 'history-card-padding', historyCard.padding || tokens.spacing?.['4']);
+  addVar(lines, 'history-title-font-size', tokens.typography?.['body-md']?.fontSize);
+  addVar(lines, 'history-title-line-height', tokens.typography?.['headline-sm']?.lineHeight);
+  addVar(lines, 'history-meta-font-size', tokens.typography?.['label-sm']?.fontSize);
+  addVar(lines, 'history-detail-font-size', tokens.typography?.['body-sm']?.fontSize);
+  addVar(lines, 'history-meta', tokens.colors?.['on-muted']);
+  addVar(lines, 'history-detail', tokens.colors?.['on-muted-strong']);
+  addVar(lines, 'history-tone-neutral', tokens.colors?.['on-muted']);
+  addVar(lines, 'history-tone-info', tokens.colors?.info);
+  addVar(lines, 'history-tone-success', tokens.colors?.success);
+  addVar(lines, 'history-tone-warning', tokens.colors?.warning);
+  addVar(lines, 'history-tone-danger', tokens.colors?.danger);
+  addVar(lines, 'history-dot-ring', tokens.colors?.['border-soft']);
+  addVar(lines, 'history-dot-shadow', `0 0 0 ${cssValue(tokens.spacing?.['1'])} ${cssValue(tokens.colors?.['border-soft'])}`);
+
+  addSection(lines, 'Telemetry');
+  addVar(lines, 'telemetry-card-bg', telemetryCard.backgroundColor || tokens.colors?.surface);
+  addVar(lines, 'telemetry-card-border', tokens.colors?.['border-soft']);
+  addVar(lines, 'telemetry-card-border-rule', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'telemetry-card-radius', telemetryCard.rounded || tokens.rounded?.status);
+  addVar(lines, 'telemetry-card-padding', telemetryCard.padding || tokens.spacing?.['4']);
+  addVar(lines, 'telemetry-label', tokens.colors?.['on-muted']);
+  addVar(lines, 'telemetry-value', tokens.colors?.['on-heading']);
+  addVar(lines, 'telemetry-hint', tokens.colors?.['on-muted']);
+  addVar(lines, 'telemetry-label-font-size', tokens.typography?.['label-sm']?.fontSize);
+  addVar(lines, 'telemetry-value-font-size', tokens.typography?.['headline-md']?.fontSize);
+  addVar(lines, 'telemetry-value-line-height', tokens.typography?.['headline-md']?.lineHeight);
+  addVar(lines, 'telemetry-value-font-weight', tokens.typography?.['headline-md']?.fontWeight);
+  addVar(lines, 'telemetry-tone-neutral', tokens.colors?.border);
+  addVar(lines, 'telemetry-tone-info', tokens.colors?.info);
+  addVar(lines, 'telemetry-tone-success', tokens.colors?.success);
+  addVar(lines, 'telemetry-tone-warning', tokens.colors?.warning);
+  addVar(lines, 'telemetry-tone-danger', tokens.colors?.danger);
+
+  lines.push('}');
   return `${lines.join('\n')}\n`;
 }
 
@@ -412,4 +553,5 @@ writeOrCheck([
   { path: GLOBAL_OUTPUT_PATH, content: buildGlobalCss(tokens) },
   { path: BUTTON_OUTPUT_PATH, content: buildButtonCss(tokens) },
   { path: TASK_CREATION_FORM_OUTPUT_PATH, content: buildTaskCreationFormCss(tokens) },
+  { path: TASK_DETAIL_OUTPUT_PATH, content: buildTaskDetailCss(tokens) },
 ]);

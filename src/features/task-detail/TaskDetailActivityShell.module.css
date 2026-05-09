@@ -1,57 +1,59 @@
+@import "./TaskDetail.tokens.css";
+
 .shell {
   display: grid;
-  gap: 20px;
-  color: var(--task-detail-text, #0f172a);
+  gap: var(--task-detail-shell-gap);
+  color: var(--task-detail-text);
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--task-detail-header-gap);
   flex-wrap: wrap;
 }
 
 .titleBlock {
   display: grid;
-  gap: 4px;
+  gap: var(--task-detail-dense-gap);
 }
 
 .eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: var(--task-detail-eyebrow-font-size);
+  font-weight: var(--task-detail-eyebrow-font-weight);
+  letter-spacing: var(--task-detail-eyebrow-letter-spacing);
   text-transform: uppercase;
-  color: var(--task-detail-eyebrow, #475569);
+  color: var(--task-detail-eyebrow);
 }
 
 .title {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.2;
+  font-size: var(--task-detail-title-font-size);
+  line-height: var(--task-detail-title-line-height);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 14px;
-  color: var(--task-detail-subtitle, #475569);
+  font-size: var(--task-detail-subtitle-font-size);
+  color: var(--task-detail-subtitle);
 }
 
 .tabs {
   display: inline-flex;
-  gap: 8px;
-  padding: 4px;
-  border-radius: 999px;
-  background: var(--task-detail-tab-bg, #e2e8f0);
+  gap: var(--task-detail-control-gap);
+  padding: var(--task-detail-tab-shell-padding);
+  border-radius: var(--task-detail-tab-radius);
+  background: var(--task-detail-tab-bg);
 }
 
 .tab {
   appearance: none;
   border: 0;
-  border-radius: 999px;
-  padding: 8px 14px;
+  border-radius: var(--task-detail-tab-radius);
+  padding: var(--task-detail-tab-padding);
   background: transparent;
-  color: var(--task-detail-tab-text, #334155);
+  color: var(--task-detail-tab-text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -59,51 +61,51 @@
 
 .tab:focus-visible,
 .filterInput:focus-visible {
-  outline: 2px solid var(--color-focus-ring, #3b82f6);
-  outline-offset: 2px;
+  outline: var(--task-detail-focus-ring);
+  outline-offset: var(--task-detail-focus-ring-offset);
 }
 
 .tabActive {
-  background: var(--task-detail-tab-active-bg, #ffffff);
-  color: var(--task-detail-tab-active-text, #0f172a);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  background: var(--task-detail-tab-active-bg);
+  color: var(--task-detail-tab-active-text);
+  box-shadow: var(--task-detail-tab-shadow);
 }
 
 .panel {
-  border: 1px solid var(--task-detail-border, #cbd5e1);
-  border-radius: 16px;
-  background: var(--task-detail-panel-bg, #ffffff);
-  padding: 20px;
+  border: var(--task-detail-border);
+  border-radius: var(--task-detail-panel-radius);
+  background: var(--task-detail-panel-bg);
+  padding: var(--task-detail-panel-padding);
   display: grid;
-  gap: 16px;
+  gap: var(--task-detail-section-gap);
 }
 
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  gap: var(--task-detail-card-gap);
 }
 
 .filterField {
   display: grid;
-  gap: 6px;
+  gap: var(--task-detail-control-gap);
 }
 
 .filterLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--task-detail-label, #334155);
+  font-size: var(--task-detail-label-font-size);
+  font-weight: var(--task-detail-label-font-weight);
+  color: var(--task-detail-label);
 }
 
 .filterInput {
   width: 100%;
-  min-height: 40px;
-  border: 1px solid var(--task-detail-input-border, #cbd5e1);
-  border-radius: 10px;
-  padding: 0 12px;
+  min-height: var(--task-detail-input-min-height);
+  border: var(--task-detail-input-border);
+  border-radius: var(--task-detail-input-radius);
+  padding: 0 var(--task-detail-input-padding-inline);
   font: inherit;
   color: inherit;
-  background: var(--task-detail-input-bg, #ffffff);
+  background: var(--task-detail-input-bg);
 }
 
 .loadMoreRow {
@@ -113,10 +115,10 @@
 
 .loadMoreButton {
   appearance: none;
-  border: 1px solid var(--task-detail-border, #cbd5e1);
-  border-radius: 999px;
-  padding: 10px 16px;
-  background: var(--task-detail-panel-bg, #ffffff);
+  border: var(--task-detail-border);
+  border-radius: var(--task-detail-tab-radius);
+  padding: var(--task-detail-button-padding);
+  background: var(--task-detail-panel-bg);
   color: inherit;
   font: inherit;
   font-weight: 600;
@@ -124,49 +126,50 @@
 }
 
 .loadMoreButton:focus-visible {
-  outline: 2px solid var(--color-focus-ring, #3b82f6);
-  outline-offset: 2px;
+  outline: var(--task-detail-focus-ring);
+  outline-offset: var(--task-detail-focus-ring-offset);
 }
 
 .loadMoreButton:disabled {
-  opacity: 0.7;
+  opacity: var(--task-detail-disabled-opacity);
   cursor: progress;
 }
 
 .notice {
-  border: 1px solid var(--task-detail-notice-border, #cbd5e1);
-  border-radius: 12px;
-  padding: 16px;
-  background: var(--task-detail-notice-bg, #f8fafc);
+  border: var(--task-detail-border);
+  border-color: var(--task-detail-notice-border);
+  border-radius: var(--task-detail-notice-radius);
+  padding: var(--task-detail-notice-padding);
+  background: var(--task-detail-notice-bg);
   display: grid;
-  gap: 6px;
+  gap: var(--task-detail-control-gap);
 }
 
 .noticeTitle {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--task-detail-notice-title-font-size);
 }
 
 .noticeBody,
 .noticeDetail {
   margin: 0;
-  font-size: 14px;
-  color: var(--task-detail-subtitle, #475569);
+  font-size: var(--task-detail-notice-body-font-size);
+  color: var(--task-detail-subtitle);
 }
 
 .noticeWarning {
-  border-color: var(--task-detail-warning-border, #fbbf24);
-  background: var(--task-detail-warning-bg, #fffbeb);
+  border-color: var(--task-detail-warning-border);
+  background: var(--task-detail-warning-bg);
 }
 
 .noticeDanger {
-  border-color: var(--task-detail-danger-border, #fca5a5);
-  background: var(--task-detail-danger-bg, #fef2f2);
+  border-color: var(--task-detail-danger-border);
+  background: var(--task-detail-danger-bg);
 }
 
 .noticeRestricted {
-  border-color: var(--task-detail-restricted-border, #a78bfa);
-  background: var(--task-detail-restricted-bg, #f5f3ff);
+  border-color: var(--task-detail-restricted-border);
+  background: var(--task-detail-restricted-bg);
 }
 
 

@@ -99,6 +99,16 @@
   --design-typography-headline-lg-font-weight: 700;
   --design-typography-headline-lg-line-height: 1.08;
   --design-typography-headline-lg-letter-spacing: 0rem;
+  --design-typography-headline-fluid-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-typography-headline-fluid-font-size: 2.25rem;
+  --design-typography-headline-fluid-font-weight: 700;
+  --design-typography-headline-fluid-line-height: 1.08;
+  --design-typography-headline-fluid-letter-spacing: 0rem;
+  --design-typography-headline-mobile-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-typography-headline-mobile-font-size: 1.65rem;
+  --design-typography-headline-mobile-font-weight: 700;
+  --design-typography-headline-mobile-line-height: 1.12;
+  --design-typography-headline-mobile-letter-spacing: 0rem;
   --design-typography-headline-md-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --design-typography-headline-md-font-size: 1.5rem;
   --design-typography-headline-md-font-weight: 650;
@@ -129,6 +139,11 @@
   --design-typography-label-sm-font-weight: 700;
   --design-typography-label-sm-line-height: 1.25;
   --design-typography-label-sm-letter-spacing: 0rem;
+  --design-typography-label-tracked-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-typography-label-tracked-font-size: 0.8rem;
+  --design-typography-label-tracked-font-weight: 700;
+  --design-typography-label-tracked-line-height: 1.25;
+  --design-typography-label-tracked-letter-spacing: 0.05rem;
   --design-typography-button-sm-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --design-typography-button-sm-font-size: 0.8125rem;
   --design-typography-button-sm-font-weight: 650;
@@ -175,6 +190,7 @@
   --design-radius-panel: 8px;
   --design-radius-auth-panel: 12px;
   --design-radius-status: 14px;
+  --design-radius-detail-panel: 16px;
   --design-radius-pill: 999px;
 
   /* Borders */
@@ -192,6 +208,11 @@
   --design-focus-ring-width: 3px;
   --design-focus-ring-offset: 2px;
   --design-focus-ring: 3px solid #B9C9F5;
+
+  /* Opacity */
+  --design-opacity-button-disabled: 0.5;
+  --design-opacity-control-disabled: 0.7;
+  --design-opacity-board-card-dragging: 0.68;
 
   /* Layers */
   --design-layer-base: 0;
@@ -343,6 +364,79 @@
   --design-component-task-creation-validation-error-letter-spacing: 0rem;
   --design-component-task-creation-validation-error-border-radius: 6px;
   --design-component-task-creation-validation-error-padding: 0.5rem 0.75rem;
+  --design-component-task-detail-shell-background-color: #EEF2F7;
+  --design-component-task-detail-shell-color: #0F172A;
+  --design-component-task-detail-shell-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-shell-font-size: 1rem;
+  --design-component-task-detail-shell-font-weight: 400;
+  --design-component-task-detail-shell-line-height: 1.5;
+  --design-component-task-detail-shell-letter-spacing: 0rem;
+  --design-component-task-detail-shell-border-radius: 8px;
+  --design-component-task-detail-shell-padding: 1rem;
+  --design-component-task-detail-title-color: #0F172A;
+  --design-component-task-detail-title-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-title-font-size: 1.5rem;
+  --design-component-task-detail-title-font-weight: 650;
+  --design-component-task-detail-title-line-height: 1.2;
+  --design-component-task-detail-title-letter-spacing: 0rem;
+  --design-component-task-detail-subtitle-color: #526174;
+  --design-component-task-detail-subtitle-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-subtitle-font-size: 0.9rem;
+  --design-component-task-detail-subtitle-font-weight: 400;
+  --design-component-task-detail-subtitle-line-height: 1.45;
+  --design-component-task-detail-subtitle-letter-spacing: 0rem;
+  --design-component-task-detail-label-color: #334155;
+  --design-component-task-detail-label-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-label-font-size: 0.8rem;
+  --design-component-task-detail-label-font-weight: 700;
+  --design-component-task-detail-label-line-height: 1.25;
+  --design-component-task-detail-label-letter-spacing: 0rem;
+  --design-component-task-detail-panel-background-color: #FFFFFF;
+  --design-component-task-detail-panel-color: #111827;
+  --design-component-task-detail-panel-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-panel-font-size: 1rem;
+  --design-component-task-detail-panel-font-weight: 400;
+  --design-component-task-detail-panel-line-height: 1.5;
+  --design-component-task-detail-panel-letter-spacing: 0rem;
+  --design-component-task-detail-panel-border-radius: 16px;
+  --design-component-task-detail-panel-padding: 1.25rem;
+  --design-component-task-detail-input-background-color: #FFFFFF;
+  --design-component-task-detail-input-color: #111827;
+  --design-component-task-detail-input-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-input-font-size: 1rem;
+  --design-component-task-detail-input-font-weight: 400;
+  --design-component-task-detail-input-line-height: 1.5;
+  --design-component-task-detail-input-letter-spacing: 0rem;
+  --design-component-task-detail-input-border-radius: 8px;
+  --design-component-task-detail-input-padding: 0.75rem;
+  --design-component-task-detail-input-height: 2.5rem;
+  --design-component-task-detail-notice-background-color: #F6F8FB;
+  --design-component-task-detail-notice-color: #334155;
+  --design-component-task-detail-notice-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-detail-notice-font-size: 0.9rem;
+  --design-component-task-detail-notice-font-weight: 400;
+  --design-component-task-detail-notice-line-height: 1.45;
+  --design-component-task-detail-notice-letter-spacing: 0rem;
+  --design-component-task-detail-notice-border-radius: 12px;
+  --design-component-task-detail-notice-padding: 1rem;
+  --design-component-task-history-card-background-color: #FFFFFF;
+  --design-component-task-history-card-color: #111827;
+  --design-component-task-history-card-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-task-history-card-font-size: 0.9rem;
+  --design-component-task-history-card-font-weight: 400;
+  --design-component-task-history-card-line-height: 1.45;
+  --design-component-task-history-card-letter-spacing: 0rem;
+  --design-component-task-history-card-border-radius: 14px;
+  --design-component-task-history-card-padding: 1rem;
+  --design-component-telemetry-card-background-color: #FFFFFF;
+  --design-component-telemetry-card-color: #111827;
+  --design-component-telemetry-card-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --design-component-telemetry-card-font-size: 0.9rem;
+  --design-component-telemetry-card-font-weight: 400;
+  --design-component-telemetry-card-line-height: 1.45;
+  --design-component-telemetry-card-letter-spacing: 0rem;
+  --design-component-telemetry-card-border-radius: 14px;
+  --design-component-telemetry-card-padding: 1rem;
   --design-component-badge-neutral-background-color: #EEF2F7;
   --design-component-badge-neutral-color: #334155;
   --design-component-badge-neutral-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -479,4 +573,3 @@
   --design-component-focus-ring-background-color: #B9C9F5;
   --design-component-focus-ring-width: 3px;
 }
-
