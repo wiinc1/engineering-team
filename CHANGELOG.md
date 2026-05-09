@@ -10,3 +10,5 @@
 - included the visual identity validator suite in Python verification coverage
 - classified generated Python test helpers as support modules outside the unit
   test filename gate
+- declared committed visual identity generated outputs and their token drift check
+- migrated app and Button styles to consume generated visual identity tokens

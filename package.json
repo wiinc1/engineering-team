@@ -78,6 +78,8 @@
     "dev:audit:down": "docker compose down --remove-orphans",
     "dev:audit:reset": "docker compose down -v --remove-orphans",
     "dev:delegation-smoke:down": "docker compose down --remove-orphans",
+    "design:tokens": "node scripts/generate-design-tokens.mjs",
+    "design:tokens:check": "node scripts/generate-design-tokens.mjs --check",
     "design:lint": "design.md lint DESIGN.md"
   },
   "repository": {
@@ -98,6 +100,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@google/design.md": "0.1.1",
     "@playwright/test": "^1.55.0",
     "@stryker-mutator/core": "^9.6.1",
     "@testing-library/jest-dom": "^6.6.3",
@@ -109,6 +112,6 @@
     "typescript": "^5.9.3",
     "vite": "^8.0.3",
     "vitest": "^3.2.4",
-    "@google/design.md": "0.1.1"
+    "yaml": "^2.8.4"
   }
 }

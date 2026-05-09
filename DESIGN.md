@@ -100,6 +100,24 @@ typography:
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: 0rem
+  button-sm:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 0.8125rem
+    fontWeight: 650
+    lineHeight: 1.25
+    letterSpacing: 0rem
+  button-md:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 0.875rem
+    fontWeight: 650
+    lineHeight: 1.25
+    letterSpacing: 0rem
+  button-lg:
+    fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+    fontSize: 1rem
+    fontWeight: 650
+    lineHeight: 1.25
+    letterSpacing: 0rem
   code-md:
     fontFamily: '"SFMono-Regular", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", monospace'
     fontSize: 0.875rem
@@ -131,6 +149,34 @@ rounded:
   auth-panel: 12px
   status: 14px
   pill: 999px
+borders:
+  default:
+    width: 1px
+    style: solid
+    color: "{colors.border}"
+  soft:
+    width: 1px
+    style: solid
+    color: "{colors.border-soft}"
+focus:
+  ring:
+    color: "{colors.focus-ring}"
+    width: 3px
+    offset: 2px
+layers:
+  base: 0
+  sticky: 100
+  dropdown: 1000
+  popover: 1100
+  modal: 1200
+  toast: 1300
+  tooltip: 1400
+shadows:
+  sm: 0 1px 2px rgba(15, 23, 42, 0.08)
+  md: 0 12px 28px rgba(15, 23, 42, 0.08)
+  auth-card: 0 18px 48px rgba(15, 23, 42, 0.1)
+  focus-primary: 0 0 0 2px rgba(37, 99, 235, 0.16)
+  success-focus: 0 0 0 3px rgba(21, 128, 61, 0.3)
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
@@ -163,6 +209,18 @@ components:
     rounded: "{rounded.control-sm}"
     padding: 10px 14px
     height: 2.5rem
+  button-size-sm:
+    typography: "{typography.button-sm}"
+    padding: 0 12px
+    height: 2rem
+  button-size-md:
+    typography: "{typography.button-md}"
+    padding: 0 16px
+    height: 2.5rem
+  button-size-lg:
+    typography: "{typography.button-lg}"
+    padding: 0 24px
+    height: 3rem
   input-default:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.on-surface}"
@@ -287,7 +345,7 @@ The product identity is **Engineering Team Software Factory Control Plane**: an 
 
 The visual posture is quiet, dense, and work-focused. Screens should read like an operator console: scannable tables and boards, plain status language, restrained depth, and direct controls. Avoid marketing composition, decorative color washes, and oversized hero treatments in product workflows.
 
-Source-of-truth decision: `DESIGN.md` is currently a synchronized mirror of implemented design tokens, not the runtime source of truth. The active runtime tokens live in `src/app/styles.css`, with component-level defaults in `src/components/Button/Button.module.css`. Keep this file synchronized with those implementation tokens until a future ADR introduces generated or imported tokens from `DESIGN.md`.
+Source-of-truth decision: `DESIGN.md` is the authoritative visual design source of truth. Runtime style files and generated token files are derived outputs. Update this file first for reusable visual token, component, accessibility, iconography, imagery, and agent-guidance decisions, then regenerate or update runtime consumers such as `src/app/styles.css` and `src/components/Button/Button.module.css`.
 
 ## Colors
 
@@ -421,8 +479,8 @@ Localization and RTL are not currently product requirements.
 ## Agent Usage
 
 - Treat YAML front matter tokens as the design governance contract.
-- Treat `src/app/styles.css` as the current runtime implementation source until a later ADR promotes generated tokens from `DESIGN.md`.
-- When changing reusable visual tokens, update `src/app/styles.css`, component CSS defaults, and `DESIGN.md` in the same change or record a follow-up with owner approval.
+- Treat `DESIGN.md` as the authoritative source for reusable visual tokens and design rules.
+- When changing reusable visual tokens, update `DESIGN.md` first, then regenerate or update runtime consumers such as `src/app/styles.css`, component CSS defaults, and generated token files.
 - Preserve unknown sections when editing.
 - Prefer `DESIGN.md` for standing tokens and design rules; prefer approved issue designs for page-specific composition when they do not contradict these tokens.
 - If `DESIGN.md`, implementation tokens, and approved mockups materially conflict, stop and surface the conflict.
