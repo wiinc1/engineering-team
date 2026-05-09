@@ -4,7 +4,7 @@ Date: 2026-05-08
 
 ## Summary
 
-`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, TaskCreationForm tokens, TaskDetail tokens, drift checking, hard-coded visual value enforcement for all authored UI CSS, PR guidance, agent guidance, machine-readable audit config, and screenshot smoke coverage.
+`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, TaskCreationForm tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual value enforcement for all authored UI CSS, PR guidance, agent guidance, machine-readable audit config, and screenshot smoke coverage.
 
 Machine-readable audit config: `docs/design/design-md-adoption.config.json`
 
@@ -26,13 +26,13 @@ Machine-readable audit config: `docs/design/design-md-adoption.config.json`
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Accessibility | Implemented | `DESIGN.md` includes app-specific requirements for WCAG AA contrast, visible keyboard focus, touch target sizing, disabled/loading state legibility, overflow behavior, text wrapping, and reduced motion. |
-| Iconography | N/A | The product is currently text-first and has no shipped icon set. `DESIGN.md` records that any future icon library must use one consistent style and ADR-backed dependency. |
+| Accessibility | Implemented | `DESIGN.md` includes app-specific requirements for WCAG AA contrast, visible keyboard focus, touch target sizing, disabled/loading state legibility, label/error association, overflow behavior, text wrapping, and reduced motion. |
+| Iconography | Implemented | The product is text-first and has no shipped icon set. `DESIGN.md` allows lightweight status glyphs only as secondary decoration paired with visible text and semantic color, and records that any future icon library must use one consistent style and ADR-backed dependency. |
 | Imagery | N/A | The product has no logo, illustration, or brand-image asset system. `DESIGN.md` directs operational screens toward real product state, tables, task records, charts, logs, and reviewed asset provenance if imagery is introduced. |
 | Content Tone | Implemented | `DESIGN.md` has app-specific UI copy guidance for task actions, empty states, errors, and workflow status labels. |
 | Localization | N/A | Localization and RTL are explicitly not current requirements. `DESIGN.md` still defines text expansion, fixed-height avoidance, readable line length, and explicit RTL declaration expectations. |
-| Navigation | Implemented | `DESIGN.md` includes app-nav rules for compact workflow navigation, wrapped links, and muted session controls. Runtime nav styles consume generated variables in `src/app/styles.css`. |
-| Data Visualization | Implemented | `DESIGN.md` defines current telemetry-card, timeline, table, log, label, metadata, and no-hover-only rules. Rich charting remains blocked until chart-specific tokens are added. |
+| Navigation | Implemented | `DESIGN.md` includes route and role-surface rules for task workspace, intake, PM overview, governance, deferred considerations, role inboxes, protected-route recovery, and permission-gated controls. Runtime nav styles consume generated variables in `src/app/styles.css`. |
+| Data Visualization | Implemented | `DESIGN.md` defines current telemetry-card, timeline, table, log, label, metadata, task-detail read-model, freshness, redaction, and no-hover-only rules. Rich charting remains blocked until chart-specific tokens are added. |
 | Multi-Brand Theming | N/A | The repo has one internal product identity: Engineering Team Software Factory Control Plane. No multi-brand or tenant-brand theming requirement is present. Add an ADR and token strategy before introducing multi-brand runtime theming. |
 | Motion | Implemented | `DESIGN.md` keeps motion intentionally limited: respect reduced motion, never use motion as the only state indicator, keep transitions local and short, and add duration/easing tokens before reusable animation patterns. |
 | Visual Regression | Implemented | Existing browser screenshots cover task detail. This PR adds screenshot smoke coverage for the primary app screen, Button states, TaskCreationForm token output, task-detail states, and mobile task-detail layout. This is smoke coverage, not a full pixel-baseline system. |
@@ -45,7 +45,7 @@ Machine-readable audit config: `docs/design/design-md-adoption.config.json`
 | Generated token files are reproducible. | Pass | `npm run design:tokens` regenerates committed outputs; `npm run design:tokens:check` compares generated content with committed files. |
 | Drift check fails if generated files are stale. | Pass | `scripts/generate-design-tokens.mjs --check` exits nonzero when an output differs or is missing. |
 | Enforcement blocks new hard-coded visual values. | Pass | `scripts/check-design-token-usage.mjs` scans all authored UI CSS listed in `docs/design/design-md-adoption.config.json`, rejects forbidden literals unless a reasoned `DESIGN-TOKEN-EXCEPTION:` is present, and fails if authored CSS falls outside enforcement scope. Focused unit coverage validates pass, fail, exception, missing-reason, generated-output allowlist, config scope, and audit coverage behavior. |
-| Migrated components use generated variables. | Pass | Global styles, Button, TaskCreationForm, and task-detail modules import generated token CSS and use `var(--...)` values. |
+| Migrated components use generated variables. | Pass | Global styles, Button, TaskCreationForm, and task-detail modules import generated token CSS and use `var(--...)` values. TaskCreationForm and StageTransition preserve label/error associations required by `DESIGN.md`. |
 | Optional areas are implemented, explicitly N/A, or tracked as follow-up. | Pass | The optional area table above marks implemented, N/A, and follow-up items. |
 | Screenshot smoke tests cover at least the primary screen and migrated components. | Pass | `tests/browser/design-token-operationalization.browser.spec.ts` captures primary app, Button states, TaskCreationForm token output, task-detail state panels, and mobile task-detail layout. |
 | `make verify` passes. | Pass | Latest local verification passed with only the existing non-blocking maintainability warning on `dev-standards/templates/DESIGN.md`. |

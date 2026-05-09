@@ -50,10 +50,29 @@
   font-size: var(--task-creation-help-font-size);
 }
 
+.field-error {
+  margin: 0;
+  color: var(--task-creation-validation-error-color);
+  font-size: var(--task-creation-validation-error-font-size);
+}
+
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--task-creation-row-gap);
+}
+
+.validation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--task-creation-field-gap);
+}
+
+.validation-summary-title {
+  margin: 0;
+  color: var(--task-creation-validation-error-color);
+  font-size: var(--task-creation-validation-error-font-size);
+  font-weight: var(--task-creation-label-font-weight);
 }
 
 .validationErrors {

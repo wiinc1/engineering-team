@@ -58,7 +58,7 @@
   ],
   "optional_areas": {
     "accessibility": "implemented",
-    "iconography": "not_applicable",
+    "iconography": "implemented",
     "imagery": "not_applicable",
     "content_tone": "implemented",
     "localization": "not_applicable",

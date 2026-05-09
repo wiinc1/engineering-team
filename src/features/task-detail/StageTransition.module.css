@@ -57,6 +57,27 @@
   font-size: var(--stage-transition-current-font-size);
 }
 
+.field-error {
+  margin: 0;
+  color: var(--stage-transition-error-color);
+  font-size: var(--stage-transition-label-font-size);
+}
+
+.validation-summary {
+  color: var(--stage-transition-error-color);
+  font-size: var(--stage-transition-label-font-size);
+}
+
+.validation-summary-title {
+  margin: 0;
+  font-weight: var(--stage-transition-title-font-weight);
+}
+
+.validation-summary ul {
+  margin: 0;
+  padding-left: var(--task-detail-section-gap);
+}
+
 .actions {
   display: flex;
   gap: var(--task-detail-control-gap);

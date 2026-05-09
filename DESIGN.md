@@ -523,6 +523,35 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 
 Persistent component exceptions must be promoted into this file through the protected change path and reflected in implementation tokens.
 
+## Navigation & Role Surfaces
+
+The app information architecture is workflow-first. Navigation must keep operational routes compact, role-aware, and recoverable after authentication.
+
+- `/tasks` is the primary task workspace for delivery board and list scanning. It must keep owner, priority, status, waiting state, and next action visible without hover-only access.
+- `/tasks/create` is the intake route. It creates an Intake Draft and keeps the operator in a local success state with links to task detail and the workspace.
+- Task detail routes must keep the task summary, owner, stage, blockers, linked PRs, child task signal, activity, telemetry, governance, and assignment context in one scannable operational surface.
+- `/overview/pm` groups work by routing bucket and remains read-only except for explicit PM/admin controls that the current session may use.
+- `/overview/governance` is the dedicated governance-review surface. Governance review tasks do not belong in the ordinary delivery list.
+- `/deferred-considerations` is a PM queue for out-of-scope ideas grouped by revisit date or trigger. Deferred items remain non-blocking until explicitly promoted.
+- `/inbox/pm`, `/inbox/architect`, `/inbox/engineer`, `/inbox/qa`, `/inbox/sre`, and `/inbox/human` are role inboxes. Each inbox should explain why the shown work is routed there.
+- The human inbox is limited to decision-ready close-governance and escalation items. It should not become a general task list.
+- SRE inbox and monitoring surfaces expose deployment health, monitoring-window state, expiry/escalation context, and read-only operational evidence unless the session has a matching action role.
+- Protected routes redirect to `/sign-in` and restore the intended route after sign-in. Safe no-login states must be explicit when no configured sign-in path is available.
+- Role-gated controls must be omitted, disabled, or replaced with read-only status text according to server permissions. Readers may see owner metadata, but must not see assignment controls.
+
+## Task Detail Data Semantics
+
+Task detail UX is governed by the task-detail read model, not by ad hoc client-side reconstruction.
+
+- `GET /tasks/:id/detail` is the canonical read model for the page. Raw history, relationships, telemetry, and task summaries are backing inputs, not independent UI sources of truth.
+- Server-side omission and redaction are authoritative. The UI must render restricted or hidden states explicitly instead of implying missing data is fresh, empty, or user-editable.
+- `summary.freshness` is the workflow/read-model freshness source. Telemetry recency is separate and must be labeled as telemetry-specific freshness.
+- Stale, degraded, restricted, empty, and error task-detail states must be visually distinct and must include direct recovery or next-step language when recovery exists.
+- Deterministic status precedence must be preserved: blocked, waiting, degraded/stale, review, done, and closed states should not compete through color alone.
+- Linked child tasks, PR metadata, orchestration counts, and telemetry summaries must avoid N+1-style page behavior. Summaries should be pre-projected or loaded through explicit adjacent panels.
+- Truncated payloads, hidden orchestration, redacted owner data, and unavailable telemetry must identify the limitation and its source.
+- Manual refresh is the default recovery model for stale task-detail data unless a route defines a stronger live-update contract.
+
 ## UX States
 
 Product screens must make workflow state explicit without adding instructional chrome.
@@ -534,6 +563,28 @@ Product screens must make workflow state explicit without adding instructional c
 - Focus and keyboard behavior must match the control pattern: tabs use arrow keys, forms preserve label associations, buttons and links expose visible focus rings.
 - Responsive layouts favor single-column reading on mobile, wrapped navigation, horizontally scrollable task boards/tables where necessary, and no accidental page-wide overflow.
 - Operational screens should remain dense and scannable: prioritize headings, metadata, status labels, and row/card grouping over narrative copy.
+
+App-specific state rules:
+
+- Auth states must distinguish normal sign-in, registration, password reset, expired session recovery, rejected sign-in code, and no-login-path safe state.
+- Task creation success keeps focus on the created-status region and presents the next actions: open task detail, view task workspace, or create another task.
+- PM overview degraded states must stay distinct from filtered-empty results. A degraded roster or metadata dependency should not make tasks disappear.
+- Role inbox empty states must name the role queue and the routing condition, such as no QA-routed work, no SRE monitoring work, or no decision-ready human close-governance items.
+- Governance and deferred-consideration states must make clear when work is non-blocking, excluded from delivery scope, waiting for revisit, or promoted into committed scope.
+- SRE monitoring states must distinguish not started, active, approved, expired, escalated, and blocked by child anomaly work.
+- Close-review and human-decision states must show whether the item is decision-ready, missing PM/Architect evidence, awaiting human decision, requesting more context, or routed back to implementation.
+- Task-detail activity states must distinguish workflow history from telemetry; telemetry must stay adjacent, not mixed into the audit stream.
+
+## Responsive & Performance UX Criteria
+
+Responsive and perceived-performance behavior is part of the design contract for operational trust.
+
+- Task detail must preserve first-viewport task context across desktop, tablet, and mobile: title, stage/status, owner, next action, and blocker signal stay discoverable before deep activity panels.
+- Tablet and mobile task-detail views must not create accidental page-wide horizontal overflow. Deliberate scroll containers are limited to boards, tables, logs, and similarly wide data displays.
+- Mobile task activity tabs use the documented keyboard-accessible tab pattern and may collapse into a compact two-column control when space is tight.
+- Task boards keep stable column widths, allow horizontal scrolling, and keep owner metadata readable on compressed mobile views.
+- Local browser performance coverage expects task-detail first contentful paint and DOMContentLoaded evidence under roughly one second, with total render evidence under roughly 1.5 seconds for the tested fixture route.
+- Long lists, child task summaries, telemetry cards, and task-detail panels should use precomputed summaries or paginated/explicit loading so the initial task context remains fast.
 
 ## Do's and Don'ts
 
@@ -577,7 +628,8 @@ The current product is text-first and does not define a shipped icon set.
 
 - Prefer clear text labels for workflow actions, especially in nav, forms, review states, and task controls.
 - If an icon library is introduced, use one library and one stroke/fill style across the product; record the dependency and style choice in an ADR.
-- Icons used for status must be paired with text and semantic color.
+- Lightweight status glyphs may be used only as secondary decoration when paired with visible status text and semantic color. The text, not the glyph, carries the meaning.
+- Icons used for status must be paired with text and semantic color, and decorative glyphs should be hidden from assistive technology when the adjacent text already names the state.
 - Do not add decorative icons to dense operational surfaces.
 
 ## Imagery
