@@ -84,13 +84,23 @@ function mergeBaseFiles() {
   return [];
 }
 
-function changedFiles() {
-  return Array.from(new Set([
+function uniqueSorted(files) {
+  return Array.from(new Set(files)).sort();
+}
+
+function localFiles() {
+  return uniqueSorted([
     ...gitList(['diff', '--cached', '--name-only']),
     ...gitList(['diff', '--name-only']),
     ...gitList(['ls-files', '--others', '--exclude-standard']),
-    ...mergeBaseFiles(),
-  ])).sort();
+  ]);
+}
+
+function changedFileScopes() {
+  return [
+    { name: 'local', files: localFiles() },
+    { name: 'branch', files: mergeBaseFiles() },
+  ].filter((scope) => scope.files.length > 0);
 }
 
 function designArtifactSet(config) {
@@ -120,20 +130,45 @@ function markerReason() {
     .trim();
 }
 
+function scopeResult(scope, config, designArtifacts) {
+  const uiFiles = scope.files.filter((file) => authoredUiFile(file, config, designArtifacts));
+  const changedDesignArtifacts = scope.files.filter((file) => designArtifacts.has(normalizePath(file)));
+  return { ...scope, uiFiles, changedDesignArtifacts };
+}
+
+function passedScopeSummary(result) {
+  return `${result.name}: ${result.uiFiles.length} UI file(s), ${result.changedDesignArtifacts.length} design artifact(s)`;
+}
+
+function writeFailure(failingResults, designArtifacts) {
+  process.stderr.write('Design change guard failed.\n');
+  for (const result of failingResults) {
+    process.stderr.write(`${result.name} authored UI files changed without a related DESIGN.md artifact:\n`);
+    for (const file of result.uiFiles) {
+      process.stderr.write(`- ${file}\n`);
+    }
+  }
+  process.stderr.write('Update at least one related design artifact in the same local or branch scope:\n');
+  for (const artifact of designArtifacts) {
+    process.stderr.write(`- ${artifact}\n`);
+  }
+  process.stderr.write(`If this truly has no design impact, create ${NO_DESIGN_IMPACT_MARKER} with a short reason, keep it local, and remove it after the change is complete.\n`);
+}
+
 function main() {
   const config = readConfig();
-  const files = changedFiles();
   const designArtifacts = designArtifactSet(config);
-  const uiFiles = files.filter((file) => authoredUiFile(file, config, designArtifacts));
-  const changedDesignArtifacts = files.filter((file) => designArtifacts.has(normalizePath(file)));
+  const results = changedFileScopes().map((scope) => scopeResult(scope, config, designArtifacts));
+  const relevantResults = results.filter((result) => result.uiFiles.length > 0);
+  const failingResults = relevantResults.filter((result) => result.changedDesignArtifacts.length === 0);
 
-  if (uiFiles.length === 0) {
+  if (relevantResults.length === 0) {
     process.stdout.write('design change guard passed: no authored UI files changed\n');
     return;
   }
 
-  if (changedDesignArtifacts.length > 0) {
-    process.stdout.write(`design change guard passed: ${uiFiles.length} UI file(s), ${changedDesignArtifacts.length} design artifact(s)\n`);
+  if (failingResults.length === 0) {
+    process.stdout.write(`design change guard passed: ${relevantResults.map(passedScopeSummary).join('; ')}\n`);
     return;
   }
 
@@ -143,16 +178,7 @@ function main() {
     return;
   }
 
-  process.stderr.write('Design change guard failed.\n');
-  process.stderr.write('Authored UI files changed without a related DESIGN.md artifact:\n');
-  for (const file of uiFiles) {
-    process.stderr.write(`- ${file}\n`);
-  }
-  process.stderr.write('Update at least one related design artifact:\n');
-  for (const artifact of designArtifacts) {
-    process.stderr.write(`- ${artifact}\n`);
-  }
-  process.stderr.write(`If this truly has no design impact, create ${NO_DESIGN_IMPACT_MARKER} with a short reason, keep it local, and remove it after the change is complete.\n`);
+  writeFailure(failingResults, designArtifacts);
   process.exit(1);
 }
 

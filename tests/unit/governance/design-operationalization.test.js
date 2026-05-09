@@ -120,8 +120,26 @@ test('check-design-change-guard fails UI changes without design artifacts', () =
 
   const result = runScriptWithArgs('check-design-change-guard.mjs', [], root);
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Authored UI files changed without a related DESIGN\.md artifact/);
+  assert.match(result.stderr, /authored UI files changed without a related DESIGN\.md artifact/);
   assert.match(result.stderr, /src\/app\/styles\.css/);
+});
+
+test('check-design-change-guard fails local UI changes even when branch has design artifacts', () => {
+  const root = makeTempDir('governance-design-change-guard-local-scope-');
+  initGitRepo(root);
+  git(root, ['branch', '-M', 'main']);
+  writeMinimalDesignRepo(root);
+  runScriptWithArgs('generate-design-adoption-audit.mjs', [], root);
+  commitAll(root, 'baseline');
+  git(root, ['switch', '-c', 'feature']);
+  writeFile(root, 'DESIGN.md', '# Design\n\nBranch design artifact changed.\n');
+  commitAll(root, 'design artifact');
+
+  writeFile(root, 'src/app/styles.css', '.app { color: var(--color-primary); }\n');
+
+  const result = runScriptWithArgs('check-design-change-guard.mjs', [], root);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /local authored UI files changed without a related DESIGN\.md artifact/);
 });
 
 test('check-design-change-guard passes UI changes with design artifacts', () => {
