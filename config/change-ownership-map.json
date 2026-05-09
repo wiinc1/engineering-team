@@ -192,6 +192,7 @@
             "^src/app/App\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
             "^src/app/auth-runtime-env\\.test\\.tsx$",
+            "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/unit/auth-admin-seed\\.test\\.js$",
             "^tests/unit/task-browser-session\\.test\\.js$",
             "^tests/unit/auth-config-check\\.test\\.js$"
@@ -201,6 +202,7 @@
           "name": "browser",
           "patterns": [
             "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
         }
@@ -209,6 +211,9 @@
         {
           "name": "design",
           "patterns": [
+            "^DESIGN\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
+            "^docs/design/design-md-adoption\\.config\\.json$",
             "^docs/design/US-002-design\\.md$",
             "^docs/design/US-003-design\\.md$",
             "^docs/design/ISSUE-104-design\\.md$",
@@ -220,8 +225,10 @@
           ]
         },
         {
-          "name": "api",
+          "name": "api-or-design-contract",
           "patterns": [
+            "^DESIGN\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/api/authenticated-browser-app-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
@@ -229,7 +236,9 @@
         {
           "name": "runbook-or-design",
           "patterns": [
+            "^docs/runbook\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/design/ISSUE-89-design\\.md$",
             "^docs/design/US-003-design\\.md$",
             "^docs/design/ISSUE-104-design\\.md$",
@@ -251,6 +260,7 @@
           "name": "unit-ui",
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
+            "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/unit/task-detail-.+\\.test\\.js$",
             "^tests/unit/task-detail-route\\.test\\.js$"
           ]
@@ -258,20 +268,25 @@
         {
           "name": "browser",
           "patterns": [
+            "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
         }
       ],
       "doc_requirements": [
         {
-          "name": "api",
+          "name": "api-or-design-contract",
           "patterns": [
+            "^DESIGN\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
         },
         {
           "name": "runbook-or-report",
           "patterns": [
+            "^docs/runbook\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/reports/ISSUE_7_COMPLETION_AUDIT\\.md$"
           ]
@@ -497,6 +512,7 @@
         {
           "name": "unit",
           "patterns": [
+            "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/unit/task-creation-form\\.test\\.tsx$",
             "^tests/unit/task-creation-page\\.test\\.tsx$",
             "^tests/unit/task-creation-adapter\\.test\\.js$",
@@ -510,6 +526,8 @@
         {
           "name": "story",
           "patterns": [
+            "^DESIGN\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/user-stories/US-001-kanban-board-ui\\.md$",
             "^docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements\\.md$",
             "^docs/design/US-003-design\\.md$"
@@ -527,6 +545,7 @@
         {
           "name": "unit",
           "patterns": [
+            "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^src/components/Button/Button\\.test\\.tsx$"
           ]
         }
@@ -535,6 +554,8 @@
         {
           "name": "adr-or-task",
           "patterns": [
+            "^docs/adr/ADR-002\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/adr/ADD-2026-03-30-button-component\\.md$",
             "^tasks/TASK-001-button-component\\.md$"
           ]
@@ -563,6 +584,9 @@
         {
           "name": "standards",
           "patterns": [
+            "^docs/adr/ADR-002\\.md$",
+            "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
+            "^docs/design/design-md-adoption\\.config\\.json$",
             "^docs/standards/software-development-standards\\.md$",
             "^docs/standards/change-governance-maintenance\\.md$",
             "^docs/standards/ai-implementation-playbook\\.md$"
