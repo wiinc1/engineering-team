@@ -143,9 +143,7 @@ function readAuthRuntimeConfig(env = {}, config = runtimeConfig(), location = gl
   const oidcRedirectUri = String(firstValue(config, 'oidcRedirectUri', 'VITE_OIDC_REDIRECT_URI') || env?.VITE_OIDC_REDIRECT_URI || callback).trim();
   const oidcScope = String(firstValue(config, 'oidcScope', 'VITE_OIDC_SCOPE') || env?.VITE_OIDC_SCOPE || 'openid profile email').trim();
   const oidcLogoutUrl = String(firstValue(config, 'oidcLogoutUrl', 'VITE_OIDC_LOGOUT_URL') || env?.VITE_OIDC_LOGOUT_URL || '').trim();
-  const oidcLogoutRedirectUri = String(
-    firstValue(config, 'oidcLogoutRedirectUri', 'VITE_OIDC_LOGOUT_REDIRECT_URI') || env?.VITE_OIDC_LOGOUT_REDIRECT_URI || signedOut
-  ).trim();
+  const oidcLogoutRedirectUri = String(firstValue(config, 'oidcLogoutRedirectUri', 'VITE_OIDC_LOGOUT_REDIRECT_URI') || env?.VITE_OIDC_LOGOUT_REDIRECT_URI || signedOut).trim();
   const internalAuthBootstrapEnabled = parseBoolean(
     firstValue(config, 'internalAuthBootstrapEnabled', 'VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED') ||
       env?.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED,
@@ -157,10 +155,11 @@ function readAuthRuntimeConfig(env = {}, config = runtimeConfig(), location = gl
       env?.AUTH_PRODUCTION_AUTH_STRATEGY ||
       ''
   ).trim().toLowerCase();
+  const vercelEnv = String(firstValue(config, 'vercelEnv', 'VITE_VERCEL_ENV') || env?.VITE_VERCEL_ENV || '').trim().toLowerCase();
   const productionAuthStrategy =
     configuredStrategy === 'magic-link'
       ? 'registration'
-      : configuredStrategy || (oidcDiscoveryUrl && oidcClientId ? 'oidc' : internalAuthBootstrapEnabled ? 'internal-bootstrap' : '');
+      : configuredStrategy || (env?.PROD || env?.MODE === 'production' || vercelEnv === 'production' || vercelEnv === 'preview' ? 'registration' : oidcDiscoveryUrl && oidcClientId ? 'oidc' : internalAuthBootstrapEnabled ? 'internal-bootstrap' : '');
 
   return {
     productionAuthStrategy,

@@ -227,13 +227,14 @@ Tasks:
 
 - Hide `API base URL` from registration sign-in in production auth mode.
 - Keep API base URL input only for explicit internal bootstrap or local/dev fallback modes.
+- Treat Vercel production and preview browser bundles as registration by default unless a strategy explicitly selects OIDC or internal bootstrap.
 - Ensure login, registration, and reset requests still use the resolved same-origin API base URL when the field is hidden.
 - Update tests that currently expect `API base URL` in the registration state.
 
 Acceptance criteria:
 
 - Registration production sign-in does not show `API base URL`.
-- Internal bootstrap fallback can still show API base URL when enabled.
+- Internal bootstrap fallback can still show API base URL when explicitly selected.
 - Browser tests verify production users do not see operator configuration.
 
 ### Phase 3: Rewrite auth copy

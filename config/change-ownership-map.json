@@ -46,7 +46,8 @@
         {
           "name": "unit",
           "patterns": [
-            "^tests/unit/(registration-auth|registration-api|registration-production-smoke|production-auth-status|auth-config-check|auth-admin-seed|task-browser-session)\\.test\\.js$"
+            "^tests/unit/(registration-auth|registration-api|registration-production-smoke|production-auth-status|auth-config-check|auth-admin-seed|task-browser-session)\\.test\\.js$",
+            "^tests/unit/browser-auth-runtime-config\\.test\\.js$"
           ]
         },
         {
