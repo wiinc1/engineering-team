@@ -55,7 +55,7 @@
   background: transparent;
   color: var(--task-detail-tab-text);
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--task-detail-label-font-weight);
   cursor: pointer;
 }
 
@@ -121,7 +121,7 @@
   background: var(--task-detail-panel-bg);
   color: inherit;
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--task-detail-label-font-weight);
   cursor: pointer;
 }
 

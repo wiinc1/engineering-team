@@ -18,7 +18,12 @@ test('check-design-token-usage passes tokenized CSS', () => {
   color: var(--color-on-surface);
   border-radius: var(--design-radius-panel);
   box-shadow: var(--design-shadow-sm);
+  font-family: var(--design-typography-body-md-font-family);
   font-size: var(--design-typography-body-md-font-size);
+  font-weight: var(--design-typography-body-md-font-weight);
+  line-height: var(--design-typography-body-md-line-height);
+  transition: none;
+  animation: none;
 }
 `);
 
@@ -35,8 +40,13 @@ test('check-design-token-usage fails forbidden visual literals', () => {
   background: rgba(15, 23, 42, 0.08);
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  font-family: Arial, sans-serif;
   font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
   letter-spacing: 0;
+  transition: all 0.15s ease-in-out;
+  animation: spin 1s linear infinite;
   opacity: 0.5;
 }
 `);
@@ -47,8 +57,13 @@ test('check-design-token-usage fails forbidden visual literals', () => {
   assert.match(result.stderr, /rgb\(\)\/rgba\(\)\/hsl\(\)\/hsla\(\) color literal/);
   assert.match(result.stderr, /border-radius size literal/);
   assert.match(result.stderr, /box-shadow literal/);
+  assert.match(result.stderr, /font-family literal/);
   assert.match(result.stderr, /font-size literal/);
+  assert.match(result.stderr, /font-weight literal/);
+  assert.match(result.stderr, /line-height literal/);
   assert.match(result.stderr, /letter-spacing literal/);
+  assert.match(result.stderr, /transition literal/);
+  assert.match(result.stderr, /animation literal/);
   assert.match(result.stderr, /opacity literal/);
 });
 
