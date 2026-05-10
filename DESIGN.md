@@ -545,6 +545,7 @@ The app information architecture is workflow-first. Navigation must keep operati
 - SRE inbox and monitoring surfaces expose deployment health, monitoring-window state, expiry/escalation context, and read-only operational evidence unless the session has a matching action role.
 - Protected routes redirect to `/sign-in` and restore the intended route after sign-in. Safe no-login states must be explicit when no configured sign-in path is available.
 - Production-like `/sign-in` deployments, including Vercel previews, default to registration auth unless a strategy explicitly selects OIDC or internal bootstrap.
+- Admin registration surfaces must render the server auth-user status vocabulary directly. Pending approval, pending verification, invited, active, and disabled states must not collapse into a generic active label, and approval must be an explicit admin action.
 - Role-gated controls must be omitted, disabled, or replaced with read-only status text according to server permissions. Readers may see owner metadata, but must not see assignment controls.
 
 ## Task Detail Data Semantics
