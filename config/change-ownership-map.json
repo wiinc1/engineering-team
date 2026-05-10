@@ -16,6 +16,7 @@
       "^tasks/.+\\.md$",
       "^docs/standards/.+",
       "^docs/(adr|reports|api|runbooks|design|diagrams|refinement|user-stories)/.+",
+      "^DESIGN\\.md$",
       "^README\\.md$",
       "^agents/README\\.md$"
     ],
@@ -237,6 +238,7 @@
         {
           "name": "runbook-or-design",
           "patterns": [
+            "^DESIGN\\.md$",
             "^docs/runbook\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
