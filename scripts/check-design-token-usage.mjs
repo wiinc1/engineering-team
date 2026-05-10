@@ -68,6 +68,39 @@ const RULES = [
     },
   },
   {
+    id: 'font-family',
+    description: 'font-family literal',
+    check(line) {
+      const match = line.match(/\bfont-family\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
+    id: 'font-weight',
+    description: 'font-weight literal',
+    check(line) {
+      const match = line.match(/\bfont-weight\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
+    id: 'line-height',
+    description: 'line-height literal',
+    check(line) {
+      const match = line.match(/\bline-height\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|normal\b|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
     id: 'letter-spacing',
     description: 'letter-spacing literal',
     check(line) {
@@ -75,6 +108,28 @@ const RULES = [
       if (!match) return [];
       const value = match[1].trim().toLowerCase();
       if (/^(?:var\(|normal\b|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
+    id: 'transition',
+    description: 'transition literal',
+    check(line) {
+      const match = line.match(/\btransition\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|none\b|inherit\b|initial\b|unset\b)/i.test(value)) return [];
+      return [{ match: match[0].trim() }];
+    },
+  },
+  {
+    id: 'animation',
+    description: 'animation literal',
+    check(line) {
+      const match = line.match(/\banimation\s*:\s*([^;]+)/i);
+      if (!match) return [];
+      const value = match[1].trim().toLowerCase();
+      if (/^(?:var\(|none\b|inherit\b|initial\b|unset\b)/i.test(value)) return [];
       return [{ match: match[0].trim() }];
     },
   },

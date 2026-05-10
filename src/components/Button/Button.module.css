@@ -11,7 +11,6 @@
   font-family: var(--button-font-family);
   font-weight: var(--button-font-weight);
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
   position: relative;
   white-space: nowrap;
 }
@@ -135,26 +134,20 @@
 
 /* Loading spinner */
 .spinner {
-  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: spin 1s linear infinite;
+  flex: 0 0 auto;
 }
 
 .spinner svg {
   display: block;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .spinner {
+    transition: none;
+    animation: none;
   }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.textHidden {
-  visibility: hidden;
 }
