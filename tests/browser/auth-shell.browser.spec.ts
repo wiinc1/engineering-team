@@ -23,17 +23,18 @@ const discoveryUrl = 'https://idp.example/.well-known/openid-configuration';
 const authorizeUrl = 'https://idp.example/oauth2/authorize';
 const tokenUrl = 'https://idp.example/oauth2/token';
 
-function buildSessionClaims() {
+function buildSessionClaims(overrides = {}) {
   return {
     sub: 'pm-1',
     tenant_id: 'tenant-a',
     roles: ['pm', 'reader'],
     exp: Math.floor(Date.now() / 1e3) + 3600,
+    ...overrides,
   };
 }
 
-function buildBearerToken() {
-  const payload = Buffer.from(JSON.stringify(buildSessionClaims())).toString('base64url');
+function buildBearerToken(overrides = {}) {
+  const payload = Buffer.from(JSON.stringify(buildSessionClaims(overrides))).toString('base64url');
   return `header.${payload}.signature`;
 }
 
@@ -103,6 +104,57 @@ async function mockAuthenticatedRoutes(page) {
   await mockInternalSessionRoute(page);
   await mockTaskRoutes(page);
   await mockAgentRoutes(page);
+}
+
+const pendingAdminUser = {
+  userId: 'user-pending',
+  email: 'wiinc1@hotmail.com',
+  tenantId: 'tenant-int',
+  actorId: 'user-050da52cf762f914',
+  roles: ['reader'],
+  lastSignInAt: null,
+};
+
+async function addAdminSession(page) {
+  const adminToken = buildBearerToken({ sub: 'admin-1', roles: ['admin', 'reader'] });
+  await page.addInitScript((token) => {
+    window.sessionStorage.setItem(
+      'engineering-team.task-browser-session',
+      JSON.stringify({
+        bearerToken: token,
+        apiBaseUrl: '/api',
+        expiresAt: new Date(Date.now() + 3600 * 1e3).toISOString(),
+      })
+    );
+  }, adminToken);
+}
+
+async function fulfillPendingUserAdminRoute(route, state) {
+  const request = route.request();
+  const url = request.url();
+
+  if (request.method() === 'GET' && url.endsWith('/auth/users')) {
+    await route.fulfill({
+      json: { data: [{ ...pendingAdminUser, status: state.currentStatus }] },
+    });
+    return;
+  }
+
+  if (request.method() === 'PATCH' && url.endsWith('/auth/users/user-pending')) {
+    const body = request.postDataJSON();
+    state.patches.push(body);
+    state.currentStatus = String(body?.status || state.currentStatus);
+    await route.fulfill({ json: { success: true } });
+    return;
+  }
+
+  await route.fallback();
+}
+
+async function mockPendingUserAdminRoutes(page) {
+  const state = { currentStatus: 'pending_approval', patches: [] };
+  await page.route('**/auth/users**', (route) => fulfillPendingUserAdminRoute(route, state));
+  return state;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -304,6 +356,24 @@ test.beforeEach(async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible();
     await expect(page.getByLabel('Email address')).toHaveValue('person@example.com');
     await expect(page.getByRole('button', { name: 'Send reset instructions' })).toBeVisible();
+  });
+
+  test('keeps pending approval visible in user admin until explicitly approved', async ({ page }) => {
+    await addAdminSession(page);
+    const adminRoutes = await mockPendingUserAdminRoutes(page);
+
+    await page.goto('/admin/users', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'User admin' })).toBeVisible();
+    await expect(page.getByText('wiinc1@hotmail.com')).toBeVisible();
+    await expect(page.getByLabel('Status for wiinc1@hotmail.com')).toHaveValue('pending_approval');
+
+    const approveButton = page.getByRole('button', { name: 'Approve' });
+    await expect(approveButton).toBeVisible();
+    await approveButton.press('Enter');
+
+    await expect(page.getByRole('status')).toContainText('User approved.');
+    await expect(page.getByLabel('Status for wiinc1@hotmail.com')).toHaveValue('active');
+    expect(adminRoutes.patches.at(-1)).toMatchObject({ status: 'active' });
   });
 
   test('completes an enterprise callback and restores the deep-linked board route', async ({ page }) => {

@@ -99,6 +99,43 @@ test('verify-change-completeness passes when runtime, tests, and matching docs c
   assert.match(result.stdout, /change completeness checks passed/);
 });
 
+test('verify-change-completeness treats root DESIGN.md as doc evidence when configured', () => {
+  const root = makeTempDir('governance-change-root-design-');
+  initGitRepo(root);
+  writeFile(root, 'config/change-ownership-map.json', JSON.stringify({
+    classification: {
+      runtime_roots: ['src'],
+      test_patterns: ['^src/app/App\\.test\\.tsx$'],
+      doc_patterns: ['^DESIGN\\.md$'],
+      non_runtime_patterns: []
+    },
+    domains: [
+      {
+        name: 'browser-shell',
+        runtime_patterns: ['^src/app/App\\.jsx$'],
+        test_requirements: [
+          { name: 'unit-ui', patterns: ['^src/app/App\\.test\\.tsx$'] }
+        ],
+        doc_requirements: [
+          { name: 'design', patterns: ['^DESIGN\\.md$'] }
+        ]
+      }
+    ],
+  }, null, 2));
+  writeFile(root, 'src/app/App.jsx', 'export default function App() { return null; }\n');
+  writeFile(root, 'src/app/App.test.tsx', 'test("baseline", () => {});\n');
+  writeFile(root, 'DESIGN.md', '# baseline design\n');
+  commitAll(root, 'baseline');
+
+  writeFile(root, 'src/app/App.jsx', 'export default function App() { return "updated"; }\n');
+  writeFile(root, 'src/app/App.test.tsx', 'test("updated", () => {});\n');
+  writeFile(root, 'DESIGN.md', '# updated design\n');
+
+  const result = runScript('verify-change-completeness.js', root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /change completeness checks passed/);
+});
+
 test('verify-change-completeness fails on unmapped runtime files', () => {
   const root = makeTempDir('governance-change-unmapped-');
   initRepoWithBaseline(root);
