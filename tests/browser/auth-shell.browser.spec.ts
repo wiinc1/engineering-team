@@ -258,6 +258,23 @@ test.beforeEach(async ({ page }) => {
     await expect(page.getByLabel('Trusted auth code')).toHaveCount(0);
   });
 
+  test('defaults Vercel preview runtime config to registration auth', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        vercelEnv: 'preview',
+        internalAuthBootstrapEnabled: true,
+      };
+    });
+
+    await page.goto('/sign-in?next=%2F', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page.getByLabel('Email address')).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByLabel('Trusted auth code')).toHaveCount(0);
+    await expect(page.getByLabel('API base URL')).toHaveCount(0);
+  });
+
   test('supports public signup with approval copy and reset modes', async ({ page }) => {
     await page.addInitScript(() => {
       window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {

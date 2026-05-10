@@ -544,6 +544,7 @@ The app information architecture is workflow-first. Navigation must keep operati
 - The human inbox is limited to decision-ready close-governance and escalation items. It should not become a general task list.
 - SRE inbox and monitoring surfaces expose deployment health, monitoring-window state, expiry/escalation context, and read-only operational evidence unless the session has a matching action role.
 - Protected routes redirect to `/sign-in` and restore the intended route after sign-in. Safe no-login states must be explicit when no configured sign-in path is available.
+- Production-like `/sign-in` deployments, including Vercel previews, default to registration auth unless a strategy explicitly selects OIDC or internal bootstrap.
 - Role-gated controls must be omitted, disabled, or replaced with read-only status text according to server permissions. Readers may see owner metadata, but must not see assignment controls.
 
 ## Task Detail Data Semantics
@@ -573,7 +574,7 @@ Product screens must make workflow state explicit without adding instructional c
 
 App-specific state rules:
 
-- Auth states must distinguish normal sign-in, registration, password reset, expired session recovery, rejected sign-in code, and no-login-path safe state.
+- Auth states must distinguish normal sign-in, registration, password reset, expired session recovery, rejected sign-in code, explicit internal-bootstrap fallback, and no-login-path safe state.
 - Task creation success keeps focus on the created-status region and presents the next actions: open task detail, view task workspace, or create another task.
 - PM overview degraded states must stay distinct from filtered-empty results. A degraded roster or metadata dependency should not make tasks disappear.
 - Role inbox empty states must name the role queue and the routing condition, such as no QA-routed work, no SRE monitoring work, or no decision-ready human close-governance items.

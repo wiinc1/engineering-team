@@ -18,6 +18,8 @@ The active no-IdP strategy is registration auth:
 
 The historical magic-link implementation and artifacts are retained only as audit history for Issue #151 and earlier production remediation. They are not a valid production strategy after Issue #167.
 
+Production-like browser bundles, including Vercel preview deployments, default to registration when no explicit browser strategy is selected. The trusted internal bootstrap fallback is visible only when an operator explicitly selects `internal-bootstrap` through the browser auth strategy config.
+
 ## Required Environment
 
 Registration production checks require these names to exist in Vercel:

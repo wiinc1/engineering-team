@@ -50,6 +50,7 @@ Resolved in this branch:
 - Added diagrams, dashboard, alerts, OpenAPI, runbooks, and ownership mapping.
 - Updated the migration runner to skip rollback files during normal forward migration and added a regression test.
 - Added live Postgres coverage for the registration auth migration apply, rollback, and reapply cycle in an isolated test schema.
+- Added 2026-05-09 Vercel preview regression coverage so production-like browser bundles default to registration when no explicit auth strategy is present, even if the internal bootstrap flag is present.
 
 ## Standards Alignment
 
@@ -60,7 +61,7 @@ Resolved in this branch:
 ## Required Evidence
 
 - Commands run: `npm run lint`; `npm run typecheck`; `npm run ownership:lint`; `npm run change:check`; `npm run standards:check`; `npm run test:unit`; `npm test`; `npm run coverage`; `npm run auth:registration:production-smoke`; `npm run auth:status:check -- --require-complete`.
-- Tests added or updated: `tests/unit/registration-auth.test.js`, `tests/unit/registration-api.test.js`, `tests/unit/registration-production-smoke.test.js`, `src/app/registration-auth-flows.test.tsx`, `src/app/session-browser-registration.test.tsx`, `src/app/App.test.tsx`, `tests/browser/auth-shell.browser.spec.ts`, `tests/visual/auth-sign-in.visual.spec.tsx`.
+- Tests added or updated: `tests/unit/registration-auth.test.js`, `tests/unit/registration-api.test.js`, `tests/unit/registration-production-smoke.test.js`, `tests/unit/browser-auth-runtime-config.test.js`, `src/app/auth-runtime-env.test.tsx`, `src/app/registration-auth-flows.test.tsx`, `src/app/session-browser-registration.test.tsx`, `src/app/App.test.tsx`, `tests/browser/auth-shell.browser.spec.ts`, `tests/visual/auth-sign-in.visual.spec.tsx`.
 - Rollout or rollback notes: Registration production gates reject stale magic-link evidence and require fresh `npm run auth:registration:production-smoke` evidence before merge/ship; rollback is documented in `docs/runbooks/production-identity-provider.md`. The production smoke run on 2026-05-08 passed against deployment `dpl_EnEg7kdTW8Gad945cqjueAHhpte1` and records rollback target metadata.
 - Docs updated: `docs/runbooks/production-auth-status.md`, `docs/runbooks/production-identity-provider.md`, `docs/api/authenticated-browser-app-openapi.yml`, registration diagrams, monitoring alert/dashboard files, and this audit report.
 
