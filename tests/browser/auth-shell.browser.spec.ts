@@ -320,6 +320,7 @@ test.beforeEach(async ({ page }) => {
 
     await page.goto('/sign-in?next=%2F', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
+    await expect(page.getByText('Access your task workspace and inboxes.')).toBeVisible();
     await expect(page.getByLabel('Email address')).toBeVisible();
     await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();

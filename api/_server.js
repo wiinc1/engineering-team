@@ -1,7 +1,9 @@
 const { createAuditApiServer } = require('../lib/audit/http');
 const { assertAuditBackendConfiguration } = require('../lib/audit/config');
+const { runDeployAuthBootstrap } = require('../scripts/bootstrap-deploy-auth');
 
 let cachedServer = null;
+let bootstrapPromise = null;
 
 function createVercelLogger() {
   function write(level, payload) {
@@ -60,7 +62,26 @@ function getServer() {
   return cachedServer;
 }
 
-function handleRequest(req, res) {
+async function ensureDeployAuthBootstrap() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = runDeployAuthBootstrap();
+  }
+  return bootstrapPromise;
+}
+
+async function handleRequest(req, res) {
+  const bootstrap = await ensureDeployAuthBootstrap();
+  if (!bootstrap.ok) {
+    res.statusCode = 500;
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({
+      error: {
+        code: 'deploy_auth_bootstrap_failed',
+        message: 'Deploy auth bootstrap failed before request handling.',
+      },
+    }));
+    return;
+  }
   const server = getServer();
   server.emit('request', req, res);
 }

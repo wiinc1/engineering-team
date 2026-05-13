@@ -53,27 +53,57 @@ Local value validation additionally enforces:
 
 ## Operator Workflow
 
-1. Seed or update the first admin:
+1. Let deployment bootstrap seed or update the first admin.
+
+   `npm run build` runs `npm run auth:deploy:bootstrap` before the auth config
+   gate and browser build. When `DATABASE_URL` is present, the bootstrap applies
+   database migrations under a Postgres advisory lock. When the admin seed
+   variables are present, it also seeds the admin user and optional credential.
+   `AUTH_ADMIN_ACTOR_ID` is optional; when it is omitted the seed uses the same
+   stable `user-<email-hash>` actor id pattern as registration. Missing optional
+   admin seed values are logged without blocking migrations. This is the default
+   Vercel path because `vercel.json` uses `npm run build`.
+
+   Set `AUTH_DEPLOY_BOOTSTRAP_ENABLED=false` to skip all deploy bootstrap work.
+   Set `AUTH_DEPLOY_BOOTSTRAP_MIGRATIONS=false` or
+   `AUTH_DEPLOY_BOOTSTRAP_ADMIN_SEED=false` to skip one step explicitly.
+
+2. For repair/debugging, seed or update the first admin manually:
 
    ```bash
    npm run auth:admin:seed
    npm run auth:admin:seed -- --apply
    ```
 
-2. Validate configuration:
+   For preview smoke testing, operators may also seed a sign-in credential for
+   that admin so every deployment can be tested without repeating public
+   registration:
+
+   ```bash
+   AUTH_ADMIN_SEED_CREDENTIAL=true \
+   AUTH_ADMIN_INITIAL_PASSWORD='<temporary-password>' \
+   npm run auth:admin:seed -- --apply
+   ```
+
+   The password is hashed into `auth_credentials` and is never printed by the
+   script. Keep `AUTH_ADMIN_INITIAL_PASSWORD` as a Vercel secret, rotate it when
+   shared access changes, and avoid leaving a shared bootstrap password enabled
+   in production longer than necessary.
+
+3. Validate configuration:
 
    ```bash
    npm run auth:config:check:vercel
    npm run auth:config:check
    ```
 
-3. Capture production smoke evidence:
+4. Capture production smoke evidence:
 
    ```bash
    npm run auth:registration:production-smoke
    ```
 
-4. Run the ship gate:
+5. Run the ship gate:
 
    ```bash
    npm run auth:status:check -- --require-complete

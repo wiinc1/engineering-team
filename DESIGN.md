@@ -462,12 +462,13 @@ Source-of-truth decision: `DESIGN.md` is the authoritative visual design source 
 
 ## Colors
 
-The palette is neutral-first with a single blue action color. Page structure is carried by light grey-blue surfaces and borders; blue is reserved for primary actions, selected states, links, and focused workflow cues.
+The palette is neutral-first with a single blue action color. The authenticated workspace uses a Linear-inspired dark issue-tracker chrome: charcoal page and sidebar surfaces, low-contrast dividers, compact rows, and blue reserved for primary actions, selected states, links, and focused workflow cues. The auth workflow may remain on the lighter card treatment because it is a single-purpose credential flow.
 
 - `primary` maps to the app token `--primary: #2557D6`.
 - `primary-strong` maps to `--primary-strong: #1E40AF` for active controls and emphasized links.
 - `primary-soft` maps to `--primary-soft: #E8EEFC` for selected rows, matched board cards, and non-dominant primary emphasis.
 - `page-bg`, `surface`, `surface-muted`, `surface-subtle`, `border`, and `border-soft` define the app shell, cards, tables, panels, and grouped controls.
+- Authenticated shell styles may derive dark local aliases from these tokens for the issue-tracker chrome, but status colors remain semantic and sparse.
 - Status colors are semantic only: success, warning, danger, info, and review must communicate workflow state or routing. They must not be used as decoration.
 - Normal text/background pairs must meet WCAG AA contrast. Do not use soft status backgrounds without the paired dark status text token.
 
@@ -487,7 +488,9 @@ The interface uses Inter when available, then the system UI stack. Typography is
 
 Product screens should prioritize repeated operator workflows over presentation.
 
-- Main authenticated shell: max width `1280px`, desktop padding near `24px 20px 48px`, mobile padding near `18px 14px 36px`.
+- Main authenticated shell: desktop uses a persistent left navigation rail plus a full-width work surface. The rail owns global workflow navigation, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
+- The authenticated work surface should not be capped like a marketing page. It may use local gutters near `24px` on desktop and `12px-14px` on mobile, while tables and boards keep deliberate horizontal scrolling where needed.
+- Authenticated desktop layout should feel like a dense issue tracker: dark fixed rail, compact content header, sticky view toolbar, low-depth panels, and board/list views that prioritize scan speed over card prominence.
 - Auth shell: centered single-card workflow, max width around `480px`, with no marketing side panel.
 - Task boards use horizontal scrolling columns on narrow viewports and fixed, predictable column widths on wide viewports.
 - Tables use sticky headers, compact row padding, and horizontal overflow when columns cannot fit.
@@ -523,7 +526,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
-- App nav: compact two-region workflow navigation with wrapped links, muted session controls, and the generated `app-nav` typography token.
+- App nav: persistent desktop left rail with compact stacked route groups, a primary create action, role inbox control, and muted session controls. On mobile it collapses back into a horizontally scrollable top navigation strip.
 - Board columns and task cards: keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
@@ -534,6 +537,7 @@ Persistent component exceptions must be promoted into this file through the prot
 
 The app information architecture is workflow-first. Navigation must keep operational routes compact, role-aware, and recoverable after authentication.
 
+- Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
 - `/tasks` is the primary task workspace for delivery board and list scanning. It must keep owner, priority, status, waiting state, and next action visible without hover-only access.
 - `/tasks/create` is the intake route. It creates an Intake Draft and keeps the operator in a local success state with links to task detail and the workspace.
 - Task detail routes must keep the task summary, owner, stage, blockers, linked PRs, child task signal, activity, telemetry, governance, and assignment context in one scannable operational surface.
