@@ -157,6 +157,13 @@ async function mockPendingUserAdminRoutes(page) {
   return state;
 }
 
+async function openNavigationIfCollapsed(page) {
+  const openButton = page.getByRole('button', { name: 'Open navigation' });
+  if (await openButton.isVisible().catch(() => false)) {
+    await openButton.click();
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(
     ({ discoveryUrl: runtimeDiscoveryUrl, clientId, redirectUri }) => {
@@ -189,6 +196,7 @@ test.beforeEach(async ({ page }) => {
 
     await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
     await expect(page).toHaveURL(/\/tasks\?view=board/);
+    await openNavigationIfCollapsed(page);
     await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
   });
@@ -199,6 +207,7 @@ test.beforeEach(async ({ page }) => {
     await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
     await expect(page.getByText('Current session')).toHaveCount(0);
+    await openNavigationIfCollapsed(page);
 
     const nav = page.getByRole('navigation', { name: 'Primary navigation' });
     const search = nav.getByRole('search', { name: 'Task search' });
@@ -219,6 +228,7 @@ test.beforeEach(async ({ page }) => {
 
     await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await openNavigationIfCollapsed(page);
 
     const shell = page.locator('main.app-shell');
     const nav = page.locator('#primary-navigation');

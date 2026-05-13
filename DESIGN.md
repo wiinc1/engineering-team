@@ -498,6 +498,7 @@ Product screens should prioritize repeated operator workflows over presentation.
 
 - Main authenticated shell: desktop uses a collapsible left navigation rail plus a full-width work surface. The rail owns global workflow navigation, task search entry, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
 - The authenticated work surface should not be capped like a marketing page. It may use local gutters near `24px` on desktop and `12px-14px` on mobile, while tables and boards keep deliberate horizontal scrolling where needed.
+- On mobile, the collapsible left rail behaves as a drawer: it may default closed, must remain reachable from a persistent toggle, and when open it sits on the popover layer above workspace controls while the toggle stays on the tooltip layer.
 - Authenticated desktop layout should feel like a dense issue tracker: dark fixed rail, compact content header, sticky view toolbar, low-depth panels, and board/list views that prioritize scan speed over card prominence.
 - Auth shell: centered single-card workflow, max width around `480px`, with no marketing side panel.
 - Task boards use horizontal scrolling columns on narrow viewports and fixed, predictable column widths on wide viewports.

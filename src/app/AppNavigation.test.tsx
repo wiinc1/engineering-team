@@ -215,6 +215,41 @@ async function assertSlidingNavigationPanel() {
   expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('true');
 }
 
+async function assertMobileNavigationDefaultsCollapsed() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: query === '(max-width: 800px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+
+  render(<App />);
+
+  await screen.findByRole('heading', { name: 'Task workspace' });
+
+  const shell = screen.getByRole('main');
+  const openButton = screen.getByRole('button', { name: 'Open navigation' });
+  const hiddenNav = document.getElementById('primary-navigation');
+
+  expect(shell).toHaveClass('app-shell--nav-collapsed');
+  expect(openButton).toHaveAttribute('aria-controls', 'primary-navigation');
+  expect(openButton).toHaveAttribute('aria-expanded', 'false');
+  expect(hiddenNav).toHaveAttribute('aria-hidden', 'true');
+
+  fireEvent.click(openButton);
+
+  expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Collapse navigation' })).toHaveAttribute('aria-expanded', 'true');
+  expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('true');
+}
+
 describe('App navigation workspace UX', () => {
   beforeEach(() => {
     setupNavigationSession();
@@ -242,5 +277,9 @@ describe('App navigation workspace UX', () => {
 
   it('collapses and reopens the sliding left navigation panel', async () => {
     await assertSlidingNavigationPanel();
+  });
+
+  it('defaults the mobile sliding navigation drawer closed until opened', async () => {
+    await assertMobileNavigationDefaultsCollapsed();
   });
 });

@@ -2024,6 +2024,7 @@ button {
   .app-nav {
     position: fixed;
     inset: 0 auto 0 0;
+    z-index: var(--design-layer-popover);
     width: min(82vw, 320px);
     min-height: 100vh;
     max-height: 100vh;
@@ -2036,6 +2037,7 @@ button {
   }
 
   .app-nav-toggle {
+    z-index: var(--design-layer-tooltip);
     left: calc(min(82vw, 320px) - 42px);
   }
 
