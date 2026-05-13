@@ -248,9 +248,21 @@ test.beforeEach(async ({ page }) => {
     await expect(nav).toHaveAttribute('aria-hidden', 'true');
     expect(await page.evaluate(() => window.localStorage.getItem('engineering-team-nav-open'))).toBe('false');
 
-    await openButton.click();
+    const collapsedRail = page.getByRole('navigation', { name: 'Collapsed navigation' });
+    await expect(collapsedRail).toBeVisible();
+    await expect(collapsedRail.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(collapsedRail.getByRole('button', { name: 'Task workspace' })).toHaveAttribute('title', 'Task workspace');
+
+    await collapsedRail.getByRole('button', { name: 'Task workspace' }).click();
+
+    await expect(page).toHaveURL(/\/tasks\?view=list$/);
+    await expect(shell).toHaveClass(/app-shell--nav-collapsed/);
+    await expect(collapsedRail.getByRole('button', { name: 'Task workspace' })).toHaveAttribute('aria-pressed', 'true');
+
+    await collapsedRail.getByRole('button', { name: 'Search tasks' }).click();
 
     await expect(page.getByRole('button', { name: 'Collapse navigation' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('navigation', { name: 'Collapsed navigation' })).toHaveCount(0);
     await expect(shell).not.toHaveClass(/app-shell--nav-collapsed/);
     await expect(nav).not.toHaveClass(/app-nav--collapsed/);
     expect(await page.evaluate(() => window.localStorage.getItem('engineering-team-nav-open'))).toBe('true');

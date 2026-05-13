@@ -181,6 +181,35 @@ async function assertSidebarTaskSearch() {
   expect(screen.getByLabelText('Intake Draft column')).not.toHaveTextContent('Shape raw operator notes');
 }
 
+function collapsedRailButton(name: string) {
+  return within(screen.getByRole('navigation', { name: 'Collapsed navigation' })).getByRole('button', { name });
+}
+
+function assertCollapsedNavigationRailActions(shell: HTMLElement) {
+  const collapsedRail = screen.getByRole('navigation', { name: 'Collapsed navigation' });
+  const railKanban = within(collapsedRail).getByRole('button', { name: 'Kanban board' });
+  const railWorkspace = within(collapsedRail).getByRole('button', { name: 'Task workspace' });
+  const railSearch = within(collapsedRail).getByRole('button', { name: 'Search tasks' });
+
+  expect(railKanban).toHaveAttribute('aria-pressed', 'true');
+  expect(railWorkspace).toHaveAttribute('title', 'Task workspace');
+  expect(railSearch).toHaveAttribute('aria-controls', 'primary-navigation');
+
+  fireEvent.click(railWorkspace);
+
+  expect(window.location.pathname).toBe('/tasks');
+  expect(window.location.search).toContain('view=list');
+  expect(shell).toHaveClass('app-shell--nav-collapsed');
+  expect(collapsedRailButton('Task workspace')).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(collapsedRailButton('Kanban board'));
+
+  expect(window.location.search).toContain('view=board');
+  expect(collapsedRailButton('Kanban board')).toHaveAttribute('aria-pressed', 'true');
+
+  fireEvent.click(collapsedRailButton('Search tasks'));
+}
+
 async function assertSlidingNavigationPanel() {
   render(<App />);
 
@@ -207,11 +236,12 @@ async function assertSlidingNavigationPanel() {
   expect(hiddenNav).toHaveAttribute('aria-hidden', 'true');
   expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('false');
 
-  fireEvent.click(openButton);
+  assertCollapsedNavigationRailActions(shell);
 
   expect(screen.getByRole('button', { name: 'Collapse navigation' })).toHaveAttribute('aria-expanded', 'true');
   expect(shell).not.toHaveClass('app-shell--nav-collapsed');
   expect(screen.getByRole('navigation', { name: 'Primary navigation' })).not.toHaveClass('app-nav--collapsed');
+  expect(screen.queryByRole('navigation', { name: 'Collapsed navigation' })).not.toBeInTheDocument();
   expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('true');
 }
 
@@ -242,6 +272,8 @@ async function assertMobileNavigationDefaultsCollapsed() {
   expect(openButton).toHaveAttribute('aria-controls', 'primary-navigation');
   expect(openButton).toHaveAttribute('aria-expanded', 'false');
   expect(hiddenNav).toHaveAttribute('aria-hidden', 'true');
+  expect(screen.getByRole('navigation', { name: 'Collapsed navigation' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('title', 'Kanban board');
 
   fireEvent.click(openButton);
 

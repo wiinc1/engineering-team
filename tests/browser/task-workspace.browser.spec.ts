@@ -357,6 +357,10 @@ test('renders the task workspace board with scannable columns and mobile overflo
   expect(navStyles.pmOverviewFontSize).toBe('13.44px');
 
   await closeNavigationIfOpen(page);
+  const collapsedRail = page.getByRole('navigation', { name: 'Collapsed navigation' });
+  await expect(collapsedRail).toBeVisible();
+  await expect(collapsedRail.getByRole('button', { name: 'Kanban board' })).toBeVisible();
+  await expect(collapsedRail.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('title', 'Kanban board');
   await assertOwnerFilterEmptyState(page);
   await assertMobileBoardOverflow(page);
 });
