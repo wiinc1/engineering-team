@@ -108,6 +108,7 @@ button {
 }
 
 .app-shell:not(.app-shell--auth) {
+  --app-nav-width: 244px;
   color-scheme: dark;
   --linear-page-bg: color-mix(in srgb, var(--design-color-palette-text) 94%, black);
   --linear-sidebar-bg: color-mix(in srgb, var(--design-color-palette-text) 90%, black);
@@ -172,7 +173,7 @@ button {
   --shadow-md: none;
   --focus-ring: 2px solid var(--color-focus-ring);
   display: grid;
-  grid-template-columns: minmax(220px, 244px) minmax(0, 1fr);
+  grid-template-columns: var(--app-nav-width) minmax(0, 1fr);
   align-items: start;
   max-width: none;
   min-height: 100vh;
@@ -180,15 +181,24 @@ button {
   padding: 0;
   background: var(--page-bg);
   color: var(--text);
+  transition: var(--design-component-app-shell-transition);
 }
 
-.app-shell:not(.app-shell--auth) > :not(.app-nav) {
+.app-shell--nav-collapsed:not(.app-shell--auth) {
+  --app-nav-width: 0px;
+}
+
+.app-shell:not(.app-shell--auth) > :not(.app-nav):not(.app-nav-toggle) {
   grid-column: 2;
   min-width: 0;
   margin-right: 0;
   margin-left: 0;
   padding-right: 24px;
   padding-left: 24px;
+}
+
+.app-shell--nav-collapsed:not(.app-shell--auth) > :not(.app-nav):not(.app-nav-toggle) {
+  padding-left: 64px;
 }
 
 .app-shell--auth {
@@ -200,6 +210,7 @@ button {
 .app-nav {
   position: sticky;
   top: 0;
+  z-index: 100;
   grid-column: 1;
   grid-row: 1 / span 24;
   display: flex;
@@ -208,12 +219,96 @@ button {
   align-self: start;
   min-height: 100vh;
   max-height: 100vh;
+  width: 244px;
+  box-sizing: border-box;
   margin: 0;
   padding: 12px;
   overflow-y: auto;
   border-right: 1px solid var(--border-soft);
   background: var(--linear-sidebar-bg, color-mix(in srgb, var(--surface-muted) 82%, var(--surface) 18%));
   box-shadow: none;
+  opacity: var(--design-component-app-nav-open-opacity);
+  transform: translateX(0);
+  visibility: visible;
+  transition: var(--design-component-app-nav-transition);
+}
+
+.app-nav--collapsed {
+  opacity: var(--design-component-app-nav-collapsed-opacity);
+  pointer-events: none;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: var(--design-component-app-nav-collapsed-transition);
+}
+
+.app-nav-toggle {
+  position: fixed;
+  top: 12px;
+  left: calc(var(--app-nav-width) - 42px);
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--design-radius-control-sm);
+  padding: 0;
+  background: var(--surface-muted);
+  color: var(--text);
+  box-shadow: none;
+  transition: var(--design-component-app-nav-toggle-transition);
+}
+
+.app-shell--nav-collapsed .app-nav-toggle {
+  left: 12px;
+}
+
+.app-nav-toggle:hover {
+  border-color: color-mix(in srgb, var(--primary) 36%, transparent);
+  background: var(--surface-subtle);
+}
+
+.app-nav-toggle:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.app-nav-toggle__icon,
+.app-nav-toggle__icon::before,
+.app-nav-toggle__icon::after {
+  display: block;
+  width: 14px;
+  height: 2px;
+  border-radius: var(--design-radius-pill);
+  background: currentColor;
+  content: "";
+}
+
+.app-nav-toggle__icon {
+  position: relative;
+}
+
+.app-nav-toggle__icon::before,
+.app-nav-toggle__icon::after {
+  position: absolute;
+  left: 0;
+}
+
+.app-nav-toggle__icon::before {
+  top: -5px;
+}
+
+.app-nav-toggle__icon::after {
+  top: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell:not(.app-shell--auth),
+  .app-nav,
+  .app-nav--collapsed,
+  .app-nav-toggle {
+    transition: none;
+  }
 }
 
 .app-nav::before {
@@ -1906,27 +2001,46 @@ button {
 
 @media (max-width: 800px) {
   .app-shell:not(.app-shell--auth) {
+    --app-nav-width: min(82vw, 320px);
     display: block;
     padding: 0 14px 36px;
   }
 
-  .app-shell:not(.app-shell--auth) > :not(.app-nav) {
+  .app-shell--nav-collapsed:not(.app-shell--auth) {
+    --app-nav-width: 0px;
+  }
+
+  .app-shell:not(.app-shell--auth) > :not(.app-nav):not(.app-nav-toggle) {
     margin-right: 0;
     margin-left: 0;
     padding-right: 0;
     padding-left: 0;
   }
 
+  .app-shell--nav-collapsed:not(.app-shell--auth) > :not(.app-nav):not(.app-nav-toggle) {
+    padding-left: 42px;
+  }
+
   .app-nav {
-    position: static;
-    min-height: 0;
-    max-height: none;
-    margin: 0 -14px 16px;
-    padding: 10px 14px;
-    border-right: 0;
-    border-bottom: 1px solid var(--border-soft);
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(82vw, 320px);
+    min-height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    padding: 12px;
+    border-right: 1px solid var(--border-soft);
+    border-bottom: 0;
     background: var(--linear-sidebar-bg, var(--surface));
     align-items: stretch;
+  }
+
+  .app-nav-toggle {
+    left: calc(min(82vw, 320px) - 42px);
+  }
+
+  .app-shell--nav-collapsed .app-nav-toggle {
+    left: 12px;
   }
 
   .app-nav::before {

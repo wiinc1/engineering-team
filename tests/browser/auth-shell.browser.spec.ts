@@ -211,6 +211,41 @@ test.beforeEach(async ({ page }) => {
     await expect(page.getByText('Wire task detail')).toBeVisible();
   });
 
+  test('collapses and reopens the authenticated left rail', async ({ page }) => {
+    await addAdminSession(page);
+    await page.addInitScript(() => {
+      window.localStorage.removeItem('engineering-team-nav-open');
+    });
+
+    await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+
+    const shell = page.locator('main.app-shell');
+    const nav = page.locator('#primary-navigation');
+    const collapseButton = page.getByRole('button', { name: 'Collapse navigation' });
+
+    await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
+    await expect(collapseButton).toHaveAttribute('aria-controls', 'primary-navigation');
+    await expect(collapseButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(shell).not.toHaveClass(/app-shell--nav-collapsed/);
+
+    await collapseButton.click();
+
+    const openButton = page.getByRole('button', { name: 'Open navigation' });
+    await expect(openButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(shell).toHaveClass(/app-shell--nav-collapsed/);
+    await expect(nav).toHaveClass(/app-nav--collapsed/);
+    await expect(nav).toHaveAttribute('aria-hidden', 'true');
+    expect(await page.evaluate(() => window.localStorage.getItem('engineering-team-nav-open'))).toBe('false');
+
+    await openButton.click();
+
+    await expect(page.getByRole('button', { name: 'Collapse navigation' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(shell).not.toHaveClass(/app-shell--nav-collapsed/);
+    await expect(nav).not.toHaveClass(/app-nav--collapsed/);
+    expect(await page.evaluate(() => window.localStorage.getItem('engineering-team-nav-open'))).toBe('true');
+  });
+
   test('shows a safe no-login-path configuration state when preview auth is unavailable', async ({ page }) => {
     await page.addInitScript(() => {
       window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = { internalAuthBootstrapEnabled: false };

@@ -405,12 +405,20 @@ components:
   border-rule:
     backgroundColor: "{colors.border}"
     height: 1px
+  app-shell:
+    transition: grid-template-columns 180ms ease
   app-nav:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.on-surface}"
     typography: "{typography.app-nav}"
     rounded: "{rounded.panel}"
     padding: 8px 10px
+    openOpacity: "1"
+    collapsedOpacity: "0"
+    transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 0s
+    collapsedTransition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms
+  app-nav-toggle:
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease, left 180ms ease
   panel-default:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.on-surface}"
@@ -488,7 +496,7 @@ The interface uses Inter when available, then the system UI stack. Typography is
 
 Product screens should prioritize repeated operator workflows over presentation.
 
-- Main authenticated shell: desktop uses a persistent left navigation rail plus a full-width work surface. The rail owns global workflow navigation, task search entry, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
+- Main authenticated shell: desktop uses a collapsible left navigation rail plus a full-width work surface. The rail owns global workflow navigation, task search entry, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
 - The authenticated work surface should not be capped like a marketing page. It may use local gutters near `24px` on desktop and `12px-14px` on mobile, while tables and boards keep deliberate horizontal scrolling where needed.
 - Authenticated desktop layout should feel like a dense issue tracker: dark fixed rail, compact content header, sticky view toolbar, low-depth panels, and board/list views that prioritize scan speed over card prominence.
 - Auth shell: centered single-card workflow, max width around `480px`, with no marketing side panel.
@@ -526,7 +534,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
-- App nav: persistent desktop left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace or Kanban board route, a primary create action, role inbox control, and muted session controls. On mobile it collapses back into a horizontally scrollable top navigation strip.
+- App nav: collapsible left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace or Kanban board route, a primary create action, role inbox control, and muted session controls. On mobile it behaves as a left drawer so navigation remains recoverable without consuming the work surface.
 - Board columns and task cards: keep visible lane headings for the standard workflow columns even when a lane is empty, include count and empty-copy context for empty lanes, keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
@@ -538,6 +546,7 @@ Persistent component exceptions must be promoted into this file through the prot
 The app information architecture is workflow-first. Navigation must keep operational routes compact, role-aware, and recoverable after authentication.
 
 - Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
+- The left rail must expose a persistent icon toggle with `aria-controls` and `aria-expanded`, preserve the open/collapsed preference for returning operators, and keep the content work surface usable when the rail is collapsed.
 - The left rail may include global task search when it routes into `/tasks` and uses the same search query and filter semantics as the workspace toolbar. It should not introduce a separate result model.
 - Exact task lookup belongs in task links, task detail routes, or the left-rail search. Page headers must not reintroduce a duplicate Task ID jump box.
 - Session identity belongs in muted nav or session controls, not a page-header diagnostic card, so workspace headers remain focused on route utilities and current view context.
