@@ -193,6 +193,24 @@ test.beforeEach(async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
   });
 
+  test('searches the task workspace from the authenticated left rail', async ({ page }) => {
+    await addAdminSession(page);
+
+    await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page.getByText('Current session')).toHaveCount(0);
+
+    const nav = page.getByRole('navigation', { name: 'Primary navigation' });
+    const search = nav.getByRole('search', { name: 'Task search' });
+    await expect(search.getByLabel('Search tasks')).toBeVisible();
+
+    await search.getByLabel('Search tasks').fill('Wire');
+    await search.getByRole('button', { name: 'Search' }).click();
+
+    await expect(page).toHaveURL(/\/tasks\?search=Wire/);
+    await expect(page.getByText('Wire task detail')).toBeVisible();
+  });
+
   test('shows a safe no-login-path configuration state when preview auth is unavailable', async ({ page }) => {
     await page.addInitScript(() => {
       window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = { internalAuthBootstrapEnabled: false };
