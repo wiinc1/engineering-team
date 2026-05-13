@@ -1,0 +1,12 @@
+flowchart TD
+  A[Operator opens /tasks/create] --> B[Dark add-new-task page renders]
+  B --> C[Title field receives first form position]
+  C --> D[Operator enters issue/task title]
+  D --> E[Operator enters raw requirements]
+  E --> F{Submit Create task draft}
+  F -->|Requirements missing| G[Focus Requirements and show dark validation state]
+  F -->|Title too long| H[Focus Title and show dark validation state]
+  F -->|Valid payload| I[POST /tasks with title and raw_requirements]
+  I --> J[Intake Draft created]
+  J --> K[Dark success state shows created title first]
+  K --> L[Operator opens task detail or returns to workspace]

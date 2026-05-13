@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+const WHITE_RGB = 'rgb(255, 255, 255)';
+
 const workspaceTasks = [
   {
     task_id: 'TSK-DRAFT',
@@ -52,11 +54,11 @@ async function installSession(page) {
   }, token);
 }
 
-function createdTaskDetailPayload(rawRequirements: string) {
+function createdTaskDetailPayload(rawRequirements: string, title: string) {
   return {
     task: {
       id: 'TSK-UX',
-      title: 'Improve operator task workspace',
+      title,
       priority: null,
       stage: 'DRAFT',
       status: 'waiting',
@@ -147,18 +149,21 @@ async function routeAgents(page) {
   });
 }
 
-async function routeTaskList(page, state: { createdRequirements: string }) {
+async function routeTaskList(page, state: { createdRequirements: string; createdTitle: string }) {
   await page.route('**/api/tasks', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({ json: { items: workspaceTasks } });
       return;
     }
 
-    state.createdRequirements = String((await route.request().postDataJSON())?.raw_requirements || '');
+    const payload = await route.request().postDataJSON();
+    state.createdRequirements = String(payload?.raw_requirements || '');
+    state.createdTitle = String(payload?.title || 'Untitled intake draft');
     await route.fulfill({
       status: 201,
       json: {
         taskId: 'TSK-UX',
+        title: state.createdTitle,
         status: 'DRAFT',
         intakeDraft: true,
         nextRequiredAction: 'PM refinement required',
@@ -167,9 +172,9 @@ async function routeTaskList(page, state: { createdRequirements: string }) {
   });
 }
 
-async function routeCreatedTaskDetail(page, state: { createdRequirements: string }) {
+async function routeCreatedTaskDetail(page, state: { createdRequirements: string; createdTitle: string }) {
   await page.route('**/api/tasks/TSK-UX/detail**', async (route) => {
-    await route.fulfill({ json: createdTaskDetailPayload(state.createdRequirements) });
+    await route.fulfill({ json: createdTaskDetailPayload(state.createdRequirements, state.createdTitle) });
   });
 }
 
@@ -218,7 +223,7 @@ async function routeCreatedTaskSummary(page) {
 }
 
 async function mockWorkspaceApi(page) {
-  const state = { createdRequirements: '' };
+  const state = { createdRequirements: '', createdTitle: 'Improve operator task workspace' };
   await routeAgents(page);
   await routeTaskList(page, state);
   await routeCreatedTaskDetail(page, state);
@@ -324,6 +329,7 @@ async function assertMobileBoardOverflow(page) {
 
 async function assertTaskCreationSuccess(page) {
   await expect(page).toHaveURL(/\/tasks\/create$/);
+  await expect(page.getByRole('status')).toContainText('Dark title-first intake');
   await expect(page.getByRole('status')).toContainText('TSK-UX is ready for PM refinement');
   await expect(page.getByRole('link', { name: 'Open task detail' })).toHaveAttribute(
     'href',
@@ -336,10 +342,69 @@ async function assertTaskCreationSuccess(page) {
 
 async function assertCreatedTaskDetail(page) {
   await expect(page).toHaveURL(/\/tasks\/TSK-UX\?created=intake-draft/);
-  await expect(page.getByRole('heading', { name: 'Improve operator task workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dark title-first intake' })).toBeVisible();
   await expect(page.locator('.task-created-banner')).toContainText('Intake Draft is ready for PM refinement');
   await expect(page.getByText('Second raw operator request from the browser test.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Back to task workspace' })).toBeVisible();
+}
+
+function rgbParts(value: string) {
+  const match = value.match(/\d+(\.\d+)?/g);
+  return (match || []).slice(0, 3).map(Number);
+}
+
+function luminance(value: string) {
+  const [red, green, blue] = rgbParts(value).map((part) => {
+    const channel = part / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const foregroundLuminance = luminance(foreground);
+  const backgroundLuminance = luminance(background);
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+async function assertTaskCreationDarkTheme(page) {
+  const colors = await page.locator('.task-create-page').evaluate((root) => {
+    const form = root.querySelector('form');
+    const title = root.querySelector('#title');
+    const success = root.querySelector('.task-create-page__success');
+    const pageStyle = window.getComputedStyle(root);
+    const formStyle = form ? window.getComputedStyle(form) : null;
+    const titleStyle = title ? window.getComputedStyle(title) : null;
+    const successStyle = success ? window.getComputedStyle(success) : null;
+
+    return {
+      pageBg: pageStyle.backgroundColor,
+      pageColor: pageStyle.color,
+      formBg: formStyle?.backgroundColor || '',
+      formColor: formStyle?.color || '',
+      titleBg: titleStyle?.backgroundColor || '',
+      titleColor: titleStyle?.color || '',
+      successBg: successStyle?.backgroundColor || '',
+      successColor: successStyle?.color || '',
+    };
+  });
+
+  expect(colors.pageBg).not.toBe(WHITE_RGB);
+  expect(contrastRatio(colors.pageColor, colors.pageBg)).toBeGreaterThanOrEqual(4.5);
+  if (colors.formBg) {
+    expect(colors.formBg).not.toBe(WHITE_RGB);
+    expect(contrastRatio(colors.formColor, colors.formBg)).toBeGreaterThanOrEqual(4.5);
+  }
+  if (colors.titleBg) {
+    expect(colors.titleBg).not.toBe(WHITE_RGB);
+    expect(contrastRatio(colors.titleColor, colors.titleBg)).toBeGreaterThanOrEqual(4.5);
+  }
+  if (colors.successBg) {
+    expect(colors.successBg).not.toBe(WHITE_RGB);
+    expect(contrastRatio(colors.successColor, colors.successBg)).toBeGreaterThanOrEqual(4.5);
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -392,12 +457,26 @@ test('switches from task workspace list into the Kanban board with selected rout
 test('creates an intake draft from the workspace and opens the created task with recovery actions', async ({ page }) => {
   await page.goto('/tasks/create', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Add a new task' })).toBeVisible();
+  await assertTaskCreationDarkTheme(page);
+  await page.getByLabel(/title/i).focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel(/requirements/i)).toBeFocused();
+
+  await page.getByLabel(/requirements/i).fill('   ');
+  await page.getByRole('button', { name: 'Create task draft' }).click();
+  await expect(page.getByText('Requirements are required.')).toBeVisible();
+  await expect(page.getByLabel(/requirements/i)).toBeFocused();
+
+  await page.getByLabel(/title/i).fill('Dark title-first intake');
   await page.getByLabel(/requirements/i).fill('Raw operator request from the browser test.');
   await page.getByRole('button', { name: 'Create task draft' }).click();
   await assertTaskCreationSuccess(page);
+  await assertTaskCreationDarkTheme(page);
 
   await page.getByRole('button', { name: 'Create another task' }).click();
+  await expect(page.getByLabel(/title/i)).toHaveValue('');
   await expect(page.getByLabel(/requirements/i)).toHaveValue('');
+  await page.getByLabel(/title/i).fill('Dark title-first intake');
   await page.getByLabel(/requirements/i).fill('Second raw operator request from the browser test.');
   await page.getByRole('button', { name: 'Create task draft' }).click();
   await page.getByRole('link', { name: 'Open task detail' }).click();

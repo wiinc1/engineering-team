@@ -66,8 +66,11 @@ function TaskCreateHeader() {
 function CreatedTaskDetails({ createdTask }: { createdTask: CreatedTaskSummary }) {
   return (
     <div className="task-create-page__intake-summary">
-      <h3>{createdTask.title}</h3>
       <dl>
+        <div>
+          <dt>Task</dt>
+          <dd>{createdTask.taskId || 'New task'}</dd>
+        </div>
         <div>
           <dt>Stage</dt>
           <dd>Intake Draft</dd>
@@ -102,11 +105,12 @@ function CreatedTaskSuccess({
 
   return (
     <section ref={successRef} className="task-create-page__success" role="status" aria-live="polite" tabIndex={-1}>
-      <div>
+      <div className="task-create-page__success-copy">
         <p className="eyebrow">Intake Draft created</p>
-        <h2>{createdTask.taskId || 'New task'} is ready for PM refinement</h2>
+        <h2>{createdTask.title}</h2>
         <p>
-          Status: {createdTask.status}. Next step: {createdTask.nextRequiredAction}.
+          {createdTask.taskId || 'New task'} is ready for PM refinement. Status: {createdTask.status}. Next step:{' '}
+          {createdTask.nextRequiredAction}.
         </p>
         <CreatedTaskDetails createdTask={createdTask} />
       </div>

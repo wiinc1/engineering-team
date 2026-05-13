@@ -30,6 +30,16 @@ colors:
   palette-info-soft: "#DBEAFE"
   palette-review: "#6D28D9"
   palette-review-soft: "#EDE9FE"
+  palette-task-create-bg: "#0B1018"
+  palette-task-create-panel: "#111827"
+  palette-task-create-input: "#0F172A"
+  palette-task-create-border: "#2B3648"
+  palette-task-create-border-soft: "#1E293B"
+  palette-task-create-text: "#F8FAFC"
+  palette-task-create-muted: "#94A3B8"
+  palette-task-create-muted-strong: "#CBD5E1"
+  palette-task-create-danger-bg: "#3F1D25"
+  palette-task-create-danger-text: "#FCA5A5"
   page-bg: "{colors.palette-page-bg}"
   surface: "{colors.palette-surface}"
   surface-muted: "{colors.palette-surface-muted}"
@@ -57,6 +67,16 @@ colors:
   info-soft: "{colors.palette-info-soft}"
   review: "{colors.palette-review}"
   review-soft: "{colors.palette-review-soft}"
+  task-create-bg: "{colors.palette-task-create-bg}"
+  task-create-panel: "{colors.palette-task-create-panel}"
+  task-create-input: "{colors.palette-task-create-input}"
+  task-create-border: "{colors.palette-task-create-border}"
+  task-create-border-soft: "{colors.palette-task-create-border-soft}"
+  task-create-text: "{colors.palette-task-create-text}"
+  task-create-muted: "{colors.palette-task-create-muted}"
+  task-create-muted-strong: "{colors.palette-task-create-muted-strong}"
+  task-create-danger-bg: "{colors.palette-task-create-danger-bg}"
+  task-create-danger-text: "{colors.palette-task-create-danger-text}"
 typography:
   headline-lg:
     fontFamily: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
@@ -261,39 +281,42 @@ components:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.danger}"
   task-creation-form:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.on-surface}"
+    backgroundColor: "{colors.task-create-panel}"
+    textColor: "{colors.task-create-text}"
+    borderColor: "{colors.task-create-border-soft}"
     typography: "{typography.body-md}"
     rounded: "{rounded.panel}"
     padding: 1.125rem
   task-creation-label:
-    textColor: "{colors.on-muted-strong}"
+    textColor: "{colors.task-create-muted-strong}"
     typography: "{typography.label-md}"
   task-creation-input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.on-surface}"
+    backgroundColor: "{colors.task-create-input}"
+    textColor: "{colors.task-create-text}"
+    borderColor: "{colors.task-create-border}"
     typography: "{typography.body-md}"
     rounded: "{rounded.control}"
     padding: "{spacing.3}"
   task-creation-textarea:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.on-surface}"
+    backgroundColor: "{colors.task-create-input}"
+    textColor: "{colors.task-create-text}"
+    borderColor: "{colors.task-create-border}"
     typography: "{typography.body-md}"
     rounded: "{rounded.control}"
     padding: "{spacing.3}"
     height: 220px
   task-creation-help:
-    textColor: "{colors.on-muted}"
+    textColor: "{colors.task-create-muted}"
     typography: "{typography.body-sm}"
   task-creation-error:
-    backgroundColor: "{colors.danger-soft}"
-    textColor: "{colors.danger-text}"
+    backgroundColor: "{colors.task-create-danger-bg}"
+    textColor: "{colors.task-create-danger-text}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.control-sm}"
     padding: "{spacing.3}"
   task-creation-validation-error:
-    backgroundColor: "{colors.danger-soft}"
-    textColor: "{colors.danger-text}"
+    backgroundColor: "{colors.task-create-danger-bg}"
+    textColor: "{colors.task-create-danger-text}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.control-sm}"
     padding: "{spacing.2} {spacing.3}"
@@ -476,6 +499,7 @@ The palette is neutral-first with a single blue action color. The authenticated 
 - `primary-strong` maps to `--primary-strong: #1E40AF` for active controls and emphasized links.
 - `primary-soft` maps to `--primary-soft: #E8EEFC` for selected rows, matched board cards, and non-dominant primary emphasis.
 - `page-bg`, `surface`, `surface-muted`, `surface-subtle`, `border`, and `border-soft` define the app shell, cards, tables, panels, and grouped controls.
+- `task-create-*` colors define the dark Intake Draft creation surface and keep its form tokens dark even where generated component CSS is consumed outside the app shell.
 - Authenticated shell styles may derive dark local aliases from these tokens for the issue-tracker chrome, but status colors remain semantic and sparse.
 - Status colors are semantic only: success, warning, danger, info, and review must communicate workflow state or routing. They must not be used as decoration.
 - Normal text/background pairs must meet WCAG AA contrast. Do not use soft status backgrounds without the paired dark status text token.

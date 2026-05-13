@@ -32,19 +32,37 @@ function stubCreatedTask() {
   );
 }
 
-function submitRequirements(value: string) {
-  fireEvent.change(screen.getByLabelText(/requirements/i), { target: { value } });
+function submitTask({ requirements, title = '' }: { requirements: string; title?: string }) {
+  if (title) {
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: title } });
+  }
+  fireEvent.change(screen.getByLabelText(/requirements/i), { target: { value: requirements } });
   fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
 }
+
+it('renders the title field before requirements on the task creation page', () => {
+  render(<TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" />);
+
+  const title = screen.getByLabelText(/title/i);
+  const requirements = screen.getByLabelText(/requirements/i);
+  const position = title.compareDocumentPosition(requirements);
+
+  expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
 
 it('shows the created Intake Draft status and PM refinement next step', async () => {
   stubCreatedTask();
   render(<TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" />);
-  submitRequirements('Raw operator request that needs PM shaping.');
+  submitTask({
+    title: 'Dark task creation polish',
+    requirements: 'Raw operator request that needs PM shaping.',
+  });
 
   await screen.findByRole('status');
-  expect(screen.getByText(/TSK-INTAKE is ready for PM refinement/i)).toBeInTheDocument();
-  expect(screen.getByText(/Status: DRAFT. Next step: PM refinement required./i)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Dark task creation polish' })).toBeInTheDocument();
+  expect(
+    screen.getByText(/TSK-INTAKE is ready for PM refinement. Status: DRAFT. Next step: PM refinement required./i),
+  ).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole('status')).toHaveFocus());
   expect(screen.getByRole('link', { name: /open task detail/i })).toHaveAttribute(
     'href',
@@ -59,7 +77,7 @@ it('keeps the routed success state local instead of calling the legacy navigatio
   const onTaskCreated = vi.fn();
   stubCreatedTask();
   render(<TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" onTaskCreated={onTaskCreated} />);
-  submitRequirements('Raw operator request that should not navigate.');
+  submitTask({ requirements: 'Raw operator request that should not navigate.' });
 
   await screen.findByRole('status');
   expect(onTaskCreated).not.toHaveBeenCalled();
@@ -68,7 +86,7 @@ it('keeps the routed success state local instead of calling the legacy navigatio
 it('keeps the operator input visible when creation fails', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => response({ error: { message: 'Tenant or user not found' } }, 404)));
   render(<TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" />);
-  submitRequirements('Do not lose this raw request.');
+  submitTask({ requirements: 'Do not lose this raw request.' });
 
   await waitFor(() => expect(screen.getByText(/Tenant or user not found/i)).toBeInTheDocument());
   expect(screen.getByLabelText(/requirements/i)).toHaveValue('Do not lose this raw request.');
@@ -79,7 +97,7 @@ it('resets the form when the operator chooses to create another task', async () 
   render(<TaskCreationPage sessionConfig={{ bearerToken: 'token' }} envApiBaseUrl="" />);
 
   fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Keep the workspace clear' } });
-  submitRequirements('Raw operator request that should clear after success.');
+  submitTask({ requirements: 'Raw operator request that should clear after success.' });
   await screen.findByRole('status');
   fireEvent.click(screen.getByRole('button', { name: /create another task/i }));
 

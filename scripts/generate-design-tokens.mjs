@@ -304,7 +304,7 @@ function buildTaskCreationFormCss(tokens) {
   addVar(lines, 'task-creation-form-padding', form.padding || tokens.spacing?.['5']);
   addVar(lines, 'task-creation-form-background', form.backgroundColor || tokens.colors?.surface);
   addVar(lines, 'task-creation-form-color', form.textColor || tokens.colors?.['on-surface']);
-  addVar(lines, 'task-creation-form-border', borderValue({}, tokens.borders?.soft));
+  addVar(lines, 'task-creation-form-border', borderValue(form, tokens.borders?.soft));
   addVar(lines, 'task-creation-form-radius', form.rounded || tokens.rounded?.panel);
   addVar(lines, 'task-creation-form-shadow', tokens.shadows?.sm);
   addVar(lines, 'task-creation-form-font-family', formTypography.fontFamily);
@@ -320,7 +320,7 @@ function buildTaskCreationFormCss(tokens) {
   addVar(lines, 'task-creation-input-padding', input.padding || tokens.spacing?.['3']);
   addVar(lines, 'task-creation-input-background', input.backgroundColor || tokens.colors?.surface);
   addVar(lines, 'task-creation-input-color', input.textColor || tokens.colors?.['on-surface']);
-  addVar(lines, 'task-creation-input-border', borderValue({}, tokens.borders?.default));
+  addVar(lines, 'task-creation-input-border', borderValue(input, tokens.borders?.default));
   addVar(lines, 'task-creation-input-radius', input.rounded || tokens.rounded?.control);
   addVar(lines, 'task-creation-input-font-size', inputTypography.fontSize);
   addVar(lines, 'task-creation-input-line-height', inputTypography.lineHeight);
