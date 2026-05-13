@@ -181,8 +181,8 @@ export function TaskCreationForm({ onSubmit, loading, error, resetToken = 0 }: T
       onSubmit={handleSubmit}
       aria-describedby={describedBy(['task-create-guidance', validationErrors.length > 1 && 'task-create-validation-summary'])}
     >
-      <RequirementsField loading={loading} error={requirementsError} inputRef={requirementsRef} />
       <TitleField loading={loading} error={titleError} inputRef={titleRef} />
+      <RequirementsField loading={loading} error={requirementsError} inputRef={requirementsRef} />
       <ValidationSummary errors={validationErrors} />
       {error ? (
         <p className={styles.error} role="alert">

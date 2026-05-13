@@ -1,0 +1,16 @@
+flowchart LR
+  Operator[Software Factory operator] --> Browser[Browser authenticated shell]
+  Browser --> Route[/tasks/create route]
+  Route --> Page[TaskCreationPage]
+  Page --> Form[TaskCreationForm]
+  Form --> Tokens[TaskCreationForm generated tokens]
+  Design[DESIGN.md] --> Generator[scripts/generate-design-tokens.mjs]
+  Generator --> Tokens
+  Generator --> GlobalTokens[src/app/design-tokens.css]
+  GlobalTokens --> PageStyles[src/app/styles.css task-create page styles]
+  Tokens --> Form
+  PageStyles --> Page
+  Form --> Payload[title + raw_requirements payload]
+  Payload --> Api[Existing POST /tasks API]
+  Api --> Draft[Intake Draft response]
+  Draft --> Success[Dark success state with title first]

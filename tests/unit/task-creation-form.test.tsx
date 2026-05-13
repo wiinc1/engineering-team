@@ -1,1 +1,101 @@
-import{jsx as s}from"react/jsx-runtime";import{render as i,screen as e,fireEvent as r,cleanup as c}from"@testing-library/react";import{describe as m,it as l,expect as t,vi as o,afterEach as d}from"vitest";import{TaskCreationForm as u}from"../../src/features/task-creation/TaskCreationForm";d(c),m("TaskCreationForm",()=>{const n={onSubmit:o.fn(),loading:!1};l("renders intake form fields",()=>{i(s(u,{...n})),t(e.getByLabelText(/requirements/i)).toBeInTheDocument(),t(e.getByLabelText(/title/i)).toBeInTheDocument(),t(e.queryByLabelText(/business context/i)).not.toBeInTheDocument(),t(e.queryByLabelText(/acceptance criteria/i)).not.toBeInTheDocument(),t(e.queryByLabelText(/definition of done/i)).not.toBeInTheDocument(),t(e.queryByLabelText(/priority/i)).not.toBeInTheDocument(),t(e.queryByLabelText(/task type/i)).not.toBeInTheDocument()}),l("calls onSubmit with raw requirements and optional title",async()=>{const a=o.fn().mockResolvedValue(void 0);i(s(u,{...n,onSubmit:a})),r.change(e.getByLabelText(/title/i),{target:{value:"Test task"}}),r.change(e.getByLabelText(/requirements/i),{target:{value:"Raw operator request"}}),r.click(e.getByRole("button",{name:/create task draft/i})),await o.waitFor(()=>{t(a).toHaveBeenCalledWith({raw_requirements:"Raw operator request",title:"Test task"})})}),l("allows title to be omitted",async()=>{const a=o.fn().mockResolvedValue(void 0);i(s(u,{...n,onSubmit:a})),r.change(e.getByLabelText(/requirements/i),{target:{value:"Raw operator request"}}),r.click(e.getByRole("button",{name:/create task draft/i})),await o.waitFor(()=>{t(a).toHaveBeenCalledWith({raw_requirements:"Raw operator request",title:""})})}),l("shows validation errors when raw requirements are empty",async()=>{const a=o.fn().mockResolvedValue(void 0);i(s(u,{...n,onSubmit:a})),r.change(e.getByLabelText(/requirements/i),{target:{value:"   "}}),r.click(e.getByRole("button",{name:/create task draft/i})),await o.waitFor(()=>{t(e.getByText(/requirements are required/i)).toBeInTheDocument(),t(a).not.toHaveBeenCalled()})}),l("shows error prop when provided",()=>{i(s(u,{...n,error:"API error occurred"})),t(e.getByText(/API error occurred/i)).toBeInTheDocument()}),l("shows loading state on button",()=>{i(s(u,{...n,loading:!0}));const a=e.getByRole("button",{name:/create task draft/i});t(a).toHaveAttribute("disabled")}),l("has required attributes on raw requirements only",()=>{i(s(u,{...n})),t(e.getByLabelText(/requirements/i)).toBeRequired(),t(e.getByLabelText(/title/i)).not.toBeRequired(),t(e.getByLabelText(/title/i)).toHaveAttribute("maxlength","120")}),l("shows validation errors when title is too long",async()=>{const a=o.fn().mockResolvedValue(void 0);i(s(u,{...n,onSubmit:a})),r.change(e.getByLabelText(/title/i),{target:{value:"x".repeat(121)}}),r.change(e.getByLabelText(/requirements/i),{target:{value:"Raw operator request"}}),r.click(e.getByRole("button",{name:/create task draft/i})),await o.waitFor(()=>{t(e.getByText(/title must be 120 characters or fewer/i)).toBeInTheDocument(),t(a).not.toHaveBeenCalled()})})});
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { TaskCreationForm } from '../../src/features/task-creation/TaskCreationForm';
+
+const defaultProps = { onSubmit: vi.fn(), loading: false };
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+it('renders title before requirements and omits pre-refinement fields', () => {
+  render(<TaskCreationForm {...defaultProps} />);
+
+  const title = screen.getByLabelText(/title/i);
+  const requirements = screen.getByLabelText(/requirements/i);
+  const position = title.compareDocumentPosition(requirements);
+
+  expect(title).toBeInTheDocument();
+  expect(requirements).toBeInTheDocument();
+  expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByLabelText(/business context/i)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/acceptance criteria/i)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/definition of done/i)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/priority/i)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/task type/i)).not.toBeInTheDocument();
+});
+
+it('calls onSubmit with raw requirements and optional title', async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  render(<TaskCreationForm {...defaultProps} onSubmit={onSubmit} />);
+
+  fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Test task' } });
+  fireEvent.change(screen.getByLabelText(/requirements/i), { target: { value: 'Raw operator request' } });
+  fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
+
+  await waitFor(() => {
+    expect(onSubmit).toHaveBeenCalledWith({ raw_requirements: 'Raw operator request', title: 'Test task' });
+  });
+});
+
+it('allows title to be omitted', async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  render(<TaskCreationForm {...defaultProps} onSubmit={onSubmit} />);
+
+  fireEvent.change(screen.getByLabelText(/requirements/i), { target: { value: 'Raw operator request' } });
+  fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
+
+  await waitFor(() => {
+    expect(onSubmit).toHaveBeenCalledWith({ raw_requirements: 'Raw operator request', title: '' });
+  });
+});
+
+it('focuses requirements and shows validation errors when raw requirements are empty', async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  render(<TaskCreationForm {...defaultProps} onSubmit={onSubmit} />);
+
+  fireEvent.change(screen.getByLabelText(/requirements/i), { target: { value: '   ' } });
+  fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/requirements are required/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/requirements/i)).toHaveFocus();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+it('shows error prop when provided', () => {
+  render(<TaskCreationForm {...defaultProps} error="API error occurred" />);
+
+  expect(screen.getByText(/API error occurred/i)).toBeInTheDocument();
+});
+
+it('shows loading state on button', () => {
+  render(<TaskCreationForm {...defaultProps} loading />);
+
+  expect(screen.getByRole('button', { name: /create task draft/i })).toHaveAttribute('disabled');
+});
+
+it('has required attributes on raw requirements only', () => {
+  render(<TaskCreationForm {...defaultProps} />);
+
+  expect(screen.getByLabelText(/requirements/i)).toBeRequired();
+  expect(screen.getByLabelText(/title/i)).not.toBeRequired();
+  expect(screen.getByLabelText(/title/i)).toHaveAttribute('maxlength', '120');
+});
+
+it('focuses title and shows validation errors when title is too long', async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  render(<TaskCreationForm {...defaultProps} onSubmit={onSubmit} />);
+
+  fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'x'.repeat(121) } });
+  fireEvent.change(screen.getByLabelText(/requirements/i), { target: { value: 'Raw operator request' } });
+  fireEvent.click(screen.getByRole('button', { name: /create task draft/i }));
+
+  await waitFor(() => {
+    expect(screen.getByText(/title must be 120 characters or fewer/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/title/i)).toHaveFocus();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});

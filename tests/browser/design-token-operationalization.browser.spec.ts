@@ -118,6 +118,47 @@ const COMPONENT_SMOKE_HTML = `
   </html>
 `;
 
+const TASK_CREATE_DARK_PAGE_HTML = `
+  <html>
+    <head>
+      <style>/* CSS_PLACEHOLDER */</style>
+      <style>
+        body {
+          margin: 0;
+          background: var(--color-page-bg);
+          color: var(--color-on-surface);
+          font-family: var(--design-typography-body-md-font-family);
+        }
+      </style>
+    </head>
+    <body>
+      <main class="app-shell">
+        <section class="task-create-page" aria-labelledby="task-create-title">
+          <div class="task-create-page__header">
+            <p class="eyebrow">New task</p>
+            <h1 id="task-create-title">Add a new task</h1>
+            <p class="lede">Paste the raw request here to create a PM intake draft and route it into the task workflow.</p>
+          </div>
+          <form class="form" aria-label="Create task">
+            <div class="field">
+              <label for="task-title">Title</label>
+              <input id="task-title" value="Dark title-first intake" />
+            </div>
+            <div class="field">
+              <label for="task-requirements">Requirements *</label>
+              <textarea id="task-requirements">Raw operator request from the design-token smoke.</textarea>
+              <p class="help">Include request, acceptance notes, links, risks, and known constraints.</p>
+            </div>
+            <div class="actions">
+              <button class="button primary md" type="button">Create task draft</button>
+            </div>
+          </form>
+        </section>
+      </main>
+    </body>
+  </html>
+`;
+
 const TASK_DETAIL_SMOKE_HTML = `
   <html>
     <head>
@@ -293,6 +334,32 @@ test('captures migrated component states and flattened summary cards', async ({ 
   expect(buttonShot.byteLength).toBeGreaterThan(4_000);
   expect(formShot.byteLength).toBeGreaterThan(8_000);
   await expect(page.getByTestId('flattened-summary-card')).toHaveCSS('box-shadow', 'none');
+});
+
+test('captures dark task creation page tokens from app shell styles', async ({ page }, testInfo) => {
+  const css = [
+    readCss('src/app/design-tokens.css'),
+    readCss('src/app/styles.css'),
+    readCss('src/components/Button/Button.tokens.css'),
+    readCss('src/components/Button/Button.module.css'),
+    readCss('src/features/task-creation/TaskCreationForm.tokens.css'),
+    readCss('src/features/task-creation/TaskCreationForm.module.css'),
+  ].join('\n');
+
+  await page.setViewportSize({ width: 960, height: 860 });
+  await page.setContent(withCss(TASK_CREATE_DARK_PAGE_HTML, css));
+
+  const pageSurface = page.locator('.task-create-page');
+  const titleInput = page.getByLabel('Title');
+  await expect(pageSurface).toHaveCSS('background-color', 'rgb(11, 16, 24)');
+  await expect(pageSurface).toHaveCSS('color', 'rgb(248, 250, 252)');
+  await expect(titleInput).toHaveCSS('background-color', 'rgb(15, 23, 42)');
+  await expect(titleInput).toHaveCSS('border-color', 'rgb(43, 54, 72)');
+
+  const darkPageShot = await pageSurface.screenshot({
+    path: testInfo.outputPath('design-token-task-create-dark-page.png'),
+  });
+  expect(darkPageShot.byteLength).toBeGreaterThan(10_000);
 });
 
 test('captures responsive task detail token output', async ({ page }, testInfo) => {
