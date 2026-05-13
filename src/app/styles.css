@@ -1670,11 +1670,13 @@ button {
 
 .task-board__column-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 2px 2px 6px;
-  border-bottom: 0;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--design-radius-control-sm);
+  background: var(--surface);
 }
 
 .task-board__column-header h2,
@@ -1684,7 +1686,8 @@ button {
 
 .task-board__column-header h2 {
   color: var(--text);
-  font-size: var(--design-typography-body-sm-font-size);
+  font-size: var(--design-typography-label-md-font-size);
+  font-weight: var(--design-typography-label-md-font-weight);
   line-height: var(--design-typography-label-md-line-height);
 }
 

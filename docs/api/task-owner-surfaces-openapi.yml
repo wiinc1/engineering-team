@@ -72,6 +72,8 @@ paths:
         authenticated Human Inbox decision cards.
         Those Human Inbox cards should only be rendered for decision-ready close-governance items; a PM-close-review
         task with only one recommendation remains out of the inbox until the backend marks `humanDecision.decisionReady=true`.
+        Kanban consumers should render the standard workflow lane headings even when a lane has no matching cards,
+        so empty owner-filtered and empty-workspace states still expose the full delivery path.
       responses:
         '200':
           description: Task-list summaries

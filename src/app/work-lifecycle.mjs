@@ -34,7 +34,7 @@ const BOARD_STAGE_PRESENTATION = {
     group: 'Operator Approval',
   },
   IMPLEMENT: {
-    label: 'Implementation',
+    label: 'Ready for Implementation',
     description: 'Engineer-owned delivery work.',
     group: 'Implementation',
   },
@@ -44,12 +44,12 @@ const BOARD_STAGE_PRESENTATION = {
     group: 'Implementation',
   },
   IN_PROGRESS: {
-    label: 'Implementation',
+    label: 'In Progress',
     description: 'Active engineer-owned work.',
     group: 'Implementation',
   },
   CONTRACT_COVERAGE_AUDIT: {
-    label: 'Implementation Evidence',
+    label: 'Coverage Audit',
     description: 'Coverage evidence before QA verification.',
     group: 'Implementation',
   },
@@ -59,7 +59,7 @@ const BOARD_STAGE_PRESENTATION = {
     group: 'QA Verification',
   },
   QA_TESTING: {
-    label: 'QA Verification',
+    label: 'QA Testing',
     description: 'QA testing and validation work.',
     group: 'QA Verification',
   },
@@ -69,12 +69,12 @@ const BOARD_STAGE_PRESENTATION = {
     group: 'SRE Verification',
   },
   SRE_MONITORING: {
-    label: 'SRE Verification',
+    label: 'SRE Monitoring',
     description: 'Production monitoring validation.',
     group: 'SRE Verification',
   },
   PM_CLOSE_REVIEW: {
-    label: 'Operator Closeout',
+    label: 'Close Review',
     description: 'PM, operator, or stakeholder close review.',
     group: 'Operator Closeout',
   },
@@ -150,8 +150,7 @@ export function buildBoardStageOrder(items = []) {
     ),
   ).sort((left, right) => String(left).localeCompare(String(right)));
 
-  const presentLifecycle = BOARD_STAGE_ORDER.filter((stage) => items.some((item) => (item?.current_stage || '') === stage));
-  return [...presentLifecycle, ...extras];
+  return [...BOARD_STAGE_ORDER, ...extras];
 }
 
 export function matchesTaskSearch(item, searchTerm = '') {

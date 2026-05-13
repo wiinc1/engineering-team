@@ -230,7 +230,11 @@ async function mockWorkspaceApi(page) {
 async function assertWorkspaceBoard(page) {
   await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
   await expect(page.getByLabel('Task board')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Intake Draft' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Task Refinement' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operator Approval' })).toBeVisible();
   await expect(page.getByLabel('Intake Draft column')).toContainText('Shape raw operator notes');
+  await expect(page.getByLabel('Task Refinement column')).toContainText('No matching tasks in this column.');
   await expect(page.getByLabel('SRE Verification column')).toContainText('Verify release telemetry');
 }
 
