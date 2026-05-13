@@ -40,7 +40,7 @@
         "^lib/audit/http\\.js$",
         "^api/auth/",
         "^db/migrations/(009_magic_link_auth|011_registration_auth(\\.down)?)\\.sql$",
-        "^scripts/(verify-registration-production|verify-magic-link-production|verify-production-auth-status|check-auth-config|seed-auth-admin)\\.js$",
+        "^scripts/(verify-registration-production|verify-magic-link-production|verify-production-auth-status|check-auth-config|seed-auth-admin|bootstrap-deploy-auth)\\.js$",
         "^src/app/(App|session|session\\.browser)\\.js$"
       ],
       "test_requirements": [
@@ -86,19 +86,22 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/audit-api\\.test\\.js$",
+            "^tests/unit/audit-api-deploy-wrapper\\.test\\.js$",
             "^tests/unit/audit-jwt-auth\\.test\\.js$"
           ]
         },
         {
           "name": "contract",
           "patterns": [
-            "^tests/contract/audit-openapi\\.contract\\.test\\.js$"
+            "^tests/contract/audit-openapi\\.contract\\.test\\.js$",
+            "^tests/contract/audit-api-deploy-wrapper\\.contract\\.test\\.js$"
           ]
         },
         {
           "name": "security",
           "patterns": [
-            "^tests/security/audit-api\\.security\\.test\\.js$"
+            "^tests/security/audit-api\\.security\\.test\\.js$",
+            "^tests/security/audit-api-deploy-wrapper\\.security\\.test\\.js$"
           ]
         }
       ],

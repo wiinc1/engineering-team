@@ -19,6 +19,7 @@ info:
     Authenticated shell routes present compact primary navigation plus a task-id route utility while preserving first-screen status context on task detail.
     Initial production admin access is seeded out-of-band by the operator-only `npm run auth:admin:seed -- --apply`
     workflow; the browser contract never exposes the seed inputs, database URL, raw email address, or generated session secrets.
+    Vercel API entrypoints await deploy auth bootstrap before route handling and return the handler promise so bootstrap failures fail closed.
 paths:
   /sign-in:
     get:
