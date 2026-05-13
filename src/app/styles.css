@@ -543,7 +543,7 @@ button {
 
 .page-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   margin-top: 0;
@@ -552,14 +552,6 @@ button {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border-soft);
   background: var(--page-bg);
-}
-
-.header-tools {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  align-items: start;
-  width: 100%;
 }
 
 .page-header h1 {
@@ -584,7 +576,6 @@ button {
   font-size: var(--design-typography-body-sm-font-size);
 }
 
-.route-form,
 .session-form {
   display: grid;
   gap: 8px;
@@ -596,13 +587,6 @@ button {
   box-shadow: none;
 }
 
-.route-form {
-  grid-template-columns: minmax(120px, 1fr);
-  align-items: end;
-  width: min(100%, 360px);
-}
-
-.route-form label,
 .session-form label {
   display: grid;
   gap: 6px;
@@ -610,7 +594,6 @@ button {
   color: var(--color-on-muted-strong);
 }
 
-.route-form input,
 .session-form input,
 .session-form textarea,
 .assignment-form select,
@@ -629,7 +612,6 @@ button {
   min-height: 96px;
 }
 
-.route-form button,
 .session-form button {
   border: 0;
   border-radius: var(--design-radius-control-sm);
@@ -642,22 +624,6 @@ button {
 .button-secondary {
   background: var(--surface-subtle) !important;
   color: var(--text) !important;
-}
-
-.route-form__actions button {
-  background: var(--surface-subtle);
-  color: var(--text);
-}
-
-.route-form__actions button:first-child {
-  background: var(--primary);
-  color: var(--color-surface);
-}
-
-.route-form__new-task {
-  border: 1px solid var(--primary) !important;
-  background: var(--primary-soft) !important;
-  color: var(--primary-strong) !important;
 }
 
 .session-form__header {
@@ -1365,12 +1331,6 @@ button {
   color: var(--danger);
 }
 
-.route-form__actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .task-create-page {
   display: grid;
   gap: 18px;
@@ -1936,10 +1896,6 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .header-tools {
-    grid-template-columns: 1fr;
-  }
-
   .task-detail-hero__title,
   .summary-grid--hero,
   .task-activity .header,
@@ -2027,14 +1983,8 @@ button {
     margin-top: 0;
   }
 
-  .header-tools,
-  .route-form,
   .session-form {
     width: 100%;
-  }
-
-  .route-form {
-    grid-template-columns: 1fr;
   }
 
   .session-meta {
@@ -2115,7 +2065,6 @@ button {
   }
 
   .auth-card,
-  .route-form,
   .session-form,
   .detail-card,
   .assignment-panel {

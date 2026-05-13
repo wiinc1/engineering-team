@@ -111,6 +111,7 @@ function assertCompactSessionNavigation() {
   expect(within(appNav).getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
   expect(screen.queryByLabelText('Current session')).not.toBeInTheDocument();
   expect(screen.queryByText('Signed-in browser access for internal use.')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Task ID')).not.toBeInTheDocument();
 }
 
 async function assertWorkspaceBoardNavigation() {
