@@ -2,6 +2,11 @@
 const crypto = require('node:crypto');
 const { createPgPoolFromEnv } = require('../lib/audit');
 const {
+  PASSWORD_HASH_VERSION,
+  hashPassword,
+  validatePasswordPolicy,
+} = require('../lib/auth/credentials');
+const {
   createRegistrationAuthService,
   normalizeEmail,
   normalizeRoles,
@@ -11,7 +16,16 @@ const DEFAULT_ADMIN_TENANT_ID = 'tenant-int';
 const DEFAULT_ADMIN_ROLES = 'admin,pm';
 const DEFAULT_ADMIN_STATUS = 'active';
 const DEFAULT_OPERATOR_ACTOR_ID = 'production-auth-operator';
-const REQUIRED_ENV = ['DATABASE_URL', 'AUTH_ADMIN_EMAIL', 'AUTH_ADMIN_ACTOR_ID'];
+const REQUIRED_ENV = ['DATABASE_URL', 'AUTH_ADMIN_EMAIL'];
+
+function parseBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
 
 function hasFlag(argv, flag) {
   return argv.includes(flag);
@@ -26,6 +40,10 @@ function parseArgs(argv = process.argv.slice(2)) {
 
 function stableHash(value) {
   return crypto.createHash('sha256').update(String(value || '')).digest('hex').slice(0, 16);
+}
+
+function actorIdForEmail(email) {
+  return email ? `user-${stableHash(email)}` : '';
 }
 
 function normalizeStatus(value = DEFAULT_ADMIN_STATUS) {
@@ -79,14 +97,26 @@ function readAdminSeedInput(env = process.env) {
   errors.push(...roleErrors, ...statusErrors);
 
   const tenantId = String(env.AUTH_ADMIN_TENANT_ID || DEFAULT_ADMIN_TENANT_ID).trim();
-  const actorId = String(env.AUTH_ADMIN_ACTOR_ID || '').trim();
+  const actorId = String(env.AUTH_ADMIN_ACTOR_ID || '').trim() || actorIdForEmail(email);
   if (!tenantId) errors.push('AUTH_ADMIN_TENANT_ID must not be empty.');
-  if (!actorId && !missing.includes('AUTH_ADMIN_ACTOR_ID')) {
-    errors.push('AUTH_ADMIN_ACTOR_ID must not be empty.');
-  }
 
   const operatorTenantId = String(env.AUTH_SEED_OPERATOR_TENANT_ID || tenantId).trim();
   const operatorActorId = String(env.AUTH_SEED_OPERATOR_ACTOR_ID || DEFAULT_OPERATOR_ACTOR_ID).trim();
+  const seedCredential = parseBoolean(env.AUTH_ADMIN_SEED_CREDENTIAL, false);
+  const initialPassword = String(env.AUTH_ADMIN_INITIAL_PASSWORD || '');
+  if (seedCredential && !initialPassword) {
+    errors.push('AUTH_ADMIN_INITIAL_PASSWORD is required when AUTH_ADMIN_SEED_CREDENTIAL=true.');
+  }
+  if (!seedCredential && initialPassword) {
+    errors.push('AUTH_ADMIN_SEED_CREDENTIAL=true is required when AUTH_ADMIN_INITIAL_PASSWORD is provided.');
+  }
+  if (seedCredential && initialPassword) {
+    try {
+      validatePasswordPolicy(initialPassword);
+    } catch (error) {
+      errors.push(`AUTH_ADMIN_INITIAL_PASSWORD is invalid: ${error.message}`);
+    }
+  }
 
   return {
     ok: errors.length === 0,
@@ -104,6 +134,10 @@ function readAdminSeedInput(env = process.env) {
     operator: {
       tenantId: operatorTenantId,
       actorId: operatorActorId,
+    },
+    credential: {
+      seed: seedCredential,
+      initialPassword,
     },
   };
 }
@@ -125,6 +159,11 @@ function redactedSeedPlan(input, options = {}) {
       tenantId: input.operator.tenantId,
       actorId: input.operator.actorId,
     },
+    credential: {
+      seed: Boolean(input.credential.seed),
+      passwordConfigured: Boolean(input.credential.initialPassword),
+      passwordHashVersion: input.credential.seed ? PASSWORD_HASH_VERSION : null,
+    },
   };
 }
 
@@ -144,10 +183,24 @@ function buildAdminSeedPlan(env = process.env, argv = process.argv.slice(2)) {
 async function applyAdminSeed(input, dependencies = {}) {
   const poolFactory = dependencies.poolFactory || createPgPoolFromEnv;
   const serviceFactory = dependencies.serviceFactory || createRegistrationAuthService;
-  const pool = poolFactory(input.databaseUrl);
+  const pool = dependencies.pool || poolFactory(input.databaseUrl);
+  const ownsPool = !dependencies.pool;
   try {
     const service = serviceFactory({ pool });
     const user = await service.upsertUser(input.user, input.operator);
+    let credentialSeeded = false;
+    if (input.credential.seed) {
+      if (!service.store || typeof service.store.upsertCredential !== 'function') {
+        throw new Error('Registration auth store does not support credential seeding.');
+      }
+      await service.store.upsertCredential({
+        userId: user.userId,
+        passwordHash: hashPassword(input.credential.initialPassword),
+        passwordHashVersion: PASSWORD_HASH_VERSION,
+        forceRehash: false,
+      });
+      credentialSeeded = true;
+    }
     return {
       user,
       redactedResult: {
@@ -158,10 +211,14 @@ async function applyAdminSeed(input, dependencies = {}) {
         roles: user.roles,
         status: user.status,
         updatedAt: user.updatedAt,
+        credential: {
+          seeded: credentialSeeded,
+          passwordHashVersion: credentialSeeded ? PASSWORD_HASH_VERSION : null,
+        },
       },
     };
   } finally {
-    if (pool && typeof pool.end === 'function') {
+    if (ownsPool && pool && typeof pool.end === 'function') {
       await pool.end();
     }
   }
@@ -175,17 +232,20 @@ Seeds or updates the first production registration admin user.
 Required env:
   DATABASE_URL
   AUTH_ADMIN_EMAIL
-  AUTH_ADMIN_ACTOR_ID
 
 Optional env:
   AUTH_ADMIN_TENANT_ID        default: ${DEFAULT_ADMIN_TENANT_ID}
+  AUTH_ADMIN_ACTOR_ID         default: derived stable user-<email-hash>
   AUTH_ADMIN_ROLES            default: ${DEFAULT_ADMIN_ROLES}
   AUTH_ADMIN_STATUS           default: ${DEFAULT_ADMIN_STATUS}
   AUTH_ADMIN_USER_ID          optional stable user_id
+  AUTH_ADMIN_SEED_CREDENTIAL  set true to create/reset a password credential
+  AUTH_ADMIN_INITIAL_PASSWORD required when AUTH_ADMIN_SEED_CREDENTIAL=true
   AUTH_SEED_OPERATOR_ACTOR_ID default: ${DEFAULT_OPERATOR_ACTOR_ID}
   AUTH_SEED_OPERATOR_TENANT_ID default: AUTH_ADMIN_TENANT_ID
 
-Default mode is dry-run. Add --apply to write to auth_users.
+Default mode is dry-run. Add --apply to write to auth_users and, when enabled,
+auth_credentials. Passwords and database URLs are never printed.
 `);
 }
 
@@ -245,4 +305,5 @@ module.exports = {
   redactedSeedPlan,
   runCli,
   stableHash,
+  parseBoolean,
 };
