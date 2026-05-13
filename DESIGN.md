@@ -539,6 +539,7 @@ The app information architecture is workflow-first. Navigation must keep operati
 
 - Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
 - The left rail may include global task search when it routes into `/tasks` and uses the same search query and filter semantics as the workspace toolbar. It should not introduce a separate result model.
+- Exact task lookup belongs in task links, task detail routes, or the left-rail search. Page headers must not reintroduce a duplicate Task ID jump box.
 - Session identity belongs in muted nav or session controls, not a page-header diagnostic card, so workspace headers remain focused on route utilities and current view context.
 - `/tasks` is the primary task workspace for delivery board and list scanning. It must keep owner, priority, status, waiting state, and next action visible without hover-only access.
 - `/tasks/create` is the intake route. It creates an Intake Draft and keeps the operator in a local success state with links to task detail and the workspace.
