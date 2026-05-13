@@ -24,33 +24,33 @@ function agentPayload() {
   };
 }
 
-function taskPayload() {
+function taskPayload(items = [
+  {
+    task_id: 'TSK-DRAFT',
+    tenant_id: 'tenant-a',
+    title: 'Shape raw operator notes',
+    priority: null,
+    current_stage: 'DRAFT',
+    current_owner: 'pm',
+    owner: { actor_id: 'pm', display_name: 'PM' },
+    intake_draft: true,
+    waiting_state: 'task_refinement',
+    next_required_action: 'PM refinement required',
+    freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
+  },
+  {
+    task_id: 'TSK-APPROVAL',
+    tenant_id: 'tenant-a',
+    title: 'Await operator approval',
+    priority: 'P2',
+    current_stage: 'TODO',
+    current_owner: null,
+    owner: null,
+    freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:01:00.000Z' },
+  },
+]) {
   return {
-    items: [
-      {
-        task_id: 'TSK-DRAFT',
-        tenant_id: 'tenant-a',
-        title: 'Shape raw operator notes',
-        priority: null,
-        current_stage: 'DRAFT',
-        current_owner: 'pm',
-        owner: { actor_id: 'pm', display_name: 'PM' },
-        intake_draft: true,
-        waiting_state: 'task_refinement',
-        next_required_action: 'PM refinement required',
-        freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:00:00.000Z' },
-      },
-      {
-        task_id: 'TSK-APPROVAL',
-        tenant_id: 'tenant-a',
-        title: 'Await operator approval',
-        priority: 'P2',
-        current_stage: 'TODO',
-        current_owner: null,
-        owner: null,
-        freshness: { status: 'fresh', last_updated_at: '2026-04-01T15:01:00.000Z' },
-      },
-    ],
+    items,
   };
 }
 
@@ -69,7 +69,7 @@ function setupNavigationSession() {
   });
 }
 
-function installNavigationFetch() {
+function installNavigationFetch(tasks = taskPayload()) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url) => {
@@ -78,7 +78,7 @@ function installNavigationFetch() {
         return response(agentPayload());
       }
       if (href.endsWith('/tasks')) {
-        return response(taskPayload());
+        return response(tasks);
       }
       throw new Error(`Unhandled fetch URL in navigation test: ${href}`);
     }),
@@ -138,5 +138,25 @@ describe('App navigation workspace UX', () => {
 
     await screen.findByRole('heading', { name: 'PM Inbox' });
     expect(window.location.pathname).toBe('/inbox/pm');
+  });
+
+  it('switches from list to Kanban with selected state, route state, and an empty-board state', async () => {
+    vi.unstubAllGlobals();
+    installNavigationFetch(taskPayload([]));
+    window.history.pushState({}, '', '/tasks?view=list');
+
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'Task workspace' });
+    expect(screen.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
+
+    const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
+    fireEvent.click(within(primaryNav).getByRole('button', { name: 'Kanban board' }));
+
+    await screen.findByRole('heading', { name: 'No tasks on the Kanban board' });
+    expect(window.location.pathname).toBe('/tasks');
+    expect(window.location.search).toContain('view=board');
+    expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
