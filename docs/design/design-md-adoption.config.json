@@ -4,7 +4,7 @@
   "audit_document": "docs/design/DESIGN_MD_ADOPTION_AUDIT.md",
   "audit": {
     "date": "2026-05-09",
-    "summary": "`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, TaskCreationForm tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual, typography, and motion value enforcement for all authored UI CSS, semantic token contrast regression coverage, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards, and screenshot smoke coverage."
+    "summary": "`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, dark TaskCreationForm and task-create page tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual, typography, and motion value enforcement for all authored UI CSS, semantic token contrast regression coverage, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards, and screenshot smoke coverage."
   },
   "exceptionBudget": 0,
   "generated_outputs": [
@@ -50,7 +50,7 @@
       "uses_design_tokens": "yes",
       "enforcement_covered": true,
       "paths": ["src/features/task-creation/TaskCreationForm.module.css"],
-      "notes": "`src/features/task-creation/TaskCreationForm.module.css` imports `TaskCreationForm.tokens.css`; the generated token file is declared in `repo-contract.yaml`; enforcement scans the authored module."
+      "notes": "`src/features/task-creation/TaskCreationForm.module.css` imports `TaskCreationForm.tokens.css`; dark task-create page semantics are defined in `DESIGN.md` and consumed by `src/app/styles.css`; the generated token file is declared in `repo-contract.yaml`; enforcement scans the authored module."
     },
     {
       "area": "Task detail modules",
@@ -139,7 +139,7 @@
     },
     "visual_regression": {
       "status": "implemented_smoke",
-      "reason": "Existing browser screenshots cover task detail. The design-token smoke spec covers the primary app screen, Button states, TaskCreationForm token output, task-detail states, and mobile task-detail layout. This is smoke coverage, not a full pixel-baseline system."
+      "reason": "Existing browser screenshots cover task detail. The design-token smoke spec covers the primary app screen, Button states, TaskCreationForm token output, the dark task-create page shell, task-detail states, and mobile task-detail layout. This is smoke coverage, not a full pixel-baseline system."
     }
   },
   "acceptance_criteria": [
@@ -176,7 +176,7 @@
     {
       "criterion": "Screenshot smoke tests cover at least the primary screen and migrated components.",
       "status": "pass",
-      "evidence": "`tests/browser/design-token-operationalization.browser.spec.ts` captures primary app, Button states, TaskCreationForm token output, task-detail state panels, and mobile task-detail layout."
+      "evidence": "`tests/browser/design-token-operationalization.browser.spec.ts` captures primary app, Button states, TaskCreationForm token output, the dark task-create page shell, task-detail state panels, and mobile task-detail layout."
     },
     {
       "criterion": "`make verify` passes.",

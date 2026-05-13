@@ -93,6 +93,20 @@ test('generate-design-adoption-audit --check fails stale audit docs', () => {
   assert.match(result.stderr, /Design adoption audit is stale/);
 });
 
+test('generate-design-tokens uses component border color for task creation inputs', () => {
+  const root = makeTempDir('governance-design-token-task-create-border-');
+  writeFile(root, 'DESIGN.md', fs.readFileSync(path.join(process.cwd(), 'DESIGN.md'), 'utf8'));
+
+  const result = runScriptWithArgs('generate-design-tokens.mjs', [], root);
+  assert.equal(result.status, 0, result.stderr);
+
+  const formTokens = fs.readFileSync(path.join(root, 'src/features/task-creation/TaskCreationForm.tokens.css'), 'utf8');
+  const globalTokens = fs.readFileSync(path.join(root, 'src/app/design-tokens.css'), 'utf8');
+
+  assert.match(formTokens, /--task-creation-input-border: 1px solid #2B3648;/);
+  assert.match(globalTokens, /--design-component-task-creation-input-border-color: #2B3648;/);
+});
+
 test('generate-design-adoption-audit fails optional areas missing reason', () => {
   const root = makeTempDir('governance-design-audit-missing-reason-');
   writeFile(root, 'docs/design/design-md-adoption.config.json', JSON.stringify(minimalAuditConfig({
