@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildBoardColumns, mapAgentOptions, resolveOwnerPresentation, UNASSIGNED_FILTER_VALUE } from '../../src/app/task-owner.mjs';
+import { BOARD_STAGE_ORDER } from '../../src/app/work-lifecycle.mjs';
 import fixture from '../fixtures/board-owner/board-owner-states.json' with { type: 'json' };
 
 const agentLookup = new Map(mapAgentOptions(fixture.agents).map((agent) => [agent.id, agent]));
@@ -31,11 +32,12 @@ describe('board owner card rendering', () => {
     const columns = buildBoardColumns(visibleItems, visibleItems, agentLookup);
     const cards = columns.flatMap((column) => column.items);
 
-    expect(columns.map((column) => column.stage)).toEqual(['BACKLOG', 'TODO', 'IMPLEMENT', 'REVIEW']);
-    expect(columns.map((column) => column.stageLabel)).toEqual([
+    expect(columns.map((column) => column.stage)).toEqual(BOARD_STAGE_ORDER);
+    expect(columns.filter((column) => column.items.length).map((column) => column.stage)).toEqual(['BACKLOG', 'TODO', 'IMPLEMENT', 'REVIEW']);
+    expect(columns.filter((column) => column.items.length).map((column) => column.stageLabel)).toEqual([
       'Task Refinement',
       'Operator Approval',
-      'Implementation',
+      'Ready for Implementation',
       'QA Verification',
     ]);
     expect(cards).toHaveLength(5);

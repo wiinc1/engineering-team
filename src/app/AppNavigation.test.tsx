@@ -104,6 +104,54 @@ function assertBoardIntakeGuidance() {
   ).toBeInTheDocument();
 }
 
+async function assertWorkspaceBoardNavigation() {
+  render(<App />);
+
+  await screen.findByRole('heading', { name: 'Task workspace' });
+  const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
+  const secondaryNav = screen.getByRole('group', { name: 'Secondary workspace navigation' });
+
+  assertWorkspaceNavigation(primaryNav, secondaryNav);
+  expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByLabelText('Intake Draft column')).toBeInTheDocument();
+  expect(screen.getByLabelText('Operator Approval column')).toBeInTheDocument();
+  expect(within(screen.getByLabelText('Intake Draft column')).getByText('PM refinement required')).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
+
+  await screen.findByText('1 unassigned cards shown.');
+  assertBoardIntakeGuidance();
+
+  fireEvent.change(within(secondaryNav).getByLabelText('Role inboxes'), { target: { value: 'pm' } });
+
+  await screen.findByRole('heading', { name: 'PM Inbox' });
+  expect(window.location.pathname).toBe('/inbox/pm');
+}
+
+async function assertKanbanButtonRouteState() {
+  vi.unstubAllGlobals();
+  installNavigationFetch(taskPayload([]));
+  window.history.pushState({}, '', '/tasks?view=list');
+
+  render(<App />);
+
+  await screen.findByRole('heading', { name: 'Task workspace' });
+  expect(screen.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
+
+  const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
+  fireEvent.click(within(primaryNav).getByRole('button', { name: 'Kanban board' }));
+
+  await screen.findByLabelText('Task board');
+  expect(window.location.pathname).toBe('/tasks');
+  expect(window.location.search).toContain('view=board');
+  expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+  expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('heading', { name: 'Intake Draft' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Operator Approval' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Task Refinement column')).toHaveTextContent('0');
+  expect(screen.getByLabelText('Task Refinement column')).toHaveTextContent('No matching tasks in this column.');
+}
+
 describe('App navigation workspace UX', () => {
   beforeEach(() => {
     setupNavigationSession();
@@ -117,46 +165,10 @@ describe('App navigation workspace UX', () => {
   });
 
   it('frames tasks as a workspace with lifecycle board labels and grouped role inbox navigation', async () => {
-    render(<App />);
-
-    await screen.findByRole('heading', { name: 'Task workspace' });
-    const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
-    const secondaryNav = screen.getByRole('group', { name: 'Secondary workspace navigation' });
-
-    assertWorkspaceNavigation(primaryNav, secondaryNav);
-    expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByLabelText('Intake Draft column')).toBeInTheDocument();
-    expect(screen.getByLabelText('Operator Approval column')).toBeInTheDocument();
-    expect(within(screen.getByLabelText('Intake Draft column')).getByText('PM refinement required')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
-
-    await screen.findByText('1 unassigned cards shown.');
-    assertBoardIntakeGuidance();
-
-    fireEvent.change(within(secondaryNav).getByLabelText('Role inboxes'), { target: { value: 'pm' } });
-
-    await screen.findByRole('heading', { name: 'PM Inbox' });
-    expect(window.location.pathname).toBe('/inbox/pm');
+    await assertWorkspaceBoardNavigation();
   });
 
-  it('switches from list to Kanban with selected state, route state, and an empty-board state', async () => {
-    vi.unstubAllGlobals();
-    installNavigationFetch(taskPayload([]));
-    window.history.pushState({}, '', '/tasks?view=list');
-
-    render(<App />);
-
-    await screen.findByRole('heading', { name: 'Task workspace' });
-    expect(screen.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
-
-    const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
-    fireEvent.click(within(primaryNav).getByRole('button', { name: 'Kanban board' }));
-
-    await screen.findByRole('heading', { name: 'No tasks on the Kanban board' });
-    expect(window.location.pathname).toBe('/tasks');
-    expect(window.location.search).toContain('view=board');
-    expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
-    expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+  it('switches from list to Kanban with selected state, route state, and empty board columns', async () => {
+    await assertKanbanButtonRouteState();
   });
 });

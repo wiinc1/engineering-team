@@ -175,6 +175,12 @@ Failing QA runs generate a packaged engineer-facing artifact containing:
 - Inactivity reassignment can create a dedicated governance review task typed as `governance_review`.
 - Governance review tasks are operational follow-up artifacts, not standard delivery work, and should be shown on a dedicated governance review surface rather than in normal delivery queues.
 
+## Kanban lane visibility
+
+- The task workspace Kanban board renders the standard delivery lanes even when a lane has no matching cards.
+- Empty lanes keep their visible heading, count, and empty-state copy so owner filters and new workspaces do not hide the workflow path.
+- Stage labels used in lane headings should remain distinct from one another to avoid ambiguous screen-reader and heading navigation.
+
 ## SRE monitoring workflow
 
 ### Monitoring start requirements
