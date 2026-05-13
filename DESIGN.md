@@ -526,7 +526,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
-- App nav: persistent desktop left rail with compact stacked route groups, a primary create action, role inbox control, and muted session controls. On mobile it collapses back into a horizontally scrollable top navigation strip.
+- App nav: persistent desktop left rail with compact stacked route groups, visible selected state for the active Task workspace or Kanban board route, a primary create action, role inbox control, and muted session controls. On mobile it collapses back into a horizontally scrollable top navigation strip.
 - Board columns and task cards: keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.

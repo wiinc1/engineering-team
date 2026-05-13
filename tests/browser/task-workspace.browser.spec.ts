@@ -259,6 +259,27 @@ async function readNavigationStyles(page) {
   });
 }
 
+async function readPrimaryWorkspaceButtonStyles(page) {
+  return page.getByRole('group', { name: 'Primary task navigation' }).evaluate((nav) => {
+    const buttons = [...nav.querySelectorAll('button')];
+    const taskWorkspace = buttons.find((button) => button.textContent?.trim() === 'Task workspace');
+    const kanbanBoard = buttons.find((button) => button.textContent?.trim() === 'Kanban board');
+    const taskWorkspaceStyle = taskWorkspace ? window.getComputedStyle(taskWorkspace) : null;
+    const kanbanBoardStyle = kanbanBoard ? window.getComputedStyle(kanbanBoard) : null;
+
+    return {
+      taskWorkspaceBackground: taskWorkspaceStyle?.backgroundColor || '',
+      taskWorkspaceBorderLeftColor: taskWorkspaceStyle?.borderLeftColor || '',
+      taskWorkspaceBorderLeftWidth: taskWorkspaceStyle?.borderLeftWidth || '',
+      taskWorkspacePressed: taskWorkspace?.getAttribute('aria-pressed') || '',
+      kanbanBoardBackground: kanbanBoardStyle?.backgroundColor || '',
+      kanbanBoardBorderLeftColor: kanbanBoardStyle?.borderLeftColor || '',
+      kanbanBoardBorderLeftWidth: kanbanBoardStyle?.borderLeftWidth || '',
+      kanbanBoardPressed: kanbanBoard?.getAttribute('aria-pressed') || '',
+    };
+  });
+}
+
 async function assertOwnerFilterEmptyState(page) {
   await page.getByLabel('Owner filter').selectOption('pm');
   await expect(page.getByText('1 cards shown for PM · PM.')).toBeVisible();
@@ -325,12 +346,25 @@ test('switches from task workspace list into the Kanban board with selected rout
   await expect(page.getByRole('table')).toBeVisible();
 
   const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
+  const listButtonStyles = await readPrimaryWorkspaceButtonStyles(page);
+  expect(listButtonStyles.taskWorkspacePressed).toBe('true');
+  expect(listButtonStyles.kanbanBoardPressed).toBe('false');
+  expect(listButtonStyles.taskWorkspaceBackground).not.toBe(listButtonStyles.kanbanBoardBackground);
+  expect(listButtonStyles.taskWorkspaceBorderLeftColor).not.toBe(listButtonStyles.kanbanBoardBorderLeftColor);
+  expect(listButtonStyles.taskWorkspaceBorderLeftWidth).toBe('3px');
+
   await primaryNav.getByRole('button', { name: 'Kanban board' }).click();
 
   await expect(page).toHaveURL(/\/tasks\?view=board$/);
   await assertWorkspaceBoard(page);
   await expect(page.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
   await expect(primaryNav.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+  const boardButtonStyles = await readPrimaryWorkspaceButtonStyles(page);
+  expect(boardButtonStyles.taskWorkspacePressed).toBe('false');
+  expect(boardButtonStyles.kanbanBoardPressed).toBe('true');
+  expect(boardButtonStyles.kanbanBoardBackground).not.toBe(boardButtonStyles.taskWorkspaceBackground);
+  expect(boardButtonStyles.kanbanBoardBorderLeftColor).not.toBe(boardButtonStyles.taskWorkspaceBorderLeftColor);
+  expect(boardButtonStyles.kanbanBoardBorderLeftWidth).toBe('3px');
 });
 
 test('creates an intake draft from the workspace and opens the created task with recovery actions', async ({ page }) => {
