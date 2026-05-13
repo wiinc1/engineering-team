@@ -42,13 +42,7 @@ exports[`task creation visual baseline > matches the dark success state with the
         Dark title-first intake
       </h2>
       <p>
-        TSK-DARK
-         is ready for PM refinement. Status:
-        DRAFT
-        . Next step:
-
-        PM refinement required
-        .
+        TSK-DARK is ready for PM refinement. Status: DRAFT. Next step: PM refinement required.
       </p>
       <div
         class="task-create-page__intake-summary"

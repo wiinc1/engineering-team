@@ -98,6 +98,9 @@ function CreatedTaskSuccess({
   onCreateAnother: () => void;
 }) {
   const successRef = React.useRef<HTMLElement | null>(null);
+  const summaryText = `${createdTask.taskId || 'New task'} is ready for PM refinement. Status: ${
+    createdTask.status
+  }. Next step: ${createdTask.nextRequiredAction}.`;
 
   React.useEffect(() => {
     successRef.current?.focus();
@@ -108,10 +111,7 @@ function CreatedTaskSuccess({
       <div className="task-create-page__success-copy">
         <p className="eyebrow">Intake Draft created</p>
         <h2>{createdTask.title}</h2>
-        <p>
-          {createdTask.taskId || 'New task'} is ready for PM refinement. Status: {createdTask.status}. Next step:{' '}
-          {createdTask.nextRequiredAction}.
-        </p>
+        <p>{summaryText}</p>
         <CreatedTaskDetails createdTask={createdTask} />
       </div>
       <div className="task-create-page__success-actions">
