@@ -56,6 +56,7 @@ function taskPayload(items = [
 
 function setupNavigationSession() {
   clearBrowserSessionConfig();
+  window.localStorage.removeItem('engineering-team-nav-open');
   window.history.pushState({}, '', '/tasks');
   writeBrowserSessionConfig({
     apiBaseUrl: '',
@@ -180,6 +181,75 @@ async function assertSidebarTaskSearch() {
   expect(screen.getByLabelText('Intake Draft column')).not.toHaveTextContent('Shape raw operator notes');
 }
 
+async function assertSlidingNavigationPanel() {
+  render(<App />);
+
+  await screen.findByRole('heading', { name: 'Task workspace' });
+
+  const shell = screen.getByRole('main');
+  const collapseButton = screen.getByRole('button', { name: 'Collapse navigation' });
+  const appNav = screen.getByRole('navigation', { name: 'Primary navigation' });
+
+  expect(shell).not.toHaveClass('app-shell--nav-collapsed');
+  expect(collapseButton).toHaveAttribute('aria-controls', 'primary-navigation');
+  expect(collapseButton).toHaveAttribute('aria-expanded', 'true');
+  expect(appNav).toHaveAttribute('id', 'primary-navigation');
+  expect(appNav).toHaveAttribute('aria-hidden', 'false');
+
+  fireEvent.click(collapseButton);
+
+  const openButton = screen.getByRole('button', { name: 'Open navigation' });
+  const hiddenNav = document.getElementById('primary-navigation');
+
+  expect(shell).toHaveClass('app-shell--nav-collapsed');
+  expect(openButton).toHaveAttribute('aria-expanded', 'false');
+  expect(hiddenNav).toHaveClass('app-nav--collapsed');
+  expect(hiddenNav).toHaveAttribute('aria-hidden', 'true');
+  expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('false');
+
+  fireEvent.click(openButton);
+
+  expect(screen.getByRole('button', { name: 'Collapse navigation' })).toHaveAttribute('aria-expanded', 'true');
+  expect(shell).not.toHaveClass('app-shell--nav-collapsed');
+  expect(screen.getByRole('navigation', { name: 'Primary navigation' })).not.toHaveClass('app-nav--collapsed');
+  expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('true');
+}
+
+async function assertMobileNavigationDefaultsCollapsed() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: query === '(max-width: 800px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+
+  render(<App />);
+
+  await screen.findByRole('heading', { name: 'Task workspace' });
+
+  const shell = screen.getByRole('main');
+  const openButton = screen.getByRole('button', { name: 'Open navigation' });
+  const hiddenNav = document.getElementById('primary-navigation');
+
+  expect(shell).toHaveClass('app-shell--nav-collapsed');
+  expect(openButton).toHaveAttribute('aria-controls', 'primary-navigation');
+  expect(openButton).toHaveAttribute('aria-expanded', 'false');
+  expect(hiddenNav).toHaveAttribute('aria-hidden', 'true');
+
+  fireEvent.click(openButton);
+
+  expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Collapse navigation' })).toHaveAttribute('aria-expanded', 'true');
+  expect(window.localStorage.getItem('engineering-team-nav-open')).toBe('true');
+}
+
 describe('App navigation workspace UX', () => {
   beforeEach(() => {
     setupNavigationSession();
@@ -189,6 +259,7 @@ describe('App navigation workspace UX', () => {
   afterEach(() => {
     cleanup();
     clearBrowserSessionConfig();
+    window.localStorage.removeItem('engineering-team-nav-open');
     vi.unstubAllGlobals();
   });
 
@@ -202,5 +273,13 @@ describe('App navigation workspace UX', () => {
 
   it('searches task workspace results from the sidebar', async () => {
     await assertSidebarTaskSearch();
+  });
+
+  it('collapses and reopens the sliding left navigation panel', async () => {
+    await assertSlidingNavigationPanel();
+  });
+
+  it('defaults the mobile sliding navigation drawer closed until opened', async () => {
+    await assertMobileNavigationDefaultsCollapsed();
   });
 });

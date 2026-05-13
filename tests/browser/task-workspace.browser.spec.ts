@@ -238,7 +238,23 @@ async function assertWorkspaceBoard(page) {
   await expect(page.getByLabel('SRE Verification column')).toContainText('Verify release telemetry');
 }
 
+async function openNavigationIfCollapsed(page) {
+  const openButton = page.getByRole('button', { name: 'Open navigation' });
+  if (await openButton.isVisible().catch(() => false)) {
+    await openButton.click();
+  }
+}
+
+async function closeNavigationIfOpen(page) {
+  const collapseButton = page.getByRole('button', { name: 'Collapse navigation' });
+  if (await collapseButton.isVisible().catch(() => false)) {
+    await collapseButton.click();
+  }
+}
+
 async function assertWorkspaceNavigation(page) {
+  await openNavigationIfCollapsed(page);
+
   const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
   const secondaryNav = page.getByRole('group', { name: 'Secondary workspace navigation' });
 
@@ -340,6 +356,7 @@ test('renders the task workspace board with scannable columns and mobile overflo
   expect(navStyles.newTaskBackground).not.toBe(navStyles.pmOverviewBackground);
   expect(navStyles.pmOverviewFontSize).toBe('13.44px');
 
+  await closeNavigationIfOpen(page);
   await assertOwnerFilterEmptyState(page);
   await assertMobileBoardOverflow(page);
 });
@@ -348,6 +365,7 @@ test('switches from task workspace list into the Kanban board with selected rout
   await page.goto('/tasks?view=list', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('table')).toBeVisible();
+  await openNavigationIfCollapsed(page);
 
   const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
   const listButtonStyles = await readPrimaryWorkspaceButtonStyles(page);
