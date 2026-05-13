@@ -319,6 +319,20 @@ test('renders the task workspace board with scannable columns and mobile overflo
   await assertMobileBoardOverflow(page);
 });
 
+test('switches from task workspace list into the Kanban board with selected route state', async ({ page }) => {
+  await page.goto('/tasks?view=list', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('table')).toBeVisible();
+
+  const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
+  await primaryNav.getByRole('button', { name: 'Kanban board' }).click();
+
+  await expect(page).toHaveURL(/\/tasks\?view=board$/);
+  await assertWorkspaceBoard(page);
+  await expect(page.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+  await expect(primaryNav.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('creates an intake draft from the workspace and opens the created task with recovery actions', async ({ page }) => {
   await page.goto('/tasks/create', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Add a new task' })).toBeVisible();
