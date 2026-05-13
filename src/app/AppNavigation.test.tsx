@@ -104,6 +104,15 @@ function assertBoardIntakeGuidance() {
   ).toBeInTheDocument();
 }
 
+function assertCompactSessionNavigation() {
+  const appNav = screen.getByRole('navigation', { name: 'Primary navigation' });
+
+  expect(within(appNav).getByText(/pm-1.*tenant-a/)).toBeInTheDocument();
+  expect(within(appNav).getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('Current session')).not.toBeInTheDocument();
+  expect(screen.queryByText('Signed-in browser access for internal use.')).not.toBeInTheDocument();
+}
+
 async function assertWorkspaceBoardNavigation() {
   render(<App />);
 
@@ -112,6 +121,7 @@ async function assertWorkspaceBoardNavigation() {
   const secondaryNav = screen.getByRole('group', { name: 'Secondary workspace navigation' });
 
   assertWorkspaceNavigation(primaryNav, secondaryNav);
+  assertCompactSessionNavigation();
   expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByLabelText('Intake Draft column')).toBeInTheDocument();
   expect(screen.getByLabelText('Operator Approval column')).toBeInTheDocument();
@@ -152,6 +162,23 @@ async function assertKanbanButtonRouteState() {
   expect(screen.getByLabelText('Task Refinement column')).toHaveTextContent('No matching tasks in this column.');
 }
 
+async function assertSidebarTaskSearch() {
+  render(<App />);
+
+  await screen.findByRole('heading', { name: 'Task workspace' });
+  const appNav = screen.getByRole('navigation', { name: 'Primary navigation' });
+  const taskSearch = within(appNav).getByRole('search', { name: 'Task search' });
+
+  fireEvent.change(within(taskSearch).getByLabelText('Search tasks'), { target: { value: 'approval' } });
+  fireEvent.click(within(taskSearch).getByRole('button', { name: 'Search' }));
+
+  await screen.findByText('1 cards shown.');
+  expect(window.location.pathname).toBe('/tasks');
+  expect(window.location.search).toContain('search=approval');
+  expect(screen.getByLabelText('Operator Approval column')).toHaveTextContent('Await operator approval');
+  expect(screen.getByLabelText('Intake Draft column')).not.toHaveTextContent('Shape raw operator notes');
+}
+
 describe('App navigation workspace UX', () => {
   beforeEach(() => {
     setupNavigationSession();
@@ -170,5 +197,9 @@ describe('App navigation workspace UX', () => {
 
   it('switches from list to Kanban with selected state, route state, and empty board columns', async () => {
     await assertKanbanButtonRouteState();
+  });
+
+  it('searches task workspace results from the sidebar', async () => {
+    await assertSidebarTaskSearch();
   });
 });

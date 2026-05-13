@@ -488,7 +488,7 @@ The interface uses Inter when available, then the system UI stack. Typography is
 
 Product screens should prioritize repeated operator workflows over presentation.
 
-- Main authenticated shell: desktop uses a persistent left navigation rail plus a full-width work surface. The rail owns global workflow navigation, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
+- Main authenticated shell: desktop uses a persistent left navigation rail plus a full-width work surface. The rail owns global workflow navigation, task search entry, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
 - The authenticated work surface should not be capped like a marketing page. It may use local gutters near `24px` on desktop and `12px-14px` on mobile, while tables and boards keep deliberate horizontal scrolling where needed.
 - Authenticated desktop layout should feel like a dense issue tracker: dark fixed rail, compact content header, sticky view toolbar, low-depth panels, and board/list views that prioritize scan speed over card prominence.
 - Auth shell: centered single-card workflow, max width around `480px`, with no marketing side panel.
@@ -526,7 +526,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
-- App nav: persistent desktop left rail with compact stacked route groups, visible selected state for the active Task workspace or Kanban board route, a primary create action, role inbox control, and muted session controls. On mobile it collapses back into a horizontally scrollable top navigation strip.
+- App nav: persistent desktop left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace or Kanban board route, a primary create action, role inbox control, and muted session controls. On mobile it collapses back into a horizontally scrollable top navigation strip.
 - Board columns and task cards: keep visible lane headings for the standard workflow columns even when a lane is empty, include count and empty-copy context for empty lanes, keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
@@ -538,6 +538,8 @@ Persistent component exceptions must be promoted into this file through the prot
 The app information architecture is workflow-first. Navigation must keep operational routes compact, role-aware, and recoverable after authentication.
 
 - Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
+- The left rail may include global task search when it routes into `/tasks` and uses the same search query and filter semantics as the workspace toolbar. It should not introduce a separate result model.
+- Session identity belongs in muted nav or session controls, not a page-header diagnostic card, so workspace headers remain focused on route utilities and current view context.
 - `/tasks` is the primary task workspace for delivery board and list scanning. It must keep owner, priority, status, waiting state, and next action visible without hover-only access.
 - `/tasks/create` is the intake route. It creates an Intake Draft and keeps the operator in a local success state with links to task detail and the workspace.
 - Task detail routes must keep the task summary, owner, stage, blockers, linked PRs, child task signal, activity, telemetry, governance, and assignment context in one scannable operational surface.

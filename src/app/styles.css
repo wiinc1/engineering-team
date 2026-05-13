@@ -252,6 +252,39 @@ button {
   min-width: 0;
 }
 
+.app-nav__search {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.app-nav__search label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--design-typography-body-sm-font-size);
+  font-weight: var(--design-typography-label-md-font-weight);
+}
+
+.app-nav__search input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--design-radius-control-sm);
+  padding: 7px 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.app-nav__search button {
+  justify-content: center;
+  border-color: var(--border-soft);
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
 .app-nav__secondary {
   padding-top: 12px;
   border-top: 1px solid var(--border-soft);
@@ -510,7 +543,7 @@ button {
 
 .page-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
   gap: 16px;
   align-items: start;
   margin-top: 0;
@@ -522,8 +555,8 @@ button {
 }
 
 .header-tools {
-  display: grid;
-  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
   align-items: start;
   width: 100%;
@@ -566,26 +599,7 @@ button {
 .route-form {
   grid-template-columns: minmax(120px, 1fr);
   align-items: end;
-}
-
-.session-form--summary {
-  align-content: start;
-}
-
-.session-form--summary .session-meta {
-  display: none;
-}
-
-.session-form--summary .session-form__header span {
-  max-width: 46ch;
-}
-
-.session-form--summary .session-meta div {
-  min-width: 0;
-}
-
-.session-form--summary .session-meta dd {
-  font-size: var(--design-typography-body-sm-font-size);
+  width: min(100%, 360px);
 }
 
 .route-form label,
@@ -1967,6 +1981,10 @@ button {
     display: grid;
     gap: 8px;
     padding-bottom: 2px;
+  }
+
+  .app-nav__search {
+    width: 100%;
   }
 
   .app-nav__primary,
