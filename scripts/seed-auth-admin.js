@@ -80,6 +80,64 @@ function readAdminStatus(env = process.env) {
   }
 }
 
+function readAdminEmail(env, errors) {
+  const email = normalizeEmail(env.AUTH_ADMIN_EMAIL);
+  if (email && !isValidEmail(email)) {
+    errors.push('AUTH_ADMIN_EMAIL must be a valid email address.');
+  }
+  return email;
+}
+
+function readAdminTenantId(env, errors) {
+  const tenantId = String(env.AUTH_ADMIN_TENANT_ID || DEFAULT_ADMIN_TENANT_ID).trim();
+  if (!tenantId) errors.push('AUTH_ADMIN_TENANT_ID must not be empty.');
+  return tenantId;
+}
+
+function readAdminUser(env, errors) {
+  const email = readAdminEmail(env, errors);
+  const tenantId = readAdminTenantId(env, errors);
+  const actorId = String(env.AUTH_ADMIN_ACTOR_ID || '').trim() || actorIdForEmail(email);
+  const { roles, errors: roleErrors } = readAdminRoles(env);
+  const { status, errors: statusErrors } = readAdminStatus(env);
+  errors.push(...roleErrors, ...statusErrors);
+
+  return {
+    email,
+    tenantId,
+    actorId,
+    roles,
+    status,
+    userId: String(env.AUTH_ADMIN_USER_ID || '').trim() || undefined,
+  };
+}
+
+function readSeedOperator(env, tenantId) {
+  return {
+    tenantId: String(env.AUTH_SEED_OPERATOR_TENANT_ID || tenantId).trim(),
+    actorId: String(env.AUTH_SEED_OPERATOR_ACTOR_ID || DEFAULT_OPERATOR_ACTOR_ID).trim(),
+  };
+}
+
+function readSeedCredential(env, errors) {
+  const seed = parseBoolean(env.AUTH_ADMIN_SEED_CREDENTIAL, false);
+  const initialPassword = String(env.AUTH_ADMIN_INITIAL_PASSWORD || '');
+  if (seed && !initialPassword) {
+    errors.push('AUTH_ADMIN_INITIAL_PASSWORD is required when AUTH_ADMIN_SEED_CREDENTIAL=true.');
+  }
+  if (!seed && initialPassword) {
+    errors.push('AUTH_ADMIN_SEED_CREDENTIAL=true is required when AUTH_ADMIN_INITIAL_PASSWORD is provided.');
+  }
+  if (seed && initialPassword) {
+    try {
+      validatePasswordPolicy(initialPassword);
+    } catch (error) {
+      errors.push(`AUTH_ADMIN_INITIAL_PASSWORD is invalid: ${error.message}`);
+    }
+  }
+  return { seed, initialPassword };
+}
+
 function readAdminSeedInput(env = process.env) {
   const missing = REQUIRED_ENV.filter(name => !String(env[name] || '').trim());
   const errors = [];
@@ -87,58 +145,18 @@ function readAdminSeedInput(env = process.env) {
     errors.push(`Missing required variables: ${missing.join(', ')}`);
   }
 
-  const email = normalizeEmail(env.AUTH_ADMIN_EMAIL);
-  if (email && !isValidEmail(email)) {
-    errors.push('AUTH_ADMIN_EMAIL must be a valid email address.');
-  }
-
-  const { roles, errors: roleErrors } = readAdminRoles(env);
-  const { status, errors: statusErrors } = readAdminStatus(env);
-  errors.push(...roleErrors, ...statusErrors);
-
-  const tenantId = String(env.AUTH_ADMIN_TENANT_ID || DEFAULT_ADMIN_TENANT_ID).trim();
-  const actorId = String(env.AUTH_ADMIN_ACTOR_ID || '').trim() || actorIdForEmail(email);
-  if (!tenantId) errors.push('AUTH_ADMIN_TENANT_ID must not be empty.');
-
-  const operatorTenantId = String(env.AUTH_SEED_OPERATOR_TENANT_ID || tenantId).trim();
-  const operatorActorId = String(env.AUTH_SEED_OPERATOR_ACTOR_ID || DEFAULT_OPERATOR_ACTOR_ID).trim();
-  const seedCredential = parseBoolean(env.AUTH_ADMIN_SEED_CREDENTIAL, false);
-  const initialPassword = String(env.AUTH_ADMIN_INITIAL_PASSWORD || '');
-  if (seedCredential && !initialPassword) {
-    errors.push('AUTH_ADMIN_INITIAL_PASSWORD is required when AUTH_ADMIN_SEED_CREDENTIAL=true.');
-  }
-  if (!seedCredential && initialPassword) {
-    errors.push('AUTH_ADMIN_SEED_CREDENTIAL=true is required when AUTH_ADMIN_INITIAL_PASSWORD is provided.');
-  }
-  if (seedCredential && initialPassword) {
-    try {
-      validatePasswordPolicy(initialPassword);
-    } catch (error) {
-      errors.push(`AUTH_ADMIN_INITIAL_PASSWORD is invalid: ${error.message}`);
-    }
-  }
+  const user = readAdminUser(env, errors);
+  const operator = readSeedOperator(env, user.tenantId);
+  const credential = readSeedCredential(env, errors);
 
   return {
     ok: errors.length === 0,
     missing,
     errors,
     databaseUrl: env.DATABASE_URL || '',
-    user: {
-      email,
-      tenantId,
-      actorId,
-      roles,
-      status,
-      userId: String(env.AUTH_ADMIN_USER_ID || '').trim() || undefined,
-    },
-    operator: {
-      tenantId: operatorTenantId,
-      actorId: operatorActorId,
-    },
-    credential: {
-      seed: seedCredential,
-      initialPassword,
-    },
+    user,
+    operator,
+    credential,
   };
 }
 

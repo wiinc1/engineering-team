@@ -92,6 +92,79 @@ async function withBootstrapLock(pool, callback, stdout = process.stdout) {
   }
 }
 
+function validateBootstrapDatabase(env, config, stderr) {
+  if (!(config.migrations || config.adminSeed) || hasValue(env, 'DATABASE_URL')) {
+    return null;
+  }
+
+  const errors = ['Missing required variables: DATABASE_URL'];
+  stderr.write('Deploy auth bootstrap validation failed.\n');
+  for (const error of errors) stderr.write(`${error}\n`);
+  return { ok: false, skipped: false, config, errors };
+}
+
+function createBootstrapSeedPlan(config, env, stdout, stderr) {
+  if (!config.adminSeed) {
+    return { ok: true, skipped: true, plan: null, env };
+  }
+
+  const seedPlan = createDeployAdminSeedPlan(env, stdout);
+  if (!seedPlan.ok) {
+    stderr.write('Deploy auth admin seed validation failed.\n');
+    for (const error of seedPlan.errors) stderr.write(`${error}\n`);
+  }
+  return seedPlan;
+}
+
+function resolveBootstrapRunners(dependencies, env) {
+  const poolFactory = dependencies.poolFactory || createPgPoolFromEnv;
+  const pool = dependencies.pool || poolFactory(env.DATABASE_URL);
+  return {
+    migrationRunner: dependencies.migrationRunner || runMigrations,
+    seedRunner: dependencies.seedRunner || applyAdminSeed,
+    pool,
+    ownsPool: !dependencies.pool,
+  };
+}
+
+async function runBootstrapMigrations(config, pool, migrationRunner, stdout) {
+  if (!config.migrations) {
+    stdout.write('Deploy auth migration step skipped by AUTH_DEPLOY_BOOTSTRAP_MIGRATIONS=false.\n');
+    return;
+  }
+
+  stdout.write('Applying deploy auth database migrations.\n');
+  await migrationRunner(pool, { baseDir: process.cwd() });
+}
+
+async function runBootstrapAdminSeed(config, seedPlan, seedRunner, pool, stdout) {
+  if (!config.adminSeed) {
+    stdout.write('Deploy auth admin seed step skipped by AUTH_DEPLOY_BOOTSTRAP_ADMIN_SEED=false.\n');
+    return null;
+  }
+  if (seedPlan.skipped) return null;
+
+  const plan = seedPlan.plan;
+  stdout.write(`${JSON.stringify(plan.redactedPlan, null, 2)}\n`);
+  const seedResult = await seedRunner(plan.input, { pool });
+  stdout.write(`${JSON.stringify({ applied: true, user: seedResult.redactedResult }, null, 2)}\n`);
+  return seedResult;
+}
+
+async function runBootstrapSteps({ pool, config, seedPlan, migrationRunner, seedRunner, stdout }) {
+  return withBootstrapLock(pool, async () => {
+    await runBootstrapMigrations(config, pool, migrationRunner, stdout);
+    const seedResult = await runBootstrapAdminSeed(config, seedPlan, seedRunner, pool, stdout);
+    return { ok: true, skipped: false, config, seedResult };
+  }, stdout);
+}
+
+async function closeOwnedPool(pool, ownsPool) {
+  if (ownsPool && pool && typeof pool.end === 'function') {
+    await pool.end();
+  }
+}
+
 async function runDeployAuthBootstrap(dependencies = {}) {
   const env = dependencies.env || process.env;
   const stdout = dependencies.stdout || process.stdout;
@@ -104,53 +177,20 @@ async function runDeployAuthBootstrap(dependencies = {}) {
     return { ok: true, skipped: true, config };
   }
 
-  if ((config.migrations || config.adminSeed) && !hasValue(env, 'DATABASE_URL')) {
-    const errors = ['Missing required variables: DATABASE_URL'];
-    stderr.write('Deploy auth bootstrap validation failed.\n');
-    for (const error of errors) stderr.write(`${error}\n`);
-    return { ok: false, skipped: false, config, errors };
-  }
+  const databaseError = validateBootstrapDatabase(env, config, stderr);
+  if (databaseError) return databaseError;
 
-  const seedPlan = config.adminSeed
-    ? createDeployAdminSeedPlan(env, stdout)
-    : { ok: true, skipped: true, plan: null, env };
+  const seedPlan = createBootstrapSeedPlan(config, env, stdout, stderr);
   if (config.adminSeed && !seedPlan.ok) {
-    stderr.write('Deploy auth admin seed validation failed.\n');
-    for (const error of seedPlan.errors) stderr.write(`${error}\n`);
     return { ok: false, skipped: false, config, errors: seedPlan.errors };
   }
 
-  const poolFactory = dependencies.poolFactory || createPgPoolFromEnv;
-  const migrationRunner = dependencies.migrationRunner || runMigrations;
-  const seedRunner = dependencies.seedRunner || applyAdminSeed;
-  const pool = dependencies.pool || poolFactory(env.DATABASE_URL);
-  const ownsPool = !dependencies.pool;
+  const runners = resolveBootstrapRunners(dependencies, env);
 
   try {
-    return await withBootstrapLock(pool, async () => {
-      if (config.migrations) {
-        stdout.write('Applying deploy auth database migrations.\n');
-        await migrationRunner(pool, { baseDir: process.cwd() });
-      } else {
-        stdout.write('Deploy auth migration step skipped by AUTH_DEPLOY_BOOTSTRAP_MIGRATIONS=false.\n');
-      }
-
-      let seedResult = null;
-      if (config.adminSeed && !seedPlan.skipped) {
-        const plan = seedPlan.plan;
-        stdout.write(`${JSON.stringify(plan.redactedPlan, null, 2)}\n`);
-        seedResult = await seedRunner(plan.input, { pool });
-        stdout.write(`${JSON.stringify({ applied: true, user: seedResult.redactedResult }, null, 2)}\n`);
-      } else if (!config.adminSeed) {
-        stdout.write('Deploy auth admin seed step skipped by AUTH_DEPLOY_BOOTSTRAP_ADMIN_SEED=false.\n');
-      }
-
-      return { ok: true, skipped: false, config, seedResult };
-    }, stdout);
+    return await runBootstrapSteps({ ...runners, config, seedPlan, stdout });
   } finally {
-    if (ownsPool && pool && typeof pool.end === 'function') {
-      await pool.end();
-    }
+    await closeOwnedPool(runners.pool, runners.ownsPool);
   }
 }
 

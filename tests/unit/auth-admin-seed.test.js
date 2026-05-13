@@ -138,22 +138,18 @@ test('auth admin seed dry-run does not open a database pool', async () => {
   assert.match(output.join(''), /Dry-run only/);
 });
 
-test('auth admin seed apply path upserts through the registration service and closes the pool', async () => {
-  let poolClosed = false;
-  let receivedUser = null;
-  let receivedOperator = null;
-  const input = readAdminSeedInput(VALID_ENV);
-  const result = await applyAdminSeed(input, {
+function createApplySeedHarness(state) {
+  return {
     poolFactory: connectionString => {
       assert.equal(connectionString, VALID_ENV.DATABASE_URL);
-      return { end: async () => { poolClosed = true; } };
+      return { end: async () => { state.poolClosed = true; } };
     },
     serviceFactory: ({ pool }) => {
       assert.equal(typeof pool.end, 'function');
       return {
         upsertUser: async (user, operator) => {
-          receivedUser = user;
-          receivedOperator = operator;
+          state.receivedUser = user;
+          state.receivedOperator = operator;
           return {
             userId: 'user-1',
             email: user.email,
@@ -166,11 +162,17 @@ test('auth admin seed apply path upserts through the registration service and cl
         },
       };
     },
-  });
+  };
+}
 
-  assert.equal(poolClosed, true);
-  assert.equal(receivedUser.email, 'admin@example.com');
-  assert.deepEqual(receivedOperator, {
+test('auth admin seed apply path upserts through the registration service and closes the pool', async () => {
+  const state = { poolClosed: false, receivedUser: null, receivedOperator: null };
+  const input = readAdminSeedInput(VALID_ENV);
+  const result = await applyAdminSeed(input, createApplySeedHarness(state));
+
+  assert.equal(state.poolClosed, true);
+  assert.equal(state.receivedUser.email, 'admin@example.com');
+  assert.deepEqual(state.receivedOperator, {
     actorId: 'production-auth-operator',
     tenantId: 'tenant-int',
   });
