@@ -1,0 +1,25 @@
+flowchart TD
+  Change[Code or policy change] --> Contract[repo-contract.yaml runtime metadata]
+  Change --> Manifest[check-manifest.yaml merge checks]
+  Contract --> Makefile[Makefile gate targets]
+  Manifest --> Makefile
+  Makefile --> Design[DESIGN.md local gates]
+  Makefile --> Standards[standards policy validators]
+  Makefile --> AppLint[npm run lint]
+  Makefile --> Typecheck[npm run typecheck]
+  Makefile --> Unit[npm run test:unit]
+  Makefile --> Browser[npm run test:browser]
+  Makefile --> Build[npm run build]
+  Makefile --> StandardsCheck[npm run standards:check]
+  Design --> Verify[make verify]
+  Standards --> Verify
+  AppLint --> Verify
+  Typecheck --> Verify
+  Unit --> Verify
+  Browser --> Verify
+  Build --> Verify
+  StandardsCheck --> Verify
+  Verify --> Evidence[artifact provenance and test-policy evidence]
+  Evidence --> PR[Pull request merge readiness]
+  PR --> Vercel[Vercel deployment preview]
+  Vercel --> Merge[Protected branch merge]

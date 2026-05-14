@@ -14,7 +14,7 @@ CHANGE_COMMANDS ?= make verify
 CHANGE_EVIDENCE ?= local-verify
 RELEASE_ENV ?= dev
 
-.PHONY: design-local-gates lint typecheck test build verify
+.PHONY: design-local-gates standards-policy-gates standards-python-typecheck standards-python-test standards-python-build lint typecheck test build verify
 
 design-local-gates:
 	npm run design:tokens:check
@@ -22,7 +22,7 @@ design-local-gates:
 	npm run design:audit:check
 	npm run design:change-guard
 
-lint:
+standards-policy-gates:
 	$(PYTHON) dev-standards/tooling/validate_policy_files.py --repo-root $(REPO_ROOT)
 	$(PYTHON) dev-standards/tooling/validate_waivers.py --repo-root $(REPO_ROOT)
 	CHANGE_KIND=$(CHANGE_KIND) CHANGE_REFERENCE=$(CHANGE_REFERENCE) $(PYTHON) dev-standards/tooling/validate_approval_proof.py --repo-root $(REPO_ROOT) $(if $(BASE_REF),--base-ref $(BASE_REF))
@@ -38,15 +38,29 @@ lint:
 	CHANGE_KIND=$(CHANGE_KIND) CHANGE_REVERSIBILITY=$(CHANGE_REVERSIBILITY) $(PYTHON) dev-standards/tooling/validate_release_evidence.py --repo-root $(REPO_ROOT) --environment $(RELEASE_ENV)
 	$(PYTHON) dev-standards/tooling/check_maintainability.py --repo-root $(REPO_ROOT)
 
-typecheck:
+standards-python-typecheck:
 	@if [ -n "$(PY_FILES)" ]; then PYTHONPYCACHEPREFIX=$(PYCACHE_PREFIX) $(PYTHON) -m py_compile $(PY_FILES); fi
 
-test:
+standards-python-test:
 	$(PYTHON) dev-standards/tooling/run_python_tests.py
 
-build:
+standards-python-build:
 	PYTHONPYCACHEPREFIX=$(PYCACHE_PREFIX) $(PYTHON) -m compileall tests dev-standards
 
+lint: standards-policy-gates
+	npm run lint
+
+typecheck: standards-python-typecheck
+	npm run typecheck
+
+test: standards-python-test
+	npm run test:unit
+	npm run test:browser
+
+build: standards-python-build
+	npm run build
+
 verify: design-local-gates lint typecheck test build
+	npm run standards:check
 	$(PYTHON) dev-standards/tooling/validate_artifact_provenance.py --repo-root $(REPO_ROOT)
 	CHANGE_KIND=$(CHANGE_KIND) $(PYTHON) dev-standards/tooling/validate_test_policy.py --repo-root $(REPO_ROOT) $(if $(BASE_REF),--base-ref $(BASE_REF))

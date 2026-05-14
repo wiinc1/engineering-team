@@ -10,6 +10,7 @@ Require these exact GitHub Actions job names before merge:
 - `Pull request metadata`
 - `Repo validation`
 - `Browser validation`
+- `verify`
 - `Merge readiness`
 
 Require this job if governance drift is treated as blocking in your environment:
@@ -23,11 +24,14 @@ Require this job if governance drift is treated as blocking in your environment:
 - Restrict direct pushes to the protected branch.
 
 ## Mapping To Workflow Files
-- `.github/workflows/validation.yml`
-- `.github/workflows/governance-drift.yml`
+- `Pull request metadata` in `.github/workflows/validation.yml` runs `npm run pr:check`, `npm run change:check`, and `npm run ownership:lint`.
+- `Repo validation` in `.github/workflows/validation.yml` runs `npm run coverage`, `npm run standards:check`, `npm run ownership:lint`, `npm run test:unit`, and the non-browser Node suites.
+- `Browser validation` in `.github/workflows/validation.yml` runs `npm run test:browser`.
+- `verify` in `.github/workflows/verify.yml` runs `make verify`, which aggregates DESIGN.md gates, standards policy validators, `npm run lint`, `npm run typecheck`, `npm run test:unit`, `npm run test:browser`, `npm run build`, `npm run standards:check`, and artifact validators.
+- `Merge readiness` is emitted by the task-platform merge-readiness GitHub check integration from the structured review source of truth.
+- `Governance drift report` in `.github/workflows/governance-drift.yml` runs `npm run governance:drift:check`.
 
 ## Maintainer Notes
 - If a workflow job name changes, update this file and any downstream org policy that references the old status name.
 - Do not mark a status as required unless the corresponding workflow runs on pull requests for the protected branch.
-- The control plane may represent Merge readiness as enforced only after default-branch protection requires `Merge readiness`.
 - If governance drift should be advisory only, leave `Governance drift report` out of the required-check list but keep the scheduled workflow enabled.

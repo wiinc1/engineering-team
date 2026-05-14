@@ -15,7 +15,7 @@
     "auth:registration:production-smoke": "node scripts/verify-registration-production.js",
     "auth:oidc:production-smoke": "node scripts/verify-oidc-production-smoke.js",
     "auth:status:check": "node scripts/verify-production-auth-status.js",
-    "build": "npm run auth:deploy:bootstrap && node scripts/check-auth-config.js --write-artifact && vite build",
+    "build": "npm run auth:deploy:bootstrap && node scripts/check-auth-config.js --target ${AUTH_CONFIG_TARGET:-${VERCEL_ENV:-development}} --write-artifact && vite build",
     "build:browser": "vite build",
     "build:browser:registration": "VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false VITE_TASK_API_BASE_URL=/backend vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort",

@@ -84,6 +84,25 @@ Compose stack for PostgreSQL, Pushgateway, audit API, and audit workers.
 | Design-token enforcement | `DESIGN.md`, token-generated CSS, migrated CSS modules | `npm run design:tokens:check`, `npm run design:tokens:enforce`, `npm run design:audit:check`, `npm run design:change-guard` |
 | Governance/protected paths | `repo-contract.yaml`, `agent-policy.yaml`, `check-manifest.yaml`, `dev-standards/`, `.github/workflows/`, `Makefile`, `DESIGN.md` | `make verify`, `npm run standards:check`, change metadata, approval proof, traceability, docs freshness |
 
+## Governance Runtime Contract
+
+The governance contract is intentionally aligned to the application runtime, not
+only to the Python standards tooling. `repo-contract.yaml` declares the
+JavaScript/TypeScript/Node/Vite/React/PostgreSQL and Python standards runtime,
+the owned app/API/auth/audit/task-platform/browser/monitoring paths, and the
+source files that can drift when runtime gates change.
+
+`check-manifest.yaml` declares the merge-check command set. The Makefile maps
+those checks to the real local commands:
+
+| Make target | Runtime and standards gates |
+|---|---|
+| `make lint` | standards policy validators and `npm run lint` |
+| `make typecheck` | Python standards compile check and `npm run typecheck` |
+| `make test` | Python standards tests, `npm run test:unit`, and `npm run test:browser` |
+| `make build` | Python standards compile check and `npm run build` |
+| `make verify` | design gates, lint, typecheck, test, build, `npm run standards:check`, artifact provenance, and test policy |
+
 ## External Systems
 
 | System | Used by | Failure posture |
@@ -124,10 +143,13 @@ Use `docs/runbook.md` for exact operator commands. At the architecture level:
 - `npm run test:browser` runs Playwright browser coverage.
 - `npm test` runs the full Node/browser quality suite.
 - `npm run standards:check` runs standards, maintainability, and coverage policy checks.
-- `make verify` runs the standards governance gate and DESIGN.md local gates.
+- `make standards-policy-gates` runs the standards-only policy validators.
+- `make verify` runs the aggregate local ship gate for design, standards, Node/Vite/browser, and Python standards evidence.
 
 ## Diagrams
 
 - Workflow: `docs/diagrams/workflow-architecture-runbooks.mmd`
 - Container architecture: `docs/diagrams/architecture-architecture-runbooks.mmd`
+- Governance runtime workflow: `docs/diagrams/workflow-governance-runtime-gates.mmd`
+- Governance runtime architecture: `docs/diagrams/architecture-governance-runtime-gates.mmd`
 - Existing domain diagrams: `docs/diagrams/`
