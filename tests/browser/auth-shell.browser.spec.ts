@@ -252,6 +252,7 @@ test.beforeEach(async ({ page }) => {
     await expect(collapsedRail).toBeVisible();
     await expect(collapsedRail.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
     await expect(collapsedRail.getByRole('button', { name: 'Task workspace' })).toHaveAttribute('title', 'Task workspace');
+    await expect(collapsedRail.getByRole('button', { name: 'Search tasks' }).locator('.app-nav-rail__icon svg')).toBeVisible();
 
     await collapsedRail.getByRole('button', { name: 'Task workspace' }).click();
 

@@ -194,6 +194,7 @@ function assertCollapsedNavigationRailActions(shell: HTMLElement) {
   expect(railKanban).toHaveAttribute('aria-pressed', 'true');
   expect(railWorkspace).toHaveAttribute('title', 'Task workspace');
   expect(railSearch).toHaveAttribute('aria-controls', 'primary-navigation');
+  expect(railSearch.querySelector('.app-nav-rail__icon svg')).toBeInTheDocument();
 
   fireEvent.click(railWorkspace);
 
