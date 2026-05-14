@@ -679,6 +679,7 @@ The current product is text-first and does not define a shipped icon set.
 
 - Prefer clear text labels for workflow actions, especially in nav, forms, review states, and task controls.
 - Collapsed navigation may use compact monogram or tool icons only when each action has an accessible label, a visible hover/focus label, and the same selected-state feedback as its expanded control.
+- Collapsed navigation search must use a recognizable search glyph rather than a monogram, because the action reopens the task search form instead of navigating to a named route.
 - If an icon library is introduced, use one library and one stroke/fill style across the product; record the dependency and style choice in an ADR.
 - Lightweight status glyphs may be used only as secondary decoration when paired with visible status text and semantic color. The text, not the glyph, carries the meaning.
 - Icons used for status must be paired with text and semantic color, and decorative glyphs should be hidden from assistive technology when the adjacent text already names the state.

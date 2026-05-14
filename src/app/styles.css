@@ -315,9 +315,20 @@ button {
 }
 
 .app-nav-rail__icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
   font-size: var(--design-typography-button-sm-font-size);
   font-weight: var(--design-typography-label-md-font-weight);
   line-height: var(--design-typography-button-sm-line-height);
+}
+
+.app-nav-rail__icon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  overflow: visible;
 }
 
 .app-nav-rail__label {
