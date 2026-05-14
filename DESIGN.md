@@ -522,6 +522,7 @@ Product screens should prioritize repeated operator workflows over presentation.
 
 - Main authenticated shell: desktop uses a collapsible left navigation rail plus a full-width work surface. The rail owns global workflow navigation, task search entry, role inbox entry, and session controls; content views own filters, tables, boards, and task detail panels.
 - The authenticated work surface should not be capped like a marketing page. It may use local gutters near `24px` on desktop and `12px-14px` on mobile, while tables and boards keep deliberate horizontal scrolling where needed.
+- When the authenticated left rail is collapsed on desktop or tablet widths, keep a narrow icon rail visible for primary workspace actions, selected-route feedback, and an explicit way to reopen task search without covering the work surface.
 - On mobile, the collapsible left rail behaves as a drawer: it may default closed, must remain reachable from a persistent toggle, and when open it sits on the popover layer above workspace controls while the toggle stays on the tooltip layer.
 - Authenticated desktop layout should feel like a dense issue tracker: dark fixed rail, compact content header, sticky view toolbar, low-depth panels, and board/list views that prioritize scan speed over card prominence.
 - Auth shell: centered single-card workflow, max width around `480px`, with no marketing side panel.
@@ -571,7 +572,7 @@ Persistent component exceptions must be promoted into this file through the prot
 The app information architecture is workflow-first. Navigation must keep operational routes compact, role-aware, and recoverable after authentication.
 
 - Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
-- The left rail must expose a persistent icon toggle with `aria-controls` and `aria-expanded`, preserve the open/collapsed preference for returning operators, and keep the content work surface usable when the rail is collapsed.
+- The left rail must expose a persistent icon toggle with `aria-controls` and `aria-expanded`, preserve the open/collapsed preference for returning operators, keep a collapsed icon rail available for common actions, and keep the content work surface usable when the full rail is collapsed.
 - The left rail may include global task search when it routes into `/tasks` and uses the same search query and filter semantics as the workspace toolbar. It should not introduce a separate result model.
 - Exact task lookup belongs in task links, task detail routes, or the left-rail search. Page headers must not reintroduce a duplicate Task ID jump box.
 - Session identity belongs in muted nav or session controls, not a page-header diagnostic card, so workspace headers remain focused on route utilities and current view context.
@@ -677,6 +678,7 @@ Accessibility requirements are part of the visual identity, not a separate pass.
 The current product is text-first and does not define a shipped icon set.
 
 - Prefer clear text labels for workflow actions, especially in nav, forms, review states, and task controls.
+- Collapsed navigation may use compact monogram or tool icons only when each action has an accessible label, a visible hover/focus label, and the same selected-state feedback as its expanded control.
 - If an icon library is introduced, use one library and one stroke/fill style across the product; record the dependency and style choice in an ADR.
 - Lightweight status glyphs may be used only as secondary decoration when paired with visible status text and semantic color. The text, not the glyph, carries the meaning.
 - Icons used for status must be paired with text and semantic color, and decorative glyphs should be hidden from assistive technology when the adjacent text already names the state.
