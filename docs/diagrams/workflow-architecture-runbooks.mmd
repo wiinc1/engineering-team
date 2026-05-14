@@ -1,0 +1,10 @@
+flowchart TD
+  A[Source and runtime inventory] --> B[docs/architecture.md]
+  B --> C[Boundary and state ownership map]
+  D[Deployment scripts and smoke checks] --> E[docs/runbook.md]
+  E --> F[Release evidence and rollback procedure]
+  G[Changed runtime or protected paths] --> H[Docs freshness validator]
+  H -->|docs updated| I[Merge evidence]
+  H -->|docs missing| J[Fail with remediation]
+  B --> K[README canonical docs links]
+  E --> K
