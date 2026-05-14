@@ -16,9 +16,18 @@ This repo now includes a standards enforcement baseline for task planning and ch
 - reusable review template: `docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md`
 - PR gate: `.github/PULL_REQUEST_TEMPLATE.md`
 - CI presence check: `npm run standards:check`
+- full local ship gate: `make verify`
+- standards-only local gate: `make standards-policy-gates`
 - branch protection policy: `.github/BRANCH_PROTECTION.md`
 
 Every task file under `tasks/` is expected to carry `## Standards Alignment` and `## Required Evidence` so the repo has a durable record of which standards applied, what evidence was produced, and which gaps remain.
+
+`make verify` is the aggregate local gate for this React/Vite/Node/PostgreSQL
+application. It runs DESIGN.md gates, standards policy validators, `npm run
+lint`, `npm run typecheck`, `npm run test:unit`, `npm run test:browser`, `npm
+run build`, `npm run standards:check`, and Python standards test/artifact
+validators. Use `make standards-policy-gates` only when you need the
+standards-policy slice without the runtime app checks.
 
 ## Visual Design Tokens
 

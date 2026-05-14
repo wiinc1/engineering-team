@@ -13,10 +13,16 @@ ownership:
   backup_owner: wiinc1
 runtime:
   languages:
+  - name: javascript
+    version: Node.js 22 runtime
+  - name: typescript
+    version: '5.9'
   - name: python
     version: '3.12'
-  toolchains: [python3, unittest, make, git]
-  package_managers: [pip]
+  - name: sql
+    version: PostgreSQL-compatible migrations
+  toolchains: [node, npm, vite, react, typescript, vitest, playwright, python3, unittest, make, git, docker, postgresql]
+  package_managers: [npm, pip]
 commands:
   lint: make lint
   typecheck: make typecheck
@@ -24,26 +30,105 @@ commands:
   build: make build
   verify: make verify
 directories:
-  reserved_paths: [src/, tests/, docs/, scripts/, config/, generated/, third_party/, .artifacts/]
+  reserved_paths: [src/, api/, lib/, db/, tests/, docs/, scripts/, monitoring/, observability/, config/, generated/, third_party/, .github/, .artifacts/]
   classifications:
     src/: authored
+    api/: authored
+    lib/: authored
+    db/: authored
     tests/: authored
     docs/: authored
+    scripts/: authored
+    monitoring/: authored
+    observability/: artifacts
     dev-standards/: authored
+    .github/: authored
     generated/: generated
     third_party/: third_party
     .artifacts/: artifacts
   protected_paths: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, dev-standards/, .github/workflows/, Makefile, DESIGN.md]
 architecture:
-  reference_scan_globs: [src/**/*.py, tests/**/*.py, dev-standards/**/*.py, dev-standards/**/*.md, dev-standards/**/*.yaml, dev-standards/**/*.yml]
-  internal_layout: [src/, tests/, docs/, dev-standards/]
+  reference_scan_globs:
+  - src/**/*.js
+  - src/**/*.jsx
+  - src/**/*.ts
+  - src/**/*.tsx
+  - api/**/*.js
+  - lib/**/*.js
+  - db/migrations/**/*.sql
+  - scripts/**/*.js
+  - scripts/**/*.mjs
+  - tests/**/*.js
+  - tests/**/*.ts
+  - tests/**/*.tsx
+  - tests/**/*.py
+  - monitoring/**/*.json
+  - monitoring/**/*.yml
+  - docs/**/*.md
+  - docs/diagrams/*.mmd
+  - dev-standards/**/*.py
+  - dev-standards/**/*.md
+  - dev-standards/**/*.yaml
+  - dev-standards/**/*.yml
+  - .github/workflows/*.yml
+  - package.json
+  - vite.config.js
+  - playwright.config.ts
+  - vercel.json
+  - Makefile
+  - repo-contract.yaml
+  - check-manifest.yaml
+  internal_layout: [src/app/, src/components/, src/features/, api/, lib/auth/, lib/audit/, lib/http/, lib/task-platform/, lib/software-factory/, db/migrations/, scripts/, monitoring/, tests/, docs/, dev-standards/, .github/workflows/]
   dependency_rules:
   - standards tooling depends on the repo contract, not ad hoc conventions
-  boundary_map: []
+  - browser feature modules depend on route adapters and browser session utilities instead of server-only state
+  - API adapters delegate to shared lib handlers and preserve Vercel rewrite boundaries
+  - auth, audit, task-platform, and software-factory modules own their runtime state transitions
+  - monitoring and observability assets describe runtime behavior but must not contain secrets
+  - workflow and standards gates are declared in Makefile, package.json, check-manifest.yaml, and GitHub Actions
+  boundary_map:
+  - from: src/app/
+    to: src/features/
+    rule: allow
+  - from: src/features/
+    to: src/components/
+    rule: allow
+  - from: api/
+    to: lib/
+    rule: allow
+  - from: scripts/
+    to: lib/
+    rule: allow
+  - from: dev-standards/
+    to: repo-contract.yaml
+    rule: allow
+  - from: .github/workflows/
+    to: Makefile
+    rule: allow
   state_ownership:
   - resource: standards-policy
     owner: dev-standards
-  source_of_truth: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, docs/architecture.md, DESIGN.md]
+  - resource: browser-session-config
+    owner: src/app/
+  - resource: browser-feature-routes
+    owner: src/features/
+  - resource: serverless-api-routing
+    owner: api/
+  - resource: auth-state
+    owner: lib/auth/
+  - resource: workflow-audit-events
+    owner: lib/audit/
+  - resource: canonical-task-records
+    owner: lib/task-platform/
+  - resource: specialist-delegation-routing
+    owner: lib/software-factory/
+  - resource: database-migrations
+    owner: db/migrations/
+  - resource: runtime-monitoring-assets
+    owner: monitoring/
+  - resource: generated-runtime-evidence
+    owner: observability/
+  source_of_truth: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, package.json, Makefile, .github/workflows/validation.yml, .github/workflows/verify.yml, docs/architecture.md, docs/runbook.md, vercel.json, DESIGN.md]
   python_layers:
   - name: standards_tooling
     paths: [dev-standards/tooling/**/*.py]
@@ -66,14 +151,26 @@ architecture:
   banned_patterns: []
 critical_paths:
 - name: standards-enforcement
-  description: repo-local standards and maintainability enforcement entrypoints
-  stronger_controls: [protected path policy, deterministic make targets]
+  description: repo-local standards, documentation, maintainability, and change-evidence enforcement entrypoints
+  stronger_controls: [protected path policy, deterministic make targets, npm standards checks]
+- name: browser-runtime
+  description: Vite and React browser routes for sign-in, task workspace, detail, role inbox, and task creation flows
+  stronger_controls: [TypeScript checks, Vitest UI tests, Playwright browser tests, Vite build]
+- name: serverless-api-runtime
+  description: Vercel Node API adapters for auth, audit, and task-platform request paths
+  stronger_controls: [Node unit tests, contract tests, security tests, deployment build]
+- name: auth-audit-task-platform-state
+  description: PostgreSQL-backed auth, audit, task-platform, and merge-readiness state transitions
+  stronger_controls: [migration tests, rollout scripts, smoke diagnostics, monitoring alerts]
+- name: deployment-and-observability
+  description: Vercel deployment config, monitoring dashboards, alerts, and redacted runtime evidence
+  stronger_controls: [npm build, auth config diagnostics, monitoring docs, artifact provenance]
 quality_gates:
   risk_taxonomy: [low, medium, high, critical]
   review_modes: [automated-only, human-approve, human-plus-evidence]
   stop_the_line: [broken required verification, secret exposure, protected path violation, expired waiver]
-  test_layers: [unit]
-  documentation_requirements: [standards changes require changelog or runbook updates]
+  test_layers: [unit, ui, browser, contract, integration, e2e, property, performance, security, chaos, standards]
+  documentation_requirements: [standards changes require changelog or runbook updates, runtime changes require architecture or runbook updates, deployment changes require release evidence]
   coverage_policy:
     strategy: risk-based
     global_floor: 0.8
@@ -227,11 +324,11 @@ testing:
     contract_report: .artifacts/contract-test-report.json
   layers:
     unit:
-      paths: [tests/test_*.py]
-      file_patterns: [test_*.py]
+      paths: [tests/test_*.py, tests/unit/**/*.test.js, tests/unit/**/*.test.ts, tests/unit/**/*.test.tsx, src/**/*.test.js, src/**/*.test.ts, src/**/*.test.tsx]
+      file_patterns: [test_*.py, '*.test.js', '*.test.ts', '*.test.tsx']
     contract:
-      paths: [tests/contract/**/*.py]
-      file_patterns: [test_*.py]
+      paths: [tests/contract/**/*.py, tests/contract/**/*.test.js]
+      file_patterns: [test_*.py, '*.test.js']
   hermeticity:
     unit:
       paths: [tests/test_*.py]
@@ -240,10 +337,10 @@ testing:
   coverage:
     global_floor: 0.8
     changed_lines_floor: 0.8
-    governed_paths: [tests/**/*.py]
+    governed_paths: [src/**, api/**, lib/**, scripts/**, tests/**, dev-standards/**]
   regression_requirements:
     change_kinds: [bugfix, security-fix]
-    test_paths: [tests/**/*.py]
+    test_paths: [tests/**/*.py, tests/**/*.js, tests/**/*.ts, tests/**/*.tsx, src/**/*.test.js, src/**/*.test.tsx]
   layer_requirements:
   - when_paths: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, dev-standards/**]
     required_layers: [unit]
@@ -265,13 +362,16 @@ compatibility:
   matrix:
   - {os: linux, runtime: local-operator}
   - {os: macos, runtime: local-operator}
+  - {os: linux, runtime: node-22-vite-vercel}
+  - {os: linux, runtime: python-3.12-standards}
+  - {os: linux, runtime: postgres-compatible}
   deprecation_policy:
     minimum_notice_days: 30
 nfrs:
   reliability:
     availability_target: 99.9%
   latency:
-    verify_runtime_seconds_p95: 60
+    verify_runtime_seconds_p95: 900
   throughput:
     concurrent_change_validations_supported: 1
   security:

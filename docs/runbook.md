@@ -20,13 +20,28 @@ Detailed domain runbooks remain authoritative for their domains:
 
 ## Verification
 
+### Full local ship gate
+
+`make verify` is the canonical local merge-readiness command for the real
+application runtime and the standards system. It runs DESIGN.md gates,
+standards policy validators, `npm run lint`, `npm run typecheck`, `npm run
+test:unit`, `npm run test:browser`, `npm run build`, `npm run
+standards:check`, Python standards tests, artifact provenance, and test-policy
+validation.
+
+```bash
+make verify
+```
+
+Use this before protected-path, runtime, broad product, deployment, or release
+work. The pre-push hook also runs `make verify`.
+
 ### Fast local checks
 
 Run these before small documentation or governance changes:
 
 ```bash
-npm run lint
-npm run typecheck
+make standards-policy-gates
 npm run standards:check
 ```
 
@@ -49,7 +64,7 @@ npm run build
 ```
 
 Run the complete Node/browser suite before merging broad product or platform
-changes:
+changes, or run `make verify` when you also need standards and design evidence:
 
 ```bash
 npm test
@@ -57,12 +72,13 @@ npm test
 
 ### Standards and DESIGN.md checks
 
-`make verify` is the local source of truth for standards governance and
-DESIGN.md enforcement. GitHub Actions can repeat these checks, but local
-evidence should still be captured for protected-path work.
+`make standards-policy-gates` is the standards-only policy slice. `npm run
+standards:check` is the Node standards, maintainability, and coverage-policy
+slice. `make verify` runs both of those plus the application runtime gates.
 
 ```bash
-make verify
+make standards-policy-gates
+npm run standards:check
 ```
 
 For UI token work, run:
@@ -75,6 +91,16 @@ npm run design:audit:check
 npm run design:change-guard
 make verify
 ```
+
+### CI mapping
+
+| Local command | GitHub Actions job or step |
+|---|---|
+| `npm run pr:check`, `npm run change:check`, `npm run ownership:lint` | `Pull request metadata` in `.github/workflows/validation.yml` |
+| `npm run coverage`, `npm run standards:check`, `npm run test:unit` | `Repo validation` in `.github/workflows/validation.yml` |
+| `npm run test:browser` | `Browser validation` in `.github/workflows/validation.yml` |
+| `make verify` | `verify` in `.github/workflows/verify.yml` |
+| `npm run governance:drift:check` | `Governance drift report` in `.github/workflows/governance-drift.yml` |
 
 Read `DESIGN.md` before UI changes, change reusable visual semantics there
 first, and avoid hard-coded visual values in migrated CSS. A rare one-off must

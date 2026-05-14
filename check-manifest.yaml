@@ -2,23 +2,31 @@ schema_version: "1.0"
 standards_version: "0.1.0"
 merge_checks:
   - id: lint
-    description: formatting and policy gate
+    description: standards policy validators plus repository lint gate
     command: make lint
     required: true
   - id: typecheck
-    description: static verification gate
+    description: TypeScript typecheck plus Python standards compile gate
     command: make typecheck
     required: true
   - id: test
-    description: automated test suite
+    description: Python standards tests, Node unit/UI tests, and Playwright browser suite
     command: make test
     required: true
   - id: build
-    description: reproducible build gate
+    description: Vite application build plus Python standards compile gate
     command: make build
     required: true
+  - id: design
+    description: DESIGN.md token drift, token usage, audit, and change guard
+    command: make design-local-gates
+    required: true
+  - id: standards
+    description: standards governance, maintainability, and coverage policy gate
+    command: npm run standards:check
+    required: true
   - id: verify
-    description: aggregate merge-readiness gate
+    description: aggregate local ship gate for runtime, design, and standards governance
     command: make verify
     required: true
 release_checks:
