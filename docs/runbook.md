@@ -1,14 +1,69 @@
 # Runbook
 
+## Scope
+
+This runbook is the root operator entry point for the Engineering Team Software
+Factory control plane. It points to exact local verification commands, release
+evidence, production auth checks, task-platform recovery, monitoring assets,
+rollback controls, and protected-path ownership.
+
+Detailed domain runbooks remain authoritative for their domains:
+
+- Production auth status: `docs/runbooks/production-auth-status.md`
+- Production identity provider: `docs/runbooks/production-identity-provider.md`
+- Audit foundation: `docs/runbooks/audit-foundation.md`
+- Task platform rollout: `docs/runbooks/task-platform-rollout.md`
+- Workflow delivery loop: `docs/runbooks/workflow-delivery-loop.md`
+- Specialist delegation: `docs/runbooks/specialist-delegation.md`
+- Orchestration scheduler and visibility: `docs/runbooks/orchestration-scheduler.md`, `docs/runbooks/orchestration-visibility.md`
+- Dependency planner: `docs/runbooks/dependency-planner.md`
+
 ## Verification
 
-Run the standards gate locally:
+### Fast local checks
+
+Run these before small documentation or governance changes:
+
+```bash
+npm run lint
+npm run typecheck
+npm run standards:check
+```
+
+Run focused tests for the changed area. Examples:
+
+```bash
+node --test tests/unit/governance/*.test.js
+python3 -m unittest tests/test_docs_freshness_validator.py
+```
+
+### Browser and application checks
+
+Run these before browser, auth, task workspace, task detail, assignment, or
+route changes:
+
+```bash
+npm run test:unit
+npm run test:browser
+npm run build
+```
+
+Run the complete Node/browser suite before merging broad product or platform
+changes:
+
+```bash
+npm test
+```
+
+### Standards and DESIGN.md checks
+
+`make verify` is the local source of truth for standards governance and
+DESIGN.md enforcement. GitHub Actions can repeat these checks, but local
+evidence should still be captured for protected-path work.
 
 ```bash
 make verify
 ```
-
-`make verify` is the local source of truth for DESIGN.md enforcement. GitHub Actions can repeat these checks, but it is not required for any DESIGN.md guarantee.
 
 For UI token work, run:
 
@@ -21,7 +76,12 @@ npm run design:change-guard
 make verify
 ```
 
-Read `DESIGN.md` before UI changes, change reusable visual semantics there first, and avoid hard-coded visual values in migrated CSS. A rare one-off must use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`; reusable exceptions must be promoted into `DESIGN.md`.
+Read `DESIGN.md` before UI changes, change reusable visual semantics there
+first, and avoid hard-coded visual values in migrated CSS. A rare one-off must
+use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`.
+Reusable exceptions must become `DESIGN.md` tokens.
+
+### Local hooks
 
 Install local hooks once per clone:
 
@@ -29,19 +89,251 @@ Install local hooks once per clone:
 scripts/setup-local-hooks.sh
 ```
 
-This runs:
+The pre-commit hook runs token drift, token usage, generated audit, and design
+change guard checks. The pre-push hook runs `make verify`.
+
+If an authored UI file changes but there is truly no visual or UX impact,
+create `docs/design/no-design-impact.txt` with a short reason. Keep the marker
+local, do not use it for reusable visual decisions, and remove it after the
+change is complete.
+
+## Local Development
+
+Start the browser app:
 
 ```bash
-git config core.hooksPath scripts/hooks
-chmod +x scripts/hooks/pre-commit scripts/hooks/pre-push
+npm run dev
 ```
 
-The pre-commit hook runs token drift, token usage, generated audit, and design change guard checks. The pre-push hook runs `make verify`.
+Start local PostgreSQL only:
 
-If an authored UI file changes but there is truly no visual or UX impact, create `docs/design/no-design-impact.txt` with a short reason. Keep the marker local, do not use it for reusable visual decisions, and remove it after the change is complete.
+```bash
+npm run dev:postgres:up
+```
 
-## Operational Notes
+Start the audit API, workers, PostgreSQL, and Pushgateway:
 
-- record how to gather release evidence
-- record any external systems required for live approval, traceability, or deploy proof
-- record who owns protected-path changes and emergency review
+```bash
+npm run dev:audit:up
+```
+
+Stop local services:
+
+```bash
+npm run dev:audit:down
+```
+
+Reset disposable local database state:
+
+```bash
+npm run dev:postgres:reset
+```
+
+Use this placeholder local host database URL shape for host-run scripts:
+
+```bash
+DATABASE_URL=postgres://<local-user>:<local-password>@127.0.0.1:5432/<local-database>
+```
+
+The file backend is a fallback-only test/dev harness. Production and staging
+must use PostgreSQL.
+
+## Release Evidence
+
+For any production-affecting change, capture:
+
+- issue or PR reference
+- commit SHA
+- deployment URL or deployment ID when deployed
+- commands run and pass/fail results
+- test, browser, security, performance, and standards evidence paths
+- updated docs or explicit no-impact rationale
+- monitoring dashboard and alert evidence
+- rollback target and rollback verification
+- redacted smoke artifacts when auth or task-platform behavior changes
+
+Generated evidence must not include raw secrets, raw cookies, bearer tokens,
+database URLs, API keys, passwords, CSRF values, raw email bodies, or private
+production identifiers.
+
+## Production Auth Operations
+
+Current canonical production auth posture is documented in
+`docs/runbooks/production-auth-status.md`.
+
+Active production strategy: `registration`.
+
+Before shipping auth-affecting production changes:
+
+```bash
+npm run auth:config:check:vercel
+npm run auth:config:check
+npm run auth:registration:production-smoke
+npm run auth:status:check -- --require-complete
+```
+
+OIDC is supported only when explicitly selected and freshly evidenced:
+
+```bash
+npm run auth:oidc:production-smoke -- --require-complete
+```
+
+Canonical auth evidence artifacts:
+
+- `observability/registration-auth-production-smoke.json`
+- `observability/oidc-production-smoke.json` when OIDC is selected
+- `observability/auth-config-diagnostics.json`
+
+Rollback target: restore the last known-good registration deployment and auth
+configuration. The emergency `internal-bootstrap` strategy requires explicit
+approval and must stay disabled in normal production builds.
+
+## Task Platform Operations
+
+Use `docs/runbooks/task-platform-rollout.md` for detailed rollout, smoke, and
+rollback procedures.
+
+Local or environment rollout sequence:
+
+```bash
+DATABASE_URL=postgres://... TENANT_ID=engineering-team npm run task-platform:rollout
+```
+
+Individual recovery commands:
+
+```bash
+DATABASE_URL=postgres://... npm run audit:migrate
+DATABASE_URL=postgres://... TENANT_ID=engineering-team npm run task-platform:backfill
+DATABASE_URL=postgres://... TENANT_ID=engineering-team npm run task-platform:verify
+```
+
+If task projections drift:
+
+```bash
+npm run audit:rebuild -- /path/to/repo-root
+npm run audit:project -- /path/to/repo-root
+```
+
+If outbox delivery stalls:
+
+```bash
+npm run audit:outbox -- /path/to/repo-root
+```
+
+Rollback posture is additive-first:
+
+1. Stop read-path cutover work.
+2. Keep legacy audit-backed routes available during the incident.
+3. Disable assignment or task-platform flags only when their surface is the incident source.
+4. Stop creating merge-readiness reviews if current-review uniqueness or stale-write conflicts appear.
+5. Disable GitHub check-run client configuration to stop external writes while keeping structured review rows readable.
+6. Rebuild projections or rerun idempotent backfill only after root cause is understood.
+
+## Monitoring And Alerts
+
+Monitoring assets live under:
+
+- `monitoring/dashboards/`
+- `monitoring/alerts/`
+- `observability/` for generated local or smoke artifacts
+
+Key dashboards and alerts:
+
+| Domain | Dashboard | Alerts |
+|---|---|---|
+| Audit foundation | `monitoring/dashboards/audit-foundation.json` | `monitoring/alerts/audit-foundation.yml` |
+| Task assignment | `monitoring/dashboards/task-assignment.json` | `monitoring/alerts/task-assignment.yml` |
+| Registration auth | `monitoring/dashboards/registration-auth-security.json` | `monitoring/alerts/registration-auth-security.yml` |
+| Production auth | `monitoring/dashboards/production-auth-status.json` | `monitoring/alerts/auth-availability.yml` |
+| Delegation | `monitoring/dashboards/real-specialist-delegation.json` | `monitoring/alerts/real-specialist-delegation.yml` |
+| Orchestration | `monitoring/dashboards/orchestration-visibility.json`, `monitoring/dashboards/orchestration-scheduler.json` | matching orchestration alert files |
+| Dependency planner | `monitoring/dashboards/dependency-planner.json` | `monitoring/alerts/dependency-planner.yml` |
+
+During rollout or incident review, inspect:
+
+- structured workflow audit log: `observability/workflow-audit.log`
+- production auth smoke artifacts
+- task-platform rollout verification output
+- browser route errors and Core Web Vitals where available
+- projection queue and outbox worker logs
+
+## Feature Flags And Kill Switches
+
+Feature-flag details live in `docs/feature-flags.md`.
+
+Common controls:
+
+- `FF_ASSIGN_AI_AGENT_TO_TASK`
+- `FF_ASSIGN_AI_AGENT_TO_TASK_KILLSWITCH`
+- `FF_REAL_SPECIALIST_DELEGATION`
+- `FF_SPECIALIST_DELEGATION`
+- `FF_DEPENDENCY_PLANNER`
+- `FF_ORCHESTRATION_SCHEDULER`
+- `FF_ORCHESTRATION_VISIBILITY`
+- `FF_TASK_DETAIL_PAGE`
+- auth strategy environment gates such as `AUTH_PRODUCTION_AUTH_STRATEGY`
+
+Rollback should prefer a documented kill switch or feature flag when one exists.
+If no safe flag exists, roll back the deployment and keep evidence of the
+deployment ID, commit SHA, and verification result.
+
+## Protected Paths And Emergency Review
+
+Protected paths:
+
+- `repo-contract.yaml`
+- `agent-policy.yaml`
+- `check-manifest.yaml`
+- `dev-standards/`
+- `.github/workflows/`
+- `Makefile`
+- `DESIGN.md`
+
+Owner: primary and backup owner are declared in `repo-contract.yaml`.
+
+Normal protected-path changes require:
+
+- explicit human instruction
+- human-plus-evidence review mode
+- change metadata
+- approval proof
+- traceability evidence
+- docs freshness evidence
+- `make verify`
+
+Emergency protected-path changes must:
+
+1. Capture incident context and affected paths before editing.
+2. Keep the change minimal and reversible.
+3. Preserve or strengthen existing gates.
+4. Run the fastest focused validation first.
+5. Run `make verify` before final closure unless the incident owner records why that command is temporarily impossible.
+6. Add follow-up work for any deferred verification.
+
+## External System Failures
+
+| System | Symptom | First response |
+|---|---|---|
+| Vercel | Deployment fails, rewrites break, or protected routes return the SPA incorrectly | Check `vercel.json`, deployment logs, env names, and auth config; roll back to last known-good deployment if production is affected |
+| PostgreSQL or Supabase | Auth/task/audit writes fail or migrations hang | Stop rollout, verify `DATABASE_URL`, inspect migration state, run read-only SQL checks before retry |
+| Resend | Verification or reset email delivery fails | Preserve generic user response, inspect registration dashboard/alerts, rerun auth smoke after provider recovery |
+| OIDC provider | Hosted sign-in or callback fails | Confirm selected strategy is really `oidc`, inspect OIDC smoke artifact, revert to approved registration config only with product/security approval |
+| GitHub | Merge-readiness check, PR summary, or branch-protection evidence fails | Treat as non-passing; verifier is read-only and must not mutate branch settings |
+| Pushgateway | Local metric push fails | Continue state recovery, inspect worker logs, rerun metrics push after service recovery |
+
+## Incident Closure
+
+Close an incident or production-remediation issue only after:
+
+- the active failure is mitigated or rolled back
+- automated smoke or synthetic checks pass
+- dashboards and alerts return to baseline
+- evidence artifacts are redacted and linked
+- rollback target is documented
+- follow-up issues exist for deferred repairs or known gaps
+- the GitHub issue or PR is updated with commands, evidence paths, and residual risk
+
+## Diagrams
+
+- Workflow: `docs/diagrams/workflow-architecture-runbooks.mmd`
+- Container architecture: `docs/diagrams/architecture-architecture-runbooks.mmd`

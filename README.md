@@ -1,5 +1,14 @@
 # engineering-team
 
+## Canonical Architecture And Operations
+
+- Architecture source of truth: `docs/architecture.md`
+- Operator runbook: `docs/runbook.md`
+
+The README summarizes the main developer entry points. Runtime boundaries,
+state ownership, release evidence, rollback posture, and monitoring operations
+belong in the canonical architecture and runbook docs.
+
 ## Standards Governance
 
 This repo now includes a standards enforcement baseline for task planning and change review:
@@ -71,7 +80,7 @@ This repo now includes a materially more production-shaped `SF-017` slice:
 - Reset the local database completely: `npm run dev:postgres:reset`
 - Start the full local stack (Postgres + Pushgateway + API + workers): `npm run dev:audit:up`
 - Stop the local stack: `npm run dev:audit:down`
-- Use `DATABASE_URL=postgres://audit:audit@127.0.0.1:5432/engineering_team` for host-run scripts/tests against the Docker database.
+- Use `DATABASE_URL=postgres://<local-user>:<local-password>@127.0.0.1:5432/<local-database>` for host-run scripts/tests against the Docker database.
 - `npm test`
 - `npm run test:contract`
 - `npm run test:performance`

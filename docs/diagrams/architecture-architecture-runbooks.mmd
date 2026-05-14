@@ -1,0 +1,37 @@
+flowchart LR
+  subgraph Browser["Browser app"]
+    React["src/app + src/features"]
+  end
+  subgraph Vercel["Vercel deployment"]
+    SPA["dist SPA"]
+    API["api/* serverless adapters"]
+  end
+  subgraph Services["Node services"]
+    Auth["lib/auth"]
+    Audit["lib/audit"]
+    TaskPlatform["lib/task-platform"]
+    Delegation["lib/software-factory"]
+  end
+  subgraph Data["State"]
+    Pg["PostgreSQL"]
+    Obs["observability artifacts"]
+  end
+  subgraph Ops["Governance and operations"]
+    Standards["dev-standards + repo contract"]
+    Monitoring["monitoring dashboards/alerts"]
+    Arch["docs/architecture.md"]
+    Runbook["docs/runbook.md"]
+  end
+  React --> SPA
+  SPA --> API
+  API --> Auth
+  API --> Audit
+  API --> TaskPlatform
+  API --> Delegation
+  Auth --> Pg
+  Audit --> Pg
+  TaskPlatform --> Pg
+  Audit --> Obs
+  Standards --> Arch
+  Standards --> Runbook
+  Monitoring --> Runbook

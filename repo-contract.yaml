@@ -212,6 +212,13 @@ documentation_freshness:
     requires_doc_update: true
     when_change_kinds: [policy, docs-only, refactor]
     message: standards changes must update the changelog or runbook
+  - id: runtime-operations
+    rule_class: runtime
+    when_paths: [src/**, lib/**, api/**, db/migrations/**, scripts/**, monitoring/**, package.json, vite.config.js, playwright.config.ts, vercel.json, docker-compose.yml, Dockerfile, Dockerfile.browser]
+    require_any_of: [docs/architecture.md, docs/runbook.md, docs/runbooks/**, docs/api/**, docs/design/**, README.md]
+    requires_doc_update: true
+    when_change_kinds: [feature, bugfix, refactor, security-fix, migration, release]
+    message: runtime or operations changes must update architecture, runbook, API, design, or README docs
 testing:
   artifacts:
     test_results: .artifacts/test-results.json

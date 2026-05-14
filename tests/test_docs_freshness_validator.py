@@ -93,10 +93,48 @@ class DocsFreshnessValidatorTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("standards:", result.stdout)
 
+    def test_runtime_change_requires_architecture_or_runbook_update(self) -> None:
+        self.repo.write("repo-contract.yaml", contract_text(runtime_rule=True))
+        self.repo.write("src/app/App.jsx", "old\n")
+        self.repo.write("docs/architecture.md", "old\n")
+        self.repo.write("docs/runbook.md", "old\n")
+        self.repo.commit_all("baseline")
+        self.repo.write("src/app/App.jsx", "new\n")
 
-def contract_text(requires_doc_update: bool = False, requires_adr: bool = False) -> str:
-    extra = "      requires_doc_update: true\n" if requires_doc_update else ""
-    adr = "      requires_adr: true\n" if requires_adr else ""
+        result = run_validator(self.repo.root)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("runtime:", result.stdout)
+
+        self.repo.write("docs/runbook.md", "new\n")
+        result = run_validator(self.repo.root)
+
+        self.assertEqual(result.returncode, 0)
+
+    def test_runtime_no_impact_waiver_satisfies_rule(self) -> None:
+        self.repo.write(
+            "repo-contract.yaml",
+            contract_text(runtime_rule=True, runtime_waiver=True),
+        )
+        self.repo.write("src/app/App.jsx", "old\n")
+        self.repo.commit_all("baseline")
+        self.repo.write("src/app/App.jsx", "new\n")
+
+        result = run_validator(self.repo.root)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PASS  docs-freshness", result.stdout)
+
+
+def contract_text(
+    requires_doc_update: bool = False,
+    requires_adr: bool = False,
+    runtime_rule: bool = False,
+    runtime_waiver: bool = False,
+) -> str:
+    standard_options = standard_rule_options(requires_doc_update, requires_adr)
+    runtime = runtime_rule_text() if runtime_rule else ""
+    waivers = runtime_waiver_text() if runtime_waiver else ""
     return f"""
 schema_version: "1.0"
 change_management:
@@ -114,7 +152,41 @@ documentation_freshness:
       require_any_of:
         - CHANGELOG.md
       allow_reference_prefix: ADR-
-{extra}{adr}      message: standards updates must touch changelog
+{standard_options}      message: standards updates must touch changelog
+{runtime}
+{waivers}
+"""
+
+
+def standard_rule_options(requires_doc_update: bool, requires_adr: bool) -> str:
+    extra = "      requires_doc_update: true\n" if requires_doc_update else ""
+    adr = "      requires_adr: true\n" if requires_adr else ""
+    return f"{extra}{adr}"
+
+
+def runtime_rule_text() -> str:
+    return """
+    - id: runtime
+      when_paths:
+        - src/**
+        - lib/**
+        - api/**
+        - scripts/**
+      require_any_of:
+        - docs/architecture.md
+        - docs/runbook.md
+      requires_doc_update: true
+      message: runtime changes must update architecture or runbook
+"""
+
+
+def runtime_waiver_text() -> str:
+    return """
+waivers:
+  - rule: docs-freshness:runtime
+    path: src/**
+    expires_at: "2999-01-01"
+    reason: no architecture or operations impact
 """
 
 
