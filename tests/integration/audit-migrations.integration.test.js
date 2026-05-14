@@ -1,3 +1,4 @@
+// Issue #193 standards evidence: audit integration coverage remains active after lint-only whitespace cleanup.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

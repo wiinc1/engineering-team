@@ -73,15 +73,78 @@ function generatedOutputsFromRepoContract() {
   return outputs.map(normalizePath);
 }
 
+function gitFile(ref, filePath) {
+  try {
+    return execFileSync('git', ['show', `${ref}:${filePath}`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return null;
+  }
+}
+
+function workingFile(filePath) {
+  const absolutePath = path.join(process.cwd(), filePath);
+  if (!fs.existsSync(absolutePath)) return null;
+  return fs.readFileSync(absolutePath, 'utf8');
+}
+
+function stripTrailingWhitespace(content) {
+  return content.replace(/[ \t]+$/gm, '');
+}
+
+function isTrailingWhitespaceOnlyChange(before, after) {
+  if (before === null || after === null || before === after) return false;
+  return stripTrailingWhitespace(before) === stripTrailingWhitespace(after);
+}
+
+function isBranchTrailingWhitespaceOnly(filePath, scope) {
+  return isTrailingWhitespaceOnlyChange(
+    gitFile(scope.baseRef, filePath),
+    gitFile('HEAD', filePath),
+  );
+}
+
+function isLocalTrailingWhitespaceOnly(filePath) {
+  const headContent = gitFile('HEAD', filePath);
+  const indexContent = gitFile('', filePath);
+  const worktreeContent = workingFile(filePath);
+
+  if (headContent === null || indexContent === null || worktreeContent === null) return false;
+
+  const stagedChanged = headContent !== indexContent;
+  const worktreeChanged = indexContent !== worktreeContent;
+
+  if (!stagedChanged && !worktreeChanged) return false;
+  if (stagedChanged && !isTrailingWhitespaceOnlyChange(headContent, indexContent)) return false;
+  if (worktreeChanged && !isTrailingWhitespaceOnlyChange(indexContent, worktreeContent)) return false;
+
+  return true;
+}
+
+function isTrailingWhitespaceOnlyUiChange(filePath, scope) {
+  if (scope.name === 'branch' && scope.baseRef) {
+    return isBranchTrailingWhitespaceOnly(filePath, scope);
+  }
+  if (scope.name === 'local') {
+    return isLocalTrailingWhitespaceOnly(filePath);
+  }
+  return false;
+}
+
 function mergeBaseFiles() {
   const candidates = ['origin/main', 'main', 'refs/remotes/origin/main', 'refs/heads/main'];
   for (const candidate of candidates) {
     const base = runGit(['merge-base', 'HEAD', candidate]);
     if (base) {
-      return gitList(['diff', '--name-only', `${base}...HEAD`]);
+      return {
+        baseRef: base,
+        files: gitList(['diff', '--name-only', `${base}...HEAD`]),
+      };
     }
   }
-  return [];
+  return { baseRef: '', files: [] };
 }
 
 function uniqueSorted(files) {
@@ -97,9 +160,10 @@ function localFiles() {
 }
 
 function changedFileScopes() {
+  const branch = mergeBaseFiles();
   return [
     { name: 'local', files: localFiles() },
-    { name: 'branch', files: mergeBaseFiles() },
+    { name: 'branch', files: branch.files, baseRef: branch.baseRef },
   ].filter((scope) => scope.files.length > 0);
 }
 
@@ -131,9 +195,11 @@ function markerReason() {
 }
 
 function scopeResult(scope, config, designArtifacts) {
-  const uiFiles = scope.files.filter((file) => authoredUiFile(file, config, designArtifacts));
+  const authoredUiFiles = scope.files.filter((file) => authoredUiFile(file, config, designArtifacts));
+  const trailingWhitespaceOnlyUiFiles = authoredUiFiles.filter((file) => isTrailingWhitespaceOnlyUiChange(file, scope));
+  const uiFiles = authoredUiFiles.filter((file) => !trailingWhitespaceOnlyUiFiles.includes(file));
   const changedDesignArtifacts = scope.files.filter((file) => designArtifacts.has(normalizePath(file)));
-  return { ...scope, uiFiles, changedDesignArtifacts };
+  return { ...scope, uiFiles, trailingWhitespaceOnlyUiFiles, changedDesignArtifacts };
 }
 
 function passedScopeSummary(result) {
@@ -163,6 +229,11 @@ function main() {
   const failingResults = relevantResults.filter((result) => result.changedDesignArtifacts.length === 0);
 
   if (relevantResults.length === 0) {
+    const whitespaceOnlyResults = results.filter((result) => result.trailingWhitespaceOnlyUiFiles.length > 0);
+    if (whitespaceOnlyResults.length > 0) {
+      process.stdout.write(`design change guard passed: trailing-whitespace-only UI changes (${whitespaceOnlyResults.map((result) => `${result.name}: ${result.trailingWhitespaceOnlyUiFiles.length}`).join('; ')})\n`);
+      return;
+    }
     process.stdout.write('design change guard passed: no authored UI files changed\n');
     return;
   }

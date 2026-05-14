@@ -1,0 +1,42 @@
+flowchart LR
+  subgraph Repo[Repository]
+    A[api lib scripts src tests]
+    B[config/lint-source-allowlist.json]
+  end
+
+  subgraph Discovery[File Discovery]
+    C[Git tracked files]
+    D[Git untracked non-ignored files]
+    E[Include and exclude classifier]
+  end
+
+  subgraph Gate[Lint Gate]
+    F[Whitespace and tab rules]
+    G[Generated source detector]
+    H[Bundled source detector]
+    I[Minified source detector]
+    J[Allowlist validator and stale-entry check]
+  end
+
+  subgraph Output[Diagnostics]
+    K[Path line rule]
+    L[Failure summary]
+    M[Scanned count and duration]
+  end
+
+  A --> C
+  A --> D
+  C --> E
+  D --> E
+  E --> F
+  E --> G
+  E --> H
+  E --> I
+  B --> J
+  F --> J
+  G --> J
+  H --> J
+  I --> J
+  J --> K
+  J --> L
+  J --> M

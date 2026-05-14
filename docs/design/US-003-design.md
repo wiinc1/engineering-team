@@ -1,6 +1,7 @@
 # US-003 Design
 
 > Issue #130 standards evidence: mechanical maintainability compaction only; no task-creation design behavior change.
+> Issue #193 standards evidence: lint-only whitespace cleanup in task-creation source/tests; no task-creation design behavior change.
 
 ## Research & Context
 

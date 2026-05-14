@@ -156,6 +156,23 @@ test('check-design-change-guard fails local UI changes even when branch has desi
   assert.match(result.stderr, /local authored UI files changed without a related DESIGN\.md artifact/);
 });
 
+test('check-design-change-guard passes branch UI changes that only trim trailing whitespace', () => {
+  const root = makeTempDir('governance-design-change-guard-whitespace-only-');
+  initGitRepo(root);
+  git(root, ['branch', '-M', 'main']);
+  writeMinimalDesignRepo(root);
+  writeFile(root, 'src/app/styles.css', '.app { color: var(--color-on-surface); }  \n');
+  runScriptWithArgs('generate-design-adoption-audit.mjs', [], root);
+  commitAll(root, 'baseline');
+  git(root, ['switch', '-c', 'feature']);
+
+  writeFile(root, 'src/app/styles.css', '.app { color: var(--color-on-surface); }\n');
+
+  const result = runScriptWithArgs('check-design-change-guard.mjs', [], root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /trailing-whitespace-only UI changes/);
+});
+
 test('check-design-change-guard passes UI changes with design artifacts', () => {
   const root = makeTempDir('governance-design-change-guard-pass-');
   initGitRepo(root);

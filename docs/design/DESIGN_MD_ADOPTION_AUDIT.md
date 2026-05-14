@@ -5,7 +5,7 @@ Date: 2026-05-09
 
 ## Summary
 
-`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, dark TaskCreationForm and task-create page tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual, typography, and motion value enforcement for all authored UI CSS, semantic token contrast regression coverage, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards, and screenshot smoke coverage.
+`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, dark TaskCreationForm and task-create page tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual, typography, and motion value enforcement for all authored UI CSS, semantic token contrast regression coverage, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards that ignore trailing-whitespace-only UI diffs, and screenshot smoke coverage.
 
 Machine-readable audit config: `docs/design/design-md-adoption.config.json`
 Generated audit document: `docs/design/DESIGN_MD_ADOPTION_AUDIT.md`
@@ -50,7 +50,7 @@ Generated audit document: `docs/design/DESIGN_MD_ADOPTION_AUDIT.md`
 | Migrated components use generated variables. | Pass | Global styles, Button, TaskCreationForm, and task-detail modules import generated token CSS and use `var(--...)` values. TaskCreationForm and StageTransition preserve label/error associations required by `DESIGN.md`. |
 | Optional areas are implemented, explicitly N/A, or tracked as follow-up. | Pass | The optional area table above marks implemented, N/A, and smoke-backed items with reasons. |
 | Screenshot smoke tests cover at least the primary screen and migrated components. | Pass | `tests/browser/design-token-operationalization.browser.spec.ts` captures primary app, Button states, TaskCreationForm token output, the dark task-create page shell, task-detail state panels, and mobile task-detail layout. |
-| `make verify` passes. | Pass | Local verification is the source of truth for DESIGN.md guarantees and runs token drift, token usage, generated audit, and design change guard checks before the rest of the repo verification. |
+| `make verify` passes. | Pass | Local verification is the source of truth for DESIGN.md guarantees and runs token drift, token usage, generated audit, and design change guard checks before the rest of the repo verification. The design change guard treats trailing-whitespace-only UI diffs as lint cleanup rather than visual semantics changes. |
 
 ## Follow-Up Backlog
 

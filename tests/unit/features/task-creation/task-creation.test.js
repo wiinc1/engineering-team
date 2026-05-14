@@ -25,7 +25,7 @@ test('task creation module creates tasks with sequence number', async () => {
     },
     42
   );
-  
+
   assert.equal(result.taskId, 'TSK-042');
   assert.equal(result.title, 'Test task');
   assert.equal(calls.length, 1);
@@ -52,7 +52,7 @@ test('task creation module saves drafts', async () => {
     priority: 'Medium',
     task_type: 'Bug',
   });
-  
+
   assert.equal(result.draftId, 'draft-1');
   assert.equal(result.title, 'Draft task');
   assert.equal(result.isDraft, true);
@@ -72,7 +72,7 @@ test('task creation module fetches drafts', async () => {
   });
 
   const result = await module.fetchTaskDraft('TSK-001');
-  
+
   assert.equal(result.taskId, 'TSK-001');
   assert.equal(result.title, 'Fetched task');
   assert.equal(result.isDraft, true);
@@ -93,7 +93,7 @@ test('task creation module deletes drafts', async () => {
   });
 
   const result = await module.deleteTaskDraft('TSK-001');
-  
+
   assert.equal(result.success, true);
   assert.equal(result.taskId, 'TSK-001');
   assert.equal(calls.length, 1);

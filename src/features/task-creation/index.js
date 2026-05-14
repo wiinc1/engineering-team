@@ -7,15 +7,15 @@ function createTaskCreationModule({ client = createTaskCreationApiClient() } = {
     async createTask(taskData, sequenceNumber) {
       return client.createTask(taskData, sequenceNumber);
     },
-    
+
     async saveDraft(taskData) {
       return client.saveDraft(taskData);
     },
-    
+
     async fetchTaskDraft(taskId) {
       return client.fetchTaskDraft(taskId);
     },
-    
+
     async deleteTaskDraft(taskId) {
       return client.deleteTaskDraft(taskId);
     },

@@ -1,3 +1,4 @@
+// Issue #193 standards evidence: audit workflow coverage remains active after lint-only whitespace cleanup.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { WorkflowEngine, WorkflowError, STAGES } = require('../../lib/audit/workflow');
