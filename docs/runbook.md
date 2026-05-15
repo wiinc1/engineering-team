@@ -12,6 +12,7 @@ Detailed domain runbooks remain authoritative for their domains:
 - Production auth status: `docs/runbooks/production-auth-status.md`
 - Production identity provider: `docs/runbooks/production-identity-provider.md`
 - Audit foundation: `docs/runbooks/audit-foundation.md`
+- Execution Contract refinement: `docs/runbooks/execution-contract-refinement.md`
 - Task platform rollout: `docs/runbooks/task-platform-rollout.md`
 - Workflow delivery loop: `docs/runbooks/workflow-delivery-loop.md`
 - Specialist delegation: `docs/runbooks/specialist-delegation.md`

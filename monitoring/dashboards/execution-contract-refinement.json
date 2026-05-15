@@ -1,0 +1,17 @@
+{
+  "title": "Execution Contract Refinement",
+  "panels": [
+    { "name": "task.execution_contract_version_recorded", "type": "event_count" },
+    { "name": "task.execution_contract_approved", "type": "event_count" },
+    { "name": "task.execution_contract_verification_report_generated", "type": "event_count" },
+    { "name": "task.execution_contract_artifact_bundle_approved", "type": "event_count" },
+    { "name": "feature_execution_contract_section_reviews_total", "type": "stat" },
+    { "name": "feature_execution_contract_material_versions_total", "type": "stat" },
+    { "name": "feature_execution_contract_auto_approvals_total", "type": "stat" },
+    { "name": "feature_execution_contract_auto_approval_blocked_total", "type": "stat" },
+    { "name": "feature_operator_trusted_autonomous_delivery_rate", "type": "stat" },
+    { "name": "workflow_audit_write_failures_total", "type": "stat" },
+    { "name": "workflow_projection_lag_seconds", "type": "timeseries" },
+    { "name": "dispatch_ready", "type": "stat" }
+  ]
+}

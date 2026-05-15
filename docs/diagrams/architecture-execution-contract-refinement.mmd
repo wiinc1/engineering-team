@@ -1,0 +1,14 @@
+flowchart LR
+  Operator[Operator or PM] --> Browser[Task detail and refinement client]
+  Reviewer[Architect UX QA SRE Principal] --> Browser
+  Browser --> API[Audit HTTP API]
+  API --> Auth[Bearer token and role checks]
+  API --> Refinement[Execution Contract refinement helper]
+  Refinement --> Domain[Execution Contract domain module]
+  Domain --> Store[Append-only audit store]
+  Store --> Projection[Task detail and contract projection]
+  Projection --> Browser
+  Domain --> Report[Verification report skeleton]
+  Domain --> Artifacts[User story and refinement artifacts]
+  Store --> Metrics[Prometheus metrics endpoint]
+  Metrics --> Dashboard[Refinement dashboard and alerts]

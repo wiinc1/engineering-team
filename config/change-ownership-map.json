@@ -37,7 +37,6 @@
       "name": "registration-auth",
       "runtime_patterns": [
         "^lib/auth/(credentials|registration|registration-production-smoke|production-smoke-common|oidc-production-smoke|production-status|config-check|magic-link|magic-link-production-smoke)\\.js$",
-        "^lib/audit/http\\.js$",
         "^api/auth/",
         "^db/migrations/(009_magic_link_auth|011_registration_auth(\\.down)?)\\.sql$",
         "^scripts/(verify-registration-production|verify-magic-link-production|verify-production-auth-status|check-auth-config|seed-auth-admin|bootstrap-deploy-auth)\\.js$",
@@ -83,6 +82,7 @@
       "name": "audit-api",
       "runtime_patterns": [
         "^api/",
+        "^lib/audit/http\\.js$",
         "^lib/auth/jwt\\.js$"
       ],
       "test_requirements": [
@@ -91,6 +91,7 @@
           "patterns": [
             "^tests/unit/audit-api\\.test\\.js$",
             "^tests/unit/audit-api-deploy-wrapper\\.test\\.js$",
+            "^tests/unit/execution-contract-refinement\\.test\\.js$",
             "^tests/unit/audit-jwt-auth\\.test\\.js$"
           ]
         },
@@ -98,14 +99,16 @@
           "name": "contract",
           "patterns": [
             "^tests/contract/audit-openapi\\.contract\\.test\\.js$",
-            "^tests/contract/audit-api-deploy-wrapper\\.contract\\.test\\.js$"
+            "^tests/contract/audit-api-deploy-wrapper\\.contract\\.test\\.js$",
+            "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$"
           ]
         },
         {
           "name": "security",
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
-            "^tests/security/audit-api-deploy-wrapper\\.security\\.test\\.js$"
+            "^tests/security/audit-api-deploy-wrapper\\.security\\.test\\.js$",
+            "^tests/security/execution-contract-refinement\\.security\\.test\\.js$"
           ]
         }
       ],
@@ -115,6 +118,7 @@
           "patterns": [
             "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/authenticated-browser-app-openapi\\.yml$",
+            "^docs/api/execution-contract-refinement-openapi\\.yml$",
             "^docs/api/task-assignment-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$",
             "^docs/api/task-owner-surfaces-openapi\\.yml$"
@@ -124,6 +128,7 @@
           "name": "runbook",
           "patterns": [
             "^docs/runbooks/audit-foundation\\.md$",
+            "^docs/runbooks/execution-contract-refinement\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
             "^docs/runbooks/task-assignment\\.md$"
           ]
@@ -146,12 +151,14 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/audit-.*\\.test\\.js$",
-            "^tests/unit/execution-contracts\\.test\\.js$"
+            "^tests/unit/execution-contracts\\.test\\.js$",
+            "^tests/unit/execution-contract-refinement\\.test\\.js$"
           ]
         },
         {
           "name": "integration",
           "patterns": [
+            "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
             "^tests/integration/audit-migrations\\.integration\\.test\\.js$",
             "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$"
@@ -161,6 +168,7 @@
           "name": "security-or-performance",
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
+            "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
             "^tests/performance/audit-foundation\\.performance\\.test\\.js$"
           ]
         }
@@ -170,6 +178,7 @@
           "name": "api",
           "patterns": [
             "^docs/api/audit-foundation-openapi\\.yml$",
+            "^docs/api/execution-contract-refinement-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
         },

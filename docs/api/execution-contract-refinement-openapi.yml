@@ -1,0 +1,274 @@
+openapi: 3.1.0
+info:
+  title: Execution Contract Refinement API
+  version: 1.0.0
+  description: |
+    Canonical API surface for the Execution Contract refinement workflow introduced for issue #152.
+    The `/api` prefix is stripped by the deployed wrapper before the audit HTTP server handles the
+    request, so `/api/v1/tasks/...` is implemented by the same audit backend as `/v1/tasks/...`.
+    External routes include `/api/v1/tasks/{taskId}/execution-contract` and
+    `/api/v1/tasks/{taskId}/execution-contract/{version}/sections/{sectionId}/review`.
+servers:
+  - url: /api/v1
+security:
+  - BearerAuth: []
+paths:
+  /tasks/{taskId}/execution-contract:
+    get:
+      summary: Read the latest Execution Contract projection
+      operationId: getExecutionContractProjection
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Latest structured Execution Contract projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionContractProjectionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      summary: Create or version an Execution Contract from an Intake Draft
+      operationId: createExecutionContractVersion
+      description: |
+        PM/admin mutation. Converts raw Intake Draft requirements into structured contract data tied
+        to the existing Task ID and audit event stream. Material changes create a new version and
+        leave implementation dispatch blocked until the latest version is approved.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionContractUpsertRequest'
+      responses:
+        '201':
+          description: Execution Contract version recorded.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: The task is not an Intake Draft or the task is locked.
+  /tasks/{taskId}/execution-contract/{version}/sections/{sectionId}/review:
+    post:
+      summary: Record reviewer contribution for a versioned Execution Contract section
+      operationId: reviewExecutionContractSection
+      description: |
+        Reviewer/PM/admin mutation. Records role-specific contribution or approval for the targeted
+        latest contract version and section. The contribution is persisted as a new
+        `task.execution_contract_version_recorded` event with `section_review` metadata. If the
+        targeted version is stale, the route returns `stale_execution_contract_review`. A material
+        section review after Operator Approval creates a new latest version and clears dispatch
+        readiness until that latest version is approved or, where eligible, auto-approved.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - name: version
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: sectionId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionContractSectionReviewRequest'
+      responses:
+        '201':
+          description: Section review persisted as a new contract version.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionContractSectionReviewResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Stale version, task lock, or review conflict.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /tasks/{taskId}/execution-contract/approve:
+    post:
+      summary: Commit the latest valid Execution Contract
+      operationId: approveExecutionContract
+      description: |
+        Operator Approval records committed scope for the current latest version only. Missing
+        required reviewer approvals or unresolved blocking questions return
+        `execution_contract_approval_blocked`; low-risk Simple policy attempts may return
+        `execution_contract_auto_approval_blocked` and require explicit Operator Approval.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvalNote: { type: string }
+                autoApproval: { type: boolean }
+                autoApprovalRationale: { type: string }
+      responses:
+        '201':
+          description: Latest contract version approved and committed.
+        '409':
+          description: Approval blocked by missing reviewer approval, blocking decision cluster, or auto-approval policy.
+  /tasks/{taskId}/execution-contract/verification-report:
+    post:
+      summary: Generate required verification report skeleton
+      operationId: generateExecutionContractVerificationReport
+      description: |
+        Generates `docs/reports/{display-id}-{slug}-verification.md`. Standard, Complex, Epic, and
+        risk-bearing Simple contracts must have this artifact before implementation dispatch becomes
+        `dispatch_ready`.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '201':
+          description: Verification report generated.
+  /tasks/{taskId}/execution-contract/artifacts:
+    post:
+      summary: Generate reviewable repo artifacts
+      operationId: generateExecutionContractArtifacts
+      description: |
+        Generates issue/story and refinement decision artifacts for PM and section-owner review.
+        GitHub issue creation remains default-off.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '201':
+          description: Artifact bundle generated.
+  /tasks/{taskId}/execution-contract/artifacts/approve:
+    post:
+      summary: Approve generated artifacts for commit
+      operationId: approveExecutionContractArtifacts
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '201':
+          description: Artifact bundle approved for commit.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Forbidden:
+      description: Caller does not have the required workflow role.
+    NotFound:
+      description: Task, contract, or contract section was not found.
+  schemas:
+    ExecutionContractUpsertRequest:
+      type: object
+      required: [templateTier, sections]
+      properties:
+        templateTier:
+          type: string
+          enum: [Simple, Standard, Complex, Epic]
+        sections:
+          type: object
+          additionalProperties: true
+        riskFlags:
+          type: array
+          items: { type: string }
+        reviewers:
+          type: object
+          additionalProperties: true
+        reviewFeedback:
+          type: object
+          additionalProperties: true
+    ExecutionContractSectionReviewRequest:
+      type: object
+      properties:
+        reviewerRole:
+          type: string
+          enum: [architect, ux, qa, sre, principalEngineer, pm]
+        status:
+          type: string
+          enum: [approved, accepted, complete, signed_off, commented, changes_requested]
+        approved:
+          type: boolean
+        comment:
+          type: string
+        blocking:
+          type: boolean
+        sectionPatch:
+          type: object
+          additionalProperties: true
+        materialChangeReason:
+          type: string
+        idempotencyKey:
+          type: string
+    ExecutionContractSectionReview:
+      type: object
+      required: [role, sectionId, status, actorId]
+      properties:
+        role: { type: string }
+        sectionId: { type: string }
+        status: { type: string }
+        actorId: { type: string }
+        comment: { type: [string, 'null'] }
+        blocking: { type: boolean }
+    ExecutionContractSectionReviewResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          required: [taskId, version, previousVersion, materialChange, sectionReview, contract]
+          properties:
+            taskId: { type: string }
+            version: { type: integer }
+            previousVersion: { type: integer }
+            materialChange: { type: boolean }
+            sectionReview:
+              $ref: '#/components/schemas/ExecutionContractSectionReview'
+            contract:
+              type: object
+              additionalProperties: true
+    ExecutionContractProjectionResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          additionalProperties: true
+          properties:
+            latestVersion: { type: integer }
+            approval:
+              type: [object, 'null']
+            dispatchReadiness:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [dispatch_ready, dispatch_blocked]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: object
+              additionalProperties: true

@@ -1,0 +1,20 @@
+flowchart TD
+  A[Intake Draft task exists in DRAFT] --> B[PM creates structured Execution Contract draft]
+  B --> C[Task history records task.execution_contract_version_recorded]
+  C --> D[Reviewer routing policy selects Architect UX QA SRE Principal]
+  D --> E{Section owner review complete?}
+  E -->|No| F[Persist reviewer contribution through versioned section review]
+  F --> C
+  E -->|Blocking question open| G[Decision cluster remains blocking]
+  G --> F
+  E -->|Yes| H[PM validates and generates review Markdown]
+  H --> I{Operator approval gate}
+  I -->|Missing approvals or blocking questions| G
+  I -->|Low-risk Simple auto approval eligible| J[Policy records Operator Approval]
+  I -->|Explicit approval| K[Operator commits current version]
+  J --> L[Generate verification skeleton when required]
+  K --> L
+  L --> M[Generate and approve reviewable artifact bundle]
+  M --> N{Latest version still approved?}
+  N -->|Yes| O[Implementation dispatch readiness true]
+  N -->|Material change after approval| C
