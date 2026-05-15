@@ -2,6 +2,7 @@ import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { installTaskAssignmentFetchMock, renderTaskAssignmentApp } from '../ui/task-assignment-harness';
+import { installTaskDetailNextActionFetchMock, renderTaskDetailNextActionApp, taskDetailNextActionPayload } from '../ui/task-detail-next-action-harness';
 
 afterEach(() => {
   cleanup();
@@ -19,5 +20,14 @@ describe('task assignment visual baseline', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /save owner/i })).toBeInTheDocument());
 
     expect(container.querySelector('.assignment-panel')).toMatchSnapshot();
+  });
+
+  it('matches the role-specific next-action panel snapshot', async () => {
+    installTaskDetailNextActionFetchMock(taskDetailNextActionPayload({ stage: 'DRAFT', intakeDraft: true, nextAction: 'PM refinement required' }));
+    const { container } = render(renderTaskDetailNextActionApp(['pm', 'reader']));
+
+    await screen.findByRole('heading', { name: /role-specific next action/i });
+
+    expect(container.querySelector('.task-next-action')).toMatchSnapshot();
   });
 });

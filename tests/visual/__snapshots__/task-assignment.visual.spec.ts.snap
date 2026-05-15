@@ -4,6 +4,7 @@ exports[`task assignment visual baseline > matches the assignment panel snapshot
 <section
   aria-label="Task assignment"
   class="assignment-panel"
+  id="task-detail-assignment-panel"
 >
   <div
     class="assignment-panel__header"
@@ -65,5 +66,107 @@ exports[`task assignment visual baseline > matches the assignment panel snapshot
       </button>
     </div>
   </form>
+</section>
+`;
+
+exports[`task assignment visual baseline > matches the role-specific next-action panel snapshot 1`] = `
+<section
+  aria-labelledby="task-next-action-title"
+  class="task-next-action task-next-action--warning"
+  data-next-action="pm_refinement"
+  data-next-action-role="pm"
+>
+  <div
+    class="task-next-action__main"
+  >
+    <p
+      class="eyebrow"
+    >
+      PM
+       next action
+    </p>
+    <h2
+      id="task-next-action-title"
+    >
+      PM refinement required
+    </h2>
+    <p>
+      PM refinement required
+    </p>
+    <a
+      class="task-next-action__primary"
+      href="#task-detail-overview-section"
+    >
+      Review PM context
+    </a>
+  </div>
+  <div
+    class="task-next-action__support"
+  >
+    <dl
+      class="task-next-action__facts"
+    >
+      <div>
+        <dt>
+          State
+        </dt>
+        <dd>
+          DRAFT
+        </dd>
+      </div>
+      <div>
+        <dt>
+          Owner
+        </dt>
+        <dd>
+          PM
+        </dd>
+      </div>
+      <div>
+        <dt>
+          Freshness
+        </dt>
+        <dd>
+          fresh · 2026-05-15T10:00:00.000Z
+        </dd>
+      </div>
+    </dl>
+    <div
+      class="task-next-action__evidence"
+    >
+      <span>
+        Evidence needed
+      </span>
+      <ul>
+        <li>
+          Business context
+        </li>
+        <li>
+          Acceptance criteria
+        </li>
+        <li>
+          Definition of Done
+        </li>
+        <li>
+          Deferred Considerations decision path
+        </li>
+      </ul>
+    </div>
+    <nav
+      aria-label="Task detail section shortcuts"
+      class="task-next-action__links"
+    >
+      <a
+        href="#task-detail-history-section"
+      >
+        History and telemetry
+      </a>
+      <a
+        href="#task-detail-discussion-section"
+      >
+        Discussion
+      </a>
+    </nav>
+  </div>
 </section>
 `;

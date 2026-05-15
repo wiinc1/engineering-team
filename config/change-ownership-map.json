@@ -214,6 +214,11 @@
             "^src/app/AuthAppShell\\.test\\.tsx$",
             "^src/app/auth-runtime-env\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
+            "^tests/accessibility/task-assignment\\.a11y\\.spec\\.ts$",
+            "^tests/visual/task-assignment\\.visual\\.spec\\.ts$",
+            "^tests/performance/lighthouse-task-detail\\.spec\\.ts$",
+            "^tests/unit/task-detail-next-action\\.test\\.js$",
             "^tests/unit/auth-admin-seed\\.test\\.js$",
             "^tests/unit/task-browser-session\\.test\\.js$",
             "^tests/unit/auth-config-check\\.test\\.js$"
@@ -225,6 +230,7 @@
             "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
         }
@@ -243,6 +249,7 @@
             "^docs/design/ISSUE-107-design\\.md$",
             "^docs/design/ISSUE-108-design\\.md$",
             "^docs/design/ISSUE-110-design\\.md$",
+            "^docs/design/ISSUE-153-design\\.md$",
             "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/ISSUE-137-design\\.md$"
@@ -301,6 +308,7 @@
           "name": "browser",
           "patterns": [
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]

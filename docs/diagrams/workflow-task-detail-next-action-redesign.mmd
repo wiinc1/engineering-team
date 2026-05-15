@@ -1,0 +1,24 @@
+flowchart TD
+  A[User opens task detail from board, inbox, overview, or deep link] --> B[Load GET /tasks/:taskId/detail]
+  B --> C[Read browser session roles and permissions]
+  C --> D[Resolve task signals: stage, owner, blocked state, waiting state, freshness, monitoring, close governance]
+  D --> E{Role and state require action?}
+  E -->|PM refinement or assignment| PM[Show PM next-action panel with owner/refinement shortcut]
+  E -->|Architect or engineer handoff| ENG[Show delivery handoff shortcut and evidence expectations]
+  E -->|QA verification| QA[Show QA result action and evidence requirements]
+  E -->|SRE monitoring| SRE[Show monitoring state, expiry, approval or blocking reason]
+  E -->|Human decision| H[Show decision cluster and close-review context]
+  E -->|Reader or missing permission| R[Show status-only panel without edit controls]
+  E -->|No immediate action| P[Show passive monitoring, owner, freshness, history, and telemetry paths]
+  PM --> F[User follows anchor or existing control]
+  ENG --> F
+  QA --> F
+  SRE --> F
+  H --> F
+  R --> G[Audit, telemetry, comments, and history remain inspectable when permitted]
+  P --> G
+  F --> I[Existing mutation endpoint records workflow event]
+  I --> J[Projection refresh updates task detail read model]
+  J --> D
+  F --> M[Emit sanitized action-click metric]
+  D --> N[Emit sanitized action-impression metric]

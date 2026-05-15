@@ -1,4 +1,5 @@
 import { Fragment as q, jsx as e, jsxs as a } from "react/jsx-runtime";
+import { TaskDetailNextActionPanel } from "../../features/task-detail/TaskDetailNextActionPanel";
 
 function TaskDetailRoute({ ctx }) {
   const {
@@ -46,7 +47,7 @@ lved").map((t) => a("li", { children: [e("strong", { children: t.title }), e("sp
 task-detail-hero", "aria-label": "Task summary", children: [a("div", { className: "task-detail-hero__title", children: [a("div", { className: "task-status-pill",
   "data-status": s.detail?.task?.status || "active", children: [e("span", { "aria-hidden": "true", children: lo(s.detail?.task?.status) }), e("span", { children: rt(
   s.detail?.task?.status) })] }), e("div", { className: "priority-pill", children: s.summary.priority || "No priority" }), oa ? e("div", { className: "routing-b\
-adge routing-badge--intake", children: "Intake Draft" }) : null, Qs ? e("div", { className: "routing-badge", children: "Assigned to me" }) : null] }), a("div", {
+adge routing-badge--intake", children: "Intake Draft" }) : null, Qs ? e("div", { className: "routing-badge", children: "Assigned to me" }) : null] }), e(TaskDetailNextActionPanel, { screen: s, principal: h }), a("div", {
   className: "summary-grid summary-grid--hero", children: [a("article", { children: [e("span", { children: "Owner" }), e("strong", { children: s.detail?.summary?.
   owner?.label || s.summary.currentOwner || "Unassigned" })] }), a("article", { children: [e("span", { children: "Workflow stage" }), e("strong", { children: s.
   detail?.summary?.workflowStage?.label || s.summary.currentStage || "\u2014" })] }), a("article", { children: [e("span", { children: "Status" }), e("strong", {
@@ -144,7 +145,7 @@ f-form", onSubmit: Fs, children: [e("h3", { children: "Capture Deferred Consider
 assignment-form__actions", children: e("button", { type: "submit", disabled: K.kind === "loading" && K.action === "capture", children: K.kind === "loading" && K.
   action === "capture" ? "Capturing\u2026" : "Capture Deferred Consideration" }) }), K.kind !== "idle" && K.action === "capture" ? e("p", { className: `assignme\
 nt-status assignment-status--${K.kind}`, role: K.kind === "error" ? "alert" : "status", children: K.message }) : null] }) : null] }), s.detail?.context?.closeGovernance?.
-  active ? a("section", { className: "detail-card detail-card--full", "aria-label": "Close review governance", children: [e("h2", { children: "Close review gove\
+  active ? a("section", { id: "task-detail-close-review-section", className: "detail-card detail-card--full", "aria-label": "Close review governance", children: [e("h2", { children: "Close review gove\
 rnance" }), a("div", { className: "review-question-note", children: [e("span", { children: uo(s.detail.context.closeGovernance.readiness?.state) }), e("p", { children: s.
   detail.context.closeGovernance.humanDecision?.summary || s.detail.context.closeGovernance.escalation?.summary || s.detail.summary?.nextAction?.label || "Gover\
 ned close review is active." }), a("p", { className: "task-list-meta", children: [Va(s.detail.context.closeGovernance.humanDecision?.status), s.detail.context.closeGovernance.
@@ -209,7 +210,7 @@ oring degraded" }), e("option", { value: "cancellation_rejected", children: "Can
 rack summary", e("textarea", { value: de.summary, onChange: (t) => bt((n) => ({ ...n, summary: t.target.value })), placeholder: "Optional short summary for the \
 audit trail." })] }), e("div", { className: "assignment-form__actions", children: e("button", { type: "submit", disabled: et.kind === "loading", children: et.kind ===
   "loading" ? "Backtracking\u2026" : "Backtrack to implementation" }) }), et.kind !== "idle" ? e("p", { className: `assignment-status assignment-status--${et.kind}`,
-  role: et.kind === "error" ? "alert" : "status", children: et.message }) : null] }) : null] }) : null, L && !oa && it(L.current_stage) ? a("section", { className: "\
+  role: et.kind === "error" ? "alert" : "status", children: et.message }) : null] }) : null] }) : null, L && !oa && it(L.current_stage) ? a("section", { id: "task-detail-lifecycle-controls", className: "\
 detail-card detail-card--full", "aria-label": "Lifecycle controls", children: [e("h2", { children: "Lifecycle controls" }), e("p", { children: "Valid transition\
 s follow the US-004 lifecycle state machine. Invalid moves are blocked before the stage event is sent." }), L.current_stage === "VERIFY" ? a(q, { children: [a("\
 label", { children: ["SRE finding note", e("textarea", { value: vn, onChange: (t) => Ta(t.target.value), placeholder: "Required when reopening from VERIFY." })] }),
@@ -242,7 +243,7 @@ dary", onClick: () => {
     k();
   }, disabled: $.kind === "loading", children: "Refresh task state" })] }), $.kind !== "idle" ? e("p", { className: `assignment-status assignment-status--${$.kind}`,
   role: $.kind === "error" ? "alert" : "status", children: $.message }) : null] }) : null, a("section", { className: "detail-sections", "aria-label": "Task deta\
-il sections", children: [a("section", { className: "detail-card", children: [e("h2", { children: "Overview" }), s.detail?.context?.operatorIntakeRequirements ? a(
+il sections", children: [a("section", { id: "task-detail-overview-section", className: "detail-card", children: [e("h2", { children: "Overview" }), s.detail?.context?.operatorIntakeRequirements ? a(
   q, { children: [e("h3", { children: "Operator intake requirements" }), e("p", { children: s.detail.context.operatorIntakeRequirements })] }) : null, e("p", { children: s.
   detail?.context?.businessContext || s.summary.businessContext || "Business context is missing." }), Rn ? a("form", { className: "architect-handoff-form", onSubmit: ai,
   children: [a("div", { className: "review-question-note", children: [e("span", { children: "PM business-context re-entry" }), e("p", { children: "Finalize the \
@@ -252,7 +253,7 @@ for this anomaly child task." })] }), e("div", { className: "assignment-form__ac
   !Es, children: Je.kind === "loading" ? "Finalizing\u2026" : "Complete PM context review" }) }), Je.kind !== "idle" ? e("p", { className: `assignment-status as\
 signment-status--${Je.kind}`, role: Je.kind === "error" ? "alert" : "status", children: Je.message }) : null] }) : null, e("h3", { children: "Acceptance criteri\
 a" }), F(s.detail?.context?.acceptanceCriteria || s.summary.acceptanceCriteria, "Acceptance criteria are missing."), e("h3", { children: "Definition of Done" }),
-  F(s.detail?.context?.definitionOfDone || s.summary.definitionOfDone, "Definition of Done is missing.")] }), a("section", { className: "detail-card", children: [
+  F(s.detail?.context?.definitionOfDone || s.summary.definitionOfDone, "Definition of Done is missing.")] }), a("section", { id: "task-detail-delivery-section", className: "detail-card", children: [
   e("h2", { children: "Delivery" }), s.detail?.context?.architectHandoff ? a("div", { className: "architect-handoff-summary", children: [a("div", { className: "\
 summary-grid review-question-summary-grid", children: [a("article", { children: [e("span", { children: "Engineer tier" }), e("strong", { children: s.detail.context.
   architectHandoff.engineerTier })] }), a("article", { children: [e("span", { children: "Handoff version" }), a("strong", { children: ["v", s.detail.context.architectHandoff.
@@ -286,35 +287,35 @@ status", children: "Responsible escalation is available only for Jr-tier work be
 pport" }) }), Oe.kind !== "idle" ? e("p", { className: `assignment-status assignment-status--${Oe.kind}`, role: Oe.kind === "error" ? "alert" : "status", children: Oe.
   message }) : null] }) : e("p", { className: "assignment-status", role: "status", children: "Responsible escalation controls are available to engineer/admin be\
 arer tokens." }), e("h3", { children: "Engineering handoff" }), xs ? a("form", { className: "architect-handoff-form", onSubmit: async (t) => {
-    t.preventDefault();
+    t.preventDefault(); const r = new FormData(t.currentTarget), n = (i, d) => String(r.get(i) ?? d);
     try {
-      Bt({ kind: "loading", message: "Submitting engineering handoff\u2026" }), await p.submitArchitectHandoff(g, { readyForEngineering: U.readyForEngineering, engineerTier: U.
-      engineerTier, tierRationale: U.tierRationale, technicalSpec: U.technicalSpec, monitoringSpec: U.monitoringSpec }), await k(), Bt({ kind: "success", message: "\
+      Bt({ kind: "loading", message: "Submitting engineering handoff\u2026" }), await p.submitArchitectHandoff(g, { readyForEngineering: r.has("readyForEngineering"), engineerTier: n("engineerTier", U.
+      engineerTier), tierRationale: n("tierRationale", U.tierRationale), technicalSpec: { summary: n("technicalSpecSummary", U.technicalSpec.summary), scope: n("technicalSpecScope", U.technicalSpec.scope), design: n("technicalSpecDesign", U.technicalSpec.design), rolloutPlan: n("technicalSpecRolloutPlan", U.technicalSpec.rolloutPlan) }, monitoringSpec: { service: n("monitoringService", U.monitoringSpec.service), dashboardUrls: n("monitoringDashboardUrls", U.monitoringSpec.dashboardUrls), alertPolicies: n("monitoringAlertPolicies", U.monitoringSpec.alertPolicies), runbook: n("monitoringRunbook", U.monitoringSpec.runbook), successMetrics: n("monitoringSuccessMetrics", U.monitoringSpec.successMetrics) } }), await k(), Bt({ kind: "success", message: "\
 Engineering handoff submitted." });
     } catch (n) {
       Bt({ kind: "error", message: n.message || "Engineering handoff failed." });
     }
   }, children: [a("div", { className: "summary-grid architect-handoff-grid", children: [a("label", { children: ["Technical summary", e("textarea", { value: U.technicalSpec.
-  summary, onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, summary: t.target.value } })), placeholder: "Summarize the implementation con\
+  summary, name: "technicalSpecSummary", onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, summary: t.target.value } })), placeholder: "Summarize the implementation con\
 tract and boundaries." })] }), a("label", { children: ["Scope and constraints", e("textarea", { value: U.technicalSpec.scope, onChange: (t) => G((n) => ({ ...n,
-  technicalSpec: { ...n.technicalSpec, scope: t.target.value } })), placeholder: "Call out scope, constraints, and assumptions." })] }), a("label", { children: [
+  technicalSpec: { ...n.technicalSpec, scope: t.target.value } })), name: "technicalSpecScope", placeholder: "Call out scope, constraints, and assumptions." })] }), a("label", { children: [
   "Design and interfaces", e("textarea", { value: U.technicalSpec.design, onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, design: t.target.
-  value } })), placeholder: "Describe components, APIs, data contracts, and dependencies." })] }), a("label", { children: ["Rollout plan", e("textarea", { value: U.
+  value } })), name: "technicalSpecDesign", placeholder: "Describe components, APIs, data contracts, and dependencies." })] }), a("label", { children: ["Rollout plan", e("textarea", { value: U.
   technicalSpec.rolloutPlan, onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, rolloutPlan: t.target.value } })), placeholder: "Explain ro\
-llout sequencing, migrations, and fallback." })] }), a("label", { children: ["Monitored service", e("input", { value: U.monitoringSpec.service, onChange: (t) => G(
+llout sequencing, migrations, and fallback.", name: "technicalSpecRolloutPlan" })] }), a("label", { children: ["Monitored service", e("input", { value: U.monitoringSpec.service, name: "monitoringService", onChange: (t) => G(
   (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, service: t.target.value } })), placeholder: "workflow-audit-api" })] }), a("label", { children: ["Dashb\
 oard URLs", e("textarea", { value: U.monitoringSpec.dashboardUrls, onChange: (t) => G((n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, dashboardUrls: t.target.
-  value } })), placeholder: "One URL per line" })] }), a("label", { children: ["Alert policies", e("textarea", { value: U.monitoringSpec.alertPolicies, onChange: (t) => G(
-  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, alertPolicies: t.target.value } })), placeholder: "One alert policy per line" })] }), a("label", { children: [
+  value } })), name: "monitoringDashboardUrls", placeholder: "One URL per line" })] }), a("label", { children: ["Alert policies", e("textarea", { value: U.monitoringSpec.alertPolicies, onChange: (t) => G(
+  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, alertPolicies: t.target.value } })), name: "monitoringAlertPolicies", placeholder: "One alert policy per line" })] }), a("label", { children: [
   "Runbook", e("input", { value: U.monitoringSpec.runbook, onChange: (t) => G((n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, runbook: t.target.value } })),
-  placeholder: "docs/runbooks/example.md" })] }), a("label", { children: ["Success metrics", e("textarea", { value: U.monitoringSpec.successMetrics, onChange: (t) => G(
-  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, successMetrics: t.target.value } })), placeholder: "One metric per line" })] }), a("label", { children: [
-  "Engineer tier", a("select", { value: U.engineerTier, onChange: (t) => G((n) => ({ ...n, engineerTier: t.target.value })), children: [e("option", { value: "Pr\
+  placeholder: "docs/runbooks/example.md", name: "monitoringRunbook" })] }), a("label", { children: ["Success metrics", e("textarea", { value: U.monitoringSpec.successMetrics, onChange: (t) => G(
+  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, successMetrics: t.target.value } })), name: "monitoringSuccessMetrics", placeholder: "One metric per line" })] }), a("label", { children: [
+  "Engineer tier", a("select", { value: U.engineerTier, name: "engineerTier", onChange: (t) => G((n) => ({ ...n, engineerTier: t.target.value })), children: [e("option", { value: "Pr\
 incipal", children: "Principal" }), e("option", { value: "Sr", children: "Sr" }), e("option", { value: "Jr", children: "Jr" })] }), e("small", { children: zn(U.
   engineerTier) })] }), a("label", { className: "architect-handoff-grid__full", children: ["Tier rationale", e("textarea", { value: U.tierRationale, onChange: (t) => G(
-  (n) => ({ ...n, tierRationale: t.target.value })), placeholder: "Explain why this level of engineering ownership is required." })] })] }), a("label", { className: "\
+  (n) => ({ ...n, tierRationale: t.target.value })), name: "tierRationale", placeholder: "Explain why this level of engineering ownership is required." })] })] }), a("label", { className: "\
 review-question-checkbox", children: [e("input", { type: "checkbox", checked: U.readyForEngineering, onChange: (t) => G((n) => ({ ...n, readyForEngineering: t.target.
-  checked })) }), "Ready for engineering. This formal handoff is required before implementation begins."] }), e("div", { className: "assignment-form__actions", children: e(
+  checked })), name: "readyForEngineering" }), "Ready for engineering. This formal handoff is required before implementation begins."] }), e("div", { className: "assignment-form__actions", children: e(
   "button", { type: "submit", disabled: $e.kind === "loading", children: $e.kind === "loading" ? "Submitting\u2026" : "Submit engineering handoff" }) }), $e.kind !==
   "idle" ? e("p", { className: `assignment-status assignment-status--${$e.kind}`, role: $e.kind === "error" ? "alert" : "status", children: $e.message }) : null] }) :
   e("p", { className: "assignment-status", role: "status", children: "Engineering handoff controls are available to architect/admin bearer tokens." }), e("h3", {
@@ -479,22 +480,22 @@ detail-bullets", children: a("li", { children: [e("strong", { children: s.detail
 No child tasks linked yet." }), s.detail?.context?.anomalyChildTask ? a("div", { className: "review-question-note", children: [e("span", { children: "Machine-ge\
 nerated anomaly context" }), e("p", { children: s.detail.context.anomalyChildTask.summary || "No anomaly summary captured." }), a("p", { className: "task-list-m\
 eta", children: [s.detail.context.anomalyChildTask.service || "Unknown service", " \xB7 Source parent: ", s.detail.context.anomalyChildTask.sourceTaskId || "Una\
-vailable"] })] }) : null] }), a("section", { className: "detail-card detail-card--full", children: [e("h2", { children: "Architect review questions" }), a("div",
+vailable"] })] }) : null] }), a("section", { id: "task-detail-architect-review-section", className: "detail-card detail-card--full", children: [e("h2", { children: "Architect review questions" }), a("div",
   { className: "summary-grid review-question-summary-grid", children: [a("article", { children: [e("span", { children: "Total threads" }), e("strong", { children: s.
   detail?.reviewQuestions?.summary?.total ?? 0 })] }), a("article", { children: [e("span", { children: "Open" }), e("strong", { children: s.detail?.reviewQuestions?.
   summary?.unresolvedCount ?? 0 })] }), a("article", { children: [e("span", { children: "Blocking" }), e("strong", { children: s.detail?.reviewQuestions?.summary?.
   unresolvedBlockingCount ?? 0 })] }), a("article", { children: [e("span", { children: "Resolved" }), e("strong", { children: s.detail?.reviewQuestions?.summary?.
   resolvedCount ?? 0 })] })] }), Is ? a("form", { className: "review-question-composer", onSubmit: async (t) => {
     t.preventDefault();
-    const n = tn.trim();
+    const r = new FormData(t.currentTarget), n = String(r.get("reviewQuestionPrompt") ?? tn).trim(), o = r.has("reviewQuestionBlocking");
     if (!n) {
       Ue({ kind: "error", message: "Review question prompt is required.", questionId: null, action: "ask" });
       return;
     }
-    await ra({ action: "ask", payload: { prompt: n, blocking: nn }, successMessage: "Architect review question created." });
-  }, children: [a("label", { children: ["New architect review question", e("textarea", { value: tn, onChange: (t) => an(t.target.value), placeholder: "What deci\
+    await ra({ action: "ask", payload: { prompt: n, blocking: o }, successMessage: "Architect review question created." });
+  }, children: [a("label", { children: ["New architect review question", e("textarea", { name: "reviewQuestionPrompt", value: tn, onChange: (t) => an(t.target.value), placeholder: "What deci\
 sion or PM clarification is needed before architect review can proceed?" })] }), a("label", { className: "review-question-checkbox", children: [e("input", { type: "\
-checkbox", checked: nn, onChange: (t) => sn(t.target.checked) }), "Blocks architect handoff until PM resolves it"] }), e("div", { className: "review-question-co\
+checkbox", name: "reviewQuestionBlocking", checked: nn, onChange: (t) => sn(t.target.checked) }), "Blocks architect handoff until PM resolves it"] }), e("div", { className: "review-question-co\
 mposer__actions", children: e("button", { type: "submit", disabled: ee.kind === "loading" && ee.action === "ask", children: ee.kind === "loading" && ee.action ===
   "ask" ? "Saving\u2026" : "Ask question" }) })] }) : null, ee.kind !== "idle" ? e("p", { className: `review-question-status review-question-status--${ee.kind}`,
   role: ee.kind === "error" ? "alert" : "status", children: ee.message }) : null, s.detail?.reviewQuestions?.items?.length ? e("div", { className: "review-quest\
@@ -526,7 +527,7 @@ tton", { type: "button", disabled: r, onClick: () => {
     children: "Resolve" }) : null, Sn && t.state === "resolved" ? e("button", { type: "button", className: "button-secondary", disabled: r, onClick: () => ra({ action: "\
 reopen", questionId: t.id, payload: { reason: n.trim() || "Reopened from task detail UI." }, successMessage: "Review question reopened." }), children: "Reopen" }) :
     null] })] }) : null] }, t.id);
-  }) }) : e("p", { children: "No architect review questions recorded yet." })] }), a("section", { className: "detail-card", children: [e("h2", { children: "Disc\
+  }) }) : e("p", { children: "No architect review questions recorded yet." })] }), a("section", { id: "task-detail-discussion-section", className: "detail-card", children: [e("h2", { children: "Disc\
 ussion" }), a("div", { className: "summary-grid review-question-summary-grid", children: [a("article", { children: [e("span", { children: "Total threads" }), e(
   "strong", { children: aa.total })] }), a("article", { children: [e("span", { children: "Open" }), e("strong", { children: aa.unresolvedCount })] }), a("articl\
 e", { children: [e("span", { children: "Blocking" }), e("strong", { children: aa.unresolvedBlockingCount })] }), a("article", { children: [e("span", { children: "\
@@ -569,7 +570,7 @@ tton", className: "button-secondary", disabled: r, onClick: () => la({ action: "
     onClick: () => la({ action: "reopen", threadId: t.id, payload: { body: n.trim() || "Reopened from task detail UI." }, successMessage: "Workflow thread reope\
 ned." }), children: "Reopen" }) })] }) : null] }, t.id);
   }) }) : Pa.canViewComments === false ? e("p", { children: "Workflow comments are hidden for this session." }) : e("p", { children: "No structured workflow thr\
-eads yet." })] }), a("section", { className: "detail-card", children: [e("h2", { children: "QA" }), a("div", { className: "summary-grid review-question-summary-\
+eads yet." })] }), a("section", { id: "task-detail-qa-section", className: "detail-card", children: [e("h2", { children: "QA" }), a("div", { className: "summary-grid review-question-summary-\
 grid", children: [a("article", { children: [e("span", { children: "Total runs" }), e("strong", { children: s.detail?.context?.qaResults?.summary?.total ?? 0 })] }),
   a("article", { children: [e("span", { children: "Passed" }), e("strong", { children: s.detail?.context?.qaResults?.summary?.passedCount ?? 0 })] }), a("articl\
 e", { children: [e("span", { children: "Failed" }), e("strong", { children: s.detail?.context?.qaResults?.summary?.failedCount ?? 0 })] }), a("article", { children: [
@@ -618,7 +619,7 @@ Escalation chain" }), e("p", { children: (t.escalationPackage.routing?.escalatio
 detail-feed", children: t.escalationPackage.previous_fix_history.map((n) => a("li", { children: [a("strong", { children: ["v", n.version, " \xB7 ", n.primary_reference?.
   label || n.commit_sha || n.pr_url || "Reference missing"] }), a("span", { children: [n.submitted_by || "Unknown engineer", " \xB7 ", n.submitted_at || "No tim\
 estamp"] })] }, `${t.runId}-${n.version}`)) }) : e("p", { className: "empty-copy", children: "No previous fix history captured." })] })] }) : null] })] }) : null] },
-  t.runId)) }) : null] }), a("section", { className: "detail-card", children: [e("h2", { children: "SRE Monitoring" }), w ? a(q, { children: [a("div", { className: "\
+  t.runId)) }) : null] }), a("section", { id: "task-detail-sre-section", className: "detail-card", children: [e("h2", { children: "SRE Monitoring" }), w ? a(q, { children: [a("div", { className: "\
 summary-grid review-question-summary-grid", children: [a("article", { children: [e("span", { children: "State" }), e("strong", { children: w.state })] }), a("ar\
 ticle", { children: [e("span", { children: "Risk" }), e("strong", { children: w.riskLevel || "unknown" })] }), a("article", { children: [e("span", { children: "\
 Time remaining" }), e("strong", { children: w.timeRemainingLabel || "Not started" })] }), a("article", { children: [e("span", { children: "Telemetry freshness" }),
@@ -665,7 +666,7 @@ proving\u2026" : "Approve early" }) }), Ve.kind !== "idle" ? e("p", { className:
 alert" : "status", children: Ve.message }) : null] }) : null, na && !w.canApprove && s.detail?.summary?.blockedState?.isBlocked ? a("div", { className: "review-\
 question-note", children: [e("span", { children: "Approval paused" }), e("p", { children: "The parent task is blocked by linked anomaly investigation work." }),
   e("p", { className: "task-list-meta", children: "Comments and review remain available, but stage progression stays paused until the child task is resolved or \
-unblocked." })] }) : null] }) : e("p", { children: "No SRE monitoring context yet." })] }), a("section", { className: "detail-card", children: [e("h2", { children: "\
+unblocked." })] }) : null] }) : e("p", { children: "No SRE monitoring context yet." })] }), a("section", { id: "task-detail-history-section", className: "detail-card", children: [e("h2", { children: "\
 History" }), a("p", { className: "task-list-meta", children: ["Telemetry: ", s.detail?.telemetry?.availability || "unknown", s.detail?.telemetry?.lastUpdatedAt ?
   ` \xB7 ${s.detail.telemetry.lastUpdatedAt}` : ""] }), e(Ni, { selectedTab: s.shell.selectedTab, onTabChange: Ns, historyState: s.shell.historyState, telemetryState: s.
   shell.telemetryState, historyItems: s.shell.historyItems, telemetryCards: s.shell.telemetryCards, filters: s.shell.filters, onFiltersChange: Cs, historyPageInfo: s.
@@ -676,7 +677,7 @@ History" }), a("p", { className: "task-list-meta", children: ["Telemetry: ", s.d
     } catch (r) {
       throw r;
     }
-  } }), oa ? null : a("section", { className: "assignment-panel", "aria-label": "Task assignment", children: [e("div", { className: "assignment-panel__header", children: a(
+  } }), oa ? null : a("section", { id: "task-detail-assignment-panel", className: "assignment-panel", "aria-label": "Task assignment", children: [e("div", { className: "assignment-panel__header", children: a(
   "div", { children: [e("p", { className: "eyebrow", children: "Assignment" }), e("h2", { children: "Assign AI agent owner" }), e("p", { className: "lede", children: "\
 Writes to the task assignment endpoint and refreshes the projected owner after success." })] }) }), _s ? a("form", { className: "assignment-form", onSubmit: async (t) => {
     if (t.preventDefault(), !!s.route?.taskId) try {
@@ -693,6 +694,4 @@ ignment-form__actions", children: e("button", { type: "submit", disabled: Ee.kin
   "Open a task route to manage assignment." })] })] });
 }
 
-export {
-  TaskDetailRoute
-};
+export { TaskDetailRoute };

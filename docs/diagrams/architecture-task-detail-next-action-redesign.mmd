@@ -1,0 +1,28 @@
+C4Container
+title Task Detail Next-Action Redesign
+
+Person(user, "Workflow user", "PM, Architect, Engineer, QA, SRE, Human stakeholder, Admin, or Reader")
+System_Boundary(browser, "Authenticated Browser App") {
+  Container(route, "TaskDetailRoute", "React", "Owns /tasks/:taskId layout, section anchors, existing mutation controls, and status regions")
+  Container(panel, "TaskDetailNextActionPanel", "React", "Displays role-specific next action, evidence needs, shortcuts, and status facts")
+  Container(resolver, "next-action resolver", "ES module", "Derives next action from task detail read model and session roles")
+  Container(metrics, "Client metric events", "CustomEvent", "Emits sanitized impression and click events for runtime collectors")
+}
+System_Boundary(api, "Audit / Task Detail Runtime") {
+  Container(detail_api, "GET /tasks/:id/detail", "Node HTTP", "Server-prepared task detail read model")
+  Container(workflow_api, "Existing mutation endpoints", "Node HTTP", "Assignment, QA, SRE, comments, close-review, and lifecycle actions")
+  Container(authz, "JWT authz", "Node", "Rejects unauthorized mutation attempts")
+  Container(projections, "Audit projections", "File/Postgres", "Current state, history, relationships, observability, and task detail context")
+}
+
+Rel(user, route, "Opens task detail")
+Rel(route, detail_api, "Fetches canonical read model")
+Rel(detail_api, projections, "Reads projected state")
+Rel(route, resolver, "Passes detail screen model and principal roles")
+Rel(resolver, panel, "Returns action, role, tone, status facts, evidence, and anchors")
+Rel(panel, route, "Links to existing anchored sections")
+Rel(panel, metrics, "Dispatches impression and click events")
+Rel(route, workflow_api, "Uses existing controls for allowed mutations")
+Rel(workflow_api, authz, "Checks role permissions")
+Rel(workflow_api, projections, "Appends events and updates projections")
+Rel(authz, route, "Returns standardized errors for unauthorized callers")
