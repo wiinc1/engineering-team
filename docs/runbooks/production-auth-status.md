@@ -1,6 +1,6 @@
 # Production Auth Status
 
-Last updated: 2026-05-08
+Last updated: 2026-05-15
 Tracking issues: Issue #151, Issue #160, Issue #166, Issue #167
 Related production remediation issue: Issue #137
 
@@ -33,6 +33,8 @@ npm run auth:status:check -- --require-complete
 ```
 
 The status check requires fresh production smoke evidence generated on or after 2026-05-08. The historical April issue #92 smoke and the Issue #151 magic-link smoke artifact remain audit history only.
+
+Latest checked-in production evidence was generated on 2026-05-15 against `https://engineering-team-zeta.vercel.app`; the artifact records the production URL, selected `registration` strategy, and rollback target.
 
 ## Evidence Artifact
 
