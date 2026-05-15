@@ -1,0 +1,72 @@
+erDiagram
+  TASK ||--o{ AUDIT_EVENT : records
+  TASK ||--o{ EXECUTION_CONTRACT_VERSION : derives
+  EXECUTION_CONTRACT_VERSION ||--o{ EXECUTION_CONTRACT_SECTION : contains
+  EXECUTION_CONTRACT_VERSION ||--o{ SECTION_REVIEW : records
+  EXECUTION_CONTRACT_VERSION ||--o{ REVIEWER_APPROVAL : tracks
+  EXECUTION_CONTRACT_VERSION ||--o{ BLOCKING_DECISION : resolves
+  EXECUTION_CONTRACT_VERSION ||--o{ GENERATED_ARTIFACT : produces
+
+  TASK {
+    string task_id
+    string current_stage
+    string waiting_state
+    string next_required_action
+  }
+
+  AUDIT_EVENT {
+    string event_id
+    string tenant_id
+    string task_id
+    string event_type
+    string actor_id
+    string idempotency_key
+  }
+
+  EXECUTION_CONTRACT_VERSION {
+    string contract_id
+    string task_id
+    integer version
+    string template_tier
+    string material_hash
+    string status
+    boolean authoritative
+  }
+
+  EXECUTION_CONTRACT_SECTION {
+    string id
+    string owner_role
+    string contributor
+    string approver
+    string approval_status
+    integer payload_schema_version
+  }
+
+  SECTION_REVIEW {
+    string role
+    string section_id
+    string status
+    string actor_id
+    boolean blocking
+  }
+
+  REVIEWER_APPROVAL {
+    string role
+    boolean required
+    string status
+    string actor_id
+  }
+
+  BLOCKING_DECISION {
+    string id
+    string source
+    string state
+    boolean blocking
+  }
+
+  GENERATED_ARTIFACT {
+    string kind
+    string path
+    string status
+    string approved_by
+  }

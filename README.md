@@ -88,6 +88,8 @@ This repo now includes a materially more production-shaped `SF-017` slice:
 - `data/` — generated append-only event stream, queues, checkpoints, and projections
 - `observability/workflow-audit.log` — structured telemetry log
 - `docs/runbooks/audit-foundation.md` — operator notes
+- `docs/runbooks/execution-contract-refinement.md` — reviewer routing, approval, artifact, and dispatch readiness runbook
+- `docs/api/execution-contract-refinement-openapi.yml` — versioned Execution Contract refinement API surface
 
 ### Backend model
 - **Supabase Postgres**: canonical production/staging backend.

@@ -1,0 +1,31 @@
+groups:
+  - name: execution-contract-refinement
+    rules:
+      - alert: ExecutionContractRefinementTelemetryMissing
+        expr: feature_execution_contract_section_reviews_total > 0 and absent(workflow_projection_lag_seconds)
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: Execution Contract section reviews are present without projection lag telemetry
+      - alert: ExecutionContractMaterialVersionSpike
+        expr: increase(feature_execution_contract_material_versions_total[1h]) > 10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Execution Contract material versions spiked during refinement
+      - alert: ExecutionContractAutoApprovalBlocked
+        expr: increase(feature_execution_contract_auto_approval_blocked_total[30m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Low-risk Simple auto-approval was blocked and explicit Operator Approval is required
+      - alert: ExecutionContractProjectionLag
+        expr: workflow_projection_lag_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Execution Contract refinement projections are lagging
