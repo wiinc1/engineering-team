@@ -3,19 +3,21 @@
 > Issue #130 standards evidence: mechanical maintainability compaction only; no task-platform rollout procedure change.
 
 ## Scope
-This runbook covers the first environment rollout of the additive canonical task platform introduced for Issue #30.
+This runbook covers the canonical task-platform runtime and persistence path.
+The canonical source of truth is the Postgres-backed `/api/v1` task platform.
 
 It assumes:
-- audit storage is already configured to use PostgreSQL through `DATABASE_URL`
+- audit storage is configured to use PostgreSQL through `DATABASE_URL`
 - the additive `/api/v1/tasks` and `/api/v1/ai-agents` routes are deployed with the current repo code
 - the additive `/api/v1/tasks/{taskId}/merge-readiness-reviews` routes are deployed with the current repo code
-- legacy audit-backed task routes remain available during the rollout window
+- legacy audit-backed task routes remain available only as compatibility adapters during the rollout window
 
 ## Preconditions
 - target environment has a valid `DATABASE_URL`
 - target environment can reach PostgreSQL
 - operator has a bearer token with admin access for smoke checks
 - task-assignment rollout flags remain in their intended state for the environment
+- file backend flags are unset in staging and production
 
 If the target PostgreSQL endpoint does not support TLS, set `PGSSLMODE=disable` explicitly for the migration and backfill commands. For managed staging or production databases, prefer verified TLS instead.
 
@@ -25,8 +27,9 @@ If the target PostgreSQL endpoint does not support TLS, set `PGSSLMODE=disable` 
 3. Run canonical task backfill.
 4. Verify canonical row counts and checkpoint state.
 5. Smoke the `/api/v1` routes.
-6. Observe logs, metrics, and alerts during the rollout window.
-7. Only after the environment is stable, decide whether read surfaces can move from projection-first to canonical-first.
+6. Run drift verification and confirm `database.drift.ok=true`.
+7. Observe logs, metrics, and alerts during the rollout window.
+8. Only after the environment is stable, decide whether remaining compatibility traffic can be disabled behind a flag.
 
 ## Commands
 ### Run the full rollout sequence
@@ -118,6 +121,39 @@ Expected results:
 - `sync_status` is predominantly `synced` or `active`
 - legacy-only owners may appear as imported canonical agents rather than causing dropped ownership
 - merge readiness rows, when present, have at most one `is_current=true` record for the same Task, repository, PR number, and commit SHA
+- `database.drift.ok=true` in `npm run task-platform:verify`
+- any drift finding includes remediation, and the command exits non-zero until remediated
+
+## Runtime Backend Guardrails
+
+Runtime startup uses Postgres by default. The standard local development path is:
+
+```bash
+npm run dev:postgres:up
+DATABASE_URL=postgres://<local-user>:<local-password>@127.0.0.1:5432/<local-database> npm run dev
+```
+
+File fallback is not a standard local backend. It is allowed only for isolated
+local/test harnesses and must be explicit:
+
+```bash
+AUDIT_STORE_BACKEND=file ALLOW_FILE_AUDIT_BACKEND=true node <isolated-test-script>
+```
+
+Production and staging reject `AUDIT_STORE_BACKEND=file`, even when fallback
+flags are present.
+
+When file fallback is enabled locally, startup emits a structured
+`ff_canonical_task_runtime` backend-selection warning with remediation to start
+Dockerized Postgres and set `DATABASE_URL`.
+
+## Compatibility And Deprecation Map
+
+| Compatibility surface | Owner | Behavior | Deprecation criteria |
+|---|---|---|---|
+| `/tasks/*` audit workflow routes | Audit/event runtime owner | Preserve workflow history, task detail, assignment, and task lifecycle clients; supported writes sync into canonical task records | `/api/v1` clients cover task list/detail/mutation needs, zero drift is sustained for the agreed window, and rollback no longer requires projection-first writes |
+| `/api/tasks/*` and `/api/ai-agents` prefixes | Vercel/API adapter owner | Delegate to shared handlers for browser/docs compatibility | Browser config and docs point to `/api/v1` or `/backend/api/v1`, and route telemetry shows no compatibility traffic |
+| Direct file-backed task/audit factories | Test harness owner | Used by isolated tests and explicit local fallback only | No production/staging config references file backend; local docs and scripts use Dockerized Postgres by default |
 
 ## API Smoke Checks
 Replace placeholders before running:
@@ -171,6 +207,10 @@ Verify:
 
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
+- review backend selection logs for `feature=ff_canonical_task_runtime`
+- confirm `feature_canonical_task_runtime_backend_mode{mode="postgres"}` or equivalent backend-mode telemetry is present in the target dashboard
+- confirm `feature_canonical_task_runtime_drift_total` remains zero after `npm run task-platform:verify`
+- confirm `feature_canonical_task_runtime_fallback_total` remains zero in staging and production
 - confirm backfill logs show `action=canonical_backfill` with `outcome=success` or an explained `partial`
 - check assignment monitoring artifacts under [monitoring/dashboards/task-assignment.json](/Users/wiinc2/.openclaw/workspace/engineering-team/monitoring/dashboards/task-assignment.json) and [monitoring/alerts/task-assignment.yml](/Users/wiinc2/.openclaw/workspace/engineering-team/monitoring/alerts/task-assignment.yml)
 - verify no unexpected drift symptoms appear in task detail, task list, or assignment flows during the window
@@ -185,12 +225,13 @@ This rollout is additive. The first rollback action is operational containment, 
 
 1. Stop read-path cutover work if it has begun.
 2. Leave legacy audit-backed routes in place.
-3. Disable assignment rollout flags if the incident affects assignment behavior.
-4. Stop creating new merge readiness reviews if current-review uniqueness or stale-write conflicts appear.
-5. Disable the GitHub check-run client configuration to stop new `Merge readiness` check-run writes while keeping review storage readable.
-6. Leave branch-protection settings unchanged unless an operator or repo admin explicitly approves a settings change; the verifier is read-only.
-7. Stop posting derived PR summaries if comment rendering is noisy; do not change structured review evaluation to read comment text.
-8. Investigate backfill errors or canonical drift before rerunning backfill.
+3. Disable `FF_CANONICAL_TASK_RUNTIME` cutover behavior only if compatibility routes remain safe; otherwise roll back the deployment.
+4. Disable assignment rollout flags if the incident affects assignment behavior.
+5. Stop creating new merge readiness reviews if current-review uniqueness or stale-write conflicts appear.
+6. Disable the GitHub check-run client configuration to stop new `Merge readiness` check-run writes while keeping review storage readable.
+7. Leave branch-protection settings unchanged unless an operator or repo admin explicitly approves a settings change; the verifier is read-only.
+8. Stop posting derived PR summaries if comment rendering is noisy; do not change structured review evaluation to read comment text.
+9. Investigate backfill errors or canonical drift before rerunning backfill.
 
 If assignment behavior is part of the incident, use [task-assignment-emergency.md](/Users/wiinc2/.openclaw/workspace/engineering-team/docs/runbooks/task-assignment-emergency.md).
 

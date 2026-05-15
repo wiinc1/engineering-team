@@ -43,6 +43,20 @@ groups:
           severity: warning
         annotations:
           summary: Workflow outbox publisher is failing events
+      - alert: CanonicalTaskRuntimeDrift
+        expr: feature_canonical_task_runtime_drift_total > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Canonical task-platform drift detected; run npm run task-platform:verify for remediation
+      - alert: CanonicalTaskRuntimeFileFallback
+        expr: feature_canonical_task_runtime_fallback_total > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: File backend fallback is active outside an isolated local/test harness
       - alert: WorkflowAuditMissingTelemetry
         expr: workflow_audit_events_written_total > 0 and absent(workflow_projection_lag_seconds)
         for: 10m

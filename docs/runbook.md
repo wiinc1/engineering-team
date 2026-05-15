@@ -160,7 +160,8 @@ Start the browser app:
 npm run dev
 ```
 
-Start local PostgreSQL only:
+Start local PostgreSQL only. This is the standard backend for local task
+platform development and host-run API scripts:
 
 ```bash
 npm run dev:postgres:up
@@ -190,8 +191,15 @@ Use this placeholder local host database URL shape for host-run scripts:
 DATABASE_URL=postgres://<local-user>:<local-password>@127.0.0.1:5432/<local-database>
 ```
 
-The file backend is a fallback-only test/dev harness. Production and staging
-must use PostgreSQL.
+The file backend is a fallback-only test/dev harness. It requires an explicit
+local/test opt-in:
+
+```bash
+AUDIT_STORE_BACKEND=file ALLOW_FILE_AUDIT_BACKEND=true node <isolated-test-script>
+```
+
+Production and staging must use PostgreSQL. Runtime startup fails closed when
+`DATABASE_URL` is missing and no explicit local/test file fallback is set.
 
 ## Release Evidence
 
@@ -261,6 +269,11 @@ DATABASE_URL=postgres://... npm run audit:migrate
 DATABASE_URL=postgres://... TENANT_ID=engineering-team npm run task-platform:backfill
 DATABASE_URL=postgres://... TENANT_ID=engineering-team npm run task-platform:verify
 ```
+
+`npm run task-platform:verify` fails when canonical rows and sync checkpoints
+drift. The JSON output includes `database.drift.findings` and remediation for
+missing checkpoints, version mismatches, stale projection sequence numbers, and
+failed sync statuses.
 
 If task projections drift:
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { URL } = require('url');
 const { createPgPoolFromEnv } = require('../lib/audit');
+const { detectTaskPlatformDrift } = require('../lib/task-platform/drift');
 
 function tenantId() {
   return process.env.TENANT_ID || 'engineering-team';
@@ -21,6 +22,28 @@ async function fetchJson(url, token) {
     throw new Error(`${url} failed with ${response.status}: ${JSON.stringify(body)}`);
   }
   return body;
+}
+
+async function verifyTaskPlatformDrift(pool, currentTenantId) {
+  const driftRowsResult = await pool.query(
+    `SELECT
+       t.task_id,
+       t.version,
+       t.last_audit_sequence_number,
+       c.canonical_version,
+       c.last_projected_sequence_number,
+       c.sync_status,
+       c.last_error
+     FROM tasks t
+     LEFT JOIN task_sync_checkpoints c
+       ON c.tenant_id = t.tenant_id
+      AND c.task_id = t.task_id
+     WHERE t.tenant_id = $1
+     ORDER BY t.updated_at DESC`,
+    [currentTenantId],
+  );
+
+  return detectTaskPlatformDrift(driftRowsResult.rows);
 }
 
 async function verifyDatabase(pool, currentTenantId) {
@@ -51,11 +74,13 @@ async function verifyDatabase(pool, currentTenantId) {
      LIMIT 20`,
     [currentTenantId],
   );
+  const drift = await verifyTaskPlatformDrift(pool, currentTenantId);
 
   return {
     migrationApplied: migrationResult.rowCount === 1,
     canonicalTaskCount: taskCountResult.rows[0]?.task_count || 0,
     checkpointStatusCounts: checkpointStatusResult.rows,
+    drift,
     recentTasks: recentTasksResult.rows.map((row) => ({
       taskId: row.task_id,
       ownerAgentId: row.owner_agent_id,
@@ -81,18 +106,21 @@ async function verifyApi(currentTenantId) {
 
   const agents = await fetchJson(agentsUrl, token);
   const tasks = await fetchJson(tasksUrl, token);
-  const firstTask = Array.isArray(tasks.items) ? tasks.items[0] : Array.isArray(tasks) ? tasks[0] : null;
+  const agentItems = Array.isArray(agents.data) ? agents.data : Array.isArray(agents.items) ? agents.items : agents;
+  const taskItems = Array.isArray(tasks.data) ? tasks.data : Array.isArray(tasks.items) ? tasks.items : tasks;
+  const firstTask = Array.isArray(taskItems) ? taskItems[0] : null;
   const taskDetail = firstTask?.taskId
     ? await fetchJson(new URL(`/api/v1/tasks/${encodeURIComponent(firstTask.taskId)}`, baseUrl).toString(), token)
     : null;
+  const taskDetailData = taskDetail?.data || taskDetail;
 
   return {
     skipped: false,
     tenantId: currentTenantId,
-    agentCount: Array.isArray(agents.items) ? agents.items.length : Array.isArray(agents) ? agents.length : null,
-    taskCount: Array.isArray(tasks.items) ? tasks.items.length : Array.isArray(tasks) ? tasks.length : null,
+    agentCount: Array.isArray(agentItems) ? agentItems.length : null,
+    taskCount: Array.isArray(taskItems) ? taskItems.length : null,
     sampledTaskId: firstTask?.taskId || null,
-    sampledTaskVersion: taskDetail?.version || null,
+    sampledTaskVersion: taskDetailData?.version || null,
   };
 }
 
@@ -104,6 +132,10 @@ async function main() {
     const database = await verifyDatabase(pool, currentTenantId);
     const api = await verifyApi(currentTenantId);
     process.stdout.write(`${JSON.stringify({ tenantId: currentTenantId, database, api }, null, 2)}\n`);
+    if (!database.drift.ok) {
+      process.stderr.write(`Task platform drift detected: ${JSON.stringify(database.drift, null, 2)}\n`);
+      process.exitCode = 1;
+    }
   } finally {
     await pool.end();
   }

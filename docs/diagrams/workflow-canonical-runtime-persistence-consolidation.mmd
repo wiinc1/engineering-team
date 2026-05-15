@@ -1,0 +1,15 @@
+flowchart TD
+  Dev[Developer starts local stack] --> PG[Dockerized Postgres via npm run dev:postgres:up]
+  PG --> Env[DATABASE_URL configured]
+  Env --> Guard[Runtime backend guard]
+  Guard -->|postgres| API[Canonical /api/v1 task-platform API]
+  Guard -->|explicit local/test fallback| Warn[Structured fallback warning]
+  Guard -->|missing DATABASE_URL| Fail[Startup failure with remediation]
+  API --> Service[Task-platform service]
+  Service --> Tasks[(Postgres tasks and ai_agents)]
+  Service --> Mutations[(task_mutations and sync checkpoints)]
+  Legacy[Compatibility /tasks and /api task routes] --> Adapter[Compatibility adapter]
+  Adapter --> Service
+  Drift[npm run task-platform:verify] --> Compare[Compare tasks with sync checkpoints]
+  Compare -->|ok| Evidence[Rollout evidence]
+  Compare -->|drift| Remediate[Report remediation and fail verification]

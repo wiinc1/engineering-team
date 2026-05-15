@@ -151,19 +151,24 @@ The legacy refined-field task creation body remains accepted for compatibility, 
 - `FF_AUDIT_FOUNDATION=false` — hard-disable the slice at runtime
 - `FF_INTAKE_DRAFT_CREATION=false` — disables raw Intake Draft creation while preserving legacy task creation behavior
 - Shared feature-flag parsing in `lib/audit/feature-flags.js` also backs specialist delegation rollout control; prefer `FF_REAL_SPECIALIST_DELEGATION` as the canonical operator-facing name, while `FF_SPECIALIST_DELEGATION` remains a legacy-compatible alias.
-- `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; if omitted, runtime prefers `postgres` when `DATABASE_URL` is present and otherwise falls back to `file`
+- `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; guarded runtime entrypoints default to `postgres` and require `DATABASE_URL` or an injected pool unless a local/test file fallback is explicitly selected
 - `ALLOW_LEGACY_HEADERS=true` — permit legacy non-JWT auth fallback
 - `DATABASE_URL=postgres://...` — required for PostgreSQL backend; in production this should be the Supabase Postgres connection string
 - `PGSSL_ACCEPT_SELF_SIGNED=1` — explicit dev-only escape hatch when a managed provider presents a chain your environment cannot validate
-- `ALLOW_FILE_AUDIT_BACKEND_IN_PRODUCTION=true` — emergency escape hatch only; normal production posture should leave this unset/false
+- `ALLOW_FILE_AUDIT_BACKEND=true` or `TASK_PLATFORM_ALLOW_FILE_BACKEND=true` — explicit local/test-only fallback opt-in for isolated file-backed harnesses
 - `PUSHGATEWAY_URL=http://...` — optional worker metric push target
 
 ## Deployment posture
 - **Production:** Supabase Postgres only. `run-audit-api.js` and `run-audit-workers.js` now fail fast if production is configured to use the file backend or if `DATABASE_URL` is missing for Postgres.
 - **Local development / test:** use Dockerized Postgres by default. `docker-compose.yml` now runs Postgres with disposable storage (`tmpfs`), so `docker compose down -v` / `npm run dev:postgres:reset` gives a clean slate quickly.
-- **Fallback local harness:** file backend remains available for fast isolated runs. Set `AUDIT_STORE_BACKEND=file` and keep `NODE_ENV=development` or `test`.
+- **Fallback local harness:** file backend remains available for fast isolated runs. Set `AUDIT_STORE_BACKEND=file`, set `ALLOW_FILE_AUDIT_BACKEND=true` or `TASK_PLATFORM_ALLOW_FILE_BACKEND=true`, and keep `NODE_ENV=development` or `test`.
 - **Managed Postgres in dev/staging:** use the same Postgres path as production by setting `DATABASE_URL`; no code-path change is required.
 - **TLS guidance:** prefer verified TLS. If a provider like Supabase is reachable only with an untrusted/self-signed chain in your current environment, set `PGSSL_ACCEPT_SELF_SIGNED=1` explicitly instead of hiding the relaxation in the connection string. Treat that as temporary dev/staging-only posture.
+
+## Runtime Backend Selection Guard
+All deployable audit runtimes call the backend guard before they create an API server or worker. The guard defaults to the canonical Postgres path, rejects production/staging file persistence, and rejects implicit local file fallback unless `ALLOW_FILE_AUDIT_BACKEND=true` or `TASK_PLATFORM_ALLOW_FILE_BACKEND=true` is present.
+
+Every guarded entrypoint emits a structured `backend_selection` log entry. Postgres selection logs `outcome=success`; explicit local/test file fallback logs `outcome=fallback_warning`, `warning_code=file_backend_fallback`, and a remediation telling the operator to start Dockerized Postgres or provide `DATABASE_URL`.
 
 ## Local Docker workflow
 ### Start disposable local Postgres

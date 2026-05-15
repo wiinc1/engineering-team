@@ -4,8 +4,9 @@ info:
   title: Canonical Task Platform API
   version: 0.2.0
   description: |
-    Implemented additive versioned API contract for the canonical task persistence and AI agent ownership architecture.
-    This is additive to the current audit-backed `/tasks/...` routes and is the live runtime contract for the Issue #30 rollout path.
+    Versioned API contract for canonical task persistence, AI agent ownership, and merge-readiness reviews.
+    `/api/v1` is the canonical task-platform read/write path for production, staging, and standard local development.
+    Audit-backed `/tasks/...` routes remain compatibility adapters during the migration window.
 servers:
   - url: /api/v1
 paths:

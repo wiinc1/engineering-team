@@ -47,3 +47,14 @@ test('Vercel API entrypoints return the request handler promise', () => {
     });
   }
 });
+
+test('Vercel server wrapper selects and logs the canonical runtime backend', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(path.join(__dirname, '../../api/_server.js'), 'utf8');
+
+  assert.match(source, /assertAuditBackendConfiguration\(\{\s*runtimeEnv: 'production'/);
+  assert.match(source, /logAuditBackendSelection\(backendConfig, logger, \{ runtimeEnv: 'production' \}\)/);
+  assert.match(source, /backend: backendConfig\.backend/);
+  assert.match(source, /connectionString: backendConfig\.connectionString/);
+});

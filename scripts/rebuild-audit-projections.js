@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 const path = require('path');
-const { createAuditStore, assertAuditBackendConfiguration } = require('../lib/audit');
+const { createAuditStore, assertAuditBackendConfiguration, logAuditBackendSelection } = require('../lib/audit');
 
 const baseDir = process.argv[2]
   ? path.resolve(process.argv[2])
   : process.cwd();
 
 const backendConfig = assertAuditBackendConfiguration();
+logAuditBackendSelection(backendConfig);
 const store = createAuditStore({ baseDir, ...backendConfig });
 
 (async () => {

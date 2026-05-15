@@ -112,6 +112,17 @@ Implemented in-repo on 2026-04-12:
 - compatibility sync from the legacy audit-owned routes into canonical task records
 - audit-to-canonical backfill utility in `lib/task-platform/backfill.js`
 
+Consolidation update on 2026-05-15:
+
+- runtime startup guards now make Postgres the default runtime backend and fail
+  closed when `DATABASE_URL` is missing
+- file fallback is limited to explicit isolated local/test opt-in and rejected in
+  production/staging
+- `npm run task-platform:verify` includes canonical drift detection against sync
+  checkpoints with remediation output
+- compatibility route ownership and deprecation criteria are documented in the
+  task-platform rollout runbook
+
 Remaining rollout work is operational rather than architectural:
 
 - run the migration in the target Postgres environment

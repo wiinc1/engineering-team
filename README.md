@@ -267,7 +267,7 @@ Browser gate flake policy:
 - This package is additive only. The current audit-backed assignment/runtime behavior remains the active implementation until follow-up execution tasks are completed.
 
 ### Canonical task-platform API (initial executable slice)
-- The audit server now also exposes an additive versioned task-platform surface at `/api/v1`.
+- `/api/v1` is the canonical task-platform read/write surface for production, staging, and standard local development.
 - Current routes:
 - `GET /api/v1/ai-agents`
 - `GET /api/v1/tasks`
@@ -275,7 +275,11 @@ Browser gate flake policy:
 - `GET /api/v1/tasks/{taskId}`
 - `PATCH /api/v1/tasks/{taskId}`
 - `PATCH /api/v1/tasks/{taskId}/owner`
-- This slice introduces optimistic concurrency at the canonical task layer and currently uses a file-backed local service while coexisting with the audit/event runtime.
+- The canonical task layer uses optimistic concurrency and Postgres-backed task records by default.
+- Standard local development starts Dockerized Postgres with `npm run dev:postgres:up` and runs host scripts with `DATABASE_URL=postgres://<local-user>:<local-password>@127.0.0.1:5432/<local-database>`.
+- File-backed runtime is limited to isolated local/test fallback harnesses and requires an explicit opt-in such as `AUDIT_STORE_BACKEND=file ALLOW_FILE_AUDIT_BACKEND=true`. Production and staging reject file backend startup.
+- Compatibility paths such as audit-owned `/tasks/*` workflow routes remain during rollout. They sync through canonical task-platform adapters or are documented in `docs/runbooks/task-platform-rollout.md` until migration criteria allow disabling them behind a flag.
+- Drift checks run through `npm run task-platform:verify`; failures include remediation for missing checkpoints, version mismatches, stale projection sequence numbers, and failed sync states.
 
 ### Remaining browser verification constraints
 - Core Web Vitals budgets run against the local Vite preview fixture routes. Production RUM comparison is still handled after deploy through the production-auth and synthetic-monitoring evidence paths.
