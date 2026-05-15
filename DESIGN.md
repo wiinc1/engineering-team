@@ -599,6 +599,7 @@ Task detail UX is governed by the task-detail read model, not by ad hoc client-s
 - `summary.freshness` is the workflow/read-model freshness source. Telemetry recency is separate and must be labeled as telemetry-specific freshness.
 - Stale, degraded, restricted, empty, and error task-detail states must be visually distinct and must include direct recovery or next-step language when recovery exists.
 - Deterministic status precedence must be preserved: blocked, waiting, degraded/stale, review, done, and closed states should not compete through color alone.
+- Role-specific next-action panels may derive from the canonical read model plus session roles, but must not introduce a second task-detail source of truth or hide blocked, waiting, stale, or read-only states behind action-only copy.
 - Linked child tasks, PR metadata, orchestration counts, and telemetry summaries must avoid N+1-style page behavior. Summaries should be pre-projected or loaded through explicit adjacent panels.
 - Truncated payloads, hidden orchestration, redacted owner data, and unavailable telemetry must identify the limitation and its source.
 - Manual refresh is the default recovery model for stale task-detail data unless a route defines a stronger live-update contract.
@@ -631,6 +632,7 @@ App-specific state rules:
 Responsive and perceived-performance behavior is part of the design contract for operational trust.
 
 - Task detail must preserve first-viewport task context across desktop, tablet, and mobile: title, stage/status, owner, next action, and blocker signal stay discoverable before deep activity panels.
+- A role-specific primary action should sit near the top of task detail on small screens, use one clear primary command when the session can act, and fall back to status-only copy for reader or unauthorized sessions.
 - Tablet and mobile task-detail views must not create accidental page-wide horizontal overflow. Deliberate scroll containers are limited to boards, tables, logs, and similarly wide data displays.
 - Mobile task activity tabs use the documented keyboard-accessible tab pattern and may collapse into a compact two-column control when space is tight.
 - Task boards keep stable column widths, allow horizontal scrolling, and keep owner metadata readable on compressed mobile views.

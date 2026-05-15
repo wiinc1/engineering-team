@@ -143,6 +143,7 @@ Task-detail contract notes for approval readiness:
 - Local performance budget: the detail view model should resolve in one `/detail` request, and the browser smoke budget stays under 1s for local mock-backed first contentful paint / DOMContentLoaded checks.
 - Freshness semantics: `summary.freshness` is the workflow/read-model freshness source of truth, `telemetry.lastUpdatedAt` is telemetry-specific recency, and stale/degraded telemetry must be rendered explicitly instead of being treated as fresh.
 - Rollout flag: `FF_TASK_DETAIL_PAGE=0` disables the `/tasks/:id/detail` surface and returns a standardized `feature_disabled` response referencing `ff_task_detail_page`.
+- Next-action rollout flag: `ff_task_detail_next_action_redesign` controls the client-side role-specific next-action panel. The panel is derived from the existing `/detail` payload, preserves deep links to lifecycle sections, emits sanitized impression/click events, and can be disabled without changing server contracts.
 - Deterministic status precedence for the detail view is `done` > `blocked` > `waiting` > `active`.
 - Detail payload truncation for v1 is explicit: comments are capped at 10 entries and audit log items at 20 entries in the `/detail` response.
 - Manual refresh is the v1 consistency model. Live updates are not required in this pass.

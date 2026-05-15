@@ -380,6 +380,10 @@ Prometheus-style metrics exported include:
 - `feature_control_plane_wip_blocks_total`
 - `feature_control_plane_budget_exhausted_total`
 - `feature_control_plane_delivery_retrospective_signals_total`
+- `feature_task_detail_next_action_impressions_total{role,action}`
+- `feature_task_detail_next_action_clicks_total{role,action}`
+- `feature_task_detail_next_action_errors_total{type}`
+- `feature_task_detail_next_action_duration_seconds{action}`
 
 ## Validation suites
 - Unit: `npm run test:unit`
@@ -393,7 +397,11 @@ Prometheus-style metrics exported include:
 - Manual host-run Postgres integration: `DATABASE_URL=postgres://audit:audit@127.0.0.1:5432/engineering_team npm run test:integration:postgres`
 
 ## UI-linked validation note
-This repository now ships the browser-rendered task detail history / telemetry UI on `/tasks/:taskId`. Executable coverage exists today in the mounted app tests and Playwright browser suite. `tests/visual/` still documents the current visual-regression gap: browser evidence exists, but dedicated screenshot baseline assertions have not been added yet.
+This repository now ships the browser-rendered task detail history / telemetry UI on `/tasks/:taskId`. Executable coverage exists today in the mounted app tests and Playwright browser suite.
+
+Issue #153 adds a feature-flagged role-specific next-action layer on top of the existing task-detail read model. Roll out with `ff_task_detail_next_action_redesign` enabled for staging, then internal PM/QA/SRE users, then all authenticated users. Roll back by setting `ff_task_detail_next_action_redesign=0`; the route continues to render the prior task-detail hierarchy because the resolver and panel are client-side only and no server fields are removed.
+
+Operators should watch task-detail route errors, action submission errors, next-action impression/click ratios, and render budget drift during rollout. Synthetic monitoring should open seeded PM, QA, SRE, reader, blocked, done, and stale task-detail fixtures and assert a `.task-next-action` element with the expected `data-next-action` value.
 
 ## Schema naming note
 The implementation uses `audit_task_*` for PostgreSQL read models and `task-*-projection.json` for the file backend. That naming split is now documented rather than silently divergent; no schema expansion from Issue #24 was pulled into this pass.
