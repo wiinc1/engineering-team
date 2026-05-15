@@ -1,0 +1,17 @@
+flowchart TD
+  Maintainer[Maintainer updates browser UI] --> AppShell[src/app/App.jsx app shell]
+  AppShell --> Model[src/app/app-model.jsx route and view helpers]
+  AppShell --> Auth[src/app/routes/AuthRoute.jsx]
+  AppShell --> Create[src/app/routes/CreateTaskRoute.jsx]
+  AppShell --> Workspace[src/app/routes/TaskWorkspaceRoute.jsx]
+  AppShell --> Detail[src/app/routes/TaskDetailRoute.jsx]
+  AppShell --> Admin[src/app/routes/AdminUsersRoute.jsx]
+
+  Workspace --> OwnerHelpers[src/app/task-owner.mjs]
+  Detail --> DetailFeature[src/features/task-detail adapters and shell]
+  Create --> CreationFeature[src/features/task-creation adapter and schema]
+
+  Lint[npm run lint] --> RepoLint[scripts/lint-repo.js]
+  Lint --> BrowserReadability[scripts/check-browser-source-readability.js]
+  BrowserReadability --> StrictScope[src/app and src/features production files]
+  StrictScope --> RequiredVerification[npm run typecheck, npm run test:ui, npm run test:browser, npm test]

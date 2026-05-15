@@ -7,12 +7,39 @@
   },
   "entries": [
     {
+      "path": "src/app/routes/TaskDetailRoute.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 3,
+      "ordinal": 1,
+      "name": "TaskDetailRoute",
+      "actual": 692,
+      "cap": 50
+    },
+    {
+      "path": "src/app/App.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 38,
+      "ordinal": 1,
+      "name": "App",
+      "actual": 668,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 725,
       "ordinal": 91,
       "name": "createRegistrationAuthService",
       "actual": 484,
+      "cap": 50
+    },
+    {
+      "path": "src/features/task-detail/adapter.browser.js",
+      "rule": "maintainability:function-lines",
+      "line": 203,
+      "ordinal": 10,
+      "name": "createTaskDetailApiClient",
+      "actual": 260,
       "cap": 50
     },
     {
@@ -25,21 +52,12 @@
       "cap": 50
     },
     {
-      "path": "tests/browser/design-token-operationalization.browser.spec.ts",
+      "path": "src/app/routes/TaskWorkspaceRoute.jsx",
       "rule": "maintainability:function-lines",
-      "line": 83,
-      "ordinal": 6,
-      "name": "<arrow>",
-      "actual": 217,
-      "cap": 50
-    },
-    {
-      "path": "tests/browser/design-token-operationalization.browser.spec.ts",
-      "rule": "maintainability:function-lines",
-      "line": 84,
-      "ordinal": 7,
-      "name": "<arrow>",
-      "actual": 215,
+      "line": 3,
+      "ordinal": 1,
+      "name": "TaskWorkspaceRoute",
+      "actual": 213,
       "cap": 50
     },
     {
@@ -79,12 +97,39 @@
       "cap": 50
     },
     {
+      "path": "src/features/task-detail/TaskDetailActivityShell.tsx",
+      "rule": "maintainability:function-lines",
+      "line": 102,
+      "ordinal": 6,
+      "name": "TaskDetailActivityShell",
+      "actual": 121,
+      "cap": 50
+    },
+    {
+      "path": "src/features/task-detail/adapter.js",
+      "rule": "maintainability:function-lines",
+      "line": 73,
+      "ordinal": 10,
+      "name": "createTaskDetailApiClient",
+      "actual": 115,
+      "cap": 50
+    },
+    {
       "path": "src/app/session-browser-registration.test.tsx",
       "rule": "maintainability:function-lines",
       "line": 24,
       "ordinal": 3,
       "name": "<arrow>",
       "actual": 108,
+      "cap": 50
+    },
+    {
+      "path": "src/features/task-detail/adapter.browser.js",
+      "rule": "maintainability:function-lines",
+      "line": 94,
+      "ordinal": 7,
+      "name": "toTaskDetailScreenModel",
+      "actual": 95,
       "cap": 50
     },
     {
@@ -115,6 +160,15 @@
       "cap": 50
     },
     {
+      "path": "src/features/task-creation/adapter.js",
+      "rule": "maintainability:function-lines",
+      "line": 19,
+      "ordinal": 3,
+      "name": "createTaskCreationApiClient",
+      "actual": 78,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 920,
@@ -139,6 +193,15 @@
       "ordinal": 9,
       "name": "TaskCreationForm",
       "actual": 61,
+      "cap": 50
+    },
+    {
+      "path": "src/app/routes/AuthRoute.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 3,
+      "ordinal": 1,
+      "name": "AuthRoute",
+      "actual": 60,
       "cap": 50
     },
     {
@@ -171,7 +234,7 @@
     {
       "path": "src/app/session.browser.js",
       "rule": "maintainability:function-lines",
-      "line": 305,
+      "line": 304,
       "ordinal": 32,
       "name": "completeOidcSignIn",
       "actual": 54,
@@ -187,12 +250,48 @@
       "cap": 50
     },
     {
+      "path": "src/features/task-creation/schema.js",
+      "rule": "maintainability:function-lines",
+      "line": 7,
+      "ordinal": 1,
+      "name": "validateTaskCreatePayload",
+      "actual": 51,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
       "actual": 1229,
+      "cap": 400
+    },
+    {
+      "path": "src/app/App.jsx",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 708,
+      "cap": 400
+    },
+    {
+      "path": "src/app/routes/TaskDetailRoute.jsx",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 698,
+      "cap": 400
+    },
+    {
+      "path": "src/app/app-model.jsx",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 686,
       "cap": 400
     },
     {
@@ -210,7 +309,16 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 489,
+      "actual": 488,
+      "cap": 400
+    },
+    {
+      "path": "src/features/task-detail/adapter.browser.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 473,
       "cap": 400
     }
   ]

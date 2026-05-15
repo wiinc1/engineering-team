@@ -1,1 +1,189 @@
-function buildHistoryQuery(n={},r={},o={}){const i=new URLSearchParams;return n.eventType&&i.append("eventType",n.eventType),n.actorId&&i.set("actorId",n.actorId),o.from&&i.set("from",o.from),o.to&&i.set("to",o.to),o.dateFrom&&i.set("dateFrom",o.dateFrom),o.dateTo&&i.set("dateTo",o.dateTo),Number.isFinite(r.limit)&&i.set("limit",String(r.limit)),r.cursor!=null&&r.cursor!==""&&i.set("cursor",String(r.cursor)),i}function toneForHistoryEvent(n=""){return/failed|error|rejected|blocked/i.test(n)?"danger":/warning|stale|degraded/i.test(n)?"warning":/created|queued|started|assigned|comment/i.test(n)?"info":/completed|resolved|approved|done|closed/i.test(n)?"success":"neutral"}function toHistoryTimelineItem(n){return{id:n.item_id,title:n.display?.summary||n.summary||n.event_type_label||n.event_type,timestampLabel:n.occurred_at,actorLabel:n.actor?.display_name||n.actor?.actor_id||n.actor_id,detail:n.display?.fallback_used?`Unmapped event type rendered via backend summary: ${n.event_type}`:void 0,statusTone:toneForHistoryEvent(n.event_type),metadata:[n.event_type_label?{label:"Event",value:n.event_type_label}:null,Number.isFinite(n.sequence_number)?{label:"Sequence",value:String(n.sequence_number)}:null,n.source?{label:"Source",value:n.source}:null].filter(Boolean)}}function deriveTelemetryFreshness(n={}){const r=String(n.freshness?.status||"").toLowerCase()||"unknown",o=n.last_updated_at||n.freshness?.last_updated_at||null,i=n.stale||r==="stale"||r==="degraded";return{value:r,hint:o||"No telemetry timestamp available.",tone:i?"warning":r==="fresh"?"success":"neutral",isWarning:i}}function deriveTelemetryState(n={}){const r=deriveTelemetryFreshness(n);return n.access?.restricted?{kind:"restricted",message:"Telemetry is restricted for this session.",detail:n.access?.omission_applied?`Restricted server-side fields omitted: ${(n.access.omitted_fields||[]).join(", ")||"none"}`:void 0}:n.degraded||r.isWarning?{kind:"degraded",message:"Telemetry freshness is degraded.",detail:n.last_updated_at||n.freshness?.last_updated_at||void 0}:n.event_count?{kind:"ready"}:{kind:"empty",message:"No telemetry signals are linked to this task yet."}}function toTelemetryCards(n){const r=n.access?.omission_applied?`Restricted server-side fields omitted: ${(n.access.omitted_fields||[]).join(", ")||"none"}`:void 0,o=deriveTelemetryFreshness(n);return[{id:"telemetry-status",label:"Status",value:n.status,hint:n.degraded?"Backend marked the task telemetry as degraded.":r,tone:n.degraded?"warning":"info"},{id:"telemetry-freshness",label:"Freshness",value:o.value,hint:o.hint,tone:o.tone},{id:"telemetry-event-count",label:"Event count",value:String(n.event_count??0),hint:"Telemetry stays on this tab; workflow history remains separate.",tone:"neutral"},{id:"telemetry-correlation",label:"Approved correlations",value:String(n.correlation?.approved_correlation_ids?.length||0),hint:n.access?.restricted?"Only approved correlation pointers are exposed for this access scope.":"Operator scope includes expanded telemetry references.",tone:n.access?.restricted?"info":"success"}]}function toTaskDetailScreenModel({summary:n,history:r,telemetry:o,historyFilters:i,detail:t}){if(t){const s=(t.activity?.auditLog||[]).map(e=>({id:e.id,title:e.summary,timestampLabel:e.occurredAt,actorLabel:e.actor?.label,statusTone:toneForHistoryEvent(e.type),metadata:e.type?[{label:"Event",value:e.type}]:[]}));return{summary:{taskId:t.task.id,tenantId:n?.tenant_id||null,title:t.task.title,priority:t.task.priority,currentStage:t.task.stage,currentOwner:t.summary?.owner?.id||null,blocked:t.task.status==="blocked",waitingState:t.summary?.blockedState?.waitingOn||null,nextRequiredAction:t.summary?.nextAction?.label||null,freshness:t.meta?.freshness?{status:t.meta.freshness.status,last_updated_at:t.meta.freshness.lastUpdatedAt}:null,statusIndicator:t.task.status,closed:t.task.status==="done",businessContext:t.context?.businessContext||null,acceptanceCriteria:t.context?.acceptanceCriteria||[],definitionOfDone:t.context?.definitionOfDone||[],intakeDraft:!!t.context?.intakeDraft,operatorIntakeRequirements:t.context?.operatorIntakeRequirements||null,taskType:null},detail:t,shell:{selectedTab:"history",filters:i||{},historyState:s.length?{kind:"ready"}:{kind:"empty",message:"No workflow history has been recorded yet."},telemetryState:t.telemetry?.availability==="error"?{kind:"error",message:t.telemetry.emptyStateReason||"Telemetry unavailable."}:t.telemetry?.availability==="stale"||deriveTelemetryFreshness({freshness:{status:t.meta?.freshness?.status,last_updated_at:t.meta?.freshness?.lastUpdatedAt},last_updated_at:t.telemetry?.lastUpdatedAt}).isWarning?{kind:"degraded",message:"Telemetry freshness is degraded.",detail:t.telemetry?.lastUpdatedAt||t.meta?.freshness?.lastUpdatedAt||void 0}:t.telemetry?.availability==="restricted"?{kind:"restricted",message:"Telemetry is restricted for this session."}:{kind:"ready"},historyItems:s,telemetryCards:toTelemetryCards({status:t.telemetry?.availability==="stale"?"degraded":"ok",degraded:t.telemetry?.availability==="stale",stale:t.telemetry?.availability==="stale",event_count:s.length,last_updated_at:t.telemetry?.lastUpdatedAt,freshness:{status:t.meta?.freshness?.status||"unknown",last_updated_at:t.meta?.freshness?.lastUpdatedAt||null},correlation:{approved_correlation_ids:[],approved_links:[]},access:t.telemetry?.access||{restricted:!1}}),historyPageInfo:t.activity?.auditLogPageInfo||null,telemetryAccess:t.telemetry?.access||null}}}return{summary:{taskId:n.task_id,tenantId:n.tenant_id,title:n.title,priority:n.priority,currentStage:n.current_stage,currentOwner:n.current_owner,blocked:n.blocked,waitingState:n.waiting_state,nextRequiredAction:n.next_required_action,freshness:n.freshness,statusIndicator:n.status_indicator,closed:n.closed,businessContext:n.business_context,acceptanceCriteria:n.acceptance_criteria,definitionOfDone:n.definition_of_done,intakeDraft:!!n.intake_draft,operatorIntakeRequirements:n.operator_intake_requirements||null,taskType:n.task_type},detail:null,shell:{selectedTab:"history",filters:i||{},historyState:r.items?.length?{kind:"ready"}:{kind:"empty",message:"No workflow history has been recorded yet."},telemetryState:deriveTelemetryState(o),historyItems:(r.items||[]).map(toHistoryTimelineItem),telemetryCards:toTelemetryCards(o),historyPageInfo:r.page_info,telemetryAccess:o.access}}}async function parseJsonResponse(n){const r=await n.json();if(!n.ok){const o=new Error(r?.error?.message||`Request failed with status ${n.status}`);throw o.status=n.status,o.code=r?.error?.code,o.details=r?.error?.details,o.requestId=r?.error?.request_id,o}return r}function createTaskDetailApiClient({baseUrl:n="",fetchImpl:r=fetch,getHeaders:o,onAuthFailure:i}={}){const t=async(s,e={})=>{const a=await r(`${n}${s}`,{method:e.method||"GET",headers:{...typeof o=="function"?await o():void 0,...e.headers||{}},body:e.body});try{return await parseJsonResponse(a)}catch(c){throw(c?.status===401||c?.code==="invalid_token"||c?.code==="missing_auth_context")&&typeof i=="function"&&i(c),c}};return{fetchTaskSummary(s){return t(`/tasks/${encodeURIComponent(s)}`)},fetchTaskList(){return t("/tasks")},fetchTaskHistory(s,{filters:e,pagination:a,range:c}={}){const l=buildHistoryQuery(e,a,c).toString();return t(`/tasks/${encodeURIComponent(s)}/history${l?`?${l}`:""}`)},fetchObservabilitySummary(s){return t(`/tasks/${encodeURIComponent(s)}/observability-summary`)},askReviewQuestion(s,e){return t(`/tasks/${encodeURIComponent(s)}/review-questions`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},answerReviewQuestion(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/review-questions/${encodeURIComponent(e)}/answers`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},resolveReviewQuestion(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/review-questions/${encodeURIComponent(e)}/resolve`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},reopenReviewQuestion(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/review-questions/${encodeURIComponent(e)}/reopen`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},submitArchitectHandoff(s,e){return t(`/tasks/${encodeURIComponent(s)}/architect-handoff`,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},submitEngineerSubmission(s,e){return t(`/tasks/${encodeURIComponent(s)}/engineer-submission`,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},requestSkillEscalation(s,e){return t(`/tasks/${encodeURIComponent(s)}/skill-escalation`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},recordEngineerCheckIn(s,e){return t(`/tasks/${encodeURIComponent(s)}/check-ins`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},retierTask(s,e){return t(`/tasks/${encodeURIComponent(s)}/retier`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},reassignTask(s,e){return t(`/tasks/${encodeURIComponent(s)}/reassignment`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},fetchTaskLock(s){return t(`/tasks/${encodeURIComponent(s)}/lock`)},acquireTaskLock(s,e){return t(`/tasks/${encodeURIComponent(s)}/lock`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},releaseTaskLock(s){return t(`/tasks/${encodeURIComponent(s)}/lock`,{method:"DELETE"})},createWorkflowThread(s,e){return t(`/tasks/${encodeURIComponent(s)}/workflow-threads`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},replyToWorkflowThread(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/workflow-threads/${encodeURIComponent(e)}/replies`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},resolveWorkflowThread(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/workflow-threads/${encodeURIComponent(e)}/resolve`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},reopenWorkflowThread(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/workflow-threads/${encodeURIComponent(e)}/reopen`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},submitQaResult(s,e){return t(`/tasks/${encodeURIComponent(s)}/qa-results`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},startSreMonitoring(s,e){return t(`/tasks/${encodeURIComponent(s)}/sre-monitoring/start`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},approveSreMonitoring(s,e){return t(`/tasks/${encodeURIComponent(s)}/sre-monitoring/approve`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},createMonitoringAnomalyChildTask(s,e){return t(`/tasks/${encodeURIComponent(s)}/sre-monitoring/anomaly-child-task`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},completePmBusinessContext(s,e){return t(`/tasks/${encodeURIComponent(s)}/pm-business-context`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},submitCloseCancellationRecommendation(s,e){return t(`/tasks/${encodeURIComponent(s)}/close-review/cancellation-recommendation`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},submitExceptionalDispute(s,e){return t(`/tasks/${encodeURIComponent(s)}/close-review/exceptional-dispute`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},submitHumanCloseDecision(s,e){return t(`/tasks/${encodeURIComponent(s)}/close-review/human-decision`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},submitCloseReviewBacktrack(s,e){return t(`/tasks/${encodeURIComponent(s)}/close-review/backtrack`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},fetchDeferredConsiderationQueue(){return t("/deferred-considerations")},captureDeferredConsideration(s,e){return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(e)})},reviewDeferredConsideration(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations/${encodeURIComponent(e)}/review`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},promoteDeferredConsideration(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations/${encodeURIComponent(e)}/promote`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},closeDeferredConsideration(s,e,a){return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations/${encodeURIComponent(e)}/close`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(a)})},fetchAssignableAgents(){return t("/ai-agents")},assignTaskOwner(s,e){return t(`/tasks/${encodeURIComponent(s)}/assignment`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({agentId:e})})},changeTaskStage(s,e,a={}){return t(`/tasks/${encodeURIComponent(s)}/events`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({eventType:"task.stage_changed",payload:{to_stage:e,...a}})})},async fetchTaskDetailScreenData(s,e={}){const a=buildHistoryQuery(e.filters,e.pagination,{dateFrom:e.filters?.dateFrom,dateTo:e.filters?.dateTo}).toString();try{const d=await t(`/tasks/${encodeURIComponent(s)}/detail${a?`?${a}`:""}`);return toTaskDetailScreenModel({summary:{task_id:d.task?.id,title:d.task?.title,priority:d.task?.priority,current_stage:d.task?.stage},history:{items:d.activity?.auditLog||[],page_info:null},telemetry:null,historyFilters:e.filters,detail:d})}catch(d){if(d?.status&&d.status!==404)throw d}const[c,l,p]=await Promise.all([t(`/tasks/${encodeURIComponent(s)}`),this.fetchTaskHistory(s,{...e,range:{dateFrom:e.filters?.dateFrom,dateTo:e.filters?.dateTo}}),t(`/tasks/${encodeURIComponent(s)}/observability-summary`)]);return toTaskDetailScreenModel({summary:c,history:l,telemetry:p,historyFilters:e.filters})}}}module.exports={buildHistoryQuery,createTaskDetailApiClient,parseJsonResponse,toHistoryTimelineItem,toTaskDetailScreenModel,deriveTelemetryFreshness,toTelemetryCards,deriveTelemetryState,toneForHistoryEvent};
+function buildHistoryQuery(n = {}, r = {}, o = {}) {
+  const i = new URLSearchParams();
+  return n.eventType && i.append("eventType", n.eventType), n.actorId && i.set("actorId", n.actorId), o.from && i.set("from", o.from), o.to && i.set("to", o.to),
+  o.dateFrom && i.set("dateFrom", o.dateFrom), o.dateTo && i.set("dateTo", o.dateTo), Number.isFinite(r.limit) && i.set("limit", String(r.limit)), r.cursor != null &&
+  r.cursor !== "" && i.set("cursor", String(r.cursor)), i;
+}
+function toneForHistoryEvent(n = "") {
+  return /failed|error|rejected|blocked/i.test(n) ? "danger" : /warning|stale|degraded/i.test(n) ? "warning" : /created|queued|started|assigned|comment/i.test(n) ?
+  "info" : /completed|resolved|approved|done|closed/i.test(n) ? "success" : "neutral";
+}
+function toHistoryTimelineItem(n) {
+  return { id: n.item_id, title: n.display?.summary || n.summary || n.event_type_label || n.event_type, timestampLabel: n.occurred_at, actorLabel: n.actor?.display_name ||
+  n.actor?.actor_id || n.actor_id, detail: n.display?.fallback_used ? `Unmapped event type rendered via backend summary: ${n.event_type}` : void 0, statusTone: toneForHistoryEvent(
+  n.event_type), metadata: [n.event_type_label ? { label: "Event", value: n.event_type_label } : null, Number.isFinite(n.sequence_number) ? { label: "Sequence",
+  value: String(n.sequence_number) } : null, n.source ? { label: "Source", value: n.source } : null].filter(Boolean) };
+}
+function deriveTelemetryFreshness(n = {}) {
+  const r = String(n.freshness?.status || "").toLowerCase() || "unknown", o = n.last_updated_at || n.freshness?.last_updated_at || null, i = n.stale || r === "s\
+tale" || r === "degraded";
+  return { value: r, hint: o || "No telemetry timestamp available.", tone: i ? "warning" : r === "fresh" ? "success" : "neutral", isWarning: i };
+}
+function deriveTelemetryState(n = {}) {
+  const r = deriveTelemetryFreshness(n);
+  return n.access?.restricted ? { kind: "restricted", message: "Telemetry is restricted for this session.", detail: n.access?.omission_applied ? `Restricted ser\
+ver-side fields omitted: ${(n.access.omitted_fields || []).join(", ") || "none"}` : void 0 } : n.degraded || r.isWarning ? { kind: "degraded", message: "Telemet\
+ry freshness is degraded.", detail: n.last_updated_at || n.freshness?.last_updated_at || void 0 } : n.event_count ? { kind: "ready" } : { kind: "empty", message: "\
+No telemetry signals are linked to this task yet." };
+}
+function toTelemetryCards(n) {
+  const r = n.access?.omission_applied ? `Restricted server-side fields omitted: ${(n.access.omitted_fields || []).join(", ") || "none"}` : void 0, o = deriveTelemetryFreshness(
+  n);
+  return [{ id: "telemetry-status", label: "Status", value: n.status, hint: n.degraded ? "Backend marked the task telemetry as degraded." : r, tone: n.degraded ?
+  "warning" : "info" }, { id: "telemetry-freshness", label: "Freshness", value: o.value, hint: o.hint, tone: o.tone }, { id: "telemetry-event-count", label: "Ev\
+ent count", value: String(n.event_count ?? 0), hint: "Telemetry stays on this tab; workflow history remains separate.", tone: "neutral" }, { id: "telemetry-corr\
+elation", label: "Approved correlations", value: String(n.correlation?.approved_correlation_ids?.length || 0), hint: n.access?.restricted ? "Only approved corre\
+lation pointers are exposed for this access scope." : "Operator scope includes expanded telemetry references.", tone: n.access?.restricted ? "info" : "success" }];
+}
+function toTaskDetailScreenModel({ summary: n, history: r, telemetry: o, historyFilters: i, detail: t }) {
+  if (t) {
+    const s = (t.activity?.auditLog || []).map((e) => ({ id: e.id, title: e.summary, timestampLabel: e.occurredAt, actorLabel: e.actor?.label, statusTone: toneForHistoryEvent(
+    e.type), metadata: e.type ? [{ label: "Event", value: e.type }] : [] }));
+    return { summary: { taskId: t.task.id, tenantId: n?.tenant_id || null, title: t.task.title, priority: t.task.priority, currentStage: t.task.stage, currentOwner: t.
+    summary?.owner?.id || null, blocked: t.task.status === "blocked", waitingState: t.summary?.blockedState?.waitingOn || null, nextRequiredAction: t.summary?.nextAction?.
+    label || null, freshness: t.meta?.freshness ? { status: t.meta.freshness.status, last_updated_at: t.meta.freshness.lastUpdatedAt } : null, statusIndicator: t.
+    task.status, closed: t.task.status === "done", businessContext: t.context?.businessContext || null, acceptanceCriteria: t.context?.acceptanceCriteria || [],
+    definitionOfDone: t.context?.definitionOfDone || [], intakeDraft: !!t.context?.intakeDraft, operatorIntakeRequirements: t.context?.operatorIntakeRequirements ||
+    null, taskType: null }, detail: t, shell: { selectedTab: "history", filters: i || {}, historyState: s.length ? { kind: "ready" } : { kind: "empty", message: "\
+No workflow history has been recorded yet." }, telemetryState: t.telemetry?.availability === "error" ? { kind: "error", message: t.telemetry.emptyStateReason ||
+    "Telemetry unavailable." } : t.telemetry?.availability === "stale" || deriveTelemetryFreshness({ freshness: { status: t.meta?.freshness?.status, last_updated_at: t.
+    meta?.freshness?.lastUpdatedAt }, last_updated_at: t.telemetry?.lastUpdatedAt }).isWarning ? { kind: "degraded", message: "Telemetry freshness is degraded.",
+    detail: t.telemetry?.lastUpdatedAt || t.meta?.freshness?.lastUpdatedAt || void 0 } : t.telemetry?.availability === "restricted" ? { kind: "restricted", message: "\
+Telemetry is restricted for this session." } : { kind: "ready" }, historyItems: s, telemetryCards: toTelemetryCards({ status: t.telemetry?.availability === "sta\
+le" ? "degraded" : "ok", degraded: t.telemetry?.availability === "stale", stale: t.telemetry?.availability === "stale", event_count: s.length, last_updated_at: t.
+    telemetry?.lastUpdatedAt, freshness: { status: t.meta?.freshness?.status || "unknown", last_updated_at: t.meta?.freshness?.lastUpdatedAt || null }, correlation: {
+    approved_correlation_ids: [], approved_links: [] }, access: t.telemetry?.access || { restricted: false } }), historyPageInfo: t.activity?.auditLogPageInfo ||
+    null, telemetryAccess: t.telemetry?.access || null } };
+  }
+  return { summary: { taskId: n.task_id, tenantId: n.tenant_id, title: n.title, priority: n.priority, currentStage: n.current_stage, currentOwner: n.current_owner,
+  blocked: n.blocked, waitingState: n.waiting_state, nextRequiredAction: n.next_required_action, freshness: n.freshness, statusIndicator: n.status_indicator, closed: n.
+  closed, businessContext: n.business_context, acceptanceCriteria: n.acceptance_criteria, definitionOfDone: n.definition_of_done, intakeDraft: !!n.intake_draft,
+  operatorIntakeRequirements: n.operator_intake_requirements || null, taskType: n.task_type }, detail: null, shell: { selectedTab: "history", filters: i || {}, historyState: r.
+  items?.length ? { kind: "ready" } : { kind: "empty", message: "No workflow history has been recorded yet." }, telemetryState: deriveTelemetryState(o), historyItems: (r.
+  items || []).map(toHistoryTimelineItem), telemetryCards: toTelemetryCards(o), historyPageInfo: r.page_info, telemetryAccess: o.access } };
+}
+async function parseJsonResponse(n) {
+  const r = await n.json();
+  if (!n.ok) {
+    const o = new Error(r?.error?.message || `Request failed with status ${n.status}`);
+    throw o.status = n.status, o.code = r?.error?.code, o.details = r?.error?.details, o.requestId = r?.error?.request_id, o;
+  }
+  return r;
+}
+function createTaskDetailApiClient({ baseUrl: n = "", fetchImpl: r = fetch, getHeaders: o, onAuthFailure: i } = {}) {
+  const t = async (s, e = {}) => {
+    const a = await r(`${n}${s}`, { method: e.method || "GET", headers: { ...typeof o == "function" ? await o() : void 0, ...e.headers || {} }, body: e.body });
+    try {
+      return await parseJsonResponse(a);
+    } catch (c) {
+      throw (c?.status === 401 || c?.code === "invalid_token" || c?.code === "missing_auth_context") && typeof i == "function" && i(c), c;
+    }
+  };
+  return { fetchTaskSummary(s) {
+    return t(`/tasks/${encodeURIComponent(s)}`);
+  }, fetchTaskList() {
+    return t("/tasks");
+  }, fetchTaskHistory(s, { filters: e, pagination: a, range: c } = {}) {
+    const l = buildHistoryQuery(e, a, c).toString();
+    return t(`/tasks/${encodeURIComponent(s)}/history${l ? `?${l}` : ""}`);
+  }, fetchObservabilitySummary(s) {
+    return t(`/tasks/${encodeURIComponent(s)}/observability-summary`);
+  }, askReviewQuestion(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/review-questions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, answerReviewQuestion(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/review-questions/${encodeURIComponent(e)}/answers`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(a) });
+  }, resolveReviewQuestion(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/review-questions/${encodeURIComponent(e)}/resolve`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(a) });
+  }, reopenReviewQuestion(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/review-questions/${encodeURIComponent(e)}/reopen`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(a) });
+  }, submitArchitectHandoff(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/architect-handoff`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, submitEngineerSubmission(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/engineer-submission`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, requestSkillEscalation(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/skill-escalation`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, recordEngineerCheckIn(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/check-ins`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, retierTask(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/retier`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, reassignTask(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/reassignment`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, fetchTaskLock(s) {
+    return t(`/tasks/${encodeURIComponent(s)}/lock`);
+  }, acquireTaskLock(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/lock`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, releaseTaskLock(s) {
+    return t(`/tasks/${encodeURIComponent(s)}/lock`, { method: "DELETE" });
+  }, createWorkflowThread(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/workflow-threads`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, replyToWorkflowThread(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/workflow-threads/${encodeURIComponent(e)}/replies`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(a) });
+  }, resolveWorkflowThread(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/workflow-threads/${encodeURIComponent(e)}/resolve`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(a) });
+  }, reopenWorkflowThread(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/workflow-threads/${encodeURIComponent(e)}/reopen`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify(a) });
+  }, submitQaResult(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/qa-results`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, startSreMonitoring(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/sre-monitoring/start`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, approveSreMonitoring(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/sre-monitoring/approve`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, createMonitoringAnomalyChildTask(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/sre-monitoring/anomaly-child-task`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.
+    stringify(e) });
+  }, completePmBusinessContext(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/pm-business-context`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, submitCloseCancellationRecommendation(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/close-review/cancellation-recommendation`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.
+    stringify(e) });
+  }, submitExceptionalDispute(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/close-review/exceptional-dispute`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(
+    e) });
+  }, submitHumanCloseDecision(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/close-review/human-decision`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(
+    e) });
+  }, submitCloseReviewBacktrack(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/close-review/backtrack`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(e) });
+  }, fetchDeferredConsiderationQueue() {
+    return t("/deferred-considerations");
+  }, captureDeferredConsideration(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(
+    e) });
+  }, reviewDeferredConsideration(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations/${encodeURIComponent(e)}/review`, { method: "POST", headers: { "content-type": "applicatio\
+n/json" }, body: JSON.stringify(a) });
+  }, promoteDeferredConsideration(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations/${encodeURIComponent(e)}/promote`, { method: "POST", headers: { "content-type": "applicati\
+on/json" }, body: JSON.stringify(a) });
+  }, closeDeferredConsideration(s, e, a) {
+    return t(`/tasks/${encodeURIComponent(s)}/deferred-considerations/${encodeURIComponent(e)}/close`, { method: "POST", headers: { "content-type": "application\
+/json" }, body: JSON.stringify(a) });
+  }, fetchAssignableAgents() {
+    return t("/ai-agents");
+  }, assignTaskOwner(s, e) {
+    return t(`/tasks/${encodeURIComponent(s)}/assignment`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ agentId: e }) });
+  }, changeTaskStage(s, e, a = {}) {
+    return t(`/tasks/${encodeURIComponent(s)}/events`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventType: "tas\
+k.stage_changed", payload: { to_stage: e, ...a } }) });
+  }, async fetchTaskDetailScreenData(s, e = {}) {
+    const a = buildHistoryQuery(e.filters, e.pagination, { dateFrom: e.filters?.dateFrom, dateTo: e.filters?.dateTo }).toString();
+    try {
+      const d = await t(`/tasks/${encodeURIComponent(s)}/detail${a ? `?${a}` : ""}`);
+      return toTaskDetailScreenModel({ summary: { task_id: d.task?.id, title: d.task?.title, priority: d.task?.priority, current_stage: d.task?.stage }, history: {
+      items: d.activity?.auditLog || [], page_info: null }, telemetry: null, historyFilters: e.filters, detail: d });
+    } catch (d) {
+      if (d?.status && d.status !== 404) throw d;
+    }
+    const [c, l, p] = await Promise.all([t(`/tasks/${encodeURIComponent(s)}`), this.fetchTaskHistory(s, { ...e, range: { dateFrom: e.filters?.dateFrom, dateTo: e.
+    filters?.dateTo } }), t(`/tasks/${encodeURIComponent(s)}/observability-summary`)]);
+    return toTaskDetailScreenModel({ summary: c, history: l, telemetry: p, historyFilters: e.filters });
+  } };
+}
+module.exports = { buildHistoryQuery, createTaskDetailApiClient, parseJsonResponse, toHistoryTimelineItem, toTaskDetailScreenModel, deriveTelemetryFreshness, toTelemetryCards,
+deriveTelemetryState, toneForHistoryEvent };

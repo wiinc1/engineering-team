@@ -1,0 +1,20 @@
+flowchart LR
+  Browser[index.html plus Vite] --> AppShell[src/app/App.jsx]
+  AppShell --> Model[src/app/app-model.jsx]
+  AppShell --> AuthRoute[src/app/routes/AuthRoute.jsx]
+  AppShell --> CreateRoute[src/app/routes/CreateTaskRoute.jsx]
+  AppShell --> AdminRoute[src/app/routes/AdminUsersRoute.jsx]
+  AppShell --> WorkspaceRoute[src/app/routes/TaskWorkspaceRoute.jsx]
+  AppShell --> DetailRoute[src/app/routes/TaskDetailRoute.jsx]
+
+  AuthRoute --> Session[src/app/session.browser.js and src/app/session.js]
+  CreateRoute --> CreationFeature[src/features/task-creation]
+  WorkspaceRoute --> TaskOwner[src/app/task-owner.mjs]
+  WorkspaceRoute --> WorkLifecycle[src/app/work-lifecycle.mjs]
+  DetailRoute --> DetailAdapter[src/features/task-detail/adapter.browser.js]
+  DetailRoute --> DetailShell[src/features/task-detail/TaskDetailActivityShell.tsx]
+
+  Session --> AuthApi[/auth endpoints]
+  CreationFeature --> TaskApi[/tasks endpoints]
+  DetailAdapter --> DetailApi[/tasks/:taskId/detail endpoints]
+  TaskOwner --> WorkspaceModel[workspace list, inbox, overview filters]
