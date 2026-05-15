@@ -66,7 +66,13 @@ select {
 }
 
 button {
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
+}
+
+.app-shell button {
+  -webkit-text-fill-color: currentColor;
 }
 
 .app-shell:not(.app-shell--auth) button:disabled {
@@ -118,8 +124,8 @@ button {
   --linear-border: color-mix(in srgb, var(--design-color-palette-surface) 15%, transparent);
   --linear-border-soft: color-mix(in srgb, var(--design-color-palette-surface) 9%, transparent);
   --linear-text: color-mix(in srgb, var(--design-color-palette-surface) 92%, var(--design-color-palette-border) 8%);
-  --linear-muted: color-mix(in srgb, var(--design-color-palette-surface) 54%, var(--design-color-palette-text) 46%);
-  --linear-muted-strong: color-mix(in srgb, var(--design-color-palette-surface) 72%, var(--design-color-palette-text) 28%);
+  --linear-muted: color-mix(in srgb, var(--design-color-palette-surface) 70%, var(--design-color-palette-text) 30%);
+  --linear-muted-strong: color-mix(in srgb, var(--design-color-palette-surface) 96%, var(--design-color-palette-text) 4%);
   --linear-accent: color-mix(in srgb, var(--design-color-palette-primary) 62%, var(--design-color-palette-surface) 38%);
   --linear-accent-soft: color-mix(in srgb, var(--design-color-palette-primary) 24%, transparent);
   --page-bg: var(--linear-page-bg);
@@ -169,6 +175,27 @@ button {
   --color-info-soft: var(--primary-soft);
   --color-review: color-mix(in srgb, var(--design-color-palette-review) 48%, var(--linear-text) 52%);
   --color-review-soft: color-mix(in srgb, var(--design-color-palette-review) 18%, transparent);
+  --task-detail-text: var(--text);
+  --task-detail-eyebrow: var(--color-on-muted-strong);
+  --task-detail-subtitle: var(--color-on-muted-strong);
+  --task-detail-label: var(--color-on-muted-strong);
+  --task-detail-panel-bg: var(--surface);
+  --task-detail-tab-bg: var(--surface-subtle);
+  --task-detail-tab-text: var(--color-on-muted-strong);
+  --task-detail-tab-active-bg: var(--surface-muted);
+  --task-detail-tab-active-text: var(--text);
+  --task-detail-input-bg: var(--surface-muted);
+  --task-detail-notice-bg: var(--surface-muted);
+  --task-detail-notice-border: var(--border-soft);
+  --stage-transition-container-bg: var(--surface-muted);
+  --stage-transition-title-color: var(--color-on-muted-strong);
+  --history-card-bg: var(--surface);
+  --history-meta: var(--color-on-muted-strong);
+  --history-detail: var(--text);
+  --telemetry-card-bg: var(--surface);
+  --telemetry-label: var(--color-on-muted-strong);
+  --telemetry-value: var(--text);
+  --telemetry-hint: var(--color-on-muted-strong);
   --shadow-sm: none;
   --shadow-md: none;
   --focus-ring: 2px solid var(--color-focus-ring);
@@ -518,6 +545,12 @@ button {
   background: transparent;
 }
 
+.app-nav__primary .button-secondary,
+.app-nav__session .button-secondary {
+  background: var(--design-color-palette-surface) !important;
+  color: var(--design-color-palette-text) !important;
+}
+
 .app-nav__primary button:not(.button-secondary, .app-nav__primary-action) {
   border-color: transparent;
   background: transparent;
@@ -542,8 +575,8 @@ button {
 
 .app-nav__secondary .button-secondary {
   border-color: transparent;
-  background: transparent !important;
-  color: var(--muted) !important;
+  background: var(--design-color-palette-surface) !important;
+  color: var(--design-color-palette-text) !important;
 }
 
 .app-nav__secondary button:not(.button-secondary) {
@@ -977,8 +1010,9 @@ button {
   min-height: var(--design-component-button-primary-height);
   border-radius: var(--design-radius-control-sm);
   padding: var(--design-component-button-primary-padding);
-  background: var(--primary);
-  color: var(--linear-page-bg, var(--color-surface));
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
   font-weight: var(--design-typography-label-md-font-weight);
   text-decoration: none;
 }
@@ -1030,8 +1064,9 @@ button {
 }
 
 .task-next-action__links a {
-  color: var(--primary);
+  color: var(--text);
   font-weight: var(--design-typography-label-md-font-weight);
+  text-decoration-line: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
@@ -1317,8 +1352,9 @@ button {
   border: 0;
   border-radius: var(--radius);
   padding: 10px 14px;
-  background: var(--primary);
-  color: var(--color-surface);
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
   font-weight: var(--design-typography-label-md-font-weight);
 }
 
@@ -1545,6 +1581,19 @@ button {
   margin-bottom: 16px;
 }
 
+.architect-handoff-form button,
+.detail-card[aria-label^='Task lock'] button:not(.button-secondary) {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
+  font-weight: var(--design-typography-label-md-font-weight);
+}
+
 .architect-handoff-grid {
   align-items: start;
 }
@@ -1610,8 +1659,9 @@ button {
   border: 0;
   border-radius: var(--radius);
   padding: 10px 14px;
-  background: var(--primary);
-  color: var(--color-surface);
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
   font-weight: var(--design-typography-label-md-font-weight);
 }
 
@@ -2050,7 +2100,7 @@ button {
   border-radius: var(--radius-pill);
   padding: 2px 8px;
   background: var(--surface-subtle);
-  color: var(--muted);
+  color: var(--color-on-muted-strong);
   font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-sm-font-weight);
   text-align: center;
@@ -2059,7 +2109,7 @@ button {
 .task-board__stage-meta {
   margin: 3px 0 0;
   max-width: 28ch;
-  color: var(--muted);
+  color: var(--color-on-muted-strong);
   font-size: var(--design-typography-label-sm-font-size);
   line-height: var(--design-typography-label-sm-line-height);
 }
@@ -2124,14 +2174,14 @@ button {
   border-radius: var(--radius-pill);
   padding: 2px 8px;
   background: var(--surface-subtle);
-  color: var(--color-on-muted-strong);
+  color: var(--text);
   font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-sm-font-weight);
   text-align: center;
 }
 
 .task-board__label {
-  color: var(--muted);
+  color: var(--color-on-muted-strong);
   font-size: var(--design-typography-label-sm-font-size);
   flex: 0 0 auto;
 }
@@ -2142,7 +2192,7 @@ button {
   border: 1px dashed var(--border);
   border-radius: var(--design-radius-control-sm);
   background: color-mix(in srgb, var(--surface) 58%, var(--surface-muted) 42%);
-  color: var(--muted);
+  color: var(--color-on-muted-strong);
   font-size: var(--design-typography-body-sm-font-size);
 }
 
@@ -2174,7 +2224,7 @@ button {
 }
 
 .task-list-table th {
-  color: var(--muted);
+  color: var(--color-on-muted-strong);
   font-size: var(--design-typography-body-sm-font-size);
   font-weight: var(--design-typography-label-sm-font-weight);
   background: var(--surface-muted);
@@ -2196,6 +2246,10 @@ button {
   margin-top: 4px;
   font-size: var(--design-typography-label-sm-font-size);
   color: var(--muted);
+}
+
+.task-board .task-list-meta {
+  color: var(--color-on-muted-strong);
 }
 
 .task-list-toolbar input,
@@ -2233,7 +2287,7 @@ button {
 
 .owner-badge--assigned {
   background: var(--primary-soft);
-  color: var(--primary-strong);
+  color: var(--text);
 }
 
 .owner-badge--unassigned {

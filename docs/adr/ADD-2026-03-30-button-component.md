@@ -128,6 +128,7 @@ Colors and sizing via CSS variables for consistency:
 - The spinner/loading animation should use CSS `@keyframes`, not SVG animation
 - Focus ring must be visible for accessibility (`:focus-visible`)
 - Consider adding `aria-disabled` when disabled, not just `disabled` attribute
+- Issue #158 update: primary buttons use the generated `button-primary` design tokens and opt out of native WebKit button painting so text/background contrast remains stable in the browser-quality gate.
 
 ## Standards Alignment
 

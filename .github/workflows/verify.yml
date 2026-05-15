@@ -36,7 +36,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Install dependencies
         run: |
@@ -139,6 +139,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PLAYWRIGHT_INCLUDE_WEBKIT: "1"
         run: >
           make verify
           BASE_REF="${{ github.event.pull_request.base.sha || github.event.before }}"
@@ -158,6 +159,7 @@ jobs:
           python3 dev-standards/tooling/validate_artifact_provenance.py --repo-root .
 
       - name: Upload audit artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: verify-audit-bundle
@@ -168,3 +170,5 @@ jobs:
             .artifacts/test-results.json
             .artifacts/coverage-summary.json
             .artifacts/contract-test-report.json
+            test-results/browser/**
+            playwright-report/**

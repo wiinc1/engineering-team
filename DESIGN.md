@@ -209,8 +209,8 @@ focus:
     width: 3px
     offset: 2px
 opacity:
-  button-disabled: "0.5"
-  control-disabled: "0.7"
+  button-disabled: "1"
+  control-disabled: "1"
   board-card-dragging: "0.68"
 layers:
   base: 0
@@ -564,6 +564,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Board columns and task cards: keep visible lane headings for the standard workflow columns even when a lane is empty, include count and empty-copy context for empty lanes, keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
+- Authenticated dark-shell metadata, badges, task-detail labels, review forms, and primary action links must meet automated 4.5:1 contrast checks in the real-browser accessibility gate.
 
 Persistent component exceptions must be promoted into this file through the protected change path and reflected in implementation tokens.
 
@@ -613,6 +614,7 @@ Product screens must make workflow state explicit without adding instructional c
 - Error states identify the failed operation, preserve user-entered content, and offer retry or next-step language when recovery is possible.
 - Form validation appears next to the relevant field and in a summarized list only when multiple fields need attention.
 - Focus and keyboard behavior must match the control pattern: tabs use arrow keys, forms preserve label associations, buttons and links expose visible focus rings.
+- Visual, accessibility, and performance gates should cover sign-in, task workspace, role inbox, task creation, and task detail before production release.
 - Responsive layouts favor single-column reading on mobile, wrapped navigation, horizontally scrollable task boards/tables where necessary, and no accidental page-wide overflow.
 - Operational screens should remain dense and scannable: prioritize headings, metadata, status labels, and row/card grouping over narrative copy.
 
@@ -637,6 +639,7 @@ Responsive and perceived-performance behavior is part of the design contract for
 - Mobile task activity tabs use the documented keyboard-accessible tab pattern and may collapse into a compact two-column control when space is tight.
 - Task boards keep stable column widths, allow horizontal scrolling, and keep owner metadata readable on compressed mobile views.
 - Local browser performance coverage expects task-detail first contentful paint and DOMContentLoaded evidence under roughly one second, with total render evidence under roughly 1.5 seconds for the tested fixture route.
+- Browser quality gates compare committed Chromium screenshots for critical route states and enforce Core Web Vitals budgets for sign-in, task workspace, and task detail.
 - Long lists, child task summaries, telemetry cards, and task-detail panels should use precomputed summaries or paginated/explicit loading so the initial task context remains fast.
 
 ## Do's and Don'ts

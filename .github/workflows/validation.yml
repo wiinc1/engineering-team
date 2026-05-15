@@ -92,7 +92,18 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run Playwright browser suite
+        env:
+          PLAYWRIGHT_INCLUDE_WEBKIT: "1"
         run: npm run test:browser
+
+      - name: Upload browser quality artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-quality-artifacts
+          path: |
+            test-results/browser/**
+            playwright-report/**

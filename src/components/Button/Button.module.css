@@ -2,6 +2,8 @@
 @import "./Button.tokens.css";
 
 .button {
+  -webkit-appearance: none;
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -41,14 +43,15 @@
 
 /* Variants */
 .primary {
-  background-color: var(--color-primary);
-  color: var(--color-on-primary);
-  border-color: var(--color-primary);
+  background-color: var(--design-component-button-primary-background-color, var(--color-primary));
+  color: var(--design-component-button-primary-color, var(--color-on-primary));
+  -webkit-text-fill-color: var(--design-component-button-primary-color, var(--color-on-primary));
+  border-color: var(--design-component-button-primary-background-color, var(--color-primary));
 }
 
 .primary:hover:not(.disabled):not(.loading) {
-  background-color: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background-color: var(--design-component-button-primary-hover-background-color, var(--color-primary-hover));
+  border-color: var(--design-component-button-primary-hover-background-color, var(--color-primary-hover));
 }
 
 .primary:active:not(.disabled):not(.loading) {

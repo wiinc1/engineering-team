@@ -1,0 +1,24 @@
+flowchart LR
+  Developer[Developer] --> Playwright[Playwright browser matrix]
+  CI[GitHub Actions] --> Playwright
+  Playwright --> Vite[Vite preview server]
+  Playwright --> Fixtures[Browser quality route fixtures]
+  Playwright --> Visual[Visual screenshot comparator]
+  Playwright --> A11y[Axe, keyboard, focus, live-region, contrast checks]
+  Playwright --> Perf[Core Web Vitals budgets]
+  Visual --> Snapshots[Committed PNG baselines]
+  Visual --> Artifacts[test-results/browser artifacts]
+  A11y --> Artifacts
+  Perf --> Artifacts
+  CI --> Upload[Artifact upload]
+  Artifacts --> Upload
+
+  subgraph Repository
+    Vite
+    Fixtures
+    Visual
+    A11y
+    Perf
+    Snapshots
+    Artifacts
+  end
