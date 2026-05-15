@@ -11,7 +11,7 @@
   --button-font-weight: 650;
   --button-focus-ring: 3px solid #B9C9F5;
   --button-focus-ring-offset: 2px;
-  --button-disabled-opacity: 0.5;
+  --button-disabled-opacity: 1;
   --button-height-sm: 2rem;
   --button-padding-sm: 0 12px;
   --button-font-size-sm: 0.8125rem;

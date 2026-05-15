@@ -18,3 +18,4 @@
 - expanded DESIGN.md token generation and enforcement to all authored UI CSS
 - migrated task detail activity, history, telemetry, and stage-transition styles to generated tokens
 - added a machine-readable DESIGN.md adoption audit config and screenshot smoke coverage for task-detail states
+- added browser quality gate ownership coverage for visual, accessibility, and performance verification suites

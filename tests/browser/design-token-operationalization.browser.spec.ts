@@ -254,6 +254,9 @@ const TASK_DETAIL_SMOKE_HTML = `
                   <input class="input" value="TECHNICAL_SPEC" />
                 </label>
                 <p class="error">Example transition validation error</p>
+                <div class="actions">
+                  <button type="button">Advance Stage</button>
+                </div>
               </div>
             </section>
           </div>
@@ -331,6 +334,9 @@ test('captures migrated component states and flattened summary cards', async ({ 
     path: testInfo.outputPath('design-token-task-creation-form.png'),
   });
 
+  await expect(page.getByRole('button', { name: 'Primary' })).toHaveCSS('background-color', 'rgb(37, 87, 214)');
+  await expect(page.getByRole('button', { name: 'Primary' })).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(page.getByRole('button', { name: 'Disabled' })).toHaveCSS('opacity', '1');
   expect(buttonShot.byteLength).toBeGreaterThan(4_000);
   expect(formShot.byteLength).toBeGreaterThan(8_000);
   await expect(page.getByTestId('flattened-summary-card')).toHaveCSS('box-shadow', 'none');
@@ -380,6 +386,8 @@ test('captures responsive task detail token output', async ({ page }, testInfo) 
   });
   expect(detailShot.byteLength).toBeGreaterThan(12_000);
   await expect(page.getByRole('tab', { name: 'History' })).toHaveCSS('font-weight', '700');
+  await expect(page.getByRole('button', { name: 'Advance Stage' })).toHaveCSS('background-color', 'rgb(30, 64, 175)');
+  await expect(page.getByRole('button', { name: 'Advance Stage' })).toHaveCSS('color', 'rgb(255, 255, 255)');
 
   await page.setViewportSize({ width: 390, height: 900 });
   const mobileShot = await page.getByLabel('Task detail token smoke').screenshot({

@@ -1,0 +1,25 @@
+flowchart TD
+  A[Developer changes browser UI] --> B[Build and start Vite preview]
+  B --> C[Playwright browser matrix]
+  C --> D[Visual screenshot baselines]
+  C --> E[Accessibility gate]
+  C --> F[Core Web Vitals budget gate]
+  D --> G{Regression found?}
+  E --> G
+  F --> G
+  G -- yes --> H[Fail CI with test-results and Playwright report artifacts]
+  G -- no --> I[Allow PR verification to continue]
+  H --> J[Developer fixes route, viewport, browser, or budget failure]
+  J --> B
+
+  subgraph Matrix
+    C1[Desktop Chrome]
+    C2[Desktop Firefox]
+    C3[Mobile Chrome]
+    C4[CI Mobile Safari / WebKit]
+  end
+
+  C --> C1
+  C --> C2
+  C --> C3
+  C --> C4

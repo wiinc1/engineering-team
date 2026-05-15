@@ -64,6 +64,14 @@ npm run test:browser
 npm run build
 ```
 
+For browser-quality gate changes, run the focused quality slice and the CI
+WebKit matrix before merging:
+
+```bash
+npm run test:browser:quality
+PLAYWRIGHT_INCLUDE_WEBKIT=1 npm run test:browser
+```
+
 Run the complete Node/browser suite before merging broad product or platform
 changes, or run `make verify` when you also need standards and design evidence:
 

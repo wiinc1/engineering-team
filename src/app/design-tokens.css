@@ -235,8 +235,8 @@
   --design-focus-ring: 3px solid #B9C9F5;
 
   /* Opacity */
-  --design-opacity-button-disabled: 0.5;
-  --design-opacity-control-disabled: 0.7;
+  --design-opacity-button-disabled: 1;
+  --design-opacity-control-disabled: 1;
   --design-opacity-board-card-dragging: 0.68;
 
   /* Layers */

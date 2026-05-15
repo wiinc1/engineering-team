@@ -214,6 +214,7 @@
             "^src/app/AuthAppShell\\.test\\.tsx$",
             "^src/app/auth-runtime-env\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/browser/browser-quality-(accessibility|visual)\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
             "^tests/accessibility/task-assignment\\.a11y\\.spec\\.ts$",
             "^tests/visual/task-assignment\\.visual\\.spec\\.ts$",
@@ -230,6 +231,7 @@
             "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/browser/browser-quality-(accessibility|performance|visual)\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]

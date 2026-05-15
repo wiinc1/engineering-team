@@ -226,16 +226,31 @@ It currently includes:
 - Chromium and mobile Chrome verification that mobile task-activity tabs collapse into the intended 2-column accessible pattern
 - Chromium and mobile Chrome verification that compressed board owner metadata remains readable on mobile
 - browser `performance` timing evidence for local route render latency beyond request-count-only smoke
+- visual screenshot baselines for sign-in, task workspace, QA role inbox, task creation, and task detail at mobile and desktop breakpoints
+- real-browser accessibility gates for keyboard order, focus-visible states, activation keys, labels, landmarks, live-region status text, axe, and contrast
+- Chromium Core Web Vitals budget gates for sign-in, task workspace, and task detail using FCP, LCP, CLS, total blocking time, and DOMContentLoaded timing
 
 Current default browser matrix:
 - Desktop Chrome (`chromium`)
 - Desktop Firefox (`firefox`)
 - Mobile Chrome (`mobile-chrome`)
-- Optional Mobile Safari (`PLAYWRIGHT_INCLUDE_WEBKIT=1 npm run test:browser`)
+- Mobile Safari / WebKit (`mobile-safari`) in CI through `PLAYWRIGHT_INCLUDE_WEBKIT=1`; local runs can opt in with `PLAYWRIGHT_INCLUDE_WEBKIT=1 npm run test:browser` or opt out with `PLAYWRIGHT_SKIP_WEBKIT=1`.
 
-Latest local browser verification evidence from 2026-04-21:
-- `npm run test:ui:vitest` passed with 92/92 tests across UI, visual snapshot, accessibility, integration, and local render-budget coverage.
-- `npm run test:browser` passed with 54/54 browser tests and no skips across Chromium, Firefox, and mobile Chrome projects.
+Browser verification commands and artifacts:
+- `npm run test:browser` runs the full Playwright suite with the local default matrix.
+- `npm run test:browser:quality` runs the visual, accessibility, and Core Web Vitals quality-gate subset.
+- `npm run test:browser:ci` forces the WebKit/Safari project on for CI-equivalent local checks when WebKit is installed.
+- Committed visual baselines live under `tests/browser/__screenshots__/browser-quality-visual.browser.spec.ts/`.
+- Failure artifacts, traces, screenshots, and attached Core Web Vitals JSON reports are written under `test-results/browser/**`; CI also uploads `playwright-report/**`.
+
+Latest local browser verification evidence from 2026-05-15:
+- `npm run test:browser:quality` passed with 35 passing checks and 13 expected skips across Chromium, Firefox accessibility, and mobile Chrome.
+- `node scripts/run-playwright.js tests/browser/browser-quality-visual.browser.spec.ts --project=chromium` passed all 10 committed screenshot baselines.
+
+Browser gate flake policy:
+- A failing visual, accessibility, or performance gate must stay blocking unless a tracked issue documents an environmental cause and a short-lived advisory downgrade.
+- Dynamic fixture data must be stabilized in `tests/browser/browser-quality-fixtures.ts`; production secrets or live credentials are not allowed in browser gate fixtures.
+- CI WebKit failures may be opted out only with `PLAYWRIGHT_SKIP_WEBKIT=1` and an explicit issue or PR rationale.
 
 ### Specialist delegation and truthful attribution
 - A new specialist delegation coordinator now routes clear specialist-owned software-factory requests to the matching specialist (`architect`, `engineer`, `qa`, `sre`) instead of letting the coordinator claim specialist handling without delegation evidence.
@@ -262,8 +277,7 @@ Latest local browser verification evidence from 2026-04-21:
 - `PATCH /api/v1/tasks/{taskId}/owner`
 - This slice introduces optimistic concurrency at the canonical task layer and currently uses a file-backed local service while coexisting with the audit/event runtime.
 
-### Remaining verification gap
-- This is still lightweight internal-use coverage, not full cross-browser visual regression.
-- No Lighthouse/Core Web Vitals run is wired yet; performance evidence is now browser-timing based, but still local/mock-backed rather than a deployed environment measurement.
-- WebKit coverage remains opt-in rather than part of the default local matrix.
-- The browser app now includes a shared authenticated shell, sign-in flow, task list/board/PM overview/inbox navigation, and task detail routing. Production auth status is tracked in `docs/runbooks/production-auth-status.md`; production-auth issue closure is blocked until `npm run auth:status:check -- --require-complete` passes with fresh redacted smoke evidence for the selected strategy.
+### Remaining browser verification constraints
+- Core Web Vitals budgets run against the local Vite preview fixture routes. Production RUM comparison is still handled after deploy through the production-auth and synthetic-monitoring evidence paths.
+- Visual screenshot baselines are pinned to Chromium for deterministic pixel comparison. Firefox, mobile Chrome, and CI WebKit still execute route behavior and accessibility coverage.
+- The browser app includes a shared authenticated shell, sign-in flow, task list/board/PM overview/inbox navigation, and task detail routing. Production auth status is tracked in `docs/runbooks/production-auth-status.md`; production-auth issue closure is blocked until `npm run auth:status:check -- --require-complete` passes with fresh redacted smoke evidence for the selected strategy.

@@ -84,6 +84,24 @@
   justify-content: flex-end;
 }
 
+.actions button {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: var(--task-detail-input-radius);
+  padding: var(--task-detail-button-padding);
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
+  font-weight: var(--stage-transition-title-font-weight);
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  opacity: var(--task-detail-disabled-opacity);
+  cursor: wait;
+}
+
 .error {
   color: var(--stage-transition-error-color);
   font-size: var(--stage-transition-label-font-size);
