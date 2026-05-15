@@ -1,4 +1,5 @@
 # Issue #130 standards evidence: mechanical maintainability compaction only; no API contract change.
+# Issue #193 standards evidence: lint-only whitespace cleanup in audit workflow source; no API contract change.
 openapi: 3.1.0
 info:
   title: Audit Foundation API

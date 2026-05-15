@@ -81,6 +81,24 @@ make standards-policy-gates
 npm run standards:check
 ```
 
+### Tracked-file linting
+
+`npm run lint` discovers authored JavaScript and TypeScript files from git
+tracked and untracked, non-ignored files instead of a hand-maintained target
+list. Current included roots are `api/`, `lib/`, `scripts/`, `src/`, and
+`tests/`; current code extensions are `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`,
+and `.tsx`.
+
+The lint gate skips explicit generated and third-party boundaries such as
+`generated/`, `node_modules/`, `dist/`, `coverage/`, `build/`, `third_party/`,
+`vendor/`, `.artifacts/`, and temporary/report output directories. Findings
+are line-oriented and redaction-safe.
+
+Use `config/lint-source-allowlist.json` only for legitimate readability
+exceptions. Each exception must include the exact path or grouped paths, the
+readability rule, owner, reason, and follow-up. Lint fails stale entries when
+the path is no longer scanned or the readability finding no longer exists.
+
 For UI token work, run:
 
 ```bash
@@ -121,7 +139,9 @@ change guard checks. The pre-push hook runs `make verify`.
 If an authored UI file changes but there is truly no visual or UX impact,
 create `docs/design/no-design-impact.txt` with a short reason. Keep the marker
 local, do not use it for reusable visual decisions, and remove it after the
-change is complete.
+change is complete. The guard automatically treats trailing-whitespace-only UI
+diffs as lint cleanup, so those diffs do not need the marker or a design
+artifact.
 
 ## Local Development
 

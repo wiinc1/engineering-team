@@ -3,19 +3,19 @@ import { Button } from './Button';
 
 /**
  * A reusable, accessible button component with multiple variants and states.
- * 
+ *
  * ## Variants
  * - **primary** — Filled primary color, main actions
  * - **secondary** — Muted color, secondary actions
  * - **outline** — Bordered, transparent background
  * - **ghost** — No border, transparent background, subtle hover
  * - **destructive** — Red, danger/delete actions
- * 
+ *
  * ## Sizes
  * - **sm** — Small (32px height)
  * - **md** — Medium (40px height, default)
  * - **lg** — Large (48px height)
- * 
+ *
  * ## States
  * - **default** — Normal interactive state
  * - **hover** — Visual feedback on mouse over

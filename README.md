@@ -22,6 +22,26 @@ This repo now includes a standards enforcement baseline for task planning and ch
 
 Every task file under `tasks/` is expected to carry `## Standards Alignment` and `## Required Evidence` so the repo has a durable record of which standards applied, what evidence was produced, and which gaps remain.
 
+### Tracked-file linting
+
+`npm run lint` discovers tracked and untracked, non-ignored authored source files
+with `git ls-files --cached --others --exclude-standard`. It scans `.js`,
+`.jsx`, `.mjs`, `.cjs`, `.ts`, and `.tsx` files under `api/`, `lib/`,
+`scripts/`, `src/`, and `tests/`.
+
+Excluded authored-source boundaries are explicit: dependency, generated,
+coverage, build, dist, third-party, vendor, report, and temporary artifact
+directories are skipped before rules run. The gate checks trailing whitespace,
+tabs, and readability signals for generated, bundled, or minified-looking
+authored source. Diagnostics report rule, path, and line only; they do not print
+source lines.
+
+Legitimate compact or generated-source exceptions must be documented in
+`config/lint-source-allowlist.json` with rule, owner, reason, and follow-up.
+Allowlist entries are exact and stale-sensitive: entries for missing files,
+excluded files, unsupported rules, or readability findings that no longer exist
+fail lint until removed or corrected.
+
 `make verify` is the aggregate local gate for this React/Vite/Node/PostgreSQL
 application. It runs DESIGN.md gates, standards policy validators, `npm run
 lint`, `npm run typecheck`, `npm run test:unit`, `npm run test:browser`, `npm

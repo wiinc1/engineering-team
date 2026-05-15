@@ -1,0 +1,13 @@
+flowchart TD
+  A[Developer adds or edits source] --> B[Run npm run lint]
+  B --> C[git ls-files cached plus untracked non-ignored files]
+  C --> D[Include roots and code extensions]
+  D --> E[Exclude generated dependency build coverage and artifact paths]
+  E --> F[Read text files and skip binary files safely]
+  F --> G[Whitespace tab and readability checks]
+  G --> H[Apply validated readability allowlist]
+  H --> I{Failures?}
+  I -- Yes --> J[Print rule path line and remediation summary]
+  I -- No --> K[Print scanned count allowlisted count and duration]
+  J --> L[Developer fixes source or documents a valid exception]
+  L --> B

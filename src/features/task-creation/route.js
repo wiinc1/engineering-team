@@ -16,7 +16,7 @@ function createTaskCreationPageModule({ client }) {
     match(pathname) {
       return matchTaskCreationRoute(pathname);
     },
-    
+
     async load({ pathname, search = '' }) {
       const route = matchTaskCreationRoute(pathname);
 
@@ -32,11 +32,11 @@ function createTaskCreationPageModule({ client }) {
         task: null,
       };
     },
-    
+
     async create(taskData) {
       return client.createTask(taskData);
     },
-    
+
     async saveDraft(taskData) {
       return client.saveDraft(taskData);
     },
