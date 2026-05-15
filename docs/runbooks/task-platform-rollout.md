@@ -10,6 +10,7 @@ It assumes:
 - audit storage is configured to use PostgreSQL through `DATABASE_URL`
 - the additive `/api/v1/tasks` and `/api/v1/ai-agents` routes are deployed with the current repo code
 - the additive `/api/v1/tasks/{taskId}/merge-readiness-reviews` routes are deployed with the current repo code
+- the additive `/api/v1/projects` and `/api/v1/tasks/{taskId}/project` routes are deployed when `FF_PROJECTS` is enabled or unset
 - legacy audit-backed task routes remain available only as compatibility adapters during the rollout window
 
 ## Preconditions
@@ -90,6 +91,10 @@ select version
 from schema_migrations
 where version = '010_merge_readiness_reviews.sql';
 
+select version
+from schema_migrations
+where version = '012_projects.sql';
+
 select count(*) as canonical_task_count
 from tasks
 where tenant_id = 'engineering-team';
@@ -111,16 +116,31 @@ from merge_readiness_reviews
 where tenant_id = 'engineering-team'
 order by updated_at desc
 limit 20;
+
+select project_id, name, status, owner_actor_id, version, updated_at
+from projects
+where tenant_id = 'engineering-team'
+order by updated_at desc
+limit 20;
+
+select task_id, project_id, version, updated_at
+from tasks
+where tenant_id = 'engineering-team'
+  and project_id is not null
+order by updated_at desc
+limit 20;
 ```
 
 Expected results:
 - the migration row exists in `schema_migrations`
 - the merge readiness review migration row exists in `schema_migrations`
+- the Projects migration row exists in `schema_migrations`
 - canonical task count is non-zero in a non-empty environment
 - checkpoint rows are present for backfilled tasks
 - `sync_status` is predominantly `synced` or `active`
 - legacy-only owners may appear as imported canonical agents rather than causing dropped ownership
 - merge readiness rows, when present, have at most one `is_current=true` record for the same Task, repository, PR number, and commit SHA
+- Project rows are tenant-scoped, task membership points at valid non-archived Projects, and `project_mutations` retains create/update/attach/detach provenance
 - `database.drift.ok=true` in `npm run task-platform:verify`
 - any drift finding includes remediation, and the command exits non-zero until remediated
 
@@ -174,6 +194,12 @@ curl -sS \
 curl -sS \
   -H "Authorization: Bearer <admin-jwt>" \
   https://<host>/api/v1/tasks/<task-id>
+```
+
+```bash
+curl -sS \
+  -H "Authorization: Bearer <admin-jwt>" \
+  https://<host>/api/v1/projects
 ```
 
 ```bash

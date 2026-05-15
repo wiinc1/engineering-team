@@ -22,6 +22,13 @@ components:
       properties:
         actor_id: { type: string }
         display_name: { type: string }
+    ProjectSummary:
+      type: [object, 'null']
+      properties:
+        projectId: { type: string, pattern: '^PRJ-[A-Z0-9]{8}$' }
+        name: { type: string }
+        status: { type: string, enum: [PLANNING, ACTIVE, PAUSED, COMPLETED, ARCHIVED] }
+        href: { type: string }
     Freshness:
       type: object
       required: [status, last_updated_at]
@@ -40,6 +47,11 @@ components:
         current_owner: { type: [string, 'null'] }
         owner:
           $ref: '#/components/schemas/OwnerSummary'
+        project_id:
+          type: [string, 'null']
+          pattern: '^PRJ-[A-Z0-9]{8}$'
+        project:
+          $ref: '#/components/schemas/ProjectSummary'
         blocked: { type: boolean }
         closed: { type: boolean }
         freshness:
@@ -74,6 +86,8 @@ paths:
         task with only one recommendation remains out of the inbox until the backend marks `humanDecision.decisionReady=true`.
         Kanban consumers should render the standard workflow lane headings even when a lane has no matching cards,
         so empty owner-filtered and empty-workspace states still expose the full delivery path.
+        Project filtering is additive: `project_id` and `project` labels are read-only planning metadata and do
+        not change owner routing, lifecycle stage, or role inbox eligibility.
       responses:
         '200':
           description: Task-list summaries

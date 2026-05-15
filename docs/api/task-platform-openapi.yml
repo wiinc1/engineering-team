@@ -38,6 +38,110 @@ paths:
                       $ref: '#/components/schemas/AiAgent'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /projects:
+    get:
+      summary: List Projects for the caller tenant
+      operationId: listProjects
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProjectStatus'
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Tenant-scoped Project list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create a Project planning container
+      operationId: createProject
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /projects/{projectId}:
+    get:
+      summary: Fetch a Project with its task memberships
+      operationId: getProject
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update Project metadata with optimistic concurrency
+      operationId: updateProject
+      tags: [Projects]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /tasks:
     get:
       summary: List canonical task records
@@ -189,6 +293,40 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /tasks/{taskId}/project:
+    patch:
+      summary: Attach a task to a Project or detach it with optimistic concurrency
+      operationId: updateTaskProject
+      tags: [Projects, Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskProjectRequest'
+      responses:
+        '200':
+          description: Task Project membership updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /tasks/{taskId}/merge-readiness-reviews:
     get:
       summary: List merge readiness reviews for a canonical task
@@ -308,6 +446,13 @@ components:
       required: true
       schema:
         type: string
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^PRJ-[A-Z0-9]{8}$'
   schemas:
     AiAgent:
       type: object
@@ -344,6 +489,66 @@ components:
           type: boolean
         assignable:
           type: boolean
+    ProjectStatus:
+      type: string
+      enum: [PLANNING, ACTIVE, PAUSED, COMPLETED, ARCHIVED]
+    ProjectSummary:
+      type: object
+      nullable: true
+      required: [projectId, name, status, href]
+      properties:
+        projectId:
+          type: string
+          pattern: '^PRJ-[A-Z0-9]{8}$'
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        href:
+          type: string
+    Project:
+      type: object
+      required: [projectId, name, status, taskCount, version, createdAt, updatedAt]
+      properties:
+        projectId:
+          type: string
+          pattern: '^PRJ-[A-Z0-9]{8}$'
+        name:
+          type: string
+        summary:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        ownerActorId:
+          type: string
+          nullable: true
+        taskCount:
+          type: integer
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    ProjectEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Project'
     Task:
       type: object
       required: [taskId, title, status, version, owner, createdAt, updatedAt]
@@ -363,6 +568,12 @@ components:
           type: integer
         owner:
           $ref: '#/components/schemas/TaskOwner'
+        projectId:
+          type: string
+          nullable: true
+          pattern: '^PRJ-[A-Z0-9]{8}$'
+        project:
+          $ref: '#/components/schemas/ProjectSummary'
         createdAt:
           type: string
           format: date-time
@@ -499,6 +710,62 @@ components:
         ownerAgentId:
           type: string
           nullable: true
+        idempotencyKey:
+          type: string
+    CreateProjectRequest:
+      type: object
+      required: [name]
+      properties:
+        projectId:
+          type: string
+          pattern: '^PRJ-[A-Z0-9]{8}$'
+        name:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        ownerActorId:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        idempotencyKey:
+          type: string
+    UpdateProjectRequest:
+      type: object
+      required: [version]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        ownerActorId:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        version:
+          type: integer
+        idempotencyKey:
+          type: string
+    UpdateTaskProjectRequest:
+      type: object
+      required: [version]
+      properties:
+        projectId:
+          type: string
+          nullable: true
+          pattern: '^PRJ-[A-Z0-9]{8}$'
+          description: Use `null` to detach a task from its Project.
+        version:
+          type: integer
         idempotencyKey:
           type: string
     UpdateTaskRequest:

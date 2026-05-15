@@ -1,0 +1,13 @@
+flowchart TD
+  PM[PM or Admin] --> Create[Create Project]
+  Create --> Project[(projects)]
+  Project --> Workspace[Projects workspace]
+  Workspace --> Attach[Attach task with task version]
+  Attach --> Check{Project active?}
+  Check -- no --> Conflict[409 project_archived]
+  Check -- yes --> Update[Update task.project_id and version]
+  Update --> Mutation[(project_mutations)]
+  Update --> Filter[Task workspace project filter]
+  Reader[Reader] --> Inspect[Inspect Projects and memberships]
+  Reader -. write attempt .-> Forbidden[403 forbidden]
+  OtherTenant[Other tenant] -. lookup .-> NotFound[404 project_not_found]

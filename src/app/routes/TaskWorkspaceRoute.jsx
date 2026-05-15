@@ -5,7 +5,7 @@ function TaskWorkspaceRoute({ ctx }) {
     _, A, ae, Ae, bi, bs, da, En,
     f, Fi, fn, ft, gi, h, H, hi,
     ht, it, j, J, Ja, k, ki, l,
-    La, Li, lt, Mn, Ms, N, ne, Ne,
+    La, Li, lt, Mn, Ms, N, ne, Ne, projectOptions,
     o, oi, os, P, Pt, Qa, qn, Rt,
     Ss, Un, Va, vi, we, wt, x, xa,
     xt, ye, Yt, zs
@@ -40,7 +40,7 @@ gned owner resolves to the ${H(f)} canonical role. Unassigned tasks appear in no
     k();
   }, children: "Refresh" })] })] }) : a(q, { children: [a("label", { children: ["Owner filter", a("select", { "aria-label": "Owner filter", value: N.owner, onChange: (t) => Ss(
   t.target.value), children: [e("option", { value: "", children: "All owners" }), e("option", { value: Fi, children: "Unassigned" }), En(Ne).map((t) => e("optio\
-n", { value: t.id, children: t.label }, t.id))] })] }), a("label", { children: ["Priority filter", a("select", { "aria-label": "Priority filter", value: N.priority,
+n", { value: t.id, children: t.label }, t.id))] })] }), a("label", { children: ["Project filter", a("select", { "aria-label": "Project filter", value: N.project || "", onChange: (t) => wt({ project: t.target.value }), children: [e("option", { value: "", children: "All projects" }), projectOptions.map((t) => e("option", { value: t.projectId, children: t.name }, t.projectId))] })] }), a("label", { children: ["Priority filter", a("select", { "aria-label": "Priority filter", value: N.priority,
   onChange: (t) => wt({ priority: t.target.value }), children: [e("option", { value: "", children: "All priorities" }), gi.map((t) => e("option", { value: t, children: t },
   t))] })] }), a("label", { children: ["Status filter", a("select", { "aria-label": "Status filter", value: N.status, onChange: (t) => wt({ status: t.target.value }),
   children: [e("option", { value: "", children: "All statuses" }), vi.map((t) => e("option", { value: t, children: t }, t))] })] }), a("label", { children: ["Se\
@@ -49,7 +49,7 @@ arch tasks", e("input", { "aria-label": "Search tasks", value: N.searchTerm, onC
   e("button", { type: "button", role: "tab", "aria-selected": N.view === "list", className: N.view === "list" ? "" : "button-secondary", onClick: () => fn("list"),
   children: "List" }), e("button", { type: "button", role: "tab", "aria-selected": N.view === "board", className: N.view === "board" ? "" : "button-secondary", onClick: () => fn(
   "board"), children: "Kanban board" })] }), e("button", { type: "button", className: "button-secondary", onClick: () => wt({ owner: "", priority: "", status: "",
-  searchTerm: "" }), disabled: !La, children: "Clear all filters" }), e("button", { type: "button", onClick: () => {
+  searchTerm: "", project: "" }), disabled: !La, children: "Clear all filters" }), e("button", { type: "button", onClick: () => {
     k();
   }, children: "Refresh" })] })] }) }), e("p", { className: "task-list-results", role: "status", "aria-live": "polite", children: bi }), _ && x.kind === "loadin\
 g" || P && x.kind === "loading" || A && x.kind === "loading" || !f && !_ && !P && !A && x.kind === "loading" || f && ne.kind === "loading" ? e("p", { role: "sta\
@@ -165,7 +165,7 @@ task-list-table", children: [e("thead", { children: a("tr", { children: [e("th",
       m.preventDefault(), l(`/tasks/${encodeURIComponent(t.task_id)}`);
     }, children: e("strong", { children: t.title || t.task_id }) }), e("div", { className: "task-list-meta", children: t.task_id }), Pt(t) ? a("div", { className: "\
 task-list-meta", children: [e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }), " ", t.next_required_action || "PM refine\
-ment required"] }) : null, d ? e("div", { className: "task-list-meta", children: e("span", { className: "routing-badge", children: "Assigned to me" }) }) : null] }),
+ment required"] }) : null, t.project ? e("div", { className: "task-list-meta", children: e("a", { href: t.project.href || `/projects/${encodeURIComponent(t.project.projectId)}`, onClick: (m) => { m.preventDefault(), l(`/projects/${encodeURIComponent(t.project.projectId)}`); }, children: t.project.name }) }) : null, d ? e("div", { className: "task-list-meta", children: e("span", { className: "routing-badge", children: "Assigned to me" }) }) : null] }),
     e("td", { children: t.current_stage || "\u2014" }), e("td", { children: t.priority || "\u2014" }), a("td", { children: [e("span", { className: `owner-badge \
 owner-badge--${n.tone}`, children: n.label }), e("div", { className: "task-list-meta", children: "Read-only owner metadata" })] })] }, t.task_id);
   }) })] }) }) : null, x.kind === "ready" && !f && !_ && !P && !A && N.view === "board" ? a("div", { className: "task-board", "aria-label": "Task board", children: [
@@ -188,7 +188,7 @@ body", children: t.items.length ? t.items.map((n) => {
       m.dataTransfer.setData("text/task-id", n.task_id), m.dataTransfer.effectAllowed = "move", ft({ taskId: n.task_id, overStage: "" });
     }, onDragEnd: () => ft({ taskId: null, overStage: "" }), children: [e("a", { href: `/tasks/${encodeURIComponent(n.task_id)}`, onClick: (m) => {
       m.preventDefault(), l(`/tasks/${encodeURIComponent(n.task_id)}`);
-    }, children: e("strong", { children: n.title || n.task_id }) }), e("div", { className: "task-list-meta", children: n.task_id }), Pt(n) ? a("div", { className: "\
+    }, children: e("strong", { children: n.title || n.task_id }) }), e("div", { className: "task-list-meta", children: n.task_id }), n.project ? e("div", { className: "task-list-meta", children: e("a", { href: n.project.href || `/projects/${encodeURIComponent(n.project.projectId)}`, onClick: (m) => { m.preventDefault(), l(`/projects/${encodeURIComponent(n.project.projectId)}`); }, children: n.project.name }) }) : null, Pt(n) ? a("div", { className: "\
 task-list-meta", children: [e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }), " ", n.next_required_action || "PM refine\
 ment required"] }) : null, t.stage === "VERIFY" || t.stage === "SRE_MONITORING" ? e("div", { className: "task-list-meta", children: e("span", { className: "rout\
 ing-badge", children: "SRE review pending" }) }) : null, d ? e("div", { className: "task-list-meta", children: e("span", { className: "routing-badge", children: "\
@@ -211,7 +211,7 @@ No Deferred Considerations awaiting review" }), e("p", { children: "Captured con
 ready" && !f && !_ && !P && !A && N.view !== "board" && !Ae.length ? a("div", { className: "empty-state", role: "status", children: [e("h2", { children: N.view ===
   "board" ? "No tasks on the Kanban board" : "No matching tasks" }), e("p", { children: La ? "No tasks match the active task filters." : N.view === "board" ? "N\
 o cards are available for this Kanban view yet." : "No tasks are available yet." }), La ? e("button", { type: "button", onClick: () => wt({ owner: "", priority: "",
-  status: "", searchTerm: "" }), children: "Clear all filters" }) : null] }) : null] });
+  status: "", searchTerm: "", project: "" }), children: "Clear all filters" }) : null] }) : null] });
 }
 
 export {

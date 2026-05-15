@@ -81,6 +81,12 @@ function installNavigationFetch(tasks = taskPayload()) {
       if (href.endsWith('/tasks')) {
         return response(tasks);
       }
+      if (href.endsWith('/v1/tasks')) {
+        return response({ data: [] });
+      }
+      if (href.endsWith('/v1/projects')) {
+        return response({ data: [{ projectId: 'PRJ-ABC12345', name: 'Launch Plan', status: 'ACTIVE', ownerActorId: 'pm-1', taskCount: 2, version: 1 }] });
+      }
       throw new Error(`Unhandled fetch URL in navigation test: ${href}`);
     }),
   );
@@ -89,6 +95,7 @@ function installNavigationFetch(tasks = taskPayload()) {
 function assertWorkspaceNavigation(primaryNav: HTMLElement, secondaryNav: HTMLElement) {
   expect(within(primaryNav).getByRole('button', { name: 'Task workspace' })).toBeInTheDocument();
   expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toBeInTheDocument();
+  expect(within(primaryNav).getByRole('button', { name: 'Projects' })).toBeInTheDocument();
   expect(within(primaryNav).getByRole('button', { name: 'New task' })).toBeInTheDocument();
   expect(within(secondaryNav).getByRole('button', { name: 'PM overview' })).toBeInTheDocument();
   expect(within(secondaryNav).getByRole('button', { name: 'Governance reviews' })).toBeInTheDocument();
@@ -189,10 +196,12 @@ function assertCollapsedNavigationRailActions(shell: HTMLElement) {
   const collapsedRail = screen.getByRole('navigation', { name: 'Collapsed navigation' });
   const railKanban = within(collapsedRail).getByRole('button', { name: 'Kanban board' });
   const railWorkspace = within(collapsedRail).getByRole('button', { name: 'Task workspace' });
+  const railProjects = within(collapsedRail).getByRole('button', { name: 'Projects' });
   const railSearch = within(collapsedRail).getByRole('button', { name: 'Search tasks' });
 
   expect(railKanban).toHaveAttribute('aria-pressed', 'true');
   expect(railWorkspace).toHaveAttribute('title', 'Task workspace');
+  expect(railProjects).toHaveAttribute('title', 'Projects');
   expect(railSearch).toHaveAttribute('aria-controls', 'primary-navigation');
   expect(railSearch.querySelector('.app-nav-rail__icon svg')).toBeInTheDocument();
 
@@ -306,6 +315,16 @@ describe('App navigation workspace UX', () => {
 
   it('searches task workspace results from the sidebar', async () => {
     await assertSidebarTaskSearch();
+  });
+
+  it('opens Projects as a planning workspace from primary navigation', async () => {
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Task workspace' });
+    fireEvent.click(within(screen.getByRole('group', { name: 'Primary task navigation' })).getByRole('button', { name: 'Projects' }));
+    await screen.findAllByRole('heading', { name: 'Projects' });
+    expect(screen.getByText('Launch Plan')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create project' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/projects');
   });
 
   it('collapses and reopens the sliding left navigation panel', async () => {

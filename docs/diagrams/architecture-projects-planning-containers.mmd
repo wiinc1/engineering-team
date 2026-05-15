@@ -1,0 +1,20 @@
+flowchart LR
+  Browser[Browser shell]
+  Route[ProjectsRoute]
+  Workspace[TaskWorkspaceRoute]
+  API[Projects HTTP wrapper]
+  TaskAPI[Canonical task API]
+  Service[task-platform withProjects]
+  Store[(File JSON or Postgres)]
+  Audit[(Audit events and metrics)]
+
+  Browser --> Route
+  Browser --> Workspace
+  Route --> API
+  Workspace --> TaskAPI
+  API --> Service
+  TaskAPI --> Service
+  Service --> Store
+  API --> Audit
+  Store --> Workspace
+  Store --> Route
