@@ -487,15 +487,15 @@ vailable"] })] }) : null] }), a("section", { id: "task-detail-architect-review-s
   unresolvedBlockingCount ?? 0 })] }), a("article", { children: [e("span", { children: "Resolved" }), e("strong", { children: s.detail?.reviewQuestions?.summary?.
   resolvedCount ?? 0 })] })] }), Is ? a("form", { className: "review-question-composer", onSubmit: async (t) => {
     t.preventDefault();
-    const n = tn.trim();
+    const r = new FormData(t.currentTarget), n = String(r.get("reviewQuestionPrompt") ?? tn).trim(), o = r.has("reviewQuestionBlocking");
     if (!n) {
       Ue({ kind: "error", message: "Review question prompt is required.", questionId: null, action: "ask" });
       return;
     }
-    await ra({ action: "ask", payload: { prompt: n, blocking: nn }, successMessage: "Architect review question created." });
-  }, children: [a("label", { children: ["New architect review question", e("textarea", { value: tn, onChange: (t) => an(t.target.value), placeholder: "What deci\
+    await ra({ action: "ask", payload: { prompt: n, blocking: o }, successMessage: "Architect review question created." });
+  }, children: [a("label", { children: ["New architect review question", e("textarea", { name: "reviewQuestionPrompt", value: tn, onChange: (t) => an(t.target.value), placeholder: "What deci\
 sion or PM clarification is needed before architect review can proceed?" })] }), a("label", { className: "review-question-checkbox", children: [e("input", { type: "\
-checkbox", checked: nn, onChange: (t) => sn(t.target.checked) }), "Blocks architect handoff until PM resolves it"] }), e("div", { className: "review-question-co\
+checkbox", name: "reviewQuestionBlocking", checked: nn, onChange: (t) => sn(t.target.checked) }), "Blocks architect handoff until PM resolves it"] }), e("div", { className: "review-question-co\
 mposer__actions", children: e("button", { type: "submit", disabled: ee.kind === "loading" && ee.action === "ask", children: ee.kind === "loading" && ee.action ===
   "ask" ? "Saving\u2026" : "Ask question" }) })] }) : null, ee.kind !== "idle" ? e("p", { className: `review-question-status review-question-status--${ee.kind}`,
   role: ee.kind === "error" ? "alert" : "status", children: ee.message }) : null, s.detail?.reviewQuestions?.items?.length ? e("div", { className: "review-quest\
