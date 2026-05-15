@@ -1,5 +1,37 @@
 # Feature Flags
 
+## Canonical Task Runtime
+
+- `FF_CANONICAL_TASK_RUNTIME`
+  Rollout label for the canonical `/api/v1` task-platform runtime. The current
+  checked-in route wiring treats canonical task records as the standard
+  production/staging/local API path whenever Postgres is configured.
+  Default: enabled when unset.
+
+Fallback controls:
+
+- `AUDIT_STORE_BACKEND=postgres`
+  Explicitly selects the Postgres audit/task-platform backend.
+
+- `AUDIT_STORE_BACKEND=file`
+  Selects the file backend only when paired with an isolated local/test fallback
+  opt-in. Production and staging reject this mode.
+
+- `ALLOW_FILE_AUDIT_BACKEND=true`
+  Allows the file backend for isolated local development or test harnesses.
+  Do not set this in staging or production.
+
+Behavior:
+
+- Runtime startup uses Postgres by default and requires `DATABASE_URL` unless an
+  explicit local/test file fallback is enabled.
+- `npm run dev:postgres:up` starts the canonical local Postgres service.
+- File fallback emits structured `ff_canonical_task_runtime` backend-selection
+  warning metadata with remediation.
+- Drift verification is enforced by `npm run task-platform:verify` and reports
+  remediation steps for missing checkpoints, version mismatches, stale
+  projection sequences, and failed sync status.
+
 ## Task Assignment
 
 - `FF_ASSIGN_AI_AGENT_TO_TASK`

@@ -1,5 +1,5 @@
 const { createAuditApiServer } = require('../lib/audit/http');
-const { assertAuditBackendConfiguration } = require('../lib/audit/config');
+const { assertAuditBackendConfiguration, logAuditBackendSelection } = require('../lib/audit/config');
 const { runDeployAuthBootstrap } = require('../scripts/bootstrap-deploy-auth');
 
 let cachedServer = null;
@@ -31,14 +31,16 @@ function createVercelLogger() {
 function getServer() {
   if (cachedServer) return cachedServer;
 
-  const { backend, connectionString } = assertAuditBackendConfiguration({
+  const backendConfig = assertAuditBackendConfiguration({
     runtimeEnv: 'production',
   });
+  const logger = createVercelLogger();
+  logAuditBackendSelection(backendConfig, logger, { runtimeEnv: 'production' });
 
   const { server } = createAuditApiServer({
     baseDir: process.cwd(),
-    backend,
-    connectionString,
+    backend: backendConfig.backend,
+    connectionString: backendConfig.connectionString,
     allowLegacyHeaders: process.env.ALLOW_LEGACY_HEADERS === 'true',
     jwtSecret: process.env.AUTH_JWT_SECRET,
     jwtIssuer: process.env.AUTH_JWT_ISSUER,
@@ -55,7 +57,7 @@ function getServer() {
     publicAppUrl: process.env.AUTH_PUBLIC_APP_URL,
     githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
     ffGitHubSync: process.env.FF_GITHUB_SYNC,
-    logger: createVercelLogger(),
+    logger,
   });
 
   cachedServer = server;

@@ -24,8 +24,8 @@ Compose stack for PostgreSQL, Pushgateway, audit API, and audit workers.
 | Browser app | `src/app/`, `src/features/`, `src/components/` | Vite, React, TypeScript/JavaScript | Authenticated UI, protected routes, task workspace, task detail, role inboxes, task creation, visual token adoption |
 | Serverless API adapters | `api/` | Vercel Node functions | Route requests to auth, audit, and task-platform handlers while preserving SPA rewrites |
 | Auth services | `lib/auth/`, `api/auth/`, `db/migrations/009_*`, `db/migrations/011_*` | Node, PostgreSQL | Registration auth, OIDC compatibility, sessions, CSRF, admin seeding, production auth diagnostics |
-| Audit/event runtime | `lib/audit/`, `lib/http/`, audit scripts | Node, PostgreSQL or file fallback for isolated tests | Append-only workflow events, projections, outbox, metrics, task detail read models |
-| Canonical task platform | `lib/task-platform/`, `db/migrations/006_*`, `db/migrations/010_*` | Node, PostgreSQL or explicit local fallback | `/api/v1` task records, AI-agent ownership, merge-readiness reviews, GitHub check integration |
+| Audit/event runtime | `lib/audit/`, `lib/http/`, audit scripts | Node, PostgreSQL by default; file fallback only for explicit isolated dev/test harnesses | Append-only workflow events, projections, outbox, metrics, task detail read models |
+| Canonical task platform | `lib/task-platform/`, `db/migrations/006_*`, `db/migrations/010_*` | Node, PostgreSQL by default; file fallback only for explicit isolated dev/test harnesses | `/api/v1` task records, AI-agent ownership, merge-readiness reviews, GitHub check integration |
 | Software-factory delegation | `lib/software-factory/`, delegation scripts | Node, optional external runtime bridge | Specialist delegation routing, fallback attribution, live-smoke validation |
 | Standards governance | `dev-standards/`, `repo-contract.yaml`, `agent-policy.yaml`, `check-manifest.yaml`, `scripts/verify-*` | Python, Node, Make | Policy validation, change evidence, traceability, docs freshness, design token gates |
 | Observability assets | `monitoring/`, `observability/` | Prometheus/Grafana-style JSON/YAML plus generated evidence files | Dashboards, alerts, smoke artifacts, workflow audit logs |
@@ -65,7 +65,7 @@ Compose stack for PostgreSQL, Pushgateway, audit API, and audit workers.
 | Auth users, credentials, sessions, CSRF | `lib/auth/registration.js`, auth migrations | PostgreSQL in production | `npm run auth:deploy:bootstrap`, `npm run auth:admin:seed`, and production auth smoke scripts |
 | Workflow audit events | `lib/audit/` | Append-only audit store, PostgreSQL in production | `npm run audit:migrate`, `npm run audit:rebuild`, projection/outbox workers |
 | Task history/detail projections | `lib/audit/` projections | Derived from audit events | Rebuild projections from audit events; stale/degraded freshness must be shown in UI |
-| Canonical task records and AI-agent owners | `lib/task-platform/` | PostgreSQL task-platform tables for production/staging | `npm run task-platform:rollout`, `npm run task-platform:backfill`, `npm run task-platform:verify` |
+| Canonical task records and AI-agent owners | `lib/task-platform/` | PostgreSQL task-platform tables for production, staging, and standard local development | `npm run task-platform:rollout`, `npm run task-platform:backfill`, `npm run task-platform:verify` |
 | Merge-readiness reviews | `lib/task-platform/merge-*` | PostgreSQL `merge_readiness_reviews` | GitHub check-run emission is derived; structured review remains authoritative |
 | Browser route/session config | `src/app/session.browser.js` | Browser storage plus runtime/build env | Production must hide internal bootstrap unless explicitly approved |
 | Design tokens | `DESIGN.md`, generated CSS | `DESIGN.md` | Regenerate with `npm run design:tokens`; enforce with design gates |
@@ -115,6 +115,28 @@ those checks to the real local commands:
 | GitHub | Issues, PRs, merge-readiness checks, branch protection evidence | GitHub check emission must fail closed; branch-protection verifier is read-only |
 | Pushgateway | Local audit metrics push | Metrics push failure should not corrupt audit state; inspect worker logs |
 | Browser engines | Playwright verification | Chromium, Firefox, and mobile Chrome run by default; WebKit is opt-in unless promoted |
+
+## Canonical Task Runtime Consolidation
+
+The canonical task source of truth is the Postgres-backed `/api/v1` task
+platform. Production, staging, and standard local development must use
+`DATABASE_URL` with the Supabase or Dockerized Postgres backend. Runtime startup
+guards reject missing Postgres configuration unless a local/test file fallback
+is explicitly enabled with `AUDIT_STORE_BACKEND=file` and
+`ALLOW_FILE_AUDIT_BACKEND=true`.
+
+Compatibility routes are temporary adapters:
+
+| Route family | Owner | Current behavior | Deprecation criteria |
+|---|---|---|---|
+| `/tasks/*` audit workflow routes | Audit/event runtime owner | Remain for workflow history, task detail, assignment, and legacy clients; write events sync into canonical task records where supported | Active clients are migrated to `/api/v1` or documented projection-only use, drift stays zero for the agreed window, and rollback no longer depends on projection-first reads |
+| `/api/tasks/*` and `/api/ai-agents` compatibility prefixes | Vercel/API adapter owner | Delegate to the same shared handler as the documented task routes for browser/docs compatibility | Browser and docs use `/backend/api/v1` or `/api/v1` consistently and route telemetry shows no compatibility traffic |
+| File-backed store/service factories | Test harness owner | Available only through explicit fallback flags or direct isolated test construction | No production/staging usage; local standard workflow stays Dockerized Postgres |
+
+Drift is governed by `npm run task-platform:verify`, which compares canonical
+task rows with sync checkpoints and reports remediation for missing
+checkpoints, version mismatches, stale projection sequence numbers, and failed
+sync statuses.
 
 ## Protected Paths
 

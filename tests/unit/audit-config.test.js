@@ -1,34 +1,113 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { resolveAuditBackend, assertAuditBackendConfiguration } = require('../../lib/audit');
+const {
+  resolveAuditBackend,
+  resolveRuntimeAuditBackend,
+  assertAuditBackendConfiguration,
+  backendSelectionLogEntry,
+} = require('../../lib/audit');
 const { isSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
+
+function withRuntimeEnv(overrides, callback) {
+  const previous = {};
+  for (const key of Object.keys(overrides)) {
+    previous[key] = process.env[key];
+    if (overrides[key] === undefined) delete process.env[key];
+    else process.env[key] = overrides[key];
+  }
+  try {
+    return callback();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
 
 test('defaults to postgres when a connection string is available', () => {
   assert.equal(resolveAuditBackend({ connectionString: 'postgres://example' }), 'postgres');
 });
 
-test('defaults to file when no explicit backend or database url is present', () => {
-  assert.equal(resolveAuditBackend({}), 'file');
+test('low-level test harness resolver defaults to file when no explicit backend or database url is present', () => {
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    assert.equal(resolveAuditBackend({}), 'file');
+  });
+});
+
+test('runtime resolver defaults to postgres when no explicit backend is present', () => {
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    assert.equal(resolveRuntimeAuditBackend({}), 'postgres');
+  });
+});
+
+test('runtime guard requires database url when no explicit local fallback is set', () => {
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    assert.throws(
+      () => assertAuditBackendConfiguration({}),
+      /DATABASE_URL is required/,
+    );
+  });
 });
 
 test('rejects file backend outside local-like environments', () => {
-  assert.throws(
-    () => assertAuditBackendConfiguration({ backend: 'file', runtimeEnv: 'production' }),
-    /Production must use Supabase Postgres/,
-  );
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    assert.throws(
+      () => assertAuditBackendConfiguration({
+        backend: 'file',
+        runtimeEnv: 'production',
+        allowFileBackend: true,
+      }),
+      /Production must use Supabase Postgres/,
+    );
+  });
 });
 
 test('requires database url for postgres backend', () => {
-  assert.throws(
-    () => assertAuditBackendConfiguration({ backend: 'postgres' }),
-    /DATABASE_URL is required/,
-  );
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    assert.throws(
+      () => assertAuditBackendConfiguration({ backend: 'postgres' }),
+      /DATABASE_URL is required/,
+    );
+  });
 });
 
 test('allows explicit local file backend during development', () => {
-  const result = assertAuditBackendConfiguration({ backend: 'file', runtimeEnv: 'development' });
-  assert.equal(result.backend, 'file');
-  assert.equal(result.connectionString, undefined);
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    const result = assertAuditBackendConfiguration({
+      backend: 'file',
+      runtimeEnv: 'development',
+      allowFileBackend: true,
+    });
+    assert.equal(result.backend, 'file');
+    assert.equal(result.connectionString, undefined);
+    assert.equal(result.fallbackWarning.code, 'file_backend_fallback');
+  });
+});
+
+test('rejects implicit local file backend without fallback opt-in', () => {
+  withRuntimeEnv({ AUDIT_STORE_BACKEND: undefined, DATABASE_URL: undefined }, () => {
+    assert.throws(
+      () => assertAuditBackendConfiguration({ backend: 'file', runtimeEnv: 'development' }),
+      /explicit local\/test fallback opt-in/,
+    );
+  });
+});
+
+test('emits structured backend selection warning metadata for file fallback', () => {
+  const entry = backendSelectionLogEntry({
+    backend: 'file',
+    fallbackWarning: {
+      code: 'file_backend_fallback',
+      remediation: 'Start Dockerized Postgres.',
+    },
+  }, { runtimeEnv: 'test' });
+
+  assert.equal(entry.feature, 'ff_canonical_task_runtime');
+  assert.equal(entry.action, 'backend_selection');
+  assert.equal(entry.outcome, 'fallback_warning');
+  assert.equal(entry.backend_mode, 'file');
+  assert.equal(entry.warning_code, 'file_backend_fallback');
 });
 
 test('prefers the canonical specialist delegation flag name when reading env-backed rollout controls', () => {

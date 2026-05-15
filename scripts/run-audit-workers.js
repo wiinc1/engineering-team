@@ -1,12 +1,20 @@
 #!/usr/bin/env node
-const { createAuditStore, createProjectionWorker, createOutboxWorker, createSupervisedWorker, assertAuditBackendConfiguration } = require('../lib/audit');
+const {
+  createAuditStore,
+  createProjectionWorker,
+  createOutboxWorker,
+  createSupervisedWorker,
+  assertAuditBackendConfiguration,
+  logAuditBackendSelection,
+} = require('../lib/audit');
 
-const { backend, connectionString } = assertAuditBackendConfiguration();
+const backendConfig = assertAuditBackendConfiguration();
+logAuditBackendSelection(backendConfig);
 
 const store = createAuditStore({
   baseDir: process.cwd(),
-  backend,
-  connectionString,
+  backend: backendConfig.backend,
+  connectionString: backendConfig.connectionString,
   projectionMode: 'async',
 });
 
