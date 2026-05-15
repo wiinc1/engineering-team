@@ -150,6 +150,16 @@ Task-detail contract notes for approval readiness:
 - App runtime: `src/app/`
 - Route/page module still lives at `src/features/task-detail/route.js`
 - Feature shell still lives at `src/features/task-detail/`
+- Browser source ownership after `ff_frontend_source_modularization`:
+- `src/app/App.jsx` owns app bootstrapping, session lifecycle, and route orchestration.
+- `src/app/app-model.jsx` owns shared route matching, auth query-state helpers, task workspace filters, and view-model formatting helpers used by the extracted routes.
+- `src/app/routes/AuthRoute.jsx` owns sign-in, registration, verification, reset, and callback route rendering.
+- `src/app/routes/CreateTaskRoute.jsx` owns `/tasks/create` integration with the task-creation feature.
+- `src/app/routes/AdminUsersRoute.jsx` owns the admin user-management route.
+- `src/app/routes/TaskWorkspaceRoute.jsx` owns `/tasks`, role inboxes, PM overview, governance, deferred-consideration, and board/list workspace rendering.
+- `src/app/routes/TaskDetailRoute.jsx` owns `/tasks/:taskId` rendering and mutation wiring against the task-detail feature model.
+- `src/features/task-detail/*` and `src/features/task-creation/*` remain feature-owned adapters, schemas, shells, and form surfaces used by the app route modules.
+- `npm run lint` includes `scripts/check-browser-source-readability.js`, which scans production browser source in `src/app/` and `src/features/` without the repo readability allowlist.
 - Production browser sign-in now starts at `/sign-in` and supports registration email/password auth, with hosted OIDC Authorization Code + PKCE retained when explicitly selected. The current production-auth source of truth is `docs/runbooks/production-auth-status.md`.
 - The trusted browser auth code exchange on `POST /auth/session` remains available only as an internal/local fallback when explicitly enabled.
 - The app protects `/tasks`, `/tasks?view=board`, `/overview/pm`, `/inbox/:role`, and `/tasks/:taskId`; unauthenticated or expired sessions are redirected back to `/sign-in`.

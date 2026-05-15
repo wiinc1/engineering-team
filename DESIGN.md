@@ -731,6 +731,13 @@ Motion is limited to functional state feedback.
 - Transitions should be short, local to the control being changed, and must not move task rows, form fields, or summary cards in a way that harms scanning.
 - Add duration/easing tokens here before introducing reusable animation patterns.
 
+## Source-Only UI Refactors
+
+Moving JSX, route ownership, adapters, or app-shell helpers without changing rendered copy, CSS, tokens, layout rules, or interaction semantics is a source-only UI refactor. These changes must keep the existing visual contract intact and rely on the current visual, accessibility, browser, and performance tests for evidence instead of adding new tokens.
+
+- Issue #154 frontend source modularization preserves the existing sign-in, task workspace, task detail, task creation, and admin-user visual semantics while moving browser source into route/model modules.
+- Source-only UI refactors should update README, diagrams, or standards evidence to explain ownership changes, and should update this file only when the reusable visual contract changes.
+
 ## Agent Usage
 
 - Treat YAML front matter tokens as the design governance contract.

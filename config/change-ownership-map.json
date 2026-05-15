@@ -48,7 +48,8 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/(registration-auth|registration-api|registration-production-smoke|production-auth-status|auth-config-check|auth-admin-seed|task-browser-session)\\.test\\.js$",
-            "^tests/unit/browser-auth-runtime-config\\.test\\.js$"
+            "^tests/unit/browser-auth-runtime-config\\.test\\.js$",
+            "^tests/unit/governance/browser-source-readability\\.test\\.js$"
           ]
         },
         {
@@ -56,6 +57,7 @@
           "patterns": [
             "^src/app/(AuthAppShell|auth-runtime-env)\\.test\\.tsx$",
             "^src/app/registration-auth-flows\\.test\\.tsx$",
+            "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
             "^tests/visual/auth-sign-in\\.visual\\.spec\\.tsx$"
           ]
@@ -68,7 +70,9 @@
             "^docs/runbooks/production-auth-status\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
             "^docs/reports/ISSUE-160-167-registration-auth-audit\\.md$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/diagrams/workflow-registration-auth-strategy\\.mmd$",
+            "^docs/diagrams/workflow-frontend-source-modularization\\.mmd$",
             "^docs/diagrams/workflow-remove-magic-link-auth\\.mmd$",
             "^monitoring/alerts/registration-auth-security\\.yml$"
           ]
@@ -181,7 +185,9 @@
       "name": "browser-shell",
       "runtime_patterns": [
         "^src/app/App\\.jsx$",
+        "^src/app/app-model\\.jsx$",
         "^src/app/main\\.jsx$",
+        "^src/app/routes/.+\\.jsx$",
         "^src/app/design-tokens\\.css$",
         "^src/app/styles\\.css$",
         "^src/app/session(\\.browser)?\\.js$",
@@ -195,6 +201,7 @@
           "name": "unit-ui",
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
+            "^src/app/AppRouteModel\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
             "^src/app/auth-runtime-env\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
@@ -207,6 +214,7 @@
           "name": "browser",
           "patterns": [
             "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
@@ -226,6 +234,8 @@
             "^docs/design/ISSUE-107-design\\.md$",
             "^docs/design/ISSUE-108-design\\.md$",
             "^docs/design/ISSUE-110-design\\.md$",
+            "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/ISSUE-137-design\\.md$"
           ]
         },
@@ -234,6 +244,8 @@
           "patterns": [
             "^DESIGN\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
+            "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/api/authenticated-browser-app-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
@@ -244,6 +256,9 @@
             "^DESIGN\\.md$",
             "^docs/runbook\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
+            "^README\\.md$",
+            "^docs/diagrams/workflow-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/design/ISSUE-89-design\\.md$",
             "^docs/design/US-003-design\\.md$",
@@ -266,7 +281,9 @@
           "name": "unit-ui",
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
+            "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/unit/governance/browser-source-readability\\.test\\.js$",
             "^tests/unit/task-detail-.+\\.test\\.js$",
             "^tests/unit/task-detail-route\\.test\\.js$"
           ]
@@ -275,6 +292,7 @@
           "name": "browser",
           "patterns": [
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
         }
@@ -284,6 +302,8 @@
           "name": "api-or-design-contract",
           "patterns": [
             "^DESIGN\\.md$",
+            "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
@@ -293,6 +313,8 @@
           "patterns": [
             "^docs/runbook\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
+            "^docs/diagrams/workflow-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/reports/ISSUE_7_COMPLETION_AUDIT\\.md$"
           ]
@@ -311,7 +333,8 @@
           "patterns": [
             "^tests/unit/role-inbox-routing\\.test\\.js$",
             "^tests/unit/pm-overview-routing\\.test\\.js$",
-            "^tests/unit/board-owner-card-rendering\\.test\\.js$"
+            "^tests/unit/board-owner-card-rendering\\.test\\.js$",
+            "^src/app/AppRouteModel\\.test\\.tsx$"
           ]
         },
         {
@@ -319,6 +342,7 @@
           "patterns": [
             "^tests/e2e/role-inbox-routing\\.e2e\\.test\\.js$",
             "^tests/e2e/pm-overview-routing\\.e2e\\.test\\.js$",
+            "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/integration/board-owner-filtering\\.integration\\.test\\.js$",
             "^tests/integration/pm-overview-filtering\\.integration\\.test\\.js$"
           ]
@@ -328,13 +352,16 @@
         {
           "name": "api",
           "patterns": [
-            "^docs/api/task-owner-surfaces-openapi\\.yml$"
+            "^docs/api/task-owner-surfaces-openapi\\.yml$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$"
           ]
         },
         {
           "name": "runbook-or-report",
           "patterns": [
             "^docs/runbooks/workflow-delivery-loop\\.md$",
+            "^docs/diagrams/workflow-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/reports/STATUS_2026-04-13_ISSUE_AUDIT\\.md$"
           ]
         }
@@ -519,6 +546,7 @@
           "name": "unit",
           "patterns": [
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
+            "^tests/unit/governance/browser-source-readability\\.test\\.js$",
             "^tests/unit/task-creation-form\\.test\\.tsx$",
             "^tests/unit/task-creation-page\\.test\\.tsx$",
             "^tests/unit/task-creation-adapter\\.test\\.js$",
@@ -533,6 +561,7 @@
           "name": "story",
           "patterns": [
             "^DESIGN\\.md$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/user-stories/US-001-kanban-board-ui\\.md$",
             "^docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements\\.md$",
@@ -577,6 +606,7 @@
         "^scripts/(finish-ui-change|setup-local-hooks)\\.sh$",
         "^scripts/hooks/(pre-commit|pre-push)$",
         "^scripts/(check-coverage-policy|check-maintainability|run-coverage)\\.js$",
+        "^scripts/check-browser-source-readability\\.js$",
         "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
         "^scripts/verify-(standards|pr-body|change-completeness)\\.js$"
       ],
@@ -593,6 +623,7 @@
           "name": "standards",
           "patterns": [
             "^docs/adr/ADR-002\\.md$",
+            "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/design/design-md-adoption\\.config\\.json$",
             "^docs/standards/software-development-standards\\.md$",

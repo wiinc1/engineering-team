@@ -30,7 +30,7 @@
     "governance:drift": "node scripts/governance-drift.js",
     "governance:drift:check": "node scripts/governance-drift.js --strict",
     "test:governance": "node --test tests/unit/governance/*.test.js",
-    "lint": "node scripts/lint-repo.js",
+    "lint": "node scripts/lint-repo.js && node scripts/check-browser-source-readability.js",
     "typecheck": "tsc --noEmit",
     "serve:browser": "node scripts/serve-browser-dist.js",
     "docker:browser": "docker build -f Dockerfile.browser -t engineering-team-task-browser .",
