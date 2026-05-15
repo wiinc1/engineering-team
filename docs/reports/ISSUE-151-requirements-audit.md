@@ -1,6 +1,6 @@
 # Issue #151 Requirements Audit
 
-Date: 2026-05-08
+Date: 2026-05-15
 Issue: https://github.com/wiinc1/engineering-team/issues/151  
 Status: Superseded by registration cutover in Issues #160-#167; fresh registration production smoke evidence was captured and the ship gate now passes.
 
@@ -13,11 +13,11 @@ Issue #160 defines the registration product policy and migration plan. Issue #16
 | Requirement | Implementation evidence | Verification status | Ship impact |
 |---|---|---|---|
 | README and auth runbooks show one current active strategy, deployment state, evidence artifact, and rollback target | `docs/runbooks/production-auth-status.md`; README production auth section; `docs/runbooks/production-identity-provider.md` | Implemented in repo; verified by `npm run auth:status:check` | Pass for repo docs |
-| Registration production smoke validates credential login, `/auth/me`, protected routes, reset generic response, logout, and magic-link removal with redacted evidence | `scripts/verify-registration-production.js`; `tests/unit/registration-production-smoke.test.js`; artifact path `observability/registration-auth-production-smoke.json` | Implemented; live smoke passed on 2026-05-08 against deployment `dpl_EnEg7kdTW8Gad945cqjueAHhpte1` | Pass |
+| Registration production smoke validates credential login, `/auth/me`, protected routes, reset generic response, logout, and magic-link removal with redacted evidence | `scripts/verify-registration-production.js`; `tests/unit/registration-production-smoke.test.js`; artifact path `observability/registration-auth-production-smoke.json` | Implemented; live smoke passed on 2026-05-15 against `https://engineering-team-zeta.vercel.app` | Pass |
 | OIDC production path is available when selected | `scripts/verify-oidc-production-smoke.js`; `lib/auth/oidc-production-smoke.js`; `docs/runbooks/production-auth-status.md`; `docs/runbooks/production-identity-provider.md`; existing browser OIDC callback tests | Implemented as OIDC-equivalent smoke and validator; not selected for current production strategy | Not blocking for current `registration` strategy |
 | Internal bootstrap disabled in production and hidden on `/sign-in` | Existing config gate and browser tests; `src/app/auth-runtime-env.test.tsx`; `tests/browser/auth-shell.browser.spec.ts`; `docs/runbooks/production-auth-status.md` | Implemented; targeted browser and runtime tests passed | Pass |
 | Issue #137 closure must use fresh evidence, not April issue #92 evidence | `docs/reports/ISSUE-137-production-login-evidence.md`; `lib/auth/production-status.js`; `npm run auth:status:check -- --require-complete` | Implemented; require-complete passes against fresh registration evidence | Pass |
-| Deployment metadata included when available | `scripts/verify-registration-production.js`; `tests/unit/registration-production-smoke.test.js`; validator requires selected strategy, deployment URL/ID, and rollback target for ship | Implemented; artifact includes deployment URL, ID, selected strategy, and rollback target | Pass |
+| Deployment metadata included when available | `scripts/verify-registration-production.js`; `tests/unit/registration-production-smoke.test.js`; validator requires selected strategy, deployment URL/ID, and rollback target for ship | Implemented; artifact includes deployment URL, selected strategy, and rollback target; deployment ID and commit SHA were not available to the 2026-05-15 smoke invocation | Pass |
 | Required workflow diagram | `docs/diagrams/workflow-production-auth-status-evidence.mmd` | Implemented; verified by status doc check | Pass |
 | Required architecture diagram | `docs/diagrams/architecture-production-auth-status-evidence.mmd` | Implemented; verified by status doc check | Pass |
 | Monitoring/dashboard status references | `monitoring/dashboards/production-auth-status.json`; existing `monitoring/alerts/auth-availability.yml` | Implemented; verified by status doc check | Pass |
@@ -30,7 +30,7 @@ Issue #151 may move to the ship portion of the workflow only after this command 
 npm run auth:status:check -- --require-complete
 ```
 
-The ship gate passed on 2026-05-08 against `observability/registration-auth-production-smoke.json`, generated from the deployed registration auth candidate. Historical issue #92 and magic-link smoke artifacts remain audit history only and are intentionally rejected for this cutover.
+The ship gate passed on 2026-05-15 against `observability/registration-auth-production-smoke.json`, generated from the deployed registration auth candidate. Historical issue #92 and magic-link smoke artifacts remain audit history only and are intentionally rejected for this cutover.
 
 ## Standards Alignment
 
@@ -38,7 +38,7 @@ Issue #151 uses the standard compliance checklist below. The applicable standard
 
 - Applicable standards areas: security, deployment and release, observability and monitoring, testing and quality assurance, coding and code quality, team and process.
 - Evidence expected for this change: canonical production-auth status, docs consistency check, fresh production smoke artifact validation, sign-in UI verification, redaction validation, rollback evidence, and ship-gate audit.
-- Gap observed: No remaining compliance gap. Documented rationale: the 2026-05-08 audit loop captured fresh deployed evidence verifying deployed env values, cookie behavior, protected-route access, logout revocation, reset generic response, magic-link removal, and rollback metadata for the selected registration strategy (source https://github.com/wiinc1/engineering-team/issues/151).
+- Gap observed: No remaining compliance gap. Documented rationale: the 2026-05-15 audit loop captured fresh deployed evidence verifying deployed env values, cookie behavior, protected-route access, logout revocation, reset generic response, magic-link removal, and rollback metadata for the selected registration strategy (source https://github.com/wiinc1/engineering-team/issues/151).
 
 ## Standards Compliance Checklist
 
@@ -70,7 +70,7 @@ Issue #151 uses the standard compliance checklist below. The applicable standard
 
 - Applicable: Yes
 - Evidence in this change: production status validator tests, registration smoke evidence tests, targeted auth UI/browser tests, full suite, lint, and typecheck.
-- No gap remains. Live production smoke ran with a dedicated registration account against the deployed origin on 2026-05-08 and passed.
+- No gap remains. Live production smoke ran with a dedicated registration account against the deployed origin on 2026-05-15 and passed.
 
 ### Deployment and Release
 
@@ -94,7 +94,7 @@ Issue #151 uses the standard compliance checklist below. The applicable standard
 
 - Applicable standards areas: security, deployment and release, observability and monitoring, testing and quality assurance.
 - Evidence expected for this change: canonical production-auth status, docs consistency check, fresh production smoke artifact validation, sign-in UI verification, redaction validation, rollback evidence, and ship-gate audit.
-- No gap remains. Fresh production smoke evidence for Issue #151 is present in this workspace and was generated against the deployed origin on 2026-05-08.
+- No gap remains. Fresh production smoke evidence for Issue #151 is present in this workspace and was generated against the deployed origin on 2026-05-15.
 - Commands run: deterministic repository checks listed below; `npm run auth:registration:production-smoke` against the deployed origin; `npm run auth:status:check -- --require-complete`.
 - Tests added or updated: `tests/unit/registration-production-smoke.test.js`, `tests/unit/oidc-production-smoke.test.js`, `tests/unit/production-auth-status.test.js`.
 - Rollout or rollback notes: production rollout requires fresh registration smoke evidence, monitoring counts/classifications only, and rollback target for the selected `registration` strategy.
@@ -143,6 +143,18 @@ npm run auth:status:check -- --require-complete
 
 Observed result after live production smoke: deterministic repo checks pass, the deployed-origin smoke artifact is fresh and redacted, and `npm run auth:status:check -- --require-complete` passes.
 
+Additional commands run on 2026-05-15:
+
+```bash
+npm run auth:config:check:vercel
+npm run auth:config:check
+npm run auth:registration:production-smoke
+npm run auth:status:check -- --require-complete
+node --test tests/unit/registration-production-smoke.test.js tests/unit/oidc-production-smoke.test.js tests/unit/production-auth-status.test.js tests/unit/auth-config-check.test.js
+```
+
+Observed result after the 2026-05-15 live smoke: production registration auth remains selected, `/auth/login` sets session and CSRF cookies, `/auth/me` returns the smoke principal, `/tasks` loads, `/auth/password-reset/request` stays generic, `/auth/magic-link/request` returns `410`, logout revokes the session, and post-logout `/auth/me` is rejected. `npm run auth:config:check` passed with the ignored local production dotenv file loaded into the child process without printing values.
+
 ## Audit Iterations
 
 - 2026-05-07 initial audit: implemented canonical magic-link status, evidence validation, docs reconciliation, diagrams, dashboard reference, and Issue #137 stale-evidence closure guard.
@@ -150,3 +162,4 @@ Observed result after live production smoke: deterministic repo checks pass, the
 - 2026-05-07 follow-up audit: found absolute `--evidence` paths were treated as repo-relative. Resolved in `lib/auth/production-status.js` and covered by `tests/unit/production-auth-status.test.js`.
 - 2026-05-07 follow-up audit: found repository maintainability hard-cap failures in task creation and workspace tests. Resolved by decomposing overlong React component/test functions; `npm run standards:check`, targeted Vitest/Playwright checks, and full `npm test` now pass.
 - 2026-05-08 final audit: captured deployed registration smoke evidence, verified the status gate with `--require-complete`, re-ran repository gates, and found no remaining compliance gaps for Issue #151 or the registration cutover.
+- 2026-05-15 closure audit: recaptured live production registration smoke evidence against `https://engineering-team-zeta.vercel.app`, verified Vercel env names, verified production auth config values through the local dotenv-loaded config gate, and re-ran the issue-specific status gate.

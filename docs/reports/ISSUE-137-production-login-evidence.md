@@ -19,7 +19,7 @@ Issue #137 reports that the landing/sign-in page has no usable login option. The
 
 Internal bootstrap remains available only for explicitly approved emergency or local/internal fallback use. It is not the production closure path for this issue.
 
-Issue #151 reconciliation note: fresh registration production evidence was captured on 2026-05-08. The April issue #92 smoke artifact remains historical evidence and must not be reused to close issue #137 or issue #151.
+Issue #151 reconciliation note: fresh registration production evidence was recaptured on 2026-05-15. The April issue #92 smoke artifact remains historical evidence and must not be reused to close issue #137 or issue #151.
 
 ## Historical Magic-Link Operator Checklist
 
@@ -137,7 +137,7 @@ Attach these before closing issue #137:
 
 ## Current Status
 
-Fresh production registration evidence was captured on 2026-05-08. Do not close issue #137 or issue #151 using the April issue #92 smoke artifact alone. Closure uses the canonical status gate in `docs/runbooks/production-auth-status.md`, which now passes:
+Fresh production registration evidence was recaptured on 2026-05-15. Do not close issue #137 or issue #151 using the April issue #92 smoke artifact alone. Closure uses the canonical status gate in `docs/runbooks/production-auth-status.md`, which now passes:
 
 ```bash
 npm run auth:status:check -- --require-complete
