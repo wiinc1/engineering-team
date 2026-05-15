@@ -287,35 +287,35 @@ status", children: "Responsible escalation is available only for Jr-tier work be
 pport" }) }), Oe.kind !== "idle" ? e("p", { className: `assignment-status assignment-status--${Oe.kind}`, role: Oe.kind === "error" ? "alert" : "status", children: Oe.
   message }) : null] }) : e("p", { className: "assignment-status", role: "status", children: "Responsible escalation controls are available to engineer/admin be\
 arer tokens." }), e("h3", { children: "Engineering handoff" }), xs ? a("form", { className: "architect-handoff-form", onSubmit: async (t) => {
-    t.preventDefault();
+    t.preventDefault(); const r = new FormData(t.currentTarget), n = (i, d) => String(r.get(i) ?? d);
     try {
-      Bt({ kind: "loading", message: "Submitting engineering handoff\u2026" }), await p.submitArchitectHandoff(g, { readyForEngineering: U.readyForEngineering, engineerTier: U.
-      engineerTier, tierRationale: U.tierRationale, technicalSpec: U.technicalSpec, monitoringSpec: U.monitoringSpec }), await k(), Bt({ kind: "success", message: "\
+      Bt({ kind: "loading", message: "Submitting engineering handoff\u2026" }), await p.submitArchitectHandoff(g, { readyForEngineering: r.has("readyForEngineering"), engineerTier: n("engineerTier", U.
+      engineerTier), tierRationale: n("tierRationale", U.tierRationale), technicalSpec: { summary: n("technicalSpecSummary", U.technicalSpec.summary), scope: n("technicalSpecScope", U.technicalSpec.scope), design: n("technicalSpecDesign", U.technicalSpec.design), rolloutPlan: n("technicalSpecRolloutPlan", U.technicalSpec.rolloutPlan) }, monitoringSpec: { service: n("monitoringService", U.monitoringSpec.service), dashboardUrls: n("monitoringDashboardUrls", U.monitoringSpec.dashboardUrls), alertPolicies: n("monitoringAlertPolicies", U.monitoringSpec.alertPolicies), runbook: n("monitoringRunbook", U.monitoringSpec.runbook), successMetrics: n("monitoringSuccessMetrics", U.monitoringSpec.successMetrics) } }), await k(), Bt({ kind: "success", message: "\
 Engineering handoff submitted." });
     } catch (n) {
       Bt({ kind: "error", message: n.message || "Engineering handoff failed." });
     }
   }, children: [a("div", { className: "summary-grid architect-handoff-grid", children: [a("label", { children: ["Technical summary", e("textarea", { value: U.technicalSpec.
-  summary, onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, summary: t.target.value } })), placeholder: "Summarize the implementation con\
+  summary, name: "technicalSpecSummary", onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, summary: t.target.value } })), placeholder: "Summarize the implementation con\
 tract and boundaries." })] }), a("label", { children: ["Scope and constraints", e("textarea", { value: U.technicalSpec.scope, onChange: (t) => G((n) => ({ ...n,
-  technicalSpec: { ...n.technicalSpec, scope: t.target.value } })), placeholder: "Call out scope, constraints, and assumptions." })] }), a("label", { children: [
+  technicalSpec: { ...n.technicalSpec, scope: t.target.value } })), name: "technicalSpecScope", placeholder: "Call out scope, constraints, and assumptions." })] }), a("label", { children: [
   "Design and interfaces", e("textarea", { value: U.technicalSpec.design, onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, design: t.target.
-  value } })), placeholder: "Describe components, APIs, data contracts, and dependencies." })] }), a("label", { children: ["Rollout plan", e("textarea", { value: U.
+  value } })), name: "technicalSpecDesign", placeholder: "Describe components, APIs, data contracts, and dependencies." })] }), a("label", { children: ["Rollout plan", e("textarea", { value: U.
   technicalSpec.rolloutPlan, onChange: (t) => G((n) => ({ ...n, technicalSpec: { ...n.technicalSpec, rolloutPlan: t.target.value } })), placeholder: "Explain ro\
-llout sequencing, migrations, and fallback." })] }), a("label", { children: ["Monitored service", e("input", { value: U.monitoringSpec.service, onChange: (t) => G(
+llout sequencing, migrations, and fallback.", name: "technicalSpecRolloutPlan" })] }), a("label", { children: ["Monitored service", e("input", { value: U.monitoringSpec.service, name: "monitoringService", onChange: (t) => G(
   (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, service: t.target.value } })), placeholder: "workflow-audit-api" })] }), a("label", { children: ["Dashb\
 oard URLs", e("textarea", { value: U.monitoringSpec.dashboardUrls, onChange: (t) => G((n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, dashboardUrls: t.target.
-  value } })), placeholder: "One URL per line" })] }), a("label", { children: ["Alert policies", e("textarea", { value: U.monitoringSpec.alertPolicies, onChange: (t) => G(
-  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, alertPolicies: t.target.value } })), placeholder: "One alert policy per line" })] }), a("label", { children: [
+  value } })), name: "monitoringDashboardUrls", placeholder: "One URL per line" })] }), a("label", { children: ["Alert policies", e("textarea", { value: U.monitoringSpec.alertPolicies, onChange: (t) => G(
+  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, alertPolicies: t.target.value } })), name: "monitoringAlertPolicies", placeholder: "One alert policy per line" })] }), a("label", { children: [
   "Runbook", e("input", { value: U.monitoringSpec.runbook, onChange: (t) => G((n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, runbook: t.target.value } })),
-  placeholder: "docs/runbooks/example.md" })] }), a("label", { children: ["Success metrics", e("textarea", { value: U.monitoringSpec.successMetrics, onChange: (t) => G(
-  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, successMetrics: t.target.value } })), placeholder: "One metric per line" })] }), a("label", { children: [
-  "Engineer tier", a("select", { value: U.engineerTier, onChange: (t) => G((n) => ({ ...n, engineerTier: t.target.value })), children: [e("option", { value: "Pr\
+  placeholder: "docs/runbooks/example.md", name: "monitoringRunbook" })] }), a("label", { children: ["Success metrics", e("textarea", { value: U.monitoringSpec.successMetrics, onChange: (t) => G(
+  (n) => ({ ...n, monitoringSpec: { ...n.monitoringSpec, successMetrics: t.target.value } })), name: "monitoringSuccessMetrics", placeholder: "One metric per line" })] }), a("label", { children: [
+  "Engineer tier", a("select", { value: U.engineerTier, name: "engineerTier", onChange: (t) => G((n) => ({ ...n, engineerTier: t.target.value })), children: [e("option", { value: "Pr\
 incipal", children: "Principal" }), e("option", { value: "Sr", children: "Sr" }), e("option", { value: "Jr", children: "Jr" })] }), e("small", { children: zn(U.
   engineerTier) })] }), a("label", { className: "architect-handoff-grid__full", children: ["Tier rationale", e("textarea", { value: U.tierRationale, onChange: (t) => G(
-  (n) => ({ ...n, tierRationale: t.target.value })), placeholder: "Explain why this level of engineering ownership is required." })] })] }), a("label", { className: "\
+  (n) => ({ ...n, tierRationale: t.target.value })), name: "tierRationale", placeholder: "Explain why this level of engineering ownership is required." })] })] }), a("label", { className: "\
 review-question-checkbox", children: [e("input", { type: "checkbox", checked: U.readyForEngineering, onChange: (t) => G((n) => ({ ...n, readyForEngineering: t.target.
-  checked })) }), "Ready for engineering. This formal handoff is required before implementation begins."] }), e("div", { className: "assignment-form__actions", children: e(
+  checked })), name: "readyForEngineering" }), "Ready for engineering. This formal handoff is required before implementation begins."] }), e("div", { className: "assignment-form__actions", children: e(
   "button", { type: "submit", disabled: $e.kind === "loading", children: $e.kind === "loading" ? "Submitting\u2026" : "Submit engineering handoff" }) }), $e.kind !==
   "idle" ? e("p", { className: `assignment-status assignment-status--${$e.kind}`, role: $e.kind === "error" ? "alert" : "status", children: $e.message }) : null] }) :
   e("p", { className: "assignment-status", role: "status", children: "Engineering handoff controls are available to architect/admin bearer tokens." }), e("h3", {
