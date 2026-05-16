@@ -56,13 +56,15 @@ Local value validation additionally enforces:
 1. Let deployment bootstrap seed or update the first admin.
 
    `npm run build` runs `npm run auth:deploy:bootstrap` before the auth config
-   gate and browser build. When `DATABASE_URL` is present, the bootstrap applies
-   database migrations under a Postgres advisory lock. When the admin seed
-   variables are present, it also seeds the admin user and optional credential.
+   gate and browser build. In local/operator runs, `DATABASE_URL` enables
+   bootstrap by default and applies database migrations under a Postgres advisory
+   lock. Vercel builds require `AUTH_DEPLOY_BOOTSTRAP_ENABLED=true` explicitly
+   before bootstrap work runs, so routine deploys are not blocked by a saturated
+   database pool when migrations are already applied. When the admin seed
+   variables are present, bootstrap also seeds the admin user and optional credential.
    `AUTH_ADMIN_ACTOR_ID` is optional; when it is omitted the seed uses the same
    stable `user-<email-hash>` actor id pattern as registration. Missing optional
-   admin seed values are logged without blocking migrations. This is the default
-   Vercel path because `vercel.json` uses `npm run build`.
+   admin seed values are logged without blocking migrations.
 
    Set `AUTH_DEPLOY_BOOTSTRAP_ENABLED=false` to skip all deploy bootstrap work.
    Set `AUTH_DEPLOY_BOOTSTRAP_MIGRATIONS=false` or

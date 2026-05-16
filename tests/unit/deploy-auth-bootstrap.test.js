@@ -58,6 +58,19 @@ test('deploy auth bootstrap stays skipped unless explicitly enabled or database 
   assert.deepEqual(resolveDeployAuthBootstrap({
     DATABASE_URL: VALID_ENV.DATABASE_URL,
   }).enabled, true);
+  assert.deepEqual(resolveDeployAuthBootstrap({
+    ...VALID_ENV,
+    VERCEL: '1',
+  }).enabled, false);
+  assert.deepEqual(resolveDeployAuthBootstrap({
+    ...VALID_ENV,
+    VERCEL_ENV: 'production',
+  }).enabled, false);
+  assert.deepEqual(resolveDeployAuthBootstrap({
+    ...VALID_ENV,
+    VERCEL: '1',
+    AUTH_DEPLOY_BOOTSTRAP_ENABLED: 'true',
+  }).enabled, true);
 });
 
 test('deploy auth bootstrap reports only redacted env presence', () => {

@@ -10,9 +10,9 @@ const API_ENTRYPOINTS = [
   '../../api/auth/password-reset/[...route].js',
   '../../api/auth/users/[userId].js',
   '../../api/v1/[...route].js',
-  '../../api/v1/ai-agents.js',
-  '../../api/v1/tasks.js',
-  '../../api/v1/tasks/[...route].js',
+  '../../api/v1/projects/[...route].js',
+  '../../api/v1/tasks/[taskId].js',
+  '../../api/v1/tasks/[taskId]/[action].js',
 ];
 
 function clearModule(modulePath) {

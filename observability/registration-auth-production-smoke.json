@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-05-15T17:24:07.600Z",
-  "baseUrl": "https://engineering-team-zeta.vercel.app",
+  "generatedAt": "2026-05-16T20:36:42.168Z",
+  "baseUrl": "https://engineering-team-nxle1id5w-wiinc1-hotmailcoms-projects.vercel.app",
   "deployment": {
     "selectedAuthStrategy": "registration",
-    "id": null,
-    "url": "https://engineering-team-zeta.vercel.app",
+    "id": "dpl_5FCcMDQypg6jbnULekDUhFYCeR3d",
+    "url": "https://engineering-team-nxle1id5w-wiinc1-hotmailcoms-projects.vercel.app",
     "commitSha": null,
-    "rollbackTarget": "https://engineering-team-539eqk6ou-wiinc1-hotmailcoms-projects.vercel.app"
+    "rollbackTarget": "https://engineering-team-8yls3uecc-wiinc1-hotmailcoms-projects.vercel.app"
   },
   "registrationEmailHash": "5d173b060e75f5fa3039a5065b050ea5fb7f20d81ef69ef7ed98b15411283c85",
   "passwordResetEmailHash": "1cd4ddeabc04801c8439527936bba763dc990ce26ce03a1252cb9f599978f8d4",
@@ -33,6 +33,18 @@
   "protectedRoutes": [
     {
       "route": "/tasks",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    },
+    {
+      "route": "/projects",
+      "status": 200,
+      "ok": true,
+      "redirectedToSignIn": false
+    },
+    {
+      "route": "/tasks/TSK-PG-001",
       "status": 200,
       "ok": true,
       "redirectedToSignIn": false

@@ -10,6 +10,18 @@ function hasFlag(name) {
   return process.argv.includes(name);
 }
 
+function readListArg(name) {
+  const values = [];
+  for (let index = 0; index < process.argv.length; index += 1) {
+    if (process.argv[index] === name && index < process.argv.length - 1) {
+      values.push(...process.argv[index + 1].split(','));
+    }
+  }
+  return values.map(value => value.trim()).filter(Boolean);
+}
+
+const protectedRoutes = readListArg('--protected-route');
+
 runRegistrationProductionSmoke({
   baseUrl: readArg('--base-url', process.env.AUTH_PROD_BASE_URL),
   email: readArg('--email', process.env.AUTH_PROD_REGISTRATION_EMAIL),
@@ -21,6 +33,7 @@ runRegistrationProductionSmoke({
   commitSha: readArg('--commit-sha', process.env.VERCEL_GIT_COMMIT_SHA),
   rollbackTarget: readArg('--rollback-target', process.env.AUTH_PROD_ROLLBACK_TARGET),
   allowHttp: hasFlag('--allow-http'),
+  protectedRoutes: protectedRoutes.length ? protectedRoutes : undefined,
 })
   .then((evidence) => {
     process.stdout.write(`${JSON.stringify({

@@ -1,4 +1,4 @@
-const { handleRequest } = require('../_server');
+const { handleRequest } = require('../../../_server');
 
 module.exports = (req, res) => {
   return handleRequest(req, res);

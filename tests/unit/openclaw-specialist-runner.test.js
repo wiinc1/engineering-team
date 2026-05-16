@@ -23,7 +23,7 @@ test('resolveSpecialistMap merges defaults with overrides', () => {
 });
 
 test('resolveRuntimeAgent uses the configured alias map', () => {
-  assert.equal(resolveRuntimeAgent('engineer'), 'sr-engineer');
+  assert.equal(resolveRuntimeAgent('engineer'), 'engineer');
   assert.equal(resolveRuntimeAgent('qa'), 'qa-engineer');
   assert.equal(resolveRuntimeAgent('engineer', {
     OPENCLAW_SPECIALIST_MAP: JSON.stringify({ engineer: 'jr-engineer' }),
@@ -33,7 +33,7 @@ test('resolveRuntimeAgent uses the configured alias map', () => {
 test('buildOpenClawArgs targets the mapped agent and uses local mode by default', () => {
   const args = buildOpenClawArgs({
     payload: { request: 'Please implement this fix' },
-    runtimeAgent: 'sr-engineer',
+    runtimeAgent: 'engineer',
     env: {},
   });
 
@@ -41,7 +41,7 @@ test('buildOpenClawArgs targets the mapped agent and uses local mode by default'
     'agent',
     '--json',
     '--agent',
-    'sr-engineer',
+    'engineer',
     '--message',
     'Please implement this fix',
     '--timeout',
