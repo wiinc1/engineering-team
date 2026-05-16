@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-05-16T20:27:05.166Z",
+  "baseUrl": "https://engineering-team-nxle1id5w-wiinc1-hotmailcoms-projects.vercel.app",
+  "deployment": {
+    "id": "dpl_5FCcMDQypg6jbnULekDUhFYCeR3d",
+    "commitSha": null,
+    "rollbackTarget": "https://engineering-team-8yls3uecc-wiinc1-hotmailcoms-projects.vercel.app"
+  },
+  "tenantId": "tenant-int",
+  "isolationTenantHash": "cade13df97a84acc7a549e0279f0ff8d757fdb20bb78a6b45569cca228ce961e",
+  "database": {
+    "migration012Applied": true,
+    "requiredColumnsPresent": true,
+    "projectCount": 10,
+    "mutationCount": 29
+  },
+  "api": {
+    "listBeforeStatus": 200,
+    "projectId": "PRJ-E5F009AB",
+    "taskId": "TSK-PG-001",
+    "createStatus": 201,
+    "readStatus": 200,
+    "updateStatus": 200,
+    "attachStatus": 200,
+    "detachStatus": 200,
+    "archiveStatus": 200,
+    "isolationReadStatus": 404,
+    "isolationListStatus": 200,
+    "createdProjectHiddenAfterArchive": true,
+    "updatedProjectVersion": 2,
+    "attachedTaskVersion": 10,
+    "detachedTaskProjectId": null,
+    "isolationListContainsProject": false,
+    "summary": {
+      "listProjectsLoaded": true,
+      "projectCreated": true,
+      "projectRead": true,
+      "projectUpdated": true,
+      "taskAttached": true,
+      "taskDetached": true,
+      "archiveDeleteEquivalent": true,
+      "tenantIsolationPassed": true
+    }
+  },
+  "summary": {
+    "migration012Applied": true,
+    "requiredColumnsPresent": true,
+    "listProjectsLoaded": true,
+    "projectCreated": true,
+    "projectRead": true,
+    "projectUpdated": true,
+    "taskAttached": true,
+    "taskDetached": true,
+    "archiveDeleteEquivalent": true,
+    "tenantIsolationPassed": true,
+    "rollbackTargetPresent": true,
+    "evidenceRedacted": true,
+    "passed": true
+  }
+}

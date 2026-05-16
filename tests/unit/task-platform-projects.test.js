@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createAuditApiServer } = require('../../lib/audit/http-projects');
+const { createPostgresProjectAdapter } = require('../../lib/task-platform/projects-postgres');
 
 function sign(payload, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -121,4 +122,87 @@ test('projects API can be disabled with FF_PROJECTS', async () => {
     assert.equal(response.status, 503);
     assert.equal((await json(response)).error.code, 'feature_disabled');
   }, { ffProjects: '0' });
+});
+
+function postgresProjectRow(tenantId, projectId) {
+  return {
+    tenant_id: tenantId,
+    project_id: projectId,
+    name: 'Production Smoke Project',
+    summary: '',
+    status: 'ACTIVE',
+    owner_actor_id: null,
+    version: 1,
+    created_at: '2026-05-16T00:00:00.000Z',
+    updated_at: '2026-05-16T00:00:00.000Z',
+    archived_at: null,
+    metadata: {},
+  };
+}
+
+function createPostgresProjectPoolFixture({ tenantId, projectId, hydrationParams, checkpointParams }) {
+  const client = {
+    async query(sql, params = []) {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [] };
+      if (sql.includes('SELECT status FROM projects')) return { rows: [{ status: 'ACTIVE' }] };
+      if (sql.includes('SELECT version FROM tasks')) return { rows: [{ version: 1 }] };
+      if (sql.includes('UPDATE tasks SET project_id')) return { rows: [{ version: 2 }] };
+      if (sql.includes('INSERT INTO task_sync_checkpoints')) {
+        checkpointParams.push(params);
+        return { rows: [] };
+      }
+      if (sql.includes('INSERT INTO project_mutations')) return { rows: [] };
+      throw new Error(`Unexpected client query: ${sql}`);
+    },
+    release() {},
+  };
+  return {
+    async connect() {
+      return client;
+    },
+    async query(sql, params = []) {
+      if (sql.includes('LEFT JOIN projects')) {
+        hydrationParams.push(params);
+        return { rows: [postgresProjectRow(tenantId, projectId)] };
+      }
+      if (sql.includes('SELECT COUNT(*)::int AS count')) return { rows: [{ count: 1 }] };
+      throw new Error(`Unexpected pool query: ${sql}`);
+    },
+  };
+}
+
+function createPostgresProjectHydrationAdapter({ pool, taskId }) {
+  const service = {
+    kind: 'postgres',
+    async getTask() {
+      return { taskId, title: 'Postgres task', description: '', status: 'BACKLOG', priority: 'P0', version: 2 };
+    },
+  };
+  return createPostgresProjectAdapter(service, { pool }, {
+    normalizeProjectId: value => value,
+    projectLabel: project => project ? { projectId: project.projectId, name: project.name, status: project.status } : null,
+    toProject: record => ({
+      projectId: record.project_id,
+      name: record.name,
+      status: record.status,
+      version: Number(record.version || 1),
+    }),
+  });
+}
+
+test('postgres project task updates hydrate the project label with tenant-scoped task lookups', async () => {
+  const tenantId = 'tenant-int';
+  const taskId = 'TSK-PG-001';
+  const projectId = 'PRJ-PG123456';
+  const hydrationParams = [];
+  const checkpointParams = [];
+  const pool = createPostgresProjectPoolFixture({ tenantId, projectId, hydrationParams, checkpointParams });
+  const adapter = createPostgresProjectHydrationAdapter({ pool, taskId });
+
+  const updated = await adapter.updateTaskProject({ tenantId, taskId, projectId, version: 1, actorId: 'pm' });
+
+  assert.deepEqual(checkpointParams, [[tenantId, taskId, 2]]);
+  assert.deepEqual(hydrationParams, [[tenantId, taskId]]);
+  assert.equal(updated.projectId, projectId);
+  assert.equal(updated.project.projectId, projectId);
 });

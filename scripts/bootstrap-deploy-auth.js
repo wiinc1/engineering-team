@@ -44,9 +44,10 @@ function resolveDeployAuthBootstrap(env = process.env) {
   const explicitConfigured = explicit.length > 0;
   const envPresence = getDeployAuthBootstrapEnvPresence(env);
   const databaseConfigured = hasValue(env, 'DATABASE_URL');
+  const vercelBuild = parseBoolean(env.VERCEL, false) || hasValue(env, 'VERCEL_ENV');
   const enabled = explicitConfigured
     ? parseBoolean(explicit, false)
-    : databaseConfigured;
+    : databaseConfigured && !vercelBuild;
 
   return {
     enabled,
