@@ -560,7 +560,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Inputs and selects: use `surface`, `border`, `8px` radius, and nearby helper or error text.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
-- App nav: collapsible left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace or Kanban board route, a primary create action, role inbox control, and muted session controls. On mobile it behaves as a left drawer so navigation remains recoverable without consuming the work surface.
+- App nav: collapsible left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace, Kanban board, or Projects route, a primary create action, role inbox control, and muted session controls. On mobile it behaves as a left drawer so navigation remains recoverable without consuming the work surface.
 - Board columns and task cards: keep visible lane headings for the standard workflow columns even when a lane is empty, include count and empty-copy context for empty lanes, keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
@@ -578,6 +578,7 @@ The app information architecture is workflow-first. Navigation must keep operati
 - Exact task lookup belongs in task links, task detail routes, or the left-rail search. Page headers must not reintroduce a duplicate Task ID jump box.
 - Session identity belongs in muted nav or session controls, not a page-header diagnostic card, so workspace headers remain focused on route utilities and current view context.
 - `/tasks` is the primary task workspace for delivery board and list scanning. It must keep owner, priority, status, waiting state, and next action visible without hover-only access.
+- `/projects` is the planning-container workspace. It lists Project scope, exposes PM/Admin create and edit controls, and keeps reader sessions read-only while task lifecycle and ownership remain on Tasks.
 - `/tasks/create` is the intake route. It creates an Intake Draft and keeps the operator in a local success state with links to task detail and the workspace.
 - Task detail routes must keep the task summary, owner, stage, blockers, linked PRs, child task signal, activity, telemetry, governance, and assignment context in one scannable operational surface.
 - `/overview/pm` groups work by routing bucket and remains read-only except for explicit PM/admin controls that the current session may use.

@@ -220,7 +220,7 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
 
   return {
     fetchTaskSummary(taskId) { return request(`/tasks/${encodeURIComponent(taskId)}`); },
-    fetchTaskList() { return request('/tasks'); },
+    fetchTaskList() { return request('/tasks').then(async list => { try { const canonical = await request('/v1/tasks'), projects = new Map((canonical.data || []).map(task => [task.taskId, { project: task.project || null, project_id: task.projectId || task.project_id || task.project?.projectId || null }])); return { ...list, items: (list.items || []).map(item => projects.has(item.task_id) ? { ...item, ...projects.get(item.task_id) } : item) }; } catch { return list; } }); },
     fetchTaskHistory(taskId, { filters, pagination, range } = {}) {
       const query = buildHistoryQuery(filters, pagination, range).toString();
       return request(`/tasks/${encodeURIComponent(taskId)}/history${query ? `?${query}` : ''}`);

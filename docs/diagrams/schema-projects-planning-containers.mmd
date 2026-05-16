@@ -1,0 +1,43 @@
+erDiagram
+  PROJECTS {
+    text tenant_id PK
+    text project_id PK
+    text name
+    text summary
+    text status
+    text owner_actor_id
+    integer version
+    jsonb metadata
+    timestamptz created_at
+    timestamptz updated_at
+    timestamptz archived_at
+  }
+
+  TASKS {
+    text tenant_id PK
+    text task_id PK
+    text project_id FK
+    text title
+    text status
+    integer version
+    timestamptz updated_at
+  }
+
+  PROJECT_MUTATIONS {
+    bigint mutation_id PK
+    text tenant_id
+    text project_id FK
+    text task_id FK
+    text mutation_type
+    integer project_version
+    integer task_version
+    text actor_id
+    text request_id
+    text idempotency_key
+    jsonb payload
+    timestamptz created_at
+  }
+
+  PROJECTS ||--o{ TASKS : groups
+  PROJECTS ||--o{ PROJECT_MUTATIONS : records
+  TASKS ||--o{ PROJECT_MUTATIONS : records

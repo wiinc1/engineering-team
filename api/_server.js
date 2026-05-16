@@ -1,4 +1,4 @@
-const { createAuditApiServer } = require('../lib/audit/http');
+const { createAuditApiServer } = require('../lib/audit/http-projects');
 const { assertAuditBackendConfiguration, logAuditBackendSelection } = require('../lib/audit/config');
 const { runDeployAuthBootstrap } = require('../scripts/bootstrap-deploy-auth');
 
@@ -57,6 +57,7 @@ function getServer() {
     publicAppUrl: process.env.AUTH_PUBLIC_APP_URL,
     githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
     ffGitHubSync: process.env.FF_GITHUB_SYNC,
+    ffProjects: process.env.FF_PROJECTS,
     logger,
   });
 

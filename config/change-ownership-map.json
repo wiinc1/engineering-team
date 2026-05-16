@@ -92,7 +92,8 @@
             "^tests/unit/audit-api\\.test\\.js$",
             "^tests/unit/audit-api-deploy-wrapper\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
-            "^tests/unit/audit-jwt-auth\\.test\\.js$"
+            "^tests/unit/audit-jwt-auth\\.test\\.js$",
+            "^tests/unit/task-platform-projects\\.test\\.js$"
           ]
         },
         {
@@ -100,7 +101,8 @@
           "patterns": [
             "^tests/contract/audit-openapi\\.contract\\.test\\.js$",
             "^tests/contract/audit-api-deploy-wrapper\\.contract\\.test\\.js$",
-            "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$"
+            "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
+            "^tests/contract/projects-openapi\\.contract\\.test\\.js$"
           ]
         },
         {
@@ -108,7 +110,8 @@
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/audit-api-deploy-wrapper\\.security\\.test\\.js$",
-            "^tests/security/execution-contract-refinement\\.security\\.test\\.js$"
+            "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
+            "^tests/security/projects-security\\.test\\.js$"
           ]
         }
       ],
@@ -119,6 +122,7 @@
             "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/authenticated-browser-app-openapi\\.yml$",
             "^docs/api/execution-contract-refinement-openapi\\.yml$",
+            "^docs/api/task-platform-openapi\\.yml$",
             "^docs/api/task-assignment-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$",
             "^docs/api/task-owner-surfaces-openapi\\.yml$"
@@ -130,7 +134,8 @@
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/runbooks/execution-contract-refinement\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
-            "^docs/runbooks/task-assignment\\.md$"
+            "^docs/runbooks/task-assignment\\.md$",
+            "^docs/runbooks/task-platform-rollout\\.md$"
           ]
         }
       ]
@@ -152,13 +157,15 @@
           "patterns": [
             "^tests/unit/audit-.*\\.test\\.js$",
             "^tests/unit/execution-contracts\\.test\\.js$",
-            "^tests/unit/execution-contract-refinement\\.test\\.js$"
+            "^tests/unit/execution-contract-refinement\\.test\\.js$",
+            "^tests/unit/task-platform-projects\\.test\\.js$"
           ]
         },
         {
           "name": "integration",
           "patterns": [
             "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
+            "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
             "^tests/integration/audit-migrations\\.integration\\.test\\.js$",
             "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$"
@@ -169,6 +176,7 @@
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
+            "^tests/security/projects-security\\.test\\.js$",
             "^tests/performance/audit-foundation\\.performance\\.test\\.js$"
           ]
         }
@@ -179,13 +187,15 @@
           "patterns": [
             "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/execution-contract-refinement-openapi\\.yml$",
+            "^docs/api/task-platform-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
           ]
         },
         {
           "name": "runbook",
           "patterns": [
-            "^docs/runbooks/audit-foundation\\.md$"
+            "^docs/runbooks/audit-foundation\\.md$",
+            "^docs/runbooks/task-platform-rollout\\.md$"
           ]
         }
       ]
@@ -333,6 +343,7 @@
             "^docs/runbook\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/diagrams/workflow-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-203_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/reports/ISSUE_7_COMPLETION_AUDIT\\.md$"
@@ -380,6 +391,7 @@
           "patterns": [
             "^docs/runbooks/workflow-delivery-loop\\.md$",
             "^docs/diagrams/workflow-frontend-source-modularization\\.mmd$",
+            "^docs/reports/ISSUE-203_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/reports/STATUS_2026-04-13_ISSUE_AUDIT\\.md$"
           ]
@@ -442,6 +454,7 @@
         "^lib/task-platform/",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
+        "^db/migrations/012_projects(\\.down)?\\.sql$",
         "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection)\\.js$"
       ],
       "test_requirements": [
@@ -449,6 +462,7 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/task-platform-api\\.test\\.js$",
+            "^tests/unit/task-platform-projects\\.test\\.js$",
             "^tests/unit/task-platform-backfill\\.test\\.js$",
             "^tests/unit/task-platform-source-policy\\.test\\.js$",
             "^tests/unit/task-platform-github-check\\.test\\.js$",
@@ -464,7 +478,8 @@
             "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-branch-protection\\.integration\\.test\\.js$",
-            "^tests/integration/task-platform-pr-summary\\.integration\\.test\\.js$"
+            "^tests/integration/task-platform-pr-summary\\.integration\\.test\\.js$",
+            "^tests/contract/projects-openapi\\.contract\\.test\\.js$"
           ]
         }
       ],

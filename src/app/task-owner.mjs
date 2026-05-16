@@ -119,10 +119,14 @@ function summarizeRoleInboxResults(e, n) {
   const r = getRoleInboxLabel(n);
   return `${e} task${e === 1 ? "" : "s"} routed to ${r}.`;
 }
+function getTaskProjectId(e) {
+  return e?.project?.projectId || e?.project_id || e?.projectId || "";
+}
 function filterTaskList(e, n) {
-  const r = typeof n == "string" ? { owner: n } : { owner: "", priority: "", status: "", searchTerm: "", ...n || {} };
+  const r = typeof n == "string" ? { owner: n } : { owner: "", priority: "", status: "", searchTerm: "", project: "", ...n || {} };
   return e.filter((t) => !(l(t) || r.owner && (r.owner === UNASSIGNED_FILTER_VALUE && t.current_owner || r.owner !== UNASSIGNED_FILTER_VALUE && t.current_owner !==
-  r.owner) || r.priority && String(t.priority || "") !== r.priority || r.status && String(t.current_stage || "") !== r.status || r.searchTerm && !R(t, r.searchTerm)));
+  r.owner) || r.priority && String(t.priority || "") !== r.priority || r.status && String(t.current_stage || "") !== r.status || r.project && getTaskProjectId(t) !==
+  r.project || r.searchTerm && !R(t, r.searchTerm)));
 }
 function summarizeListResults(e, n, r, t = "list") {
   const i = t === "board" ? "cards" : "tasks";

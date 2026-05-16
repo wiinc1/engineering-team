@@ -27,18 +27,19 @@ describe('browser app route model helpers', () => {
   });
 
   it('round-trips task workspace filters without dropping route query state', () => {
-    expect(va('?owner=engineer&view=list&priority=P1&status=active&search=TSK-42')).toEqual({
+    expect(va('?owner=engineer&view=list&priority=P1&status=active&search=TSK-42&project=PRJ-ABC12345')).toEqual({
       owner: 'engineer',
       view: 'list',
       bucket: '',
       priority: 'P1',
       status: 'active',
       searchTerm: 'TSK-42',
+      project: 'PRJ-ABC12345',
     });
 
     expect(
-      we({ owner: '', view: 'board', searchTerm: 'queued' }, '?bucket=sre&priority=P1'),
-    ).toBe('?bucket=sre&priority=P1&view=board&search=queued');
+      we({ owner: '', view: 'board', searchTerm: 'queued', project: 'PRJ-ABC12345' }, '?bucket=sre&priority=P1'),
+    ).toBe('?bucket=sre&priority=P1&view=board&search=queued&project=PRJ-ABC12345');
   });
 
   it('keeps auth mode routing encoded in query state', () => {

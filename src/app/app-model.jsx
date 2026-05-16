@@ -118,15 +118,15 @@ function qe(i = "") {
 }
 function va(i = "") {
   const o = new URLSearchParams(i), l = o.get("owner") || "", u = o.get("view") === "list" ? "list" : "board", b = o.get("bucket") || "", S = o.get("priority") ||
-  "", C = o.get("status") || "", y = o.get("search") || "";
-  return { owner: l, view: u, bucket: b, priority: S, status: C, searchTerm: y };
+  "", C = o.get("status") || "", y = o.get("search") || "", E = o.get("project") || "";
+  return { owner: l, view: u, bucket: b, priority: S, status: C, searchTerm: y, project: E };
 }
-function we({ owner: i, view: o, bucket: l, priority: u, status: b, searchTerm: S }, C = "") {
+function we({ owner: i, view: o, bucket: l, priority: u, status: b, searchTerm: S, project: projectFilter }, C = "") {
   const y = new URLSearchParams(C), E = i ?? y.get("owner") ?? "", M = o ?? (y.get("view") === "list" ? "list" : "board"), V = l ?? y.get("bucket") ?? "", se = u ??
-  y.get("priority") ?? "", s = b ?? y.get("status") ?? "", O = S ?? y.get("search") ?? "";
+  y.get("priority") ?? "", s = b ?? y.get("status") ?? "", O = S ?? y.get("search") ?? "", projectValue = projectFilter ?? y.get("project") ?? "";
   E ? y.set("owner", E) : y.delete("owner"), M === "list" ? y.set("view", "list") : o === "board" || y.get("view") === "board" ? y.set("view", "board") : y.delete(
   "view"), V ? y.set("bucket", V) : y.delete("bucket"), se ? y.set("priority", se) : y.delete("priority"), s ? y.set("status", s) : y.delete("status"), O ? y.set(
-  "search", O) : y.delete("search");
+  "search", O) : y.delete("search"), projectValue ? y.set("project", projectValue) : y.delete("project");
   const Ne = y.toString();
   return Ne ? `?${Ne}` : "";
 }

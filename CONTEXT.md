@@ -58,6 +58,14 @@ The canonical domain lifecycle for work in the control plane:
 
 Board statuses are views over this lifecycle, not the lifecycle itself.
 
+### Project
+
+A Project is a tenant-scoped planning container for grouping existing Tasks into a delivery plan.
+
+Projects do not replace Task lifecycle, ownership, audit history, or execution contracts. A Task may belong to one Project at a time, and Project membership is a planning signal used by PMs and operators to filter task workspace views, inspect delivery scope, and coordinate related work.
+
+Project mutation requires Product Manager or Admin permission. Reader roles can inspect Projects and task memberships but cannot create Projects, edit metadata, or attach and detach Tasks.
+
 ### Operator Approval
 
 The stage where the Software Factory operator approves the full execution contract before implementation begins.
