@@ -61,7 +61,7 @@ idle", message: "", taskId: null }), [vn, Ta] = c.useState(""), [Yt, ft] = c.use
   hn = c.useRef(null), Da = c.useRef(false), nt = c.useRef(null), bn = V || to(ue.reason), Xt = Y.productionAuthStrategy === "registration", ys = !Xt, ws = Y.internalAuthBootstrapEnabled &&
   Y.productionAuthStrategy !== "registration", authMode = Xt ? authModeFromSearch(o) : "signIn", toggleAuthPassword = c.useCallback((t) => {
     setAuthPasswordVisible((n) => ({ ...n, [t]: !n[t] }));
-  }, []), Zt = c.useCallback((t, n = "expired") => {
+  }, []), detailStatusTaskRef = c.useRef(null), Zt = c.useCallback((t, n = "expired") => {
     const r = Ga({ apiBaseUrl: D });
     b(r), y((d) => ({ ...d, apiBaseUrl: r.apiBaseUrl || d.apiBaseUrl })), se(t), l(ot, It(`${i}${o}`, n), { replace: true });
   }, [l, i, D, o]), p = c.useMemo(() => {
@@ -143,14 +143,14 @@ ntinue.") });
     return () => {
       n = true;
     };
-  }, [D, i, o]), c.useEffect(() => {
+  }, [D, i, o]), c.useLayoutEffect(() => {
     if (s.kind === "detail") {
-      const t = s.route?.taskId || null, n = hn.current !== t;
-      hn.current = t, en(s.summary?.currentOwner || ""), an(""), sn(true), on({}), G(Fn(s.detail?.context?.architectHandoff)), ya(Wn(s.detail?.context?.engineerSubmission)),
+      const t = s.route?.taskId || null, n = !!s.detail?.task?.id && hn.current !== t, r = detailStatusTaskRef.current !== t;
+      n && (hn.current = t), r && (detailStatusTaskRef.current = t), n && (en(s.summary?.currentOwner || ""), an(""), sn(true), on({}), G(Fn(s.detail?.context?.architectHandoff)), ya(Wn(s.detail?.context?.engineerSubmission)),
       ln(jn(s.detail?.context?.skillEscalation)), wa(Vn(s.detail?.context?.activityMonitoring)), Na(Kn(s.detail?.context)), ut(Jn(s.detail?.context)), ze(Yn()),
       cn({}), dn({}), mn({}), re(Xn(s.detail?.context?.qaResults?.latest)), pt(Zn(s.detail?.context?.sreMonitoring)), Ca(es(s.detail?.context?.sreMonitoring)), Se(
       ts(s.detail)), pn(as(s.detail)), _a(ns(s.detail)), kt(ss(s.detail)), jt(is(s.detail)), bt(rs(s.detail)), z(Ka()), gn(vo(s.detail?.context?.deferredConsiderations?.
-      unresolved || [])), Ta(""), $t({ kind: "idle", message: "" }), n && (Ut({ kind: "idle", message: "" }), Ue({ kind: "idle", message: "", questionId: null, action: null }),
+      unresolved || [])), Ta("")), r && ($t({ kind: "idle", message: "" }), Ut({ kind: "idle", message: "" }), Ue({ kind: "idle", message: "", questionId: null, action: null }),
       Bt({ kind: "idle", message: "" }), Me({ kind: "idle", message: "" }), Le({ kind: "idle", message: "" }), Ge({ kind: "idle", message: "" }), dt({ kind: "id\
 le", message: "" }), mt({ kind: "idle", message: "" }), Ce({ kind: "idle", message: "" }), Ot({ kind: "idle", message: "", threadId: null, action: null }), Lt({
       kind: "idle", message: "" }), Ht({ kind: "idle", message: "" }), Gt({ kind: "idle", message: "" }), Qt({ kind: "idle", message: "" }), Ft({ kind: "idle", message: "" }),
