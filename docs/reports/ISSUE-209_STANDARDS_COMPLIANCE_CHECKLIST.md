@@ -28,7 +28,7 @@
 ## Coding and Code Quality
 
 - Applicable: Yes.
-- Evidence in this change: The Vercel wrappers and proxy delegate to the existing shared request handler, avoiding duplicate route logic; route matching accepts both legacy and versioned task workflow paths.
+- Evidence in this change: The Vercel wrappers and proxy delegate to the existing shared request handler, avoiding duplicate route logic; route matching accepts both legacy and versioned task workflow paths; the Projects production smoke CLI is mapped in `config/change-ownership-map.json`.
 - Gap observed: None remaining for this scoped route remediation. Documented rationale: the change is a narrow adapter/routing correction with adjacent regression coverage (source `docs/standards/software-development-standards.md`).
 
 ## Testing and Quality Assurance
@@ -66,7 +66,7 @@
 
 ## Required Evidence
 
-- Commands run: `gh issue view 209 --repo wiinc1/engineering-team --json number,title,state,body,labels,url`; `gh issue view 208 --repo wiinc1/engineering-team --json number,title,state,url`; `gh issue view 156 --repo wiinc1/engineering-team --json number,title,state,url`; `node --test tests/unit/audit-api-deploy-wrapper.test.js tests/unit/audit-api-v1-workflow-routes.test.js`; `npm run lint`; `npm run test:unit`; `npm run standards:check`; `npm run test:delegation:live-smoke:openclaw`; `npx vercel deploy --prod --yes --force --logs`; production pilot resume helper using `.env.production.local`.
+- Commands run: `gh issue view 209 --repo wiinc1/engineering-team --json number,title,state,body,labels,url`; `gh issue view 208 --repo wiinc1/engineering-team --json number,title,state,url`; `gh issue view 156 --repo wiinc1/engineering-team --json number,title,state,url`; `node --test tests/unit/audit-api-deploy-wrapper.test.js tests/unit/audit-api-v1-workflow-routes.test.js`; `npm run lint`; `npm run test:unit`; `npm run coverage`; `npm run ownership:lint`; `npm run standards:check`; `npm run test:delegation:live-smoke:openclaw`; `npx vercel deploy --prod --yes --force --logs`; production pilot resume helper using `.env.production.local`.
 - Tests added or updated: `tests/unit/audit-api-v1-workflow-routes.test.js`; `tests/unit/audit-api-deploy-wrapper.test.js`; `package.json` unit test list.
 - Rollout or rollback notes: Production deployment `dpl_FdiWbwoaJ5uRAWMVRntVjGb9WUDm` is Ready and aliased to `https://engineering-team-zeta.vercel.app`; rollback is a normal git revert plus redeploy after preserving pilot evidence.
 - Docs updated: `README.md`; `docs/diagrams/workflow-supervised-autonomous-pilot.mmd`; `docs/runbooks/supervised-autonomous-pilot.md`; `docs/reports/ISSUE-209-supervised-autonomous-pilot.md`; this checklist.

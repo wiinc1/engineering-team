@@ -62,6 +62,10 @@ Projection blocker:
 - Production audit event writes returned accepted event IDs, but task history/detail remained stale until projection queue processing ran.
 - The pilot used bounded projection processing after each production workflow write. All recorded projection runs passed with `failed=0`; see `observability/supervised-autonomous-pilot.json`.
 
+CI ownership-map blocker:
+- GitHub `Repo validation` failed because the repository-wide ownership lint found `scripts/verify-projects-production-smoke.js` unmapped.
+- Added that CLI to the existing `task-platform` ownership domain in `config/change-ownership-map.json` so the production Projects smoke helper is covered by the same unit, contract, integration, and rollout documentation requirements as the Projects runtime.
+
 ## Manual Action Log
 
 | Timestamp | Action | Classification | Location | Reason |
@@ -75,6 +79,7 @@ Projection blocker:
 | 2026-05-17 UTC | Ran bounded projection processing after production writes | operator intervention | Audit projection worker | Postgres read models needed to catch up before each subsequent workflow gate. |
 | 2026-05-17 UTC | Approved Simple contract v2 by policy | required approval | Execution Contract API | Low-risk Simple auto-approval policy recorded `execution-contract-low-risk-simple-auto-approval.v1`. |
 | 2026-05-17 UTC | Recorded delegated runtime attribution | routine observation | Task control-plane decision | OpenClaw smoke recorded `agentId=engineer`, session `20a1c12b-d183-419d-b08f-5f0730375514`. |
+| 2026-05-17 UTC | Mapped Projects production smoke CLI to task-platform ownership domain | operator intervention | GitHub PR validation | Repo-wide ownership lint blocked merge until `scripts/verify-projects-production-smoke.js` had an ownership domain. |
 
 ## Validation
 
@@ -82,6 +87,8 @@ Passed:
 - `node --test tests/unit/audit-api-deploy-wrapper.test.js tests/unit/audit-api-v1-workflow-routes.test.js`
 - `npm run lint`
 - `npm run test:unit`
+- `npm run coverage`
+- `npm run ownership:lint`
 - `npm run standards:check`
 - `npm run test:delegation:live-smoke:openclaw`
 - `npx vercel deploy --prod --yes --force --logs`: deployment `dpl_FdiWbwoaJ5uRAWMVRntVjGb9WUDm` Ready and aliased to `https://engineering-team-zeta.vercel.app`.
@@ -107,7 +114,7 @@ Additional follow-up issues must be linked here if deployment, delegation, QA/SR
 
 ## Required Evidence
 
-- Commands run: `gh issue view 209 --repo wiinc1/engineering-team --json number,title,state,body,labels,url`; `gh issue view 208 --repo wiinc1/engineering-team --json number,title,state,url`; `gh issue view 156 --repo wiinc1/engineering-team --json number,title,state,url`; `node --test tests/unit/audit-api-deploy-wrapper.test.js tests/unit/audit-api-v1-workflow-routes.test.js`; `npm run lint`; `npm run test:unit`; `npm run standards:check`; `npm run test:delegation:live-smoke:openclaw`; `npx vercel deploy --prod --yes --force --logs`; production pilot resume helper using `.env.production.local`.
+- Commands run: `gh issue view 209 --repo wiinc1/engineering-team --json number,title,state,body,labels,url`; `gh issue view 208 --repo wiinc1/engineering-team --json number,title,state,url`; `gh issue view 156 --repo wiinc1/engineering-team --json number,title,state,url`; `node --test tests/unit/audit-api-deploy-wrapper.test.js tests/unit/audit-api-v1-workflow-routes.test.js`; `npm run lint`; `npm run test:unit`; `npm run coverage`; `npm run ownership:lint`; `npm run standards:check`; `npm run test:delegation:live-smoke:openclaw`; `npx vercel deploy --prod --yes --force --logs`; production pilot resume helper using `.env.production.local`.
 - Tests added or updated: `tests/unit/audit-api-v1-workflow-routes.test.js`; `tests/unit/audit-api-deploy-wrapper.test.js`; `package.json` unit test list.
 - Rollout or rollback notes: production deployment `dpl_FdiWbwoaJ5uRAWMVRntVjGb9WUDm` is Ready; rollback is a normal git revert plus redeploy after preserving pilot evidence.
 - Docs updated: `README.md`; `docs/diagrams/workflow-supervised-autonomous-pilot.mmd`; `docs/runbooks/supervised-autonomous-pilot.md`; `docs/reports/ISSUE-209_STANDARDS_COMPLIANCE_CHECKLIST.md`; this report.
