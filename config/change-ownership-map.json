@@ -160,6 +160,7 @@
             "^tests/unit/autonomous-delivery-metrics\\.test\\.js$",
             "^tests/unit/execution-contracts\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
+            "^tests/unit/live-task-updates\\.test\\.js$",
             "^tests/unit/task-platform-projects\\.test\\.js$"
           ]
         },
@@ -167,6 +168,7 @@
           "name": "integration",
           "patterns": [
             "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
+            "^tests/integration/live-task-updates\\.integration\\.test\\.js$",
             "^tests/contract/autonomous-delivery-metrics\\.contract\\.test\\.js$",
             "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
@@ -180,6 +182,8 @@
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
+            "^tests/security/live-task-updates\\.security\\.test\\.js$",
+            "^tests/performance/live-task-updates\\.performance\\.test\\.js$",
             "^tests/security/projects-security\\.test\\.js$",
             "^tests/security/autonomous-delivery-metrics\\.security\\.test\\.js$",
             "^tests/performance/autonomous-delivery-metrics\\.performance\\.test\\.js$",
@@ -193,6 +197,7 @@
           "patterns": [
             "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/autonomous-delivery-metrics-openapi\\.yml$",
+            "^docs/api/live-task-freshness-updates-openapi\\.yml$",
             "^docs/api/execution-contract-refinement-openapi\\.yml$",
             "^docs/api/task-platform-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
@@ -203,6 +208,7 @@
           "patterns": [
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/runbooks/autonomous-delivery-metrics\\.md$",
+            "^docs/runbooks/live-task-freshness\\.md$",
             "^docs/runbooks/task-platform-rollout\\.md$"
           ]
         }
