@@ -2041,6 +2041,56 @@ button {
   font-weight: var(--design-typography-label-md-font-weight);
 }
 
+.live-freshness {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-left: 4px solid var(--muted);
+  border-radius: var(--design-radius-control-sm);
+  background: color-mix(in srgb, var(--surface) 86%, var(--surface-muted) 14%);
+  color: var(--muted);
+  font-size: var(--design-typography-body-sm-font-size);
+}
+
+.live-freshness > span:first-child {
+  color: var(--text);
+  font-weight: var(--design-typography-label-md-font-weight);
+}
+
+.live-freshness .button-secondary {
+  min-height: 28px;
+  padding: 5px 9px;
+}
+
+.live-freshness--fresh {
+  border-left-color: var(--success);
+  background: color-mix(in srgb, var(--success-soft) 42%, var(--surface) 58%);
+}
+
+.live-freshness--polling,
+.live-freshness--reconnecting {
+  border-left-color: var(--primary);
+}
+
+.live-freshness--stale {
+  border-left-color: var(--warning);
+  background: color-mix(in srgb, var(--warning-soft) 38%, var(--surface) 62%);
+}
+
+.live-freshness--degraded {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger-soft) 36%, var(--surface) 64%);
+}
+
+.live-freshness--disabled {
+  border-left-color: var(--border);
+}
+
 .task-list-results {
   margin: 0;
   color: var(--muted);

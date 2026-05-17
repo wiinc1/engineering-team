@@ -146,7 +146,8 @@ Task-detail contract notes for approval readiness:
 - Next-action rollout flag: `ff_task_detail_next_action_redesign` controls the client-side role-specific next-action panel. The panel is derived from the existing `/detail` payload, preserves deep links to lifecycle sections, emits sanitized impression/click events, and can be disabled without changing server contracts.
 - Deterministic status precedence for the detail view is `done` > `blocked` > `waiting` > `active`.
 - Detail payload truncation for v1 is explicit: comments are capped at 10 entries and audit log items at 20 entries in the `/detail` response.
-- Manual refresh is the v1 consistency model. Live updates are not required in this pass.
+- Live freshness polling is the current pilot consistency model when `VITE_FF_LIVE_TASK_FRESHNESS_POLLING=1` or the local browser override is enabled. Task detail, Projects, workspace board/list, and role inbox routes poll `GET /api/v1/tasks/updates?cursor=...`, reconcile only newer Task/Project snapshots, and continue to expose manual refresh as the fallback.
+- Server rollback for the polling endpoint is `FF_LIVE_TASK_FRESHNESS_POLLING=0`; see `docs/runbooks/live-task-freshness.md` and `docs/api/live-task-freshness-updates-openapi.yml`.
 - See `docs/reports/ISSUE_7_COMPLETION_AUDIT.md` for the issue-7 completion mapping, derivation rules, permissions behavior, and freshness notes.
 
 - Browser entry: `index.html`

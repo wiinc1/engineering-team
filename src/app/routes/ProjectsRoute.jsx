@@ -1,4 +1,5 @@
 import React from "react";
+import { LiveTaskFreshnessIndicator, useLiveTaskFreshnessPolling } from "../live-task-freshness";
 import { buildAuthHeaders, resolveApiBaseUrl } from "../session.browser";
 
 const PROJECT_STATUSES = ["PLANNING", "ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"];
@@ -154,6 +155,12 @@ function ProjectDetail({ project, canWrite, onBack, onUpdate, onAttach, onDetach
 
 function ProjectsRoute({ ctx }) {
   const { api, load, projectId, state } = useProjectRoute(ctx);
+  const liveFreshness = useLiveTaskFreshnessPolling({
+    session: ctx.u,
+    defaultBaseUrl: ctx.At,
+    scope: { kind: "projects", projectId },
+    onUpdates: load,
+  });
   const [createStatus, setCreateStatus] = React.useState({ kind: "idle", message: "" });
   const [editStatus, setEditStatus] = React.useState({ kind: "idle", message: "" });
   const [attachStatus, setAttachStatus] = React.useState({ kind: "idle", message: "" });
@@ -178,6 +185,7 @@ function ProjectsRoute({ ctx }) {
   return <section className="task-list-panel" aria-label="Projects workspace">
     {state.kind === "loading" ? <p role="status">Loading Projects.</p> : null}
     {state.kind === "error" ? <p role="alert">{state.message}</p> : null}
+    <LiveTaskFreshnessIndicator state={liveFreshness} onManualRefresh={load} />
     {!projectId && state.kind === "ready" ? <><div className="role-inbox-toolbar"><div><p className="eyebrow">Planning containers</p><h2>Projects</h2><p className="role-inbox-toolbar__cue">Group tasks into PM-owned delivery plans while lifecycle, owner, and audit state remain on the task.</p></div><button type="button" onClick={load}>Refresh</button></div><ProjectCreateForm canWrite={writable} onCreate={create} status={createStatus} /><ProjectList projects={state.projects} onOpen={(id) => ctx.l(`/projects/${encodeURIComponent(id)}`)} /></> : null}
     {projectId && state.kind === "ready" && state.project ? <ProjectDetail project={state.project} canWrite={writable} onBack={() => ctx.l("/projects")} onUpdate={update} onAttach={attach} onDetach={detach} editStatus={editStatus} attachStatus={attachStatus} /> : null}
   </section>;

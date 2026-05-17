@@ -562,6 +562,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
 - App nav: collapsible left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace, Kanban board, or Projects route, a primary create action, role inbox control, and muted session controls. On mobile it behaves as a left drawer so navigation remains recoverable without consuming the work surface.
 - Board columns and task cards: keep visible lane headings for the standard workflow columns even when a lane is empty, include count and empty-copy context for empty lanes, keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
+- Live freshness indicators: use compact inline status containers near route content, pair semantic status color with visible text, keep manual refresh reachable as a secondary action, and reuse existing surface, border, typography, radius, success, warning, danger, and primary tokens instead of introducing a new token family.
 - Badges: use semantic status text plus color. Do not rely on color alone.
 - Review-question and QA/SRE panels: use status banners and summary grids to show route, risk, evidence, and required next action.
 - Authenticated dark-shell metadata, badges, task-detail labels, review forms, and primary action links must meet automated 4.5:1 contrast checks in the real-browser accessibility gate.
@@ -626,6 +627,7 @@ App-specific state rules:
 - Task creation success keeps focus on the created-status region and presents the next actions: open task detail, view task workspace, or create another task.
 - PM overview degraded states must stay distinct from filtered-empty results. A degraded roster or metadata dependency should not make tasks disappear.
 - Role inbox empty states must name the role queue and the routing condition, such as no QA-routed work, no SRE monitoring work, or no decision-ready human close-governance items.
+- Live freshness states must distinguish fresh, stale, reconnecting, degraded, disabled, and manual refresh fallback without relying on color alone.
 - Governance and deferred-consideration states must make clear when work is non-blocking, excluded from delivery scope, waiting for revisit, or promoted into committed scope.
 - SRE monitoring states must distinguish not started, active, approved, expired, escalated, and blocked by child anomaly work.
 - Close-review and human-decision states must show whether the item is decision-ready, missing PM/Architect evidence, awaiting human decision, requesting more context, or routed back to implementation.
