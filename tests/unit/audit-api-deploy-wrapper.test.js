@@ -11,6 +11,7 @@ const API_ENTRYPOINTS = [
   '../../api/auth/users/[userId].js',
   '../../api/v1/[...route].js',
   '../../api/v1/projects/[...route].js',
+  '../../api/v1/task-workflow-proxy.js',
   '../../api/v1/tasks/[taskId].js',
   '../../api/v1/tasks/[taskId]/[action].js',
 ];
@@ -37,6 +38,20 @@ function withStubbedServer(handleRequest, callback) {
   }
 }
 
+function createResponseRecorder() {
+  return {
+    statusCode: 200,
+    headers: {},
+    body: '',
+    setHeader(name, value) {
+      this.headers[String(name).toLowerCase()] = value;
+    },
+    end(chunk = '') {
+      this.body += String(chunk);
+    },
+  };
+}
+
 test('Vercel API entrypoints return the request handler promise', () => {
   for (const entrypoint of API_ENTRYPOINTS) {
     const expected = Promise.resolve({ handled: entrypoint });
@@ -46,6 +61,43 @@ test('Vercel API entrypoints return the request handler promise', () => {
       assert.equal(handler({}, {}), expected);
     });
   }
+});
+
+test('task workflow proxy restores the rewritten workflow URL before dispatch', () => {
+  let observedUrl = null;
+  const expected = Promise.resolve({ handled: true });
+  withStubbedServer(req => {
+    observedUrl = req.url;
+    return expected;
+  }, () => {
+    clearModule('../../api/v1/task-workflow-proxy.js');
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    const result = handler({
+      url: '/api/v1/task-workflow-proxy?__workflow_path=tasks/TSK-1/execution-contract/approve&source=backend',
+    }, {});
+
+    assert.equal(result, expected);
+    assert.equal(observedUrl, '/api/v1/tasks/TSK-1/execution-contract/approve?source=backend');
+  });
+});
+
+test('task workflow proxy rejects routes outside the versioned workflow allowlist', () => {
+  let dispatched = false;
+  withStubbedServer(() => {
+    dispatched = true;
+  }, () => {
+    clearModule('../../api/v1/task-workflow-proxy.js');
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    const response = createResponseRecorder();
+
+    handler({
+      url: '/api/v1/task-workflow-proxy?__workflow_path=tasks/TSK-1/admin/delete',
+    }, response);
+
+    assert.equal(dispatched, false);
+    assert.equal(response.statusCode, 400);
+    assert.equal(JSON.parse(response.body).error.code, 'invalid_workflow_proxy_path');
+  });
 });
 
 test('Vercel server wrapper selects and logs the canonical runtime backend', () => {

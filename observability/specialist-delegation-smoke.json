@@ -1,5 +1,5 @@
 {
-  "validatedAt": "2026-05-16T20:37:44.116Z",
+  "validatedAt": "2026-05-16T23:57:51.204Z",
   "request": "Please implement this fix",
   "mode": "delegated",
   "specialist": "engineer",
@@ -11,7 +11,7 @@
     "coordinator": "main"
   },
   "metadata": {
-    "delegationId": "a1b6ed8b-9d48-4a11-bc9d-d06a65869902",
+    "delegationId": "1c8216a7-f2b8-4d81-af2f-421b49cc9c55",
     "routeConfidence": "clear",
     "sessionId": "20a1c12b-d183-419d-b08f-5f0730375514",
     "ownership": {
@@ -26,7 +26,7 @@
           }
         ],
         "meta": {
-          "durationMs": 49044,
+          "durationMs": 51819,
           "agentMeta": {
             "sessionId": "20a1c12b-d183-419d-b08f-5f0730375514",
             "provider": "google-gemini-cli",
@@ -42,7 +42,7 @@
           "aborted": false,
           "systemPromptReport": {
             "source": "run",
-            "generatedAt": 1778963816256,
+            "generatedAt": 1778975820587,
             "sessionId": "34fa1aaf-0904-4b85-8f46-0b7cc3e64376",
             "sessionKey": "agent:engineer:main",
             "provider": "google-gemini-cli",
@@ -337,7 +337,7 @@
     "artifactLogged": true,
     "artifactPath": "/Users/wiinc1/repos/engineering-team/observability/specialist-delegation.jsonl",
     "metricsPath": "/Users/wiinc1/repos/engineering-team/observability/specialist-delegation-metrics.json",
-    "latencyMs": 51176
+    "latencyMs": 54007
   },
   "message": "⚠️ API rate limit reached. Please try again later."
 }

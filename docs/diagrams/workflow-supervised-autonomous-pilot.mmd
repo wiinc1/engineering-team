@@ -1,0 +1,38 @@
+flowchart TD
+  start([Issue 209 pilot start]) --> readiness{Issue 208 production readiness closed?}
+  readiness -->|no| blocked[Block pilot and link readiness issue]
+  readiness -->|yes| project[Create pilot Project]
+
+  project --> task[Create exactly one low-risk Simple task]
+  task --> link[Link task to pilot Project]
+  link --> contract[Record Simple Execution Contract]
+  contract --> projection[Run bounded projection catch-up]
+  projection --> risk{No production-risk flags?}
+  risk -->|no| explicit[Require explicit operator approval]
+  risk -->|yes| policy[Record policy auto-approval]
+  explicit --> approved[Approved contract evidence]
+  policy --> approved
+
+  approved --> dispatch[Dispatch to implementation owner]
+  dispatch --> delegation[Run specialist delegation smoke]
+  delegation --> attribution{Runtime specialist and session recorded?}
+  attribution -->|no| failClosed[Fail closed and link blocker]
+  attribution -->|yes| branch[Branch, commit, and open PR]
+
+  branch --> checks[Run unit, standards, PR, browser, and Vercel checks]
+  checks --> checksPass{Validation passed?}
+  checksPass -->|no| repair[Repair or block with visible reason]
+  repair --> checks
+  checksPass -->|yes| merge[Merge PR]
+
+  merge --> qa[Record QA pass]
+  qa --> sre[Record SRE monitoring approval]
+  sre --> close[Close task with report]
+  close --> classify[Classify manual actions]
+  classify --> decision{Operator decision}
+  decision -->|repeat| candidate[Candidate positive signal for Issue 156 metrics]
+  decision -->|remediate| followup[Create or link follow-up issue]
+  decision -->|stop| stopped[Stop further autonomy expansion]
+
+  blocked --> followup
+  failClosed --> followup
