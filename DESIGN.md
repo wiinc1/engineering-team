@@ -616,6 +616,7 @@ Product screens must make workflow state explicit without adding instructional c
 - Form validation appears next to the relevant field and in a summarized list only when multiple fields need attention.
 - Focus and keyboard behavior must match the control pattern: tabs use arrow keys, forms preserve label associations, buttons and links expose visible focus rings.
 - Visual, accessibility, and performance gates should cover sign-in, task workspace, role inbox, task creation, and task detail before production release.
+- Test-only UI synchronization changes that wait for existing controlled form values must preserve the visible design contract and rely on the existing browser quality gates for visual, accessibility, and performance coverage.
 - Responsive layouts favor single-column reading on mobile, wrapped navigation, horizontally scrollable task boards/tables where necessary, and no accidental page-wide overflow.
 - Operational screens should remain dense and scannable: prioritize headings, metadata, status labels, and row/card grouping over narrative copy.
 
