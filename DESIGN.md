@@ -726,6 +726,7 @@ The product currently uses operational summaries, telemetry cards, tables, timel
 
 - Telemetry cards must use semantic `telemetry-*` tokens and pair values with labels and hints.
 - Timeline and table status cues must pair color with text, event type, timestamp, actor, or source metadata.
+- Autonomous delivery metrics use compact metric cards, tables, and task-level facts instead of charts so PM/admin reviewers can audit rates, unknown exclusions, interventions, rework, rollback, and escaped-defect counts from text alone.
 - Do not introduce chart colors, graph legends, or heatmap scales without adding reusable tokens here first.
 - Data displays should prioritize auditability: visible labels, stable sort/grouping, readable timestamps, and no hover-only critical information.
 

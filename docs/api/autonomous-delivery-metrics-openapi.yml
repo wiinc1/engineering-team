@@ -1,0 +1,237 @@
+openapi: 3.1.0
+info:
+  title: Autonomous Delivery Metrics API
+  version: autonomous-delivery-metrics-mvp.v1
+paths:
+  /api/v1/metrics/autonomous-delivery:
+    get:
+      summary: Read autonomous delivery pilot metrics
+      description: >
+        Returns tenant-scoped autonomous delivery metrics built from
+        delivery-retrospective-signal.v1 evidence. Unknown legacy evidence is
+        excluded from threshold math unless includeUnknown is true. PM,
+        product-owner, SRE, and admin roles with metrics:read may access the
+        report for their tenant.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: taskClass
+          in: query
+          schema:
+            type: string
+        - name: tier
+          in: query
+          schema:
+            type: string
+        - name: agent
+          in: query
+          schema:
+            type: string
+        - name: includeUnknown
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Metrics report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousDeliveryMetricsResponse'
+        '403':
+          description: Requires metrics:read.
+        '503':
+          description: Disabled by ff_autonomous_delivery_metrics_mvp.
+  /api/v1/tasks/{taskId}/retrospective-signal:
+    get:
+      summary: Read a task retrospective signal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task-level retrospective signal
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/RetrospectiveSignal'
+        '403':
+          description: Requires metrics:read.
+        '404':
+          description: Task not found in the caller tenant.
+  /api/v1/metrics/autonomous-delivery/rebuild:
+    post:
+      summary: Rebuild autonomous delivery metrics projections
+      description: >
+        Recomputes retrospective signals and the aggregate metrics snapshot from
+        the canonical audit history. Rebuilds are deterministic and idempotent
+        for the same input history and filters.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filters:
+                  type: object
+                includeOpen:
+                  type: boolean
+                persist:
+                  type: boolean
+                  default: true
+      responses:
+        '202':
+          description: Rebuild accepted and completed synchronously for the MVP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousDeliveryMetricsResponse'
+        '403':
+          description: Requires projections:rebuild.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AutonomousDeliveryMetricsResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [schema_version, policy_version, summary, breakdowns, signals]
+          properties:
+            schema_version:
+              const: autonomous-delivery-metrics-mvp.v1
+            policy_version:
+              const: autonomous-delivery-metrics-policy.v1
+            generated_at:
+              type: string
+              format: date-time
+            filters:
+              type: object
+            summary:
+              $ref: '#/components/schemas/AutonomousDeliveryMetricsSummary'
+            breakdowns:
+              type: object
+            threshold_evaluations:
+              type: array
+              items:
+                type: object
+            signals:
+              type: array
+              items:
+                $ref: '#/components/schemas/RetrospectiveSignal'
+    AutonomousDeliveryMetricsSummary:
+      type: object
+      required:
+        - total_signals
+        - included_signals
+        - unknown_signals
+        - autonomous_delivery_rate
+        - operator_interventions_total
+      properties:
+        total_signals:
+          type: integer
+        included_signals:
+          type: integer
+        known_signals:
+          type: integer
+        unknown_signals:
+          type: integer
+        autonomous_deliveries:
+          type: integer
+        autonomous_delivery_rate:
+          type: number
+        operator_interventions_total:
+          type: integer
+        operator_intervention_rate:
+          type: number
+        qa_sre_rework_total:
+          type: integer
+        rollback_total:
+          type: integer
+        escaped_defects_total:
+          type: integer
+    RetrospectiveSignal:
+      type: object
+      required:
+        - signal_id
+        - schema_version
+        - task_id
+        - classification_status
+        - operator_interventions
+        - qa_sre_rework
+      properties:
+        signal_id:
+          type: string
+        schema_version:
+          const: delivery-retrospective-signal.v1
+        projection_schema_version:
+          const: autonomous-delivery-metrics-mvp.v1
+        task_id:
+          type: string
+        tenant_id:
+          type: string
+        task_class:
+          type: string
+        template_tier:
+          type: string
+        approval_mode:
+          enum: [policy_auto_approved, operator_approved, manual_approved, unknown]
+        implementation_agent:
+          type:
+            - string
+            - 'null'
+        classification_status:
+          enum: [known, unknown]
+        excluded_from_thresholds:
+          type: boolean
+        operator_interventions:
+          type: object
+          required: [taxonomy_version, count, items]
+          properties:
+            taxonomy_version:
+              const: operator-intervention-taxonomy.v1
+            count:
+              type: integer
+            routine_action_count:
+              type: integer
+            items:
+              type: array
+              items:
+                type: object
+        qa_sre_rework:
+          type: object
+        rollback:
+          type: object
+        escaped_defects:
+          type: object
