@@ -1,15 +1,16 @@
 import { Fragment as q, jsx as e, jsxs as a } from "react/jsx-runtime";
+import { LiveTaskFreshnessIndicator, useLiveTaskFreshnessPolling } from "../live-task-freshness";
 
 function TaskWorkspaceRoute({ ctx }) {
   const {
-    _, A, ae, Ae, bi, bs, da, En,
+    _, A, ae, Ae, At, bi, bs, da, En,
     f, Fi, fn, ft, gi, h, H, hi,
     ht, it, j, J, Ja, k, ki, l,
     La, Li, lt, Mn, Ms, N, ne, Ne, projectOptions,
     o, oi, os, P, Pt, Qa, qn, Rt,
-    Ss, Un, Va, vi, we, wt, x, xa,
-    xt, ye, Yt, zs
-  } = ctx;
+    Ss, u, Un, Va, vi, we, wt, x, xa,
+    xt, ye, Yt, zs } = ctx;
+  const liveFreshness = useLiveTaskFreshnessPolling({ session: u, defaultBaseUrl: At, scope: { kind: "list", pathname: ctx.i || "" }, onUpdates: k });
   return a("section", { className: "task-list-panel", "aria-label": _ ? "PM overview view" : P ? "\
 Governance reviews view" : A ? "Deferred Considerations review queue" : f ? `${H(f)} inbox view` : "Task workspace view", children: [e("div", { className: "task\
 -list-toolbar", children: _ ? a("div", { className: "role-inbox-toolbar", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Cross-role \
@@ -51,7 +52,7 @@ arch tasks", e("input", { "aria-label": "Search tasks", value: N.searchTerm, onC
   "board"), children: "Kanban board" })] }), e("button", { type: "button", className: "button-secondary", onClick: () => wt({ owner: "", priority: "", status: "",
   searchTerm: "", project: "" }), disabled: !La, children: "Clear all filters" }), e("button", { type: "button", onClick: () => {
     k();
-  }, children: "Refresh" })] })] }) }), e("p", { className: "task-list-results", role: "status", "aria-live": "polite", children: bi }), _ && x.kind === "loadin\
+  }, children: "Refresh" })] })] }) }), e(LiveTaskFreshnessIndicator, { state: liveFreshness, onManualRefresh: k }), e("p", { className: "task-list-results", role: "status", "aria-live": "polite", children: bi }), _ && x.kind === "loadin\
 g" || P && x.kind === "loading" || A && x.kind === "loading" || !f && !_ && !P && !A && x.kind === "loading" || f && ne.kind === "loading" ? e("p", { role: "sta\
 tus", children: f ? ne.message : _ ? "Loading PM overview." : P ? "Loading governance reviews." : A ? "Loading Deferred Considerations." : "Loading task workspa\
 ce." }) : null, !f && !_ && !P && !A && x.kind === "error" || _ && x.kind === "error" || P && x.kind === "error" || A && x.kind === "error" ? e("p", { role: "al\

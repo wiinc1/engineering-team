@@ -1,0 +1,19 @@
+sequenceDiagram
+  autonumber
+  participant User as Workflow user
+  participant Route as Task/Project route
+  participant Hook as Live freshness hook
+  participant API as GET /api/v1/tasks/updates
+  participant ReadModel as Task/Project read models
+
+  User->>Route: Opens task detail, Projects, workspace, or inbox
+  Route->>Hook: Start route-scoped polling with cursor
+  Hook->>API: Poll with bearer token and cursor
+  API->>ReadModel: Read tenant-scoped Task, Project, and membership projections
+  ReadModel-->>API: Projection snapshots and mutation positions
+  API-->>Hook: Permission-safe updates and next cursor
+  Hook->>Hook: Ignore stale or duplicate versions
+  Hook->>Route: Trigger existing refresh callback for relevant fresh updates
+  Route-->>User: Visible state refreshes without page reload
+  API-->>Hook: Error, invalid cursor, or feature disabled
+  Hook-->>User: Show stale, reconnecting, degraded, or manual refresh state

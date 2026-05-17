@@ -1,10 +1,11 @@
 import { Fragment as q, jsx as e, jsxs as a } from "react/jsx-runtime";
+import { LiveTaskFreshnessIndicator, useLiveTaskFreshnessPolling } from "../live-task-freshness";
 import { TaskDetailNextActionPanel } from "../../features/task-detail/TaskDetailNextActionPanel";
 
 function TaskDetailRoute({ ctx }) {
   const {
     _a, _n, _s, _t, $, $a, $e, $s,
-    aa, ai, an, As, B, ba, Ba, be,
+    aa, ai, an, As, At, B, ba, Ba, be,
     Be, Bn, Bs, bt, Bt, Ca, ce, Ci,
     Cn, co, cs, Cs, ct, de, ds, dt,
     ee, Ee, ei, en, Eo, Es, et, Et,
@@ -21,12 +22,12 @@ function TaskDetailRoute({ ctx }) {
     Ra, re, Re, ri, rn, Rn, ro, Rs,
     rt, s, Sa, Se, si, sn, Sn, st,
     St, T, ta, Ta, te, ti, tn, Ts,
-    U, Ua, Ue, un, uo, Us, ut, Ut,
+    u, U, Ua, Ue, un, uo, Us, ut, Ut,
     Va, ve, Ve, vn, vs, Vs, vt, w,
     wa, we, We, wn, Ws, xe, Xe, xn,
     xs, Xs, ya, Ye, yn, Ys, z, ze,
-    Ze, zn, Zs
-  } = ctx;
+    Ze, zn, Zs } = ctx;
+  const liveFreshness = useLiveTaskFreshnessPolling({ session: u, defaultBaseUrl: At, scope: { kind: "detail", taskId: g }, onUpdates: k });
   return a(q, { children: [new URLSearchParams(o).get("created") === "intake-dr\
 aft" ? a("section", { className: "task-created-banner", role: "status", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Task created" }),
   e("h2", { children: "Intake Draft is ready for PM refinement" }), e("p", { children: "This task keeps the same ID through refinement, implementation, verifica\
@@ -43,7 +44,7 @@ nned here until the thread owner resolves them." })] }), e("ul", { className: "r
 lved").map((t) => a("li", { children: [e("strong", { children: t.title }), e("span", { children: ls(t.commentType) })] }, t.id)) })] }) : null, s.detail?.blockers?.
   length ? a("section", { className: "blocker-banner", "aria-label": "Task blockers", role: "alert", "aria-live": "assertive", children: [a("div", { children: [
   e("p", { className: "eyebrow", children: "Blockers" }), e("h2", { children: "Work is currently blocked" })] }), e("ul", { className: "blocker-list", children: s.
-  detail.blockers.map((t) => a("li", { children: [e("strong", { children: t.label }), e("span", { children: ro(t) })] }, t.id)) })] }) : null, a("section", { className: "\
+  detail.blockers.map((t) => a("li", { children: [e("strong", { children: t.label }), e("span", { children: ro(t) })] }, t.id)) })] }) : null, e(LiveTaskFreshnessIndicator, { state: liveFreshness, onManualRefresh: k }), a("section", { className: "\
 task-detail-hero", "aria-label": "Task summary", children: [a("div", { className: "task-detail-hero__title", children: [a("div", { className: "task-status-pill",
   "data-status": s.detail?.task?.status || "active", children: [e("span", { "aria-hidden": "true", children: lo(s.detail?.task?.status) }), e("span", { children: rt(
   s.detail?.task?.status) })] }), e("div", { className: "priority-pill", children: s.summary.priority || "No priority" }), oa ? e("div", { className: "routing-b\

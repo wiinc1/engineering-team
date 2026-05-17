@@ -48,6 +48,33 @@ Behavior:
 - The same routes return `503 feature_disabled` when `FF_ASSIGN_AI_AGENT_TO_TASK_KILLSWITCH` is enabled.
 - `GET /health/task-assignment` and `GET /api/internal/smoke-test/task-assignment` expose operational readiness for the assignment surface.
 
+## Live Task Freshness Polling
+
+- `FF_LIVE_TASK_FRESHNESS_POLLING`
+  Server-side rollback flag for `GET /api/v1/tasks/updates`.
+  Default: enabled when unset.
+
+- `VITE_FF_LIVE_TASK_FRESHNESS_POLLING`
+  Browser rollout flag for protected task routes.
+  Default: disabled when unset.
+
+- `VITE_FF_TASK_FRESHNESS_POLLING`
+  Backward-compatible browser alias.
+  Default: disabled when unset.
+
+Local browser overrides:
+
+- `localStorage["engineering-team.live-task-freshness-polling"] = "1"` enables polling for the current browser.
+- `localStorage["engineering-team.live-task-freshness-polling"] = "0"` disables polling for the current browser.
+- `localStorage["engineering-team.live-task-freshness-poll-ms"]` overrides the poll interval for local smoke tests.
+
+Behavior:
+
+- The server endpoint requires tenant and actor claims plus `state:read`.
+- Task detail, Projects, workspace board/list, PM overview, governance/deferred queues, and role inbox routes reuse their existing refresh callbacks when relevant live updates arrive.
+- Poll responses contain only permission-safe Task/Project snapshots and an opaque cursor. Comments, audit logs, telemetry, orchestration, context, and relationship detail remain omitted from the delta payload.
+- Disabling the browser flag preserves manual refresh-only behavior. Disabling the server flag returns `503 feature_disabled`.
+
 ## Specialist Delegation
 
 - `FF_REAL_SPECIALIST_DELEGATION`

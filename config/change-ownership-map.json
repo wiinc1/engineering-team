@@ -160,6 +160,7 @@
             "^tests/unit/autonomous-delivery-metrics\\.test\\.js$",
             "^tests/unit/execution-contracts\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
+            "^tests/unit/live-task-updates\\.test\\.js$",
             "^tests/unit/task-platform-projects\\.test\\.js$"
           ]
         },
@@ -167,6 +168,7 @@
           "name": "integration",
           "patterns": [
             "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
+            "^tests/integration/live-task-updates\\.integration\\.test\\.js$",
             "^tests/contract/autonomous-delivery-metrics\\.contract\\.test\\.js$",
             "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
@@ -180,6 +182,8 @@
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
+            "^tests/security/live-task-updates\\.security\\.test\\.js$",
+            "^tests/performance/live-task-updates\\.performance\\.test\\.js$",
             "^tests/security/projects-security\\.test\\.js$",
             "^tests/security/autonomous-delivery-metrics\\.security\\.test\\.js$",
             "^tests/performance/autonomous-delivery-metrics\\.performance\\.test\\.js$",
@@ -193,6 +197,7 @@
           "patterns": [
             "^docs/api/audit-foundation-openapi\\.yml$",
             "^docs/api/autonomous-delivery-metrics-openapi\\.yml$",
+            "^docs/api/live-task-freshness-updates-openapi\\.yml$",
             "^docs/api/execution-contract-refinement-openapi\\.yml$",
             "^docs/api/task-platform-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
@@ -203,6 +208,7 @@
           "patterns": [
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/runbooks/autonomous-delivery-metrics\\.md$",
+            "^docs/runbooks/live-task-freshness\\.md$",
             "^docs/runbooks/task-platform-rollout\\.md$"
           ]
         }
@@ -215,6 +221,7 @@
         "^src/app/app-model\\.jsx$",
         "^src/app/main\\.jsx$",
         "^src/app/routes/.+\\.jsx$",
+        "^src/app/live-task-(freshness|reconciler)\\.js$",
         "^src/app/design-tokens\\.css$",
         "^src/app/styles\\.css$",
         "^src/app/session(\\.browser)?\\.js$",
@@ -232,10 +239,13 @@
             "^src/app/AutonomyMetricsRoute\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
             "^src/app/auth-runtime-env\\.test\\.tsx$",
+            "^src/app/live-task-freshness\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/browser-quality-(accessibility|visual)\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
+            "^tests/accessibility/live-task-freshness\\.a11y\\.spec\\.tsx$",
             "^tests/accessibility/task-assignment\\.a11y\\.spec\\.ts$",
+            "^tests/visual/live-task-freshness\\.visual\\.spec\\.tsx$",
             "^tests/visual/task-assignment\\.visual\\.spec\\.ts$",
             "^tests/performance/lighthouse-task-detail\\.spec\\.ts$",
             "^tests/unit/task-detail-next-action\\.test\\.js$",
@@ -252,6 +262,7 @@
             "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/browser-quality-(accessibility|performance|visual)\\.browser\\.spec\\.ts$",
+            "^tests/browser/live-task-freshness\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
           ]
@@ -263,7 +274,9 @@
           "patterns": [
             "^DESIGN\\.md$",
             "^docs/diagrams/workflow-autonomous-delivery-metrics-mvp\\.mmd$",
+            "^docs/diagrams/workflow-live-task-freshness-polling-mvp\\.mmd$",
             "^docs/reports/ISSUE-210_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
+            "^docs/reports/ISSUE-211_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/design/design-md-adoption\\.config\\.json$",
             "^docs/design/US-002-design\\.md$",
@@ -284,7 +297,9 @@
           "patterns": [
             "^DESIGN\\.md$",
             "^docs/api/autonomous-delivery-metrics-openapi\\.yml$",
+            "^docs/api/live-task-freshness-updates-openapi\\.yml$",
             "^docs/reports/ISSUE-210_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
+            "^docs/reports/ISSUE-211_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
@@ -297,7 +312,9 @@
           "patterns": [
             "^DESIGN\\.md$",
             "^docs/runbooks/autonomous-delivery-metrics\\.md$",
+            "^docs/runbooks/live-task-freshness\\.md$",
             "^docs/reports/ISSUE-210_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
+            "^docs/reports/ISSUE-211_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/runbook\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
             "^README\\.md$",

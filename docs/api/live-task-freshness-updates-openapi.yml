@@ -1,0 +1,200 @@
+openapi: 3.1.0
+info:
+  title: Live Task Freshness Updates API
+  version: 1.0.0
+  description: Polling delta endpoint for permission-safe Task and Project freshness updates.
+servers:
+  - url: /api
+paths:
+  /v1/tasks/updates:
+    get:
+      operationId: listLiveTaskFreshnessUpdates
+      summary: List tenant-scoped Task and Project updates after a cursor.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque cursor returned by the previous poll. Empty starts at the beginning of the tenant projection.
+      responses:
+        "200":
+          description: Permission-filtered update batch and the next cursor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveTaskUpdateResponse"
+        "400":
+          description: Invalid cursor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks state read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Unsupported method.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Feature flag disabled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+        - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LiveTaskUpdateResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [cursor, position, pollAfterMs, serverTime, updates]
+          properties:
+            cursor:
+              type: string
+              description: Opaque cursor for the next poll.
+            position:
+              type: integer
+              minimum: 0
+            pollAfterMs:
+              type: integer
+              minimum: 1000
+              example: 8000
+            serverTime:
+              type: string
+              format: date-time
+            updates:
+              type: array
+              items:
+                $ref: "#/components/schemas/LiveTaskUpdate"
+    LiveTaskUpdate:
+      type: object
+      required: [entityType, entityId, updateType, version, updatedAt, position, payload]
+      properties:
+        entityType:
+          type: string
+          enum: [task, project]
+        entityId:
+          type: string
+        updateType:
+          type: string
+          enum: [task_snapshot, project_snapshot]
+        version:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: string
+          nullable: true
+          format: date-time
+        position:
+          type: integer
+          minimum: 0
+        payload:
+          oneOf:
+            - $ref: "#/components/schemas/TaskUpdatePayload"
+            - $ref: "#/components/schemas/ProjectUpdatePayload"
+    TaskUpdatePayload:
+      type: object
+      required: [task]
+      additionalProperties: false
+      properties:
+        task:
+          type: object
+          required: [task_id, tenant_id, title]
+          additionalProperties: true
+          properties:
+            task_id:
+              type: string
+            tenant_id:
+              type: string
+            title:
+              type: string
+            priority:
+              type: string
+              nullable: true
+            current_stage:
+              type: string
+              nullable: true
+            current_owner:
+              type: string
+              nullable: true
+            owner:
+              type: object
+              nullable: true
+            freshness:
+              type: object
+              nullable: true
+            project_id:
+              type: string
+              nullable: true
+            project:
+              type: object
+              nullable: true
+    ProjectUpdatePayload:
+      type: object
+      required: [project]
+      additionalProperties: false
+      properties:
+        project:
+          type: object
+          required: [projectId, name, status, taskCount, version]
+          additionalProperties: true
+          properties:
+            projectId:
+              type: string
+            name:
+              type: string
+            status:
+              type: string
+            ownerActorId:
+              type: string
+              nullable: true
+            taskCount:
+              type: integer
+              minimum: 0
+            version:
+              type: integer
+              minimum: 0
+            updatedAt:
+              type: string
+              nullable: true
+              format: date-time
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id, requestId]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            request_id:
+              type: string
+            requestId:
+              type: string
