@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS autonomous_delivery_metric_snapshots;
+DROP TABLE IF EXISTS autonomous_delivery_retrospective_signals;

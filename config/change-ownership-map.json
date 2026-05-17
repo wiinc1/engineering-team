@@ -149,6 +149,7 @@
         "^db/migrations/00[1-5]_.*\\.sql$",
         "^db/migrations/007_.*\\.sql$",
         "^db/migrations/008_.*\\.sql$",
+        "^db/migrations/013_autonomous_delivery_metrics(\\.down)?\\.sql$",
         "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker)\\..+$"
       ],
       "test_requirements": [
@@ -156,6 +157,7 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/audit-.*\\.test\\.js$",
+            "^tests/unit/autonomous-delivery-metrics\\.test\\.js$",
             "^tests/unit/execution-contracts\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
             "^tests/unit/task-platform-projects\\.test\\.js$"
@@ -165,8 +167,10 @@
           "name": "integration",
           "patterns": [
             "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
+            "^tests/contract/autonomous-delivery-metrics\\.contract\\.test\\.js$",
             "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
+            "^tests/integration/autonomous-delivery-metrics\\.integration\\.test\\.js$",
             "^tests/integration/audit-migrations\\.integration\\.test\\.js$",
             "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$"
           ]
@@ -177,6 +181,8 @@
             "^tests/security/audit-api\\.security\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
             "^tests/security/projects-security\\.test\\.js$",
+            "^tests/security/autonomous-delivery-metrics\\.security\\.test\\.js$",
+            "^tests/performance/autonomous-delivery-metrics\\.performance\\.test\\.js$",
             "^tests/performance/audit-foundation\\.performance\\.test\\.js$"
           ]
         }
@@ -186,6 +192,7 @@
           "name": "api",
           "patterns": [
             "^docs/api/audit-foundation-openapi\\.yml$",
+            "^docs/api/autonomous-delivery-metrics-openapi\\.yml$",
             "^docs/api/execution-contract-refinement-openapi\\.yml$",
             "^docs/api/task-platform-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
@@ -195,6 +202,7 @@
           "name": "runbook",
           "patterns": [
             "^docs/runbooks/audit-foundation\\.md$",
+            "^docs/runbooks/autonomous-delivery-metrics\\.md$",
             "^docs/runbooks/task-platform-rollout\\.md$"
           ]
         }
@@ -221,6 +229,7 @@
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
+            "^src/app/AutonomyMetricsRoute\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
             "^src/app/auth-runtime-env\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
@@ -239,6 +248,7 @@
           "name": "browser",
           "patterns": [
             "^tests/browser/auth-shell\\.browser\\.spec\\.ts$",
+            "^tests/browser/autonomous-delivery-metrics\\.browser\\.spec\\.ts$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/browser-quality-(accessibility|performance|visual)\\.browser\\.spec\\.ts$",
@@ -252,6 +262,8 @@
           "name": "design",
           "patterns": [
             "^DESIGN\\.md$",
+            "^docs/diagrams/workflow-autonomous-delivery-metrics-mvp\\.mmd$",
+            "^docs/reports/ISSUE-210_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/design/design-md-adoption\\.config\\.json$",
             "^docs/design/US-002-design\\.md$",
@@ -271,6 +283,8 @@
           "name": "api-or-design-contract",
           "patterns": [
             "^DESIGN\\.md$",
+            "^docs/api/autonomous-delivery-metrics-openapi\\.yml$",
+            "^docs/reports/ISSUE-210_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
@@ -282,6 +296,8 @@
           "name": "runbook-or-design",
           "patterns": [
             "^DESIGN\\.md$",
+            "^docs/runbooks/autonomous-delivery-metrics\\.md$",
+            "^docs/reports/ISSUE-210_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/runbook\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
             "^README\\.md$",

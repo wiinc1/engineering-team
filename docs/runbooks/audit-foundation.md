@@ -31,6 +31,8 @@ Supabase Postgres is the canonical production/staging database. Dockerized Postg
 - `audit_task_current_state` — projected current-state read model
 - `audit_task_relationships` — projected relationship read model
 - `audit_metrics` — persisted telemetry counters/gauges
+- `autonomous_delivery_retrospective_signals` — tenant-scoped delivery retrospective signal projection for the autonomous metrics MVP
+- `autonomous_delivery_metric_snapshots` — aggregate autonomous delivery metric snapshots and threshold evaluation evidence
 - `schema_migrations` — forward migration ledger; normal migration apply skips `*.down.sql` rollback files so rollback scripts must be executed only by an explicit operator rollback procedure.
 
 ## HTTP authz model in this slice
@@ -46,6 +48,10 @@ Supported roles:
 - `contributor` — append audit events plus read
 - `sre` — read plus metrics access
 - `admin` — full access including metrics and projection processing
+
+Autonomous delivery metrics are exposed behind `ff_autonomous_delivery_metrics_mvp`.
+PM, product-owner, SRE, and admin roles with `metrics:read` can read tenant metrics and task retrospective signals.
+Only admin role holders with `projections:rebuild` can rebuild the projection.
 
 ## API error/logging contract
 Audit HTTP responses now follow a standardized envelope:
@@ -151,6 +157,7 @@ The legacy refined-field task creation body remains accepted for compatibility, 
 ## Runtime configuration
 - `FF_AUDIT_FOUNDATION=false` — hard-disable the slice at runtime
 - `FF_INTAKE_DRAFT_CREATION=false` — disables raw Intake Draft creation while preserving legacy task creation behavior
+- `FF_AUTONOMOUS_DELIVERY_METRICS_MVP=false` — disables `GET /api/v1/metrics/autonomous-delivery`, `GET /api/v1/tasks/{taskId}/retrospective-signal`, and `POST /api/v1/metrics/autonomous-delivery/rebuild`
 - Shared feature-flag parsing in `lib/audit/feature-flags.js` also backs specialist delegation rollout control; prefer `FF_REAL_SPECIALIST_DELEGATION` as the canonical operator-facing name, while `FF_SPECIALIST_DELEGATION` remains a legacy-compatible alias.
 - `AUDIT_STORE_BACKEND=file|postgres` — optional explicit backend override; guarded runtime entrypoints default to `postgres` and require `DATABASE_URL` or an injected pool unless a local/test file fallback is explicitly selected
 - `ALLOW_LEGACY_HEADERS=true` — permit legacy non-JWT auth fallback

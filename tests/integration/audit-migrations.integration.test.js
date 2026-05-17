@@ -36,3 +36,15 @@ test('audit migration runner applies forward migrations without rollback files',
     ['001_audit_forward.sql', '002_audit_forward.sql']
   );
 });
+
+test('autonomous delivery metrics migration defines reversible signal and snapshot projections', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '../../db/migrations/013_autonomous_delivery_metrics.sql'), 'utf8');
+  const rollback = fs.readFileSync(path.join(__dirname, '../../db/migrations/013_autonomous_delivery_metrics.down.sql'), 'utf8');
+
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS autonomous_delivery_retrospective_signals/);
+  assert.match(migration, /operator_intervention_count/);
+  assert.match(migration, /excluded_from_thresholds/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS autonomous_delivery_metric_snapshots/);
+  assert.match(rollback, /DROP TABLE IF EXISTS autonomous_delivery_metric_snapshots/);
+  assert.match(rollback, /DROP TABLE IF EXISTS autonomous_delivery_retrospective_signals/);
+});

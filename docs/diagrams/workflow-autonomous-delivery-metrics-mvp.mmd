@@ -1,0 +1,17 @@
+flowchart TD
+  A[Closed pilot task audit history] --> B[Intervention classifier]
+  B --> C[Retrospective signal builder]
+  C --> D[(Retrospective signal projection)]
+  D --> E[Metrics aggregator]
+  E --> F[(Metric snapshot)]
+  F --> G[GET /api/v1/metrics/autonomous-delivery]
+  D --> H[GET /api/v1/tasks/{taskId}/retrospective-signal]
+  G --> I[Autonomy metrics report]
+  H --> I
+  J[Admin rebuild request] --> K[Replay tenant audit history]
+  K --> C
+  E --> L[Threshold evaluator]
+  L --> M[PM/admin pilot review]
+  M --> N{Expand autonomy?}
+  N -->|Evidence sufficient| O[Allow next supervised pilot]
+  N -->|Unknown or weak evidence| P[Keep expansion blocked]
