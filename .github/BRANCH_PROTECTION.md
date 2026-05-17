@@ -31,6 +31,19 @@ Require this job if governance drift is treated as blocking in your environment:
 - `Merge readiness` is emitted by the task-platform merge-readiness GitHub check integration from the structured review source of truth.
 - `Governance drift report` in `.github/workflows/governance-drift.yml` runs `npm run governance:drift:check`.
 
+## Merge Readiness Enforcement Verification
+
+Run this read-only verifier before enabling `MERGE_READINESS_ENFORCEMENT_TARGET=all`:
+
+```bash
+GITHUB_TOKEN=<repo-read-token> npm run task-platform:verify-branch-protection -- wiinc1/engineering-team main
+```
+
+The control plane may only report merge-readiness enforcement as active when the default
+branch requires the exact `Merge readiness` check. If the check is absent from branch
+protection, merge-readiness review creation records `policy_blocked` rather than treating
+the gate as enforced.
+
 ## Maintainer Notes
 - If a workflow job name changes, update this file and any downstream org policy that references the old status name.
 - Do not mark a status as required unless the corresponding workflow runs on pull requests for the protected branch.

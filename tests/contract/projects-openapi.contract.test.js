@@ -35,3 +35,22 @@ test('task platform OpenAPI documents Projects planning containers', () => {
     assert.match(migration, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
+
+test('task platform OpenAPI documents merge-readiness enforcement contract shape', () => {
+  const root = path.join(__dirname, '../..');
+  const openapi = fs.readFileSync(path.join(root, 'docs/api/task-platform-openapi.yml'), 'utf8');
+
+  for (const expected of [
+    'ff_merge_readiness_enforcement',
+    'autonomousWorkflowPr',
+    'enforceMergeReadiness',
+    'branchProtection',
+    'policy_blocked',
+    'github_merge_readiness_gate',
+    'merge_readiness_enforcement',
+    'finding_deferral_policy',
+    'Structured MergeReadinessReview',
+  ]) {
+    assert.match(openapi, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});

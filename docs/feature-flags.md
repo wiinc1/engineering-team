@@ -32,6 +32,30 @@ Behavior:
   remediation steps for missing checkpoints, version mismatches, stale
   projection sequences, and failed sync status.
 
+## Merge Readiness Enforcement
+
+- `FF_MERGE_READINESS_ENFORCEMENT`
+  Controls the structured merge-readiness enforcement layer for autonomous workflow PRs.
+  Default: enabled when unset.
+
+- `MERGE_READINESS_ENFORCEMENT_TARGET`
+  Controls rollout targeting. Use `autonomous` for autonomous workflow PRs only, or `all`
+  after branch protection is verified for the default branch.
+  Default: `autonomous`.
+
+Behavior:
+
+- Reviews marked `autonomousWorkflowPr: true`, carrying an autonomous workflow label, or
+  carrying autonomous workflow metadata require branch-protection verification before
+  merge readiness can pass.
+- Branch protection must require the exact GitHub check name `Merge readiness`; missing
+  required-check configuration records `policy_blocked`.
+- Proposed deferrals for blocking findings remain blocked unless policy permission,
+  follow-up links, Product Manager risk acceptance, technical-owner risk acceptance, and
+  Principal/SRE approval for high-risk findings are present.
+- The PR summary remains derived output from the structured `MergeReadinessReview`; it
+  is never used as the source of truth.
+
 ## Task Assignment
 
 - `FF_ASSIGN_AI_AGENT_TO_TASK`

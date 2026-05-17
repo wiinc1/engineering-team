@@ -1,0 +1,20 @@
+flowchart TD
+  PREvent[GitHub PR, check, workflow, status, or deployment event] --> Derive[Derive merge-readiness refresh event]
+  Derive --> Inventory[Enumerate required checks and policy-selected evidence for HEAD SHA]
+  Inventory --> Access{Required evidence accessible?}
+  Access -- No --> Error[Record MergeReadinessReview status error and policy_blocked when config or permission caused access failure]
+  Access -- Yes --> Findings[Classify findings and validate blocking-finding deferrals]
+  Findings --> Deferral{Blocking finding unresolved or invalid deferral?}
+  Deferral -- Yes --> Blocked[Record blocked structured review]
+  Deferral -- No --> Branch[Verify default-branch protection]
+  Branch --> Required{Branch protection requires Merge readiness?}
+  Required -- No --> PolicyBlocked[Record policy_blocked branch-protection exception]
+  Required -- Yes --> Record[Persist current MergeReadinessReview for exact commit SHA and evidence fingerprint]
+  Error --> Check[Emit non-passing Merge readiness check]
+  Blocked --> Check
+  PolicyBlocked --> Check
+  Record --> Check
+  Check --> Summary[Render allowlisted PR summary linking to structured review]
+  Derive --> Changed{New commit or evidence fingerprint changed?}
+  Changed -- Yes --> Stale[Mark prior review stale and emit pending Merge readiness check]
+  Stale --> Inventory

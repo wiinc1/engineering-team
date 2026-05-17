@@ -4,6 +4,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createFileTaskPlatformService } = require('../../lib/task-platform/service');
+const { createTaskPlatformService } = require('../../lib/task-platform');
+const {
+  shouldEnforceMergeReadiness,
+} = require('../../lib/task-platform/merge-readiness-enforcement');
 const {
   evaluateMergeReadinessBranchProtection,
 } = require('../../lib/task-platform/merge-readiness-branch-protection');
@@ -163,6 +167,70 @@ test('blocking-finding deferral requires risk acceptance, follow-up, permission,
     'technical_owner_risk_acceptance',
     'principal_or_sre_high_risk_approval',
   ]);
+});
+
+test('persisted reviews remain blocked when blocking-finding deferral lacks policy approvals', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'merge-readiness-deferral-policy-'));
+  const calls = [];
+  const service = createTaskPlatformService({
+    baseDir,
+    mergeReadinessCheckRunClient: {
+      async createCheckRun(call) {
+        calls.push(call);
+        return { id: 21201 };
+      },
+    },
+  });
+  const task = service.createTask({ tenantId: 'engineering-team', actorId: 'pm-1', title: 'Deferral policy', status: 'READY_FOR_REVIEW' });
+
+  const review = await service.createMergeReadinessReview({
+    tenantId: 'engineering-team',
+    taskId: task.taskId,
+    repository: 'wiinc1/engineering-team',
+    pullRequestNumber: 212,
+    commitSha: 'abc2120',
+    reviewStatus: 'passed',
+    findings: [validDeferredFinding({ deferralAllowed: false, followUpLinks: [], approvals: [] })],
+  });
+
+  assert.equal(review.reviewStatus, 'blocked');
+  assert.equal(review.classification.finding_deferral_policy.status, 'blocked');
+  assert.deepEqual(review.classification.finding_deferral_policy.invalid_deferrals[0].missing_requirements, [
+    'policy_permission',
+    'follow_up_link',
+    'pm_risk_acceptance',
+    'technical_owner_risk_acceptance',
+    'principal_or_sre_high_risk_approval',
+  ]);
+  assert.equal(calls[0].payload.conclusion, 'failure');
+});
+
+test('ff_merge_readiness_enforcement targets autonomous workflow PRs for branch-protection gating', () => {
+  assert.equal(shouldEnforceMergeReadiness({ autonomousWorkflowPr: true }, { mergeReadinessEnforcementEnabled: true }), true);
+  assert.equal(shouldEnforceMergeReadiness({ autonomousWorkflowPr: true }, { mergeReadinessEnforcementEnabled: false }), false);
+  assert.equal(shouldEnforceMergeReadiness({ labels: ['documentation'] }, { mergeReadinessEnforcementEnabled: true }), false);
+});
+
+test('autonomous enforcement reports policy_blocked until branch protection requires Merge readiness', () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'merge-readiness-enforcement-'));
+  const service = createTaskPlatformService({ baseDir, mergeReadinessEnforcementEnabled: true });
+  const task = service.createTask({ tenantId: 'engineering-team', actorId: 'pm-1', title: 'Autonomous enforcement', status: 'READY_FOR_REVIEW' });
+
+  const review = service.createMergeReadinessReview({
+    tenantId: 'engineering-team',
+    taskId: task.taskId,
+    repository: 'wiinc1/engineering-team',
+    pullRequestNumber: 212,
+    commitSha: 'abc2121',
+    reviewStatus: 'passed',
+    autonomousWorkflowPr: true,
+    branchProtection: { required_status_checks: { contexts: ['Repo validation'] } },
+  });
+
+  assert.equal(review.reviewStatus, 'blocked');
+  assert.equal(review.classification.branch_protection_policy.status, 'policy_blocked');
+  assert.equal(review.metadata.merge_readiness_enforcement.flag, 'ff_merge_readiness_enforcement');
+  assert.equal(review.metadata.merge_readiness_enforcement.scope, 'autonomous_workflow_pr');
 });
 
 test('GitHub Merge readiness check-run emission covers pass, fail, and incomplete states', () => {

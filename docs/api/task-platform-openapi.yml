@@ -589,7 +589,7 @@ components:
       enum: [pending, passed, blocked, stale, error]
     MergeReadinessReviewJsonValue:
       nullable: true
-      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`; branch-protection enforcement is evaluated under `merge-readiness-branch-protection.v1` when verification evidence is supplied. Human-facing PR summaries are derived from this structured review under `merge-readiness-pr-summary.v1`; comment text is never the source of truth. Cross-cutting reusable gate checks are exercised under `merge-readiness-gate.v1`.
+      description: Evolving JSONB payload. Source logs must be linked from this record, not copied inline. Merge-readiness source inventory is evaluated under `merge-readiness-source-inventory.v1`; branch-protection enforcement is evaluated under `merge-readiness-branch-protection.v1` when verification evidence is supplied or when `ff_merge_readiness_enforcement` targets the PR. Human-facing PR summaries are derived from this structured review under `merge-readiness-pr-summary.v1`; comment text is never the source of truth. Cross-cutting reusable gate checks, including `finding_deferral_policy`, are exercised under `merge-readiness-gate.v1`.
       oneOf:
         - type: object
           additionalProperties: true
@@ -653,7 +653,7 @@ components:
           description: Structured findings used by check-run evaluation and by the derived PR summary. PR comments may render blocking findings, non-blocking findings with rationale, and deferred blockers with approvals, but must not include full logs. Gate-level finding policy distinguishes blocking versus non-blocking findings and requires ownership plus rationale for non-blocking findings.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         classification:
-          description: Includes `branch_protection_policy` when default-branch required status checks are verified. `enforced=true` is valid only when branch protection requires `Merge readiness`; otherwise the policy reports `policy_blocked` or `error`.
+          description: Includes `branch_protection_policy` when default-branch required status checks are verified. `enforced=true` is valid only when branch protection requires `Merge readiness`; otherwise the policy reports `policy_blocked` or `error`. Includes `finding_deferral_policy` when blocking findings or proposed deferrals are present.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         owner:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
@@ -666,7 +666,7 @@ components:
           description: Structured approvals that may be rendered only for deferred blocking findings in the derived PR summary. Blocking-finding deferral validation requires Product Manager risk acceptance, technical-owner risk acceptance, a follow-up link, explicit deferral policy permission, and Principal/SRE approval for high-risk findings.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         metadata:
-          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes. Includes `github_merge_readiness_branch_protection` with `policy_version=merge-readiness-branch-protection.v1`, status, branch, required check name, and `enforced` when branch-protection verification runs. May include a structured review URL for PR summary rendering; merge readiness evaluation still reads this review record, not comment text.
+          description: Includes `github_merge_readiness_gate` metadata with `policy_version=merge-readiness-github-check.v1`, evidence fingerprint, check-run id, and invalidation details when the PR commit SHA or evidence changes. Includes `github_merge_readiness_branch_protection` with `policy_version=merge-readiness-branch-protection.v1`, status, branch, required check name, and `enforced` when branch-protection verification runs. Includes `merge_readiness_enforcement` when `ff_merge_readiness_enforcement` activates enforcement for an autonomous workflow PR or all PRs. May include a Structured MergeReadinessReview URL for PR summary rendering; merge readiness evaluation still reads this review record, not comment text.
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         reviewerActorId:
           type: string
@@ -873,6 +873,12 @@ components:
           type: object
           description: Default-branch protection evidence from GitHub. Required status checks must include `Merge readiness` before the control plane represents the gate as enforced. Missing or unreadable evidence reports `policy_blocked` or `error`; this field is verification evidence only and does not mutate GitHub settings.
           additionalProperties: true
+        autonomousWorkflowPr:
+          type: boolean
+          description: Marks this review as an autonomous workflow PR. When `ff_merge_readiness_enforcement` is enabled and the target is autonomous PRs, branch-protection verification is required before merge readiness can pass.
+        enforceMergeReadiness:
+          type: boolean
+          description: Explicit per-review enforcement override. When true and the feature flag is enabled, branch-protection verification is required even if the PR is not tagged as autonomous.
         sourceInventory:
           $ref: '#/components/schemas/MergeReadinessReviewJsonValue'
         requiredCheckInventory:
