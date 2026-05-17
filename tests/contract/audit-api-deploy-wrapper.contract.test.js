@@ -12,3 +12,14 @@ test('authenticated browser API contract documents deploy bootstrap wrapper beha
   assert.match(spec, /Vercel API entrypoints await deploy auth bootstrap/);
   assert.match(spec, /bootstrap failures fail closed/);
 });
+
+test('audit foundation API contract documents Vercel workflow proxy aliases', () => {
+  const spec = fs.readFileSync(
+    path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'),
+    'utf8'
+  );
+
+  assert.match(spec, /versioned task workflow aliases/);
+  assert.match(spec, /\/api\/v1\/tasks\/\{taskId\}\/execution-contract\/\{action\}/);
+  assert.match(spec, /api\/v1\/task-workflow-proxy\.js/);
+});
