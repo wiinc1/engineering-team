@@ -11,6 +11,7 @@ const API_ENTRYPOINTS = [
   '../../api/auth/users/[userId].js',
   '../../api/v1/[...route].js',
   '../../api/v1/projects/[...route].js',
+  '../../api/v1/task-workflow-proxy.js',
   '../../api/v1/tasks/[taskId].js',
   '../../api/v1/tasks/[taskId]/[action].js',
 ];
@@ -46,6 +47,24 @@ test('Vercel API entrypoints return the request handler promise', () => {
       assert.equal(handler({}, {}), expected);
     });
   }
+});
+
+test('task workflow proxy restores the rewritten workflow URL before dispatch', () => {
+  let observedUrl = null;
+  const expected = Promise.resolve({ handled: true });
+  withStubbedServer(req => {
+    observedUrl = req.url;
+    return expected;
+  }, () => {
+    clearModule('../../api/v1/task-workflow-proxy.js');
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    const result = handler({
+      url: '/api/v1/task-workflow-proxy?__workflow_path=tasks/TSK-1/execution-contract/approve&source=backend',
+    }, {});
+
+    assert.equal(result, expected);
+    assert.equal(observedUrl, '/api/v1/tasks/TSK-1/execution-contract/approve?source=backend');
+  });
 });
 
 test('Vercel server wrapper selects and logs the canonical runtime backend', () => {

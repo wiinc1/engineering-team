@@ -1,0 +1,194 @@
+{
+  "generatedAt": "2026-05-17T00:23:04.170Z",
+  "issue": 209,
+  "baseUrl": "https://engineering-team-zeta.vercel.app",
+  "tenantId": "engineering-team",
+  "deployment": {
+    "id": "dpl_FdiWbwoaJ5uRAWMVRntVjGb9WUDm",
+    "url": "https://engineering-team-4o3a142bg-wiinc1-hotmailcoms-projects.vercel.app",
+    "alias": "https://engineering-team-zeta.vercel.app"
+  },
+  "project": {
+    "projectId": "PRJ-3F6E1F1D",
+    "name": "Autonomous Workflow Pilot - Issue 209",
+    "status": "ACTIVE",
+    "version": 1,
+    "createdThisRun": false
+  },
+  "task": {
+    "taskId": "TSK-4C15648B",
+    "title": "Issue 209 supervised pilot evidence task",
+    "createdThisRun": false,
+    "intakeStatus": "DRAFT",
+    "intakeDraft": null,
+    "auditHistorySeeded": false,
+    "refinementRequestSeeded": false,
+    "linkedProjectId": "PRJ-3F6E1F1D",
+    "currentStage": "IN_PROGRESS",
+    "assignee": "engineer-sr"
+  },
+  "contract": {
+    "version": 2,
+    "templateTier": "Simple",
+    "validationStatus": "valid",
+    "markdownGenerated": true,
+    "approvalMode": "policy",
+    "autoApprovalPolicy": "execution-contract-low-risk-simple-auto-approval.v1",
+    "autoApprovalApproved": true,
+    "dispatchSelectedEngineerTier": "Jr",
+    "committedRequirementCount": 4
+  },
+  "dispatch": {
+    "assignedAgent": "engineer-sr",
+    "delegation": {
+      "mode": "delegated",
+      "selectedSpecialist": "engineer",
+      "runtimeAgentId": "engineer",
+      "sessionId": "20a1c12b-d183-419d-b08f-5f0730375514",
+      "smokeArtifact": "observability/specialist-delegation-smoke.json"
+    }
+  },
+  "validation": {
+    "local": [
+      {
+        "command": "node --test tests/unit/audit-api-deploy-wrapper.test.js tests/unit/audit-api-v1-workflow-routes.test.js",
+        "status": "passed"
+      },
+      {
+        "command": "npm run lint",
+        "status": "passed"
+      },
+      {
+        "command": "npm run test:unit",
+        "status": "passed"
+      },
+      {
+        "command": "npm run standards:check",
+        "status": "passed"
+      },
+      {
+        "command": "npm run test:delegation:live-smoke:openclaw",
+        "status": "passed",
+        "sessionId": "20a1c12b-d183-419d-b08f-5f0730375514"
+      }
+    ],
+    "production": [
+      {
+        "command": "npx vercel deploy --prod --yes --force --logs",
+        "status": "passed",
+        "deploymentId": "dpl_FdiWbwoaJ5uRAWMVRntVjGb9WUDm"
+      },
+      {
+        "route": "/api/v1/tasks/TSK-4C15648B/execution-contract",
+        "status": "passed"
+      },
+      {
+        "command": "bounded audit projection processing",
+        "status": "passed",
+        "runs": [
+          {
+            "label": "pre-contract-resume",
+            "processed": 0,
+            "failed": 0
+          },
+          {
+            "label": "execution-contract-recorded",
+            "processed": 1,
+            "failed": 0
+          },
+          {
+            "label": "execution-contract-markdown",
+            "processed": 1,
+            "failed": 0
+          },
+          {
+            "label": "execution-contract-approved",
+            "processed": 1,
+            "failed": 0
+          },
+          {
+            "label": "stage-draft-backlog",
+            "processed": 1,
+            "failed": 0
+          },
+          {
+            "label": "engineer-assigned",
+            "processed": 1,
+            "failed": 0
+          },
+          {
+            "label": "stage-backlog-in-progress",
+            "processed": 1,
+            "failed": 0
+          },
+          {
+            "label": "delegation-attribution-recorded",
+            "processed": 1,
+            "failed": 0
+          }
+        ]
+      }
+    ]
+  },
+  "closeout": {
+    "status": "pending_pr_merge"
+  },
+  "followUps": [
+    {
+      "issue": 156,
+      "url": "https://github.com/wiinc1/engineering-team/issues/156",
+      "reason": "Structured operator-trusted autonomous delivery metrics replace this manual report artifact."
+    }
+  ],
+  "manualActions": [
+    {
+      "action": "Verify Issue 208 readiness",
+      "classification": "routine observation",
+      "location": "GitHub issue",
+      "reason": "Issue 209 is blocked until production readiness is closed.",
+      "timestamp": "2026-05-17T00:20:51.359Z"
+    },
+    {
+      "action": "Deploy route remediation to production",
+      "classification": "operator intervention",
+      "location": "Vercel production deployment",
+      "reason": "Nested versioned task workflow routes were missing in production and blocked contract recording.",
+      "timestamp": "2026-05-17T00:20:51.359Z"
+    },
+    {
+      "action": "Create or reuse pilot Project",
+      "classification": "required approval",
+      "location": "Projects API",
+      "reason": "Issue 209 requires an operator-created pilot Project.",
+      "timestamp": "2026-05-16T23:48:45.851Z"
+    },
+    {
+      "action": "Create or reuse one pilot task",
+      "classification": "required approval",
+      "location": "Task intake API",
+      "reason": "Issue 209 requires exactly one low-risk pilot task.",
+      "timestamp": "2026-05-16T23:48:50.462Z"
+    },
+    {
+      "action": "Run bounded projection processing after production writes",
+      "classification": "operator intervention",
+      "location": "Audit projection worker",
+      "reason": "Postgres audit writes are queued asynchronously and the pilot workflow needed read models caught up before each gate.",
+      "timestamp": "2026-05-17T00:20:51.359Z"
+    },
+    {
+      "action": "Approve Simple contract by policy",
+      "classification": "required approval",
+      "location": "Execution Contract API",
+      "reason": "Low-risk policy auto-approval was requested and recorded.",
+      "timestamp": "2026-05-17T00:21:39.144Z"
+    },
+    {
+      "action": "Observe dispatch state",
+      "classification": "routine observation",
+      "location": "Task detail API",
+      "reason": "Operator checked that the pilot reached implementation.",
+      "timestamp": "2026-05-17T00:23:04.171Z"
+    }
+  ]
+}

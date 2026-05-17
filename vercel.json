@@ -10,6 +10,30 @@
   },
   "rewrites": [
     {
+      "source": "/api/v1/tasks/:taskId/execution-contract/:action",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/execution-contract/:action"
+    },
+    {
+      "source": "/api/v1/tasks/:taskId/contract-coverage-audit/:action",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/contract-coverage-audit/:action"
+    },
+    {
+      "source": "/api/v1/tasks/:taskId/sre-monitoring/:action",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/sre-monitoring/:action"
+    },
+    {
+      "source": "/backend/v1/tasks/:taskId/execution-contract/:action",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/execution-contract/:action"
+    },
+    {
+      "source": "/backend/v1/tasks/:taskId/contract-coverage-audit/:action",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/contract-coverage-audit/:action"
+    },
+    {
+      "source": "/backend/v1/tasks/:taskId/sre-monitoring/:action",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/sre-monitoring/:action"
+    },
+    {
       "source": "/backend",
       "destination": "/api"
     },
