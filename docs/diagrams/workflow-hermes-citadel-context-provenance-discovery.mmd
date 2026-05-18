@@ -1,0 +1,22 @@
+flowchart TD
+  Candidate[Hermes or Citadel candidate source] --> Owner{Source owner approved access?}
+  Owner -- No --> NeedsOwner[Mark status needs owner decision]
+  Owner -- Blocked by legal/security --> Blocked[Mark status blocked]
+  Owner -- Yes --> Contract[Record access method, owner, tenant key, freshness SLA, redaction rule, and allowed signal types]
+  Contract --> Tenant{Tenant boundary verified?}
+  Tenant -- No --> TenantBlocked[Fail closed and create restricted-context note]
+  Tenant -- Yes --> Freshness{Freshness valid?}
+  Freshness -- No --> Stale[Record stale, expired, or unknown freshness without decision authority]
+  Freshness -- Yes --> Redact[Create redacted source summary and safe source reference]
+  Redact --> Provenance[Map summary to control-plane-context-provenance.v1 external_sources]
+  Stale --> Provenance
+  TenantBlocked --> Provenance
+  Provenance --> Conflict{Could fact affect scope, acceptance, risk, routing, timeline, customer impact, or compliance?}
+  Conflict -- Yes --> BlockingQuestion[Create PM-owned blocking question with operator resolution required]
+  BlockingQuestion --> Operator{Operator resolves?}
+  Operator -- No --> ContextOnly[Keep as context-only provenance]
+  Operator -- Yes --> PMUpdate[PM updates authoritative artifact through normal workflow]
+  Conflict -- No --> RestrictedNote[Expose role-scoped restricted-context note]
+  RestrictedNote --> ContextOnly
+  PMUpdate --> Authoritative[Artifact carries approved provenance reference]
+  ContextOnly --> NoAuthority[No committed requirements, approvals, dispatch, closeout, or operator-intent override]
