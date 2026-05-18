@@ -1,0 +1,27 @@
+flowchart TD
+  Start[Task, issue, and Project context] --> Contract{Approved scope and validation commands?}
+  Contract -- No --> PMQuestion[Resolve PM blocking question before patching]
+  Contract -- Yes --> Decision{Clawpatch decision}
+  Decision -- Not used --> Fallback[Use Codex and OpenClaw fallback workflow]
+  Decision -- Out of scope --> Fallback
+  Decision -- Required or optional --> Branch[Use approved branch or isolated worktree]
+  Branch --> Clean{Worktree clean for task-owned files?}
+  Clean -- No --> StopDirty[Stop and isolate or get owner decision]
+  Clean -- Yes --> Setup[Install from upstream docs and run clawpatch doctor]
+  Setup --> SetupOk{Smoke check passes?}
+  SetupOk -- No --> EvidenceFail[Record redacted failure evidence]
+  EvidenceFail --> Fallback
+  SetupOk -- Yes --> Review[Run review or map commands in task scope]
+  Review --> Finding{Scoped finding selected?}
+  Finding -- No --> Fallback
+  Finding -- Yes --> Patch[Apply one Clawpatch fix]
+  Patch --> Diff[Manual diff review]
+  Diff --> Safe{Patch safe and in scope?}
+  Safe -- No --> Reject[Reject patch, preserve redacted evidence, recover safely]
+  Reject --> Fallback
+  Safe -- Yes --> Validate[Run standards, lint, tests, build, and Vercel as applicable]
+  Validate --> Checks{All required checks green?}
+  Checks -- No --> Repair[Repair normally or reject Clawpatch patch]
+  Repair --> Fallback
+  Checks -- Yes --> PR[Open PR with Clawpatch decision and evidence]
+  PR --> Closeout[Merge after green checks and record closeout note]
