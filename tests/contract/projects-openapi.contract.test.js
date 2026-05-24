@@ -19,6 +19,9 @@ test('task platform OpenAPI documents Projects planning containers', () => {
     'ProjectStatus',
     'UpdateTaskProjectRequest',
     'ProjectSummary',
+    'ProjectsProductionSmokeEvidence',
+    'taskFixtureCreated',
+    'createTaskStatus',
   ]) {
     assert.match(openapi, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
