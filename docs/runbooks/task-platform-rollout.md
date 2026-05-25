@@ -79,6 +79,21 @@ npm run task-platform:verify
 
 `npm run task-platform:rollout` is the preferred operator entrypoint. Use the individual commands only when a step must be rerun in isolation.
 
+### Run Projects production smoke
+```bash
+DATABASE_URL=postgres://... \
+AUTH_PUBLIC_APP_URL=https://<host> \
+AUTH_JWT_SECRET=<jwt-secret> \
+AUTH_PROD_ROLLBACK_TARGET=<rollback-url> \
+npm run projects:production-smoke
+```
+
+The Projects production smoke creates a temporary task fixture through
+`POST /api/v1/tasks` before it attaches and detaches Project membership. Do
+not rely on an existing unassigned production task. The redacted evidence must
+show `summary.taskFixtureCreated=true`, `summary.taskAttached=true`, and
+`summary.taskDetached=true`.
+
 ## Database Verification
 `npm run task-platform:verify` automates the core checks below. Use the SQL directly when an operator needs to inspect raw rows.
 

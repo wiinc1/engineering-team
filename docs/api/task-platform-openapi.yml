@@ -549,6 +549,33 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Project'
+    ProjectsProductionSmokeEvidence:
+      type: object
+      description: Redacted operator evidence emitted by `npm run projects:production-smoke`.
+      required: [summary, api]
+      properties:
+        summary:
+          type: object
+          required: [taskFixtureCreated, taskAttached, taskDetached, evidenceRedacted]
+          properties:
+            taskFixtureCreated:
+              type: boolean
+              description: True only when the smoke creates its own safe task fixture.
+            taskAttached:
+              type: boolean
+            taskDetached:
+              type: boolean
+            evidenceRedacted:
+              type: boolean
+        api:
+          type: object
+          required: [createTaskStatus, taskFixtureCreated]
+          properties:
+            createTaskStatus:
+              type: integer
+              nullable: true
+            taskFixtureCreated:
+              type: boolean
     Task:
       type: object
       required: [taskId, title, status, version, owner, createdAt, updatedAt]

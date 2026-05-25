@@ -42,51 +42,89 @@ function createPool() {
   };
 }
 
-function createFetch() {
-  const state = {
+function createSmokeState() {
+  return {
     project: null,
-    task: { taskId: 'TSK-SMOKE', version: 1, projectId: null, project: null },
+    task: null,
   };
+}
+
+function handleProjectRoutes(state, parsed, options, isPrimaryTenant) {
+  if (parsed.pathname === '/api/v1/projects' && options.method === 'POST') {
+    const body = JSON.parse(options.body);
+    state.project = {
+      projectId: 'PRJ-SMOKE123',
+      name: body.name,
+      summary: body.summary,
+      status: body.status,
+      version: 1,
+    };
+    return jsonResponse(201, { data: state.project });
+  }
+  if (parsed.pathname === '/api/v1/projects' && !options.method) {
+    return jsonResponse(200, { data: isPrimaryTenant && state.project?.status !== 'ARCHIVED' ? [state.project] : [] });
+  }
+  return null;
+}
+
+function handleProjectDetailRoutes(state, parsed, options, isPrimaryTenant) {
+  if (parsed.pathname === '/api/v1/projects/PRJ-SMOKE123' && !options.method) {
+    return isPrimaryTenant
+      ? jsonResponse(200, { data: { ...state.project, tasks: state.task?.projectId ? [state.task] : [] } })
+      : jsonResponse(404, { error: { code: 'project_not_found' } });
+  }
+  if (parsed.pathname === '/api/v1/projects/PRJ-SMOKE123' && options.method === 'PATCH') {
+    const body = JSON.parse(options.body);
+    state.project = { ...state.project, ...body, version: state.project.version + 1 };
+    return jsonResponse(200, { data: state.project });
+  }
+  return null;
+}
+
+function handleTaskRoutes(state, parsed, options) {
+  if (parsed.pathname === '/api/v1/tasks' && options.method === 'POST') {
+    const body = JSON.parse(options.body);
+    state.task = {
+      taskId: 'TSK-SMOKE',
+      title: body.title,
+      description: body.description,
+      status: body.status,
+      priority: body.priority,
+      version: 1,
+      projectId: null,
+      project: null,
+    };
+    return jsonResponse(201, { data: state.task });
+  }
+  if (parsed.pathname === '/api/v1/tasks' && !options.method) {
+    return jsonResponse(200, { data: state.task ? [state.task] : [] });
+  }
+  return null;
+}
+
+function handleTaskProjectRoutes(state, parsed, options) {
+  if (parsed.pathname !== '/api/v1/tasks/TSK-SMOKE/project' || options.method !== 'PATCH') return null;
+  const body = JSON.parse(options.body);
+  state.task = {
+    ...state.task,
+    version: state.task.version + 1,
+    projectId: body.projectId,
+    project: body.projectId ? { projectId: body.projectId, name: state.project.name, status: state.project.status } : null,
+  };
+  return jsonResponse(200, { data: state.task });
+}
+
+function createFetch() {
+  const state = createSmokeState();
   return async function fetchImpl(url, options = {}) {
     const parsed = new URL(url);
     const claims = claimsFromAuth(options.headers);
     const isPrimaryTenant = claims.tenant_id === 'tenant-int';
-    if (parsed.pathname === '/api/v1/projects' && options.method === 'POST') {
-      const body = JSON.parse(options.body);
-      state.project = {
-        projectId: 'PRJ-SMOKE123',
-        name: body.name,
-        summary: body.summary,
-        status: body.status,
-        version: 1,
-      };
-      return jsonResponse(201, { data: state.project });
-    }
-    if (parsed.pathname === '/api/v1/projects' && !options.method) {
-      return jsonResponse(200, { data: isPrimaryTenant && state.project?.status !== 'ARCHIVED' ? [state.project] : [] });
-    }
-    if (parsed.pathname === '/api/v1/tasks' && !options.method) {
-      return jsonResponse(200, { data: [state.task] });
-    }
-    if (parsed.pathname === '/api/v1/projects/PRJ-SMOKE123' && !options.method) {
-      return isPrimaryTenant ? jsonResponse(200, { data: { ...state.project, tasks: state.task.projectId ? [state.task] : [] } }) : jsonResponse(404, { error: { code: 'project_not_found' } });
-    }
-    if (parsed.pathname === '/api/v1/projects/PRJ-SMOKE123' && options.method === 'PATCH') {
-      const body = JSON.parse(options.body);
-      state.project = { ...state.project, ...body, version: state.project.version + 1 };
-      return jsonResponse(200, { data: state.project });
-    }
-    if (parsed.pathname === '/api/v1/tasks/TSK-SMOKE/project' && options.method === 'PATCH') {
-      const body = JSON.parse(options.body);
-      state.task = {
-        ...state.task,
-        version: state.task.version + 1,
-        projectId: body.projectId,
-        project: body.projectId ? { projectId: body.projectId, name: state.project.name, status: state.project.status } : null,
-      };
-      return jsonResponse(200, { data: state.task });
-    }
-    return jsonResponse(404, { error: { code: 'not_found' } });
+    return handleProjectRoutes(state, parsed, options, isPrimaryTenant)
+      || handleProjectDetailRoutes(state, parsed, options, isPrimaryTenant)
+      || handleTaskRoutes(state, parsed, options)
+      || handleTaskProjectRoutes(state, parsed, options)
+      || jsonResponse(404, { error: { code: 'not_found' } });
   };
 }
 
@@ -107,11 +145,13 @@ test('Projects production smoke records redacted migration, CRUD, membership, ar
   assert.equal(evidence.summary.passed, true);
   assert.equal(evidence.summary.migration012Applied, true);
   assert.equal(evidence.summary.projectCreated, true);
+  assert.equal(evidence.summary.taskFixtureCreated, true);
   assert.equal(evidence.summary.taskAttached, true);
   assert.equal(evidence.summary.taskDetached, true);
   assert.equal(evidence.summary.archiveDeleteEquivalent, true);
   assert.equal(evidence.summary.tenantIsolationPassed, true);
   assert.equal(evidence.api.projectId, 'PRJ-SMOKE123');
+  assert.equal(evidence.api.taskFixtureCreated, true);
   assert.equal(JSON.parse(fs.readFileSync(outputPath, 'utf8')).summary.evidenceRedacted, true);
   assert.doesNotMatch(fs.readFileSync(outputPath, 'utf8'), /Bearer|test-secret|authorization/i);
 });
