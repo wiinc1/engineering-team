@@ -10,3 +10,4 @@ data/
 docs/design/no-design-impact.txt
 __pycache__/
 *.pyc
+.env*
