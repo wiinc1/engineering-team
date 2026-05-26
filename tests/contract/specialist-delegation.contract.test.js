@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createRuntimeDelegateWork, normalizeRuntimeEvidence } = require('../../lib/software-factory/runtime-delegation');
+const { buildBridgeResponse } = require('../../scripts/openclaw-specialist-runner');
 
 const runtimeRunnerPath = path.join(__dirname, '..', 'fixtures', 'specialist-runtime-runner.js');
 
@@ -30,4 +31,29 @@ test('normalizeRuntimeEvidence rejects responses that omit required ownership ev
     () => normalizeRuntimeEvidence({ agentId: 'engineer' }),
     /must include agentId and sessionId/i,
   );
+});
+
+test('OpenClaw gateway responses satisfy the bridge evidence contract', () => {
+  const bridge = buildBridgeResponse({
+    payload: {
+      specialist: 'engineer',
+      delegationId: 'contract-gateway',
+    },
+    runtimeAgent: 'sr-engineer',
+    response: {
+      result: {
+        payloads: [{ text: 'OK' }],
+        meta: {
+          agentMeta: {
+            sessionId: 'specialist-delegation-contract-gateway',
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(bridge.agentId, 'sr-engineer');
+  assert.equal(bridge.sessionId, 'specialist-delegation-contract-gateway');
+  assert.equal(bridge.output, 'OK');
+  assert.equal(bridge.ownership.specialistId, 'engineer');
 });
