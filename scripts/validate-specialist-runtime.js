@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { createSpecialistCoordinator } = require('../lib/software-factory/delegation');
 
+const DEFAULT_SMOKE_REQUEST = 'Implement a no-op delegation smoke by replying OK only. Do not inspect or edit files.';
+
 function resolveBaseDir(env = process.env) {
   return env.SPECIALIST_DELEGATION_BASE_DIR
     ? path.resolve(env.SPECIALIST_DELEGATION_BASE_DIR)
@@ -48,7 +50,7 @@ function writeSmokeReport(baseDir, report) {
 }
 
 async function runValidation({ baseDir = resolveBaseDir(), request } = {}) {
-  const resolvedRequest = request || 'Please implement this fix';
+  const resolvedRequest = request || DEFAULT_SMOKE_REQUEST;
   const coordinator = createSpecialistCoordinator({
     baseDir,
   });
@@ -66,7 +68,7 @@ async function runValidation({ baseDir = resolveBaseDir(), request } = {}) {
 
 async function main() {
   const baseDir = resolveBaseDir();
-  const request = process.argv.slice(2).join(' ').trim() || 'Please implement this fix';
+  const request = process.argv.slice(2).join(' ').trim() || DEFAULT_SMOKE_REQUEST;
   const { report } = await runValidation({ baseDir, request });
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   assertLiveDelegation(report);
@@ -82,6 +84,7 @@ if (require.main === module) {
 module.exports = {
   assertLiveDelegation,
   buildSmokeReport,
+  DEFAULT_SMOKE_REQUEST,
   resolveBaseDir,
   runValidation,
   writeSmokeReport,
