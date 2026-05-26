@@ -23,17 +23,17 @@ test('resolveSpecialistMap merges defaults with overrides', () => {
 });
 
 test('resolveRuntimeAgent uses the configured alias map', () => {
-  assert.equal(resolveRuntimeAgent('engineer'), 'engineer');
+  assert.equal(resolveRuntimeAgent('engineer'), 'sr-engineer');
   assert.equal(resolveRuntimeAgent('qa'), 'qa-engineer');
   assert.equal(resolveRuntimeAgent('engineer', {
     OPENCLAW_SPECIALIST_MAP: JSON.stringify({ engineer: 'jr-engineer' }),
   }), 'jr-engineer');
 });
 
-test('buildOpenClawArgs targets the mapped agent and uses local mode by default', () => {
+test('buildOpenClawArgs targets the mapped agent through gateway mode by default', () => {
   const args = buildOpenClawArgs({
-    payload: { request: 'Please implement this fix' },
-    runtimeAgent: 'engineer',
+    payload: { request: 'Please implement this fix', delegationId: 'delegation-1' },
+    runtimeAgent: 'sr-engineer',
     env: {},
   });
 
@@ -41,12 +41,63 @@ test('buildOpenClawArgs targets the mapped agent and uses local mode by default'
     'agent',
     '--json',
     '--agent',
-    'engineer',
+    'sr-engineer',
     '--message',
     'Please implement this fix',
+    '--session-id',
+    'specialist-delegation-delegation-1',
+    '--timeout',
+    '60',
+  ]);
+});
+
+test('buildOpenClawArgs can opt into local mode and low thinking', () => {
+  const args = buildOpenClawArgs({
+    payload: { request: 'Please implement this fix', delegationId: 'delegation-2' },
+    runtimeAgent: 'sr-engineer',
+    env: {
+      OPENCLAW_DELEGATION_LOCAL: 'true',
+      OPENCLAW_DELEGATION_THINKING: 'low',
+    },
+  });
+
+  assert.deepEqual(args, [
+    'agent',
+    '--json',
+    '--agent',
+    'sr-engineer',
+    '--message',
+    'Please implement this fix',
+    '--session-id',
+    'specialist-delegation-delegation-2',
+    '--thinking',
+    'low',
     '--timeout',
     '60',
     '--local',
+  ]);
+});
+
+test('buildOpenClawArgs lets operators override the delegation session id', () => {
+  const args = buildOpenClawArgs({
+    payload: { request: 'Please implement this fix', delegationId: 'delegation-3' },
+    runtimeAgent: 'sr-engineer',
+    env: {
+      OPENCLAW_DELEGATION_SESSION_ID: 'manual-session',
+    },
+  });
+
+  assert.deepEqual(args, [
+    'agent',
+    '--json',
+    '--agent',
+    'sr-engineer',
+    '--message',
+    'Please implement this fix',
+    '--session-id',
+    'manual-session',
+    '--timeout',
+    '60',
   ]);
 });
 
@@ -88,6 +139,22 @@ test('extractSessionId and extractOutput handle OpenClaw payload/meta response s
 
   assert.equal(extractSessionId(response), 'sess-4');
   assert.equal(extractOutput(response), 'handled from payloads');
+});
+
+test('extractSessionId and extractOutput handle gateway OpenClaw result shapes', () => {
+  const response = {
+    result: {
+      payloads: [{ text: 'handled from gateway payloads' }],
+      meta: {
+        agentMeta: {
+          sessionId: 'sess-6',
+        },
+      },
+    },
+  };
+
+  assert.equal(extractSessionId(response), 'sess-6');
+  assert.equal(extractOutput(response), 'handled from gateway payloads');
 });
 
 test('buildBridgeResponse preserves runtime agent evidence and logical specialist ownership', () => {

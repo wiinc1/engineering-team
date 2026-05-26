@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 
 const DEFAULT_SPECIALIST_MAP = Object.freeze({
   architect: 'architect',
-  engineer: 'engineer',
+  engineer: 'sr-engineer',
   qa: 'qa-engineer',
   sre: 'sre',
 });
@@ -62,11 +62,21 @@ function resolveRuntimeAgent(specialist, env = process.env) {
 
 function buildOpenClawArgs({ payload, runtimeAgent, env = process.env }) {
   const args = ['agent', '--json', '--agent', runtimeAgent, '--message', payload.request || ''];
+  const sessionId = env.OPENCLAW_DELEGATION_SESSION_ID || (
+    payload.delegationId ? `specialist-delegation-${payload.delegationId}` : ''
+  );
+  if (sessionId) {
+    args.push('--session-id', sessionId);
+  }
+  const thinking = env.OPENCLAW_DELEGATION_THINKING;
+  if (thinking) {
+    args.push('--thinking', thinking);
+  }
   const timeout = env.OPENCLAW_DELEGATION_TIMEOUT_SEC || '60';
   if (timeout) {
     args.push('--timeout', timeout);
   }
-  if (env.OPENCLAW_DELEGATION_LOCAL !== 'false') {
+  if (env.OPENCLAW_DELEGATION_LOCAL === 'true') {
     args.push('--local');
   }
   return args;
@@ -108,6 +118,8 @@ function extractSessionId(response) {
     response?.result?.sessionId,
     response?.result?.session_id,
     response?.result?.session?.id,
+    response?.result?.meta?.agentMeta?.sessionId,
+    response?.result?.meta?.sessionId,
     response?.conversation?.sessionId,
   ];
   return candidates.find((value) => typeof value === 'string' && value.trim()) || '';
@@ -122,6 +134,7 @@ function extractOutput(response) {
     response?.result?.output,
     response?.result?.reply,
     response?.result?.message,
+    response?.result?.payloads?.[0]?.text,
   ];
   return candidates.find((value) => typeof value === 'string') || '';
 }

@@ -8,6 +8,8 @@
 - `FF_SPECIALIST_DELEGATION` remains a compatibility alias for older environments.
 - `SPECIALIST_DELEGATION_RUNNER` must point at the real runtime bridge command. Without it, the software factory falls back truthfully and does not claim session ownership.
 - `SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS` or `SPECIALIST_DELEGATION_RUNNER_TIMEOUT_MS` controls the runtime bridge timeout. Default: `20000`.
+- `OPENCLAW_DELEGATION_LOCAL=true` opts the repo-local OpenClaw bridge into embedded local mode. The default is gateway mode because it returns session evidence without requiring model provider keys in the shell.
+- `OPENCLAW_DELEGATION_THINKING` optionally sets the OpenClaw agent thinking level. The live OpenClaw smoke defaults this to `low`.
 
 ## Rollout steps
 1. Enable in local/dev and verify `tests/unit/specialist-delegation.test.js` passes.
@@ -24,7 +26,7 @@
 8. Confirm `observability/specialist-delegation-metrics.json` is updated with both the raw snapshot and flattened Prometheus-safe metrics.
 9. Run `npm run metrics:delegation:push` with `PUSHGATEWAY_URL` set when you want to publish the latest delegation metrics snapshot to your monitoring stack.
 10. Confirm `observability/workflow-audit.log` shows structured attempt, success, fallback, and mismatch events.
-11. Run `npm run test:delegation:live-smoke` or `npm run test:delegation:live-smoke:openclaw` in the target environment and confirm it exits successfully only when runtime delegation is truly confirmed and writes `observability/specialist-delegation-smoke.json`.
+11. Run `npm run test:delegation:live-smoke` or `npm run test:delegation:live-smoke:openclaw` in the target environment and confirm it exits successfully only when runtime delegation is truly confirmed and writes `observability/specialist-delegation-smoke.json`. The default smoke request is a bounded no-op so it proves handoff evidence without asking the specialist to perform unrelated repository work.
 12. Enable in staging with log review for fallback volume and attribution mismatches.
 13. Promote to production only after no unexpected fallback or mismatch spikes are observed.
 

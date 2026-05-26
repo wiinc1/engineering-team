@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createSpecialistCoordinator } = require('../../lib/software-factory/delegation');
+const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
 
 test('delegation fallback messages stay sanitized when runtime execution fails', async () => {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-security-'));
@@ -40,4 +41,10 @@ test('canonical specialist delegation disablement does not leak the legacy flag 
   assert.equal(result.metadata.fallbackReason, 'feature_disabled');
   assert.match(result.message, /ff_real_specialist_delegation/i);
   assert.doesNotMatch(result.message, /ff_specialist_delegation/i);
+});
+
+test('default live smoke request is bounded against repository edits', () => {
+  assert.match(DEFAULT_SMOKE_REQUEST, /replying OK only/i);
+  assert.match(DEFAULT_SMOKE_REQUEST, /Do not inspect or edit files/i);
+  assert.doesNotMatch(DEFAULT_SMOKE_REQUEST, /\bQA\b|\btest\b/i);
 });

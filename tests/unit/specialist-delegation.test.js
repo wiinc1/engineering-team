@@ -17,6 +17,7 @@ const {
   createSpecialistCoordinator,
 } = require('../../lib/software-factory/delegation');
 const { isSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
+const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
 
 const runtimeRunnerPath = path.join(__dirname, '..', 'fixtures', 'specialist-runtime-runner.js');
 
@@ -25,6 +26,13 @@ test('routes clear specialist-owned requests to the expected specialist', () => 
   assert.deepEqual(classifySpecialistRequest('Need architecture review for this service boundary').specialist, 'architect');
   assert.deepEqual(classifySpecialistRequest('Can QA verify the regression coverage?').specialist, 'qa');
   assert.deepEqual(classifySpecialistRequest('SRE should inspect the latency spike and alerts').specialist, 'sre');
+});
+
+test('routes the default live smoke request to engineering only', () => {
+  const result = classifySpecialistRequest(DEFAULT_SMOKE_REQUEST);
+
+  assert.equal(result.confidence, 'clear');
+  assert.equal(result.specialist, 'engineer');
 });
 
 test('treats ambiguous or unmatched requests as coordinator-owned', () => {
