@@ -26,6 +26,14 @@ describe('browser app route model helpers', () => {
     expect(qe('/deferred-considerations')).toEqual({ scope: 'deferred-considerations' });
   });
 
+  it('keeps persisted-agent owner surfaces on canonical inbox and PM overview routes', () => {
+    for (const role of ['pm', 'architect', 'engineer', 'qa', 'sre', 'human']) {
+      expect(Ie(`/inbox/${role}`)).toEqual({ role });
+    }
+
+    expect(De('/overview/pm')).toEqual({ scope: 'pm' });
+  });
+
   it('round-trips task workspace filters without dropping route query state', () => {
     expect(va('?owner=engineer&view=list&priority=P1&status=active&search=TSK-42&project=PRJ-ABC12345')).toEqual({
       owner: 'engineer',

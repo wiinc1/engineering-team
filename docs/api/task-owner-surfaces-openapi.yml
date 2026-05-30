@@ -21,7 +21,14 @@ components:
       type: [object, 'null']
       properties:
         actor_id: { type: string }
+        agentId: { type: string }
         display_name: { type: string }
+        displayName: { type: string }
+        role:
+          type: string
+          enum: [pm, architect, engineer, qa, sre, human]
+        active: { type: boolean }
+        assignable: { type: boolean }
     ProjectSummary:
       type: [object, 'null']
       properties:
@@ -107,6 +114,9 @@ paths:
         Returns the projected task detail summary.
         `current_owner` and `owner` are additive read fields exposed to the same `state:read`
         audience as the rest of the task summary. Assignment mutation stays on `PATCH /tasks/{id}/assignment`.
+        Persisted supported-role AI agents may supply canonical role metadata plus active and assignable flags
+        for historical owner rendering; inactive or non-assignable owners remain readable but must not appear
+        in new assignment choices.
         Governance review tasks use `task_type=governance_review` and should be treated as a dedicated
         operational surface rather than part of the standard delivery queues.
       responses:
