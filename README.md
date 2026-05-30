@@ -167,7 +167,7 @@ Task-detail contract notes for approval readiness:
 - Production browser sign-in now starts at `/sign-in` and supports registration email/password auth, with hosted OIDC Authorization Code + PKCE retained when explicitly selected. The current production-auth source of truth is `docs/runbooks/production-auth-status.md`.
 - The trusted browser auth code exchange on `POST /auth/session` remains available only as an internal/local fallback when explicitly enabled.
 - The app protects `/tasks`, `/tasks?view=board`, `/overview/pm`, `/inbox/:role`, and `/tasks/:taskId`; unauthenticated or expired sessions are redirected back to `/sign-in`.
-- PM/admin tokens also unlock the task assignment control, which reads `GET /ai-agents` and writes `PATCH /tasks/:taskId/assignment`.
+- PM/admin tokens also unlock the task assignment control, which reads `GET /ai-agents` and writes `PATCH /tasks/:taskId/assignment`. During canonical rollout, those compatibility routes resolve assignable agents from persisted `/api/v1/ai-agents` data while preserving the older browser response shape.
 - Reader-level tokens still see owner metadata on `GET /tasks/:taskId` and `GET /tasks`; they just do not get assignment controls.
 
 Run it locally:
@@ -271,6 +271,8 @@ Browser gate flake policy:
 - `/api/v1` is the canonical task-platform read/write surface for production, staging, and standard local development.
 - Current routes:
 - `GET /api/v1/ai-agents`
+- `POST /api/v1/ai-agents`
+- `PATCH /api/v1/ai-agents/{agentId}`
 - `GET /api/v1/tasks`
 - `POST /api/v1/tasks`
 - `GET /api/v1/tasks/{taskId}`
@@ -280,6 +282,7 @@ Browser gate flake policy:
 - Standard local development starts Dockerized Postgres with `npm run dev:postgres:up` and runs host scripts with `DATABASE_URL=postgres://<local-user>:<local-password>@127.0.0.1:5432/<local-database>`.
 - File-backed runtime is limited to isolated local/test fallback harnesses and requires an explicit opt-in such as `AUDIT_STORE_BACKEND=file ALLOW_FILE_AUDIT_BACKEND=true`. Production and staging reject file backend startup.
 - Compatibility paths such as audit-owned `/tasks/*` workflow routes remain during rollout. They sync through canonical task-platform adapters or are documented in `docs/runbooks/task-platform-rollout.md` until migration criteria allow disabling them behind a flag.
+- AI agent records are now canonical task-platform data. `lib/audit/agents.js` provides bootstrap seed defaults only; persisted `ai_agents` rows take precedence by ID and operator-created agents are versioned, audited, and limited to supported roles (`pm`, `architect`, `engineer`, `qa`, `sre`, plus legacy `human` ownership). The legacy PM assignment controls (`GET /ai-agents`, `PATCH /tasks/{taskId}/assignment`) now use the same persisted assignability checks as `/api/v1/tasks/{taskId}/owner`; inactive or non-assignable records remain visible only through `/api/v1/ai-agents?includeInactive=true`.
 - Drift checks run through `npm run task-platform:verify`; failures include remediation for missing checkpoints, version mismatches, stale projection sequence numbers, and failed sync states.
 
 ### Remaining browser verification constraints

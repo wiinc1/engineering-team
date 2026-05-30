@@ -5,7 +5,8 @@ info:
   version: 1.3.0
   description: |
     API contract for assigning an AI agent owner to a task.
-    The runtime accepts both `/tasks/...` and `/api/tasks/...` paths; `/tasks/...` is the canonical route shape used elsewhere in this repo.
+    The runtime accepts both `/tasks/...` and `/api/tasks/...` paths for existing PM controls. These compatibility paths resolve active, assignable owners from the canonical `/api/v1/ai-agents` task-platform data and preserve the legacy response shape.
+    The long-term canonical task-platform writer is `PATCH /api/v1/tasks/{taskId}/owner`.
     Governance note: assignment runtime changes should update this spec in the same pull request.
     Delivery-loop mutations that are reserved for the currently assigned engineer role now reject callers
     that no longer match the task's canonical assignee.
@@ -99,7 +100,7 @@ paths:
                       eventId:
                         type: string
         '400':
-          description: Invalid request or inactive agent id
+          description: Invalid request, unknown agent id, inactive agent, non-assignable agent, or unsupported assignment target
           content:
             application/json:
               schema:
