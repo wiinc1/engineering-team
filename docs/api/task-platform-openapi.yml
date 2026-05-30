@@ -59,11 +59,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/AiAgentEnvelope'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Validation failed; AI-agent management returns `invalid_agent_slug` or `unsupported_agent_role` for invalid registry records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: AI-agent id already exists; returns `duplicate_agent_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /ai-agents/{agentId}:
     patch:
       summary: Update or deactivate an operator-managed AI agent
@@ -92,13 +100,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/AiAgentEnvelope'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Validation failed; AI-agent management returns `unsupported_agent_role` for invalid registry records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          $ref: '#/components/responses/Conflict'
+          description: Optimistic concurrency conflict; returns `agent_version_conflict`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /projects:
     get:
       summary: List Projects for the caller tenant

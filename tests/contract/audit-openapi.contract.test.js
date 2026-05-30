@@ -3,3 +3,19 @@ async function withRegistrationServer(e){const a=fs.mkdtempSync(path.join(os.tmp
 function getSetCookieHeaders(e){return typeof e.getSetCookie=="function"?e.getSetCookie():(e.get("set-cookie")?[e.get("set-cookie")]:[])}
 test("registration auth endpoints satisfy the documented runtime contract",async()=>{await withRegistrationServer(async({baseUrl:e})=>{let a=await fetch(`${e}/auth/register`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"contract-registration@example.com",password:"CorrectHorse123!"})});assert.equal(a.status,201),assert.match((await a.json()).message,/next steps/i),a=await fetch(`${e}/auth/login`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"contract-registration@example.com",password:"CorrectHorse123!",next:"/tasks"})}),assert.equal(a.status,200),assert.equal((await a.json()).data.next,"/tasks"),assert.ok(getSetCookieHeaders(a.headers).some(s=>s.startsWith("engineering_team_session="))),a=await fetch(`${e}/auth/password-reset/request`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"contract-registration@example.com"})}),assert.equal(a.status,200),assert.match((await a.json()).message,/password reset instructions/i),a=await fetch(`${e}/auth/email/verify/confirm`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:"not-a-real-token"})}),assert.equal(a.status,401),a=await fetch(`${e}/auth/password-reset/confirm`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:"not-a-real-token",password:"NewCorrectHorse123!"})}),assert.equal(a.status,401),a=await fetch(`${e}/auth/magic-link/request`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"contract-registration@example.com"})}),assert.equal(a.status,410)})});
 test("audit OpenAPI contract documents canonical runtime backend selection",()=>{const e=fs.readFileSync(path.join(__dirname,"../../docs/api/audit-foundation-openapi.yml"),"utf8");for(const a of["canonical Postgres-backed audit store","backend_selection","file_backend_fallback","local/test fallback opt-in"])assert.match(e,new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")))});
+
+test("task-platform contract documents persisted AI-agent management", () => {
+  const platform = fs.readFileSync(path.join(__dirname, "../../docs/api/task-platform-openapi.yml"), "utf8");
+  const assignment = fs.readFileSync(path.join(__dirname, "../../docs/api/task-assignment-openapi.yml"), "utf8");
+  for (const expected of [
+    "/ai-agents:",
+    "/ai-agents/{agentId}:",
+    "Create an operator-managed AI agent",
+    "Update or deactivate an operator-managed AI agent",
+    "agent_version_conflict",
+    "unsupported_agent_role",
+  ]) {
+    assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(assignment, /canonical `\/api\/v1\/ai-agents` task-platform data/);
+});
