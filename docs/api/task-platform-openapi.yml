@@ -20,6 +20,7 @@ paths:
       parameters:
         - name: includeInactive
           in: query
+          description: Defaults to false and returns only active assignable agents for assignment controls. Set true for operator management views that need inactive or non-assignable records.
           schema:
             type: boolean
             default: false
@@ -38,6 +39,82 @@ paths:
                       $ref: '#/components/schemas/AiAgent'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create an operator-managed AI agent
+      operationId: createAiAgent
+      tags: [AI Agents]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAiAgentRequest'
+      responses:
+        '201':
+          description: AI agent created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiAgentEnvelope'
+        '400':
+          description: Validation failed; AI-agent management returns `invalid_agent_slug` or `unsupported_agent_role` for invalid registry records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: AI-agent id already exists; returns `duplicate_agent_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /ai-agents/{agentId}:
+    patch:
+      summary: Update or deactivate an operator-managed AI agent
+      operationId: updateAiAgent
+      tags: [AI Agents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z][a-z0-9-]{1,63}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAiAgentRequest'
+      responses:
+        '200':
+          description: AI agent updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiAgentEnvelope'
+        '400':
+          description: Validation failed; AI-agent management returns `unsupported_agent_role` for invalid registry records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Optimistic concurrency conflict; returns `agent_version_conflict`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /projects:
     get:
       summary: List Projects for the caller tenant
@@ -456,13 +533,17 @@ components:
   schemas:
     AiAgent:
       type: object
-      required: [agentId, displayName, active, assignable]
+      required: [agentId, displayName, role, active, assignable, version]
       properties:
         agentId:
           type: string
+          pattern: '^[a-z][a-z0-9-]{1,63}$'
         displayName:
           type: string
         role:
+          type: string
+          enum: [pm, architect, engineer, qa, sre, human]
+        description:
           type: string
           nullable: true
         executionKind:
@@ -473,6 +554,81 @@ components:
           type: boolean
         environmentScope:
           type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        version:
+          type: integer
+          minimum: 1
+        createdByActorId:
+          type: string
+          nullable: true
+        updatedByActorId:
+          type: string
+          nullable: true
+    AiAgentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AiAgent'
+    CreateAiAgentRequest:
+      type: object
+      required: [agentId, displayName, role]
+      properties:
+        agentId:
+          type: string
+          pattern: '^[a-z][a-z0-9-]{1,63}$'
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [pm, architect, engineer, qa, sre, human]
+        description:
+          type: string
+        executionKind:
+          type: string
+          default: software-factory
+          description: Execution backend/category for the agent. Defaults to `software-factory`.
+        environmentScope:
+          type: string
+          default: default
+          description: Environment or workspace scope where the agent may run. Defaults to `default`.
+        assignable:
+          type: boolean
+          default: true
+          description: Whether the agent can be selected as a task owner. Inactive agents are forced to non-assignable.
+        active:
+          type: boolean
+          default: true
+          description: Whether the agent is active. Creating an inactive agent forces `assignable=false`.
+        metadata:
+          type: object
+          additionalProperties: true
+    UpdateAiAgentRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic concurrency token from the current AiAgent record.
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [pm, architect, engineer, qa, sre, human]
+        description:
+          type: string
+          nullable: true
+        assignable:
+          type: boolean
+        active:
+          type: boolean
+          description: Set false to deactivate. Deactivation also removes assignability. Reactivation requires a normal versioned PATCH and does not automatically restore assignability unless `assignable:true` is supplied.
+        metadata:
+          type: object
+          additionalProperties: true
     TaskOwner:
       type: object
       nullable: true

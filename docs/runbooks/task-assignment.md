@@ -6,9 +6,11 @@
 Allows an authorized Product Manager to assign or reassign an AI agent as the owner of a task.
 
 ## Live route shape
-- Canonical runtime route: `PATCH /tasks/{taskId}/assignment`
+- Compatibility assignment route used by existing PM controls: `PATCH /tasks/{taskId}/assignment`
 - Compatibility alias also accepted by the API server: `PATCH /api/tasks/{taskId}/assignment`
-- Agent roster endpoint for the UI: `GET /ai-agents` (also accepts `/api/ai-agents`)
+- Agent roster endpoint for the existing UI: `GET /ai-agents` (also accepts `/api/ai-agents`)
+- Canonical task-platform writer: `PATCH /api/v1/tasks/{taskId}/owner`
+- Canonical AI-agent management: `GET|POST /api/v1/ai-agents`, `PATCH /api/v1/ai-agents/{agentId}`
 - Task-list read surface used by the thin browser runtime: `GET /tasks`
 - Operator health endpoint: `GET /health/task-assignment`
 - Internal smoke endpoint: `GET /api/internal/smoke-test/task-assignment`
@@ -17,6 +19,8 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Any authenticated caller with `state:read` can see additive owner metadata on `GET /tasks/{taskId}` and `GET /tasks` via `current_owner` and `owner`.
 - That visibility is intentionally read-only; it does **not** grant assignment capability.
 - Only callers with `assignment:write` (PM/admin in the current role map) can mutate owner state through `PATCH /tasks/{taskId}/assignment`.
+- Operator-created persisted agents are assignable through the existing PM controls when they are active, assignable, and use a supported role. The compatibility roster and assignment writer resolve through canonical `ai_agents` first; `lib/audit/agents.js` is only the bootstrap fallback registry.
+- `GET /ai-agents` intentionally returns only active assignable agents in the legacy `{id, display_name, role}` shape. Use `GET /api/v1/ai-agents?includeInactive=true` for operator management views that need inactive or non-assignable records.
 - Restricted telemetry behavior is separate: lower-privilege readers still get owner metadata, while `GET /tasks/{taskId}/observability-summary` omits privileged telemetry fields server-side.
 - Tier-specific projected assignee ids such as `engineer-jr`, `engineer-sr`, and `engineer-principal` are valid owner values and should still be treated as canonical engineer ownership for delivery routing.
 - When a task has an approved Execution Contract, assignment to a tier-specific engineer id evaluates the dispatch policy first. `engineer-sr` is the default Standard-or-higher implementation route, `engineer-jr` is accepted only for constrained Simple tests/fixtures/docs/clear refactors with a clear failing or pending test plan, and `engineer-principal` is required when Principal triggers are present.
@@ -56,7 +60,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - **403 Authorization error** → verify user role includes task-management permission.
 - **403 Only the currently assigned owner may perform this action** → verify the task was not reassigned to a different canonical owner role or tier-specific engineer assignee before the caller retried the action.
 - **409 dispatch_policy_blocked** → verify the proposed engineer tier matches the approved Execution Contract dispatch policy. Common fixes are assigning `engineer-sr`, adding a clear failing/pending test plan before `engineer-jr`, or recording required Principal review before `engineer-principal`/Principal-triggered dispatch.
-- **400 Invalid agent** → verify selected agent exists and is active in the roster source.
+- **400 Invalid agent** → verify selected agent exists, is active, is assignable, and has a supported canonical role in `/api/v1/ai-agents`.
 - **404 Task not found** → verify task id and tenant/workspace scope.
 - **No queue/list update visible** → this repo projects assignee into task state, but does not yet include a dedicated board/inbox UI. Downstream consumers should read `current_owner`/`assignee` from the projection.
 - **Intake Draft assignment rejected before approval** → expected until PM refinement and approval complete; Execution Contract generation alone does not make assignment mutable or dispatch-ready.

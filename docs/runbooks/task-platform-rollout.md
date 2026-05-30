@@ -186,7 +186,7 @@ Dockerized Postgres and set `DATABASE_URL`.
 
 | Compatibility surface | Owner | Behavior | Deprecation criteria |
 |---|---|---|---|
-| `/tasks/*` audit workflow routes | Audit/event runtime owner | Preserve workflow history, task detail, assignment, and task lifecycle clients; supported writes sync into canonical task records | `/api/v1` clients cover task list/detail/mutation needs, zero drift is sustained for the agreed window, and rollback no longer requires projection-first writes |
+| `/tasks/*` audit workflow routes | Audit/event runtime owner | Preserve workflow history, task detail, assignment, and task lifecycle clients; assignment compatibility routes resolve active assignable owners from canonical `ai_agents` and sync supported writes into canonical task records | `/api/v1` clients cover task list/detail/mutation needs, zero drift is sustained for the agreed window, and rollback no longer requires projection-first writes |
 | `/api/tasks/*` and `/api/ai-agents` prefixes | Vercel/API adapter owner | Delegate to shared handlers for browser/docs compatibility | Browser config and docs point to `/api/v1` or `/backend/api/v1`, and route telemetry shows no compatibility traffic |
 | Direct file-backed task/audit factories | Test harness owner | Used by isolated tests and explicit local fallback only | No production/staging config references file backend; local docs and scripts use Dockerized Postgres by default |
 
@@ -198,6 +198,8 @@ curl -sS \
   -H "Authorization: Bearer <admin-jwt>" \
   https://<host>/api/v1/ai-agents
 ```
+
+For assignment compatibility checks, create or update an active assignable agent through `/api/v1/ai-agents`, confirm it appears in `GET /ai-agents`, then assign it through `PATCH /tasks/<task-id>/assignment`. Inactive or non-assignable records should be hidden from `GET /ai-agents` and rejected by assignment.
 
 ```bash
 curl -sS \

@@ -2,3 +2,34 @@ const test=require("node:test"),assert=require("node:assert/strict"),fs=require(
 function responseSetCookies(e){return typeof e.getSetCookie=="function"?e.getSetCookie():(e.get("set-cookie")?[e.get("set-cookie")]:[])}
 test("registration auth rejects invalid credentials without issuing sessions",async()=>{await withServer(async({baseUrl:e})=>{let o=await fetch(`${e}/auth/register`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"security-registration@example.com",password:"CorrectHorse123!"})});assert.equal(o.status,201),o=await fetch(`${e}/auth/login`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"security-registration@example.com",password:"WrongCorrectHorse123!"})}),assert.equal(o.status,401),assert.equal(responseSetCookies(o.headers).length,0),assert.equal((await o.json()).error.code,"invalid_credentials"),o=await fetch(`${e}/auth/password-reset/request`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"unknown-security-registration@example.com"})}),assert.equal(o.status,200),assert.match((await o.json()).message,/If the email is eligible/i),o=await fetch(`${e}/auth/password-reset/confirm`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:"not-a-real-token",password:"NewCorrectHorse123!"})}),assert.equal(o.status,401),o=await fetch(`${e}/auth/magic-link/request`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"security-registration@example.com"})}),assert.equal(o.status,410)},{publicAppUrl:"https://app.example",sessionSecret:"security-session-secret",registrationMode:"open",requireEmailVerification:!1})});
 test("production audit API runtime rejects file persistence before request handling",()=>{const{assertAuditBackendConfiguration}=require("../../lib/audit/config");assert.throws(()=>assertAuditBackendConfiguration({backend:"file",runtimeEnv:"production",allowFileBackend:!0}),/File audit backend is restricted to local development\/test/)});
+
+test("AI-agent management mutations require agents write permission", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const reader = {
+      authorization: `Bearer ${sign({ sub: "reader", tenant_id: "tenant-sec", roles: ["reader"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    const pm = {
+      authorization: `Bearer ${sign({ sub: "pm", tenant_id: "tenant-sec", roles: ["pm"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    let response = await fetch(`${baseUrl}/api/v1/ai-agents`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...reader },
+      body: JSON.stringify({ agentId: "qa-sec", displayName: "Security QA", role: "qa" }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...pm },
+      body: JSON.stringify({ agentId: "qa-sec", displayName: "Security QA", role: "qa" }),
+    });
+    assert.equal(response.status, 201);
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents/qa-sec`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", ...reader },
+      body: JSON.stringify({ version: 1, active: false }),
+    });
+    assert.equal(response.status, 403);
+  });
+});
