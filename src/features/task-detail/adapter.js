@@ -166,6 +166,13 @@ on/json" }, body: JSON.stringify(a) });
 /json" }, body: JSON.stringify(a) });
   }, fetchAssignableAgents() {
     return t("/ai-agents");
+  }, async fetchAgentRoster() {
+    try {
+      const s = await t("/v1/ai-agents?includeInactive=true");
+      return { items: s.data || s.items || [] };
+    } catch {
+      return t("/ai-agents");
+    }
   }, assignTaskOwner(s, e) {
     return t(`/tasks/${encodeURIComponent(s)}/assignment`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ agentId: e }) });
   }, changeTaskStage(s, e, a = {}) {

@@ -688,7 +688,7 @@ Writes to the task assignment endpoint and refreshes the projected owner after s
       Ut({ kind: "error", message: n.message || "Assignment update failed." });
     }
   }, children: [a("label", { children: ["Owner", a("select", { value: Et, onChange: (t) => en(t.target.value), children: [e("option", { value: "", children: "Un\
-assigned" }), Ne.map((t) => a("option", { value: t.id, children: [t.display_name, t.role ? ` \xB7 ${t.role}` : ""] }, t.id))] })] }), e("div", { className: "ass\
+assigned" }), Ne.filter((t) => t.active !== false && t.assignable !== false).map((t) => a("option", { value: t.id || t.agentId, children: [t.display_name || t.displayName, t.role ? ` \xB7 ${t.role}` : ""] }, t.id || t.agentId))] })] }), e("div", { className: "ass\
 ignment-form__actions", children: e("button", { type: "submit", disabled: Ee.kind === "loading", children: Ee.kind === "loading" ? "Saving\u2026" : "Save owner" }) }),
   Ee.kind !== "idle" ? e("p", { className: `assignment-status assignment-status--${Ee.kind}`, role: Ee.kind === "error" ? "alert" : "status", children: Ee.message }) :
   null] }) : e("p", { className: "assignment-status", role: "status", children: s.route?.taskId ? "Assignment controls are available to PM/admin bearer tokens." :

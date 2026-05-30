@@ -190,8 +190,8 @@ ror", message: n.message || "Task detail load failed." } } });
     };
   }, [X, yt, i, o, p]), c.useEffect(() => {
     let t = false;
-    return X ? (qt({ kind: "loading", message: "Loading canonical role roster." }), p.fetchAssignableAgents().then((n) => {
-      t || (ha(n.items || []), qt({ kind: "ready", message: "" }));
+    return X ? (qt({ kind: "loading", message: "Loading canonical role roster." }), (p.fetchAgentRoster || p.fetchAssignableAgents)().then((n) => {
+      t || (ha(n.items || n.data || []), qt({ kind: "ready", message: "" }));
     }).catch((n) => {
       t || (ha([]), qt({ kind: "error", message: n?.message || "Canonical role roster unavailable. Role inbox routing cannot be confirmed right now." }));
     }), Ya(h) ? () => {

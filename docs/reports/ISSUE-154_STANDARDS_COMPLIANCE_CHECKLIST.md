@@ -4,6 +4,12 @@
 - Standards document: `docs/standards/software-development-standards.md`
 - Required gap statement format: `Gap observed: X. Documented rationale: Y (source Z).`
 
+## Issue #240 Addendum
+- Change or task ID: Issue #240, persisted AI agent routing through assignment, inbox, and PM overview surfaces.
+- Scope summary: Preserved the existing source-only browser visual contract while changing roster source and supported-role owner routing semantics.
+- Evidence in this change: `src/app/AppRouteModel.test.tsx` keeps the canonical role inbox and PM overview route model covered; `DESIGN.md` records that the assignment select, role inbox, and PM overview visual contract is unchanged; `docs/api/task-owner-surfaces-openapi.yml` records persisted owner metadata readability for historical owners.
+- Gap observed: Dynamic role policy remains outside this change. Documented rationale: Unsupported roles must stay out of live routing until a versioned role-policy layer owns role keys, assignment eligibility, inbox buckets, PM overview buckets, delegation mapping, permissions, and metrics dimensions (source issue #240).
+
 ## Change Metadata
 - Change or task ID: Issue #154, frontend source modularization.
 - Owner: Codex implementation agent.

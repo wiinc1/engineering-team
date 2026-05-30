@@ -746,6 +746,7 @@ Motion is limited to functional state feedback.
 Moving JSX, route ownership, adapters, or app-shell helpers without changing rendered copy, CSS, tokens, layout rules, or interaction semantics is a source-only UI refactor. These changes must keep the existing visual contract intact and rely on the current visual, accessibility, browser, and performance tests for evidence instead of adding new tokens.
 
 - Issue #154 frontend source modularization preserves the existing sign-in, task workspace, task detail, task creation, and admin-user visual semantics while moving browser source into route/model modules.
+- Issue #240 persisted agent routing preserves the existing assignment select, role inbox, and PM overview visual contract while changing roster source and owner-routing semantics only.
 - Source-only UI refactors should update README, diagrams, or standards evidence to explain ownership changes, and should update this file only when the reusable visual contract changes.
 
 ## Agent Usage

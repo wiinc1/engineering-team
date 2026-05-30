@@ -434,6 +434,14 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
       });
     },
     fetchAssignableAgents() { return request('/ai-agents'); },
+    async fetchAgentRoster() {
+      try {
+        const response = await request('/v1/ai-agents?includeInactive=true');
+        return { items: response.data || response.items || [] };
+      } catch {
+        return request('/ai-agents');
+      }
+    },
     assignTaskOwner(taskId, agentId) {
       return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });
     },

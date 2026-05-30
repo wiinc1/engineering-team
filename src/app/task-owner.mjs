@@ -28,8 +28,18 @@ function y(e) {
 function I(e = {}) {
   return !!(e.intake_draft || e.intakeDraft || String(e.current_stage || "").trim().toUpperCase() === "DRAFT");
 }
+function normalizeAgentOption(e = {}) {
+  const n = e.id || e.agentId || e.agent_id || e.owner_agent_id || e.actor_id;
+  if (!n) return null;
+  const r = e.display_name || e.displayName || e.owner_display_name || e.display_name || n;
+  const t = e.role || e.owner_role || null;
+  const i = e.active !== false && e.owner_active !== false;
+  const o = e.assignable !== false && e.owner_assignable !== false;
+  const s = normalizeRoleKey(t);
+  return { id: String(n), label: `${r}${t ? ` \xB7 ${t}` : ""}`, role: s, active: i, assignable: o, displayName: r };
+}
 function mapAgentOptions(e = []) {
-  return e.map((n) => ({ id: n.id, label: `${n.display_name}${n.role ? ` \xB7 ${n.role}` : ""}`, role: normalizeRoleKey(n.role) }));
+  return e.map(normalizeAgentOption).filter(Boolean);
 }
 function normalizeRoleKey(e) {
   if (typeof e != "string") return null;
@@ -44,10 +54,27 @@ function getRoleInboxLabel(e) {
 function d(e) {
   return !e || typeof e != "object" ? false : e.redacted === true || e.visibility === "hidden" || e.policy_state === "hidden";
 }
+function ownerOptionFromTask(e = {}) {
+  if (!e?.owner || d(e.owner)) return null;
+  const n = normalizeAgentOption({
+    id: e.owner.agentId || e.owner.agent_id || e.owner.actor_id || e.current_owner,
+    displayName: e.owner.displayName || e.owner.display_name || e.owner.displayName || e.owner.display_name,
+    role: e.owner.role,
+    active: e.owner.active,
+    assignable: e.owner.assignable
+  });
+  return n?.role ? n : null;
+}
+function resolveOwnerOption(e, n) {
+  return n.get(e?.current_owner) || ownerOptionFromTask(e);
+}
 function resolveOwnerPresentation(e, n) {
   if (!e.current_owner) return { label: "Unassigned", detail: "No owner assigned", tone: "unassigned", filterValue: UNASSIGNED_FILTER_VALUE };
-  const r = n.get(e.current_owner);
-  if (r) return { label: r.label, detail: `Owner: ${r.label}`, tone: "assigned", filterValue: e.current_owner };
+  const r = resolveOwnerOption(e, n);
+  if (r) {
+    const t = r.active === false ? " Historical owner is inactive." : r.assignable === false ? " Historical owner is not assignable for new work." : "";
+    return { label: r.label, detail: `Owner: ${r.label}.${t}`, tone: "assigned", filterValue: e.current_owner };
+  }
   const t = y(e.current_owner);
   return t ? { label: t, detail: `Owner: ${t}`, tone: "assigned", filterValue: e.current_owner } : d(e.owner) ? { label: "Owner hidden", detail: "Owner identity\
  is intentionally redacted on this surface", tone: "fallback", filterValue: e.current_owner } : { label: "Unknown owner", detail: `Owner record unavailable for ${e.
@@ -71,7 +98,7 @@ an approval or escalation handling.", isFallback: false };
   if (String(e?.current_stage || "").trim().toUpperCase() === "SRE_MONITORING") return { inboxRole: "sre", reason: "stage-sre-monitoring", routingLabel: "Routed\
  to SRE because the task is actively in the SRE monitoring stage.", isFallback: false };
   if (!e?.current_owner) return { inboxRole: null, reason: "unassigned", routingLabel: "Not routed to a role inbox until an owner is assigned.", isFallback: false };
-  const c = n.get(e.current_owner);
+  const c = resolveOwnerOption(e, n);
   if (c?.role) return { inboxRole: c.role, reason: "matched", routingLabel: `Routed to ${getRoleInboxLabel(c.role)} because the assigned owner maps to that cano\
 nical role.`, isFallback: false };
   const u = h(e.current_owner);
@@ -87,7 +114,7 @@ function resolvePmOverviewBucket(e, n) {
   const r = resolveOwnerPresentation(e, n), t = e?.current_owner;
   if (!t) return { key: "unassigned", label: "Unassigned", routingCue: "Unassigned", routingReason: "No owner is assigned, so this task is visible in the Unassi\
 gned bucket.", ownerPresentation: r };
-  const i = n.get(t), o = h(t);
+  const i = resolveOwnerOption(e, n), o = h(t);
   return i?.role && f.has(i.role) ? { key: i.role, label: getPmOverviewBucketLabel(i.role), routingCue: `${getRoleInboxLabel(i.role)} route`, routingReason: `Ro\
 uted to ${getRoleInboxLabel(i.role)} because the assigned owner maps to that canonical role.`, ownerPresentation: r } : o && f.has(o) ? { key: o, label: getPmOverviewBucketLabel(
   o), routingCue: `${getRoleInboxLabel(o)} route`, routingReason: `Routed to ${getRoleInboxLabel(o)} because the assigned owner follows the canonical ${o} owner\
