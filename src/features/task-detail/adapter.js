@@ -1,3 +1,5 @@
+const { normalizeCanonicalTaskList } = require("./canonical-list");
+
 function buildHistoryQuery(n = {}, r = {}, o = {}) {
   const i = new URLSearchParams();
   return n.eventType && i.append("eventType", n.eventType), n.actorId && i.set("actorId", n.actorId), o.from && i.set("from", o.from), o.to && i.set("to", o.to),
@@ -82,7 +84,7 @@ function createTaskDetailApiClient({ baseUrl: n = "", fetchImpl: r = fetch, getH
   return { fetchTaskSummary(s) {
     return t(`/tasks/${encodeURIComponent(s)}`);
   }, fetchTaskList() {
-    return t("/tasks");
+    return t("/v1/tasks").then(normalizeCanonicalTaskList).catch(() => t("/tasks"));
   }, fetchTaskHistory(s, { filters: e, pagination: a, range: c } = {}) {
     const l = buildHistoryQuery(e, a, c).toString();
     return t(`/tasks/${encodeURIComponent(s)}/history${l ? `?${l}` : ""}`);

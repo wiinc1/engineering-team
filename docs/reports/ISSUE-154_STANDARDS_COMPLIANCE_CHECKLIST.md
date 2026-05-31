@@ -86,3 +86,16 @@
 - Tests added or updated: `tests/unit/governance/browser-source-readability.test.js`, `src/app/AppRouteModel.test.tsx`, and existing route smoke coverage in `src/app/AppNavigation.test.tsx` ran against the extracted modules.
 - Rollout or rollback notes: `ff_frontend_source_modularization` is documented as a source/refactor rollout label only; no runtime branch was added. Roll back by reverting the refactor commit, including `package.json`, `scripts/check-browser-source-readability.js`, `src/app/routes/`, `src/app/app-model.jsx`, README, diagrams, and baseline changes.
 - Docs updated: `DESIGN.md`, `README.md`, `docs/diagrams/workflow-frontend-source-modularization.mmd`, `docs/diagrams/architecture-frontend-source-modularization.mmd`, and this checklist.
+
+## Issue #252 Addendum - Canonical Task Workspace List Reads
+
+- Change or task ID: Issue #252, route task workspace list reads to the canonical task-platform API.
+- Owner: Codex implementation agent.
+- Date: 2026-05-31.
+- Scope summary: The task-detail adapter now reads the workspace list from `/v1/tasks` first, normalizes canonical task-platform records into the existing list shape, preserves legacy-shaped compatibility rows, and falls back to `/tasks` only if the canonical list request fails.
+- Standards baseline reviewed: `docs/standards/software-development-standards.md`.
+- Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring.
+- Standards gaps or exceptions: No new exception. Existing legacy task-detail adapter maintainability findings remain at or below the recorded baseline while the canonical-list mapper is isolated in a smaller helper.
+- Evidence in this change: `src/features/task-detail/canonical-list.browser.js`, `src/features/task-detail/canonical-list.js`, `tests/unit/task-detail-canonical-list.test.js`, `tests/browser/task-detail.browser.spec.ts`, and `DESIGN.md`.
+- Validation evidence: `node --test tests/unit/task-detail-adapter.test.js tests/unit/task-detail-canonical-list.test.js`; `npx vitest run src/app/AppNavigation.test.tsx src/app/App.test.tsx`; `npm run standards:check`.
+- Rollout and rollback: Deploy PR #253 to move normal workspace list reads off the expensive legacy projection path. Roll back by reverting the adapter and canonical-list helper changes, which restores `/tasks` as the primary workspace list source.
