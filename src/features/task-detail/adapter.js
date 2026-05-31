@@ -70,6 +70,26 @@ async function parseJsonResponse(n) {
   }
   return r;
 }
+function normalizeCanonicalTaskStatus(n = "") {
+  const r = String(n || "").trim();
+  return r || "BACKLOG";
+}
+function isClosedCanonicalTask(n = {}) {
+  const r = normalizeCanonicalTaskStatus(n.status).toUpperCase();
+  return !!(n.closedAt || n.closed_at || ["DONE", "CLOSED"].includes(r));
+}
+function canonicalTaskToListItem(n = {}) {
+  const r = n.taskId || n.task_id || n.id || null, o = normalizeCanonicalTaskStatus(n.status), i = n.owner?.agentId || n.owner_agent_id || null, t = n.updatedAt ||
+  n.updated_at || n.createdAt || n.created_at || null, s = n.projectId || n.project_id || n.project?.projectId || null;
+  return { task_id: r, tenant_id: n.tenantId || n.tenant_id || null, title: n.title || r || "Untitled task", task_type: n.taskType || n.task_type || null, priority: n.
+  priority || null, current_stage: o, current_owner: i, owner: i ? { actor_id: i, display_name: n.owner?.displayName || n.owner?.display_name || i, role: n.owner?.
+  role || null } : null, blocked: o.toUpperCase() === "BLOCKED", closed: isClosedCanonicalTask(n), waiting_state: null, next_required_action: null, queue_entered_at: n.
+  createdAt || n.created_at || null, wip_owner: i, wip_started_at: null, freshness: { status: t ? "fresh" : "unknown", last_updated_at: t }, status_indicator: o.toLowerCase(),
+  intake_draft: o.toUpperCase() === "DRAFT", project: n.project || null, project_id: s };
+}
+function normalizeCanonicalTaskList(n = {}) {
+  return { items: (n.data || n.items || []).map(canonicalTaskToListItem) };
+}
 function createTaskDetailApiClient({ baseUrl: n = "", fetchImpl: r = fetch, getHeaders: o, onAuthFailure: i } = {}) {
   const t = async (s, e = {}) => {
     const a = await r(`${n}${s}`, { method: e.method || "GET", headers: { ...typeof o == "function" ? await o() : void 0, ...e.headers || {} }, body: e.body });
@@ -81,8 +101,12 @@ function createTaskDetailApiClient({ baseUrl: n = "", fetchImpl: r = fetch, getH
   };
   return { fetchTaskSummary(s) {
     return t(`/tasks/${encodeURIComponent(s)}`);
-  }, fetchTaskList() {
-    return t("/tasks");
+  }, async fetchTaskList() {
+    try {
+      return normalizeCanonicalTaskList(await t("/v1/tasks"));
+    } catch {
+      return t("/tasks");
+    }
   }, fetchTaskHistory(s, { filters: e, pagination: a, range: c } = {}) {
     const l = buildHistoryQuery(e, a, c).toString();
     return t(`/tasks/${encodeURIComponent(s)}/history${l ? `?${l}` : ""}`);
