@@ -9,7 +9,6 @@
         "lib/audit/execution-contracts.js",
         "lib/audit/feature-flags.js",
         "lib/audit/http.js",
-        "lib/audit/orchestration.js",
         "lib/audit/postgres.js",
         "lib/audit/review-questions.js",
         "lib/audit/store.js",

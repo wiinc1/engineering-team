@@ -114,6 +114,7 @@ Behavior:
 - The runtime-backed specialist delegation path treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical flag and still honors `FF_SPECIALIST_DELEGATION` for compatibility.
 - Disabling the flag fails closed to coordinator handling and does not claim specialist ownership.
 - `SPECIALIST_DELEGATION_RUNNER` must resolve to the real runtime bridge command before delegated ownership can be emitted.
+- Pilot readiness verification uses `npm run pilot:delegation:readiness`, which requires this flag to be enabled and `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'` before writing app-dispatched ownership evidence.
 
 ## Orchestration
 

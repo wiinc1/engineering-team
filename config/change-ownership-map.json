@@ -143,7 +143,7 @@
     {
       "name": "audit-foundation",
       "runtime_patterns": [
-        "^lib/audit/(?!http\\.js$).+",
+        "^lib/audit/(?!http\\.js$)(?!orchestration(?:-planner)?\\.js$).+",
         "^lib/http/standard\\.js$",
         "^lib/monitoring/pushgateway\\.js$",
         "^db/migrations/00[1-5]_.*\\.sql$",
@@ -484,7 +484,7 @@
     {
       "name": "task-platform",
       "runtime_patterns": [
-        "^lib/task-platform/",
+        "^lib/task-platform/(?!pilot-agents\\.js$)",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^db/migrations/012_projects(\\.down)?\\.sql$",
@@ -530,6 +530,32 @@
           "patterns": [
             "^docs/runbooks/task-platform-rollout\\.md$",
             "^docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pilot-delegation-readiness",
+      "runtime_patterns": [
+        "^lib/audit/orchestration(?:-planner)?\\.js$",
+        "^lib/task-platform/pilot-agents\\.js$",
+        "^scripts/(seed-pilot-agents|verify-pilot-delegation-readiness)\\.js$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit",
+          "patterns": [
+            "^tests/unit/pilot-delegation-readiness\\.test\\.js$",
+            "^tests/unit/orchestration\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "runbook",
+          "patterns": [
+            "^docs/runbooks/supervised-autonomous-pilot\\.md$",
+            "^docs/runbooks/specialist-delegation\\.md$"
           ]
         }
       ]
