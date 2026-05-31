@@ -79,3 +79,34 @@ test('task detail client falls back to legacy task list when canonical list is u
   assert.deepEqual(requests, ['/backend/v1/tasks', '/backend/tasks']);
   assert.equal(list.items[0].task_id, 'TSK-LEGACY');
 });
+
+test('task detail client preserves legacy-shaped list items returned by canonical path', async () => {
+  const client = createTaskDetailApiClient({
+    baseUrl: '/backend',
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            task_id: 'TSK-INTAKE',
+            tenant_id: 'tenant-a',
+            title: 'Untitled intake draft',
+            current_stage: 'DRAFT',
+            current_owner: 'pm',
+            intake_draft: true,
+            waiting_state: 'task_refinement',
+            next_required_action: 'PM refinement required',
+          },
+        ],
+      }),
+    }),
+  });
+
+  const list = await client.fetchTaskList();
+
+  assert.equal(list.items[0].task_id, 'TSK-INTAKE');
+  assert.equal(list.items[0].current_stage, 'DRAFT');
+  assert.equal(list.items[0].waiting_state, 'task_refinement');
+  assert.equal(list.items[0].next_required_action, 'PM refinement required');
+  assert.equal(list.items[0].intake_draft, true);
+});

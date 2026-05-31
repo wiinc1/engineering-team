@@ -1,3 +1,4 @@
+import { normalizeCanonicalTaskList } from './canonical-list.browser';
 function buildHistoryQuery(filters = {}, pagination = {}, range = {}) {
   const params = new URLSearchParams();
   if (filters.eventType) params.append('eventType', filters.eventType);
@@ -199,61 +200,6 @@ async function parseJsonResponse(response) {
   }
   return payload;
 }
-
-function normalizeCanonicalTaskStatus(status = '') {
-  const normalized = String(status || '').trim();
-  return normalized || 'BACKLOG';
-}
-
-function isClosedCanonicalTask(task = {}) {
-  const status = normalizeCanonicalTaskStatus(task.status).toUpperCase();
-  return Boolean(task.closedAt || task.closed_at || ['DONE', 'CLOSED'].includes(status));
-}
-
-function canonicalTaskToListItem(task = {}) {
-  const taskId = task.taskId || task.task_id || task.id || null;
-  const status = normalizeCanonicalTaskStatus(task.status);
-  const ownerAgentId = task.owner?.agentId || task.owner_agent_id || null;
-  const updatedAt = task.updatedAt || task.updated_at || task.createdAt || task.created_at || null;
-  const projectId = task.projectId || task.project_id || task.project?.projectId || null;
-
-  return {
-    task_id: taskId,
-    tenant_id: task.tenantId || task.tenant_id || null,
-    title: task.title || taskId || 'Untitled task',
-    task_type: task.taskType || task.task_type || null,
-    priority: task.priority || null,
-    current_stage: status,
-    current_owner: ownerAgentId,
-    owner: ownerAgentId ? {
-      actor_id: ownerAgentId,
-      display_name: task.owner?.displayName || task.owner?.display_name || ownerAgentId,
-      role: task.owner?.role || null,
-    } : null,
-    blocked: status.toUpperCase() === 'BLOCKED',
-    closed: isClosedCanonicalTask(task),
-    waiting_state: null,
-    next_required_action: null,
-    queue_entered_at: task.createdAt || task.created_at || null,
-    wip_owner: ownerAgentId,
-    wip_started_at: null,
-    freshness: {
-      status: updatedAt ? 'fresh' : 'unknown',
-      last_updated_at: updatedAt,
-    },
-    status_indicator: status.toLowerCase(),
-    intake_draft: status.toUpperCase() === 'DRAFT',
-    project: task.project || null,
-    project_id: projectId,
-  };
-}
-
-function normalizeCanonicalTaskList(payload = {}) {
-  return {
-    items: (payload.data || payload.items || []).map(canonicalTaskToListItem),
-  };
-}
-
 export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, getHeaders, onAuthFailure } = {}) {
   const request = async (path, init = {}) => {
     const response = await fetchImpl(`${baseUrl}${path}`, {
@@ -274,13 +220,7 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
 
   return {
     fetchTaskSummary(taskId) { return request(`/tasks/${encodeURIComponent(taskId)}`); },
-    async fetchTaskList() {
-      try {
-        return normalizeCanonicalTaskList(await request('/v1/tasks'));
-      } catch {
-        return request('/tasks');
-      }
-    },
+    fetchTaskList() { return request('/v1/tasks').then(normalizeCanonicalTaskList).catch(() => request('/tasks')); },
     fetchTaskHistory(taskId, { filters, pagination, range } = {}) {
       const query = buildHistoryQuery(filters, pagination, range).toString();
       return request(`/tasks/${encodeURIComponent(taskId)}/history${query ? `?${query}` : ''}`);
