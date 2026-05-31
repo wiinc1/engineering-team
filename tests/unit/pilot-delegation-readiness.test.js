@@ -16,9 +16,53 @@ const {
 const repoRoot = path.join(__dirname, '..', '..');
 const fixtureRunner = `node ${path.join(repoRoot, 'tests', 'fixtures', 'specialist-runtime-runner.js')}`;
 
+function tempService(prefix) {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  return createTaskPlatformService({ baseDir, agentRegistry: [] });
+}
+
+function readyChildTask(overrides = {}) {
+  return {
+    task_id: 'TSK-PILOT-1',
+    title: 'Implement app-dispatched proof',
+    task_type: 'engineer',
+    current_stage: 'TODO',
+    closed: false,
+    blocked: false,
+    waiting_state: null,
+    ...overrides,
+  };
+}
+
+function singleChildRelationships(run = null) {
+  return {
+    child_task_ids: ['TSK-PILOT-1'],
+    child_dependencies: {},
+    ...(run ? { orchestration_state: run } : {}),
+  };
+}
+
+async function appDispatchRun() {
+  return evaluateOrchestrationStart({
+    taskId: 'PILOT-PARENT',
+    relationships: singleChildRelationships(),
+    childTaskSummaries: [readyChildTask()],
+    dispatchWork: async () => ({
+      mode: 'delegated',
+      agentId: 'engineer',
+      specialist: 'engineer',
+      message: 'runtime handled by engineer',
+      attribution: { handledBy: 'engineer', delegated: true, coordinator: 'pm' },
+      metadata: {
+        sessionId: 'session-app-1',
+        artifactPath: '/tmp/specialist-delegation.jsonl',
+      },
+    }),
+  });
+}
+
 test('ensurePilotAgents creates active assignable supported-role pilot agents', async () => {
-  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pilot-agent-seed-'));
-  const taskPlatform = createTaskPlatformService({ baseDir, agentRegistry: [] });
+  const taskPlatform = tempService('pilot-agent-seed-');
 
   const result = await ensurePilotAgents({ taskPlatform, tenantId: 'tenant-pilot', actorId: 'pm-pilot' });
 
@@ -33,8 +77,7 @@ test('ensurePilotAgents creates active assignable supported-role pilot agents', 
 });
 
 test('ensurePilotAgents updates inactive or non-assignable existing pilot agents', async () => {
-  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pilot-agent-update-'));
-  const taskPlatform = createTaskPlatformService({ baseDir, agentRegistry: [] });
+  const taskPlatform = tempService('pilot-agent-update-');
   taskPlatform.createAiAgent({
     tenantId: 'tenant-pilot',
     actorId: 'setup',
@@ -57,35 +100,7 @@ test('ensurePilotAgents updates inactive or non-assignable existing pilot agents
 });
 
 test('orchestration dispatch persists runtime ownership evidence for app workflow proof', async () => {
-  const run = await evaluateOrchestrationStart({
-    taskId: 'PILOT-PARENT',
-    relationships: {
-      child_task_ids: ['TSK-PILOT-1'],
-      child_dependencies: {},
-    },
-    childTaskSummaries: [
-      {
-        task_id: 'TSK-PILOT-1',
-        title: 'Implement app-dispatched proof',
-        task_type: 'engineer',
-        current_stage: 'TODO',
-        closed: false,
-        blocked: false,
-        waiting_state: null,
-      },
-    ],
-    dispatchWork: async () => ({
-      mode: 'delegated',
-      agentId: 'engineer',
-      specialist: 'engineer',
-      message: 'runtime handled by engineer',
-      attribution: { handledBy: 'engineer', delegated: true, coordinator: 'pm' },
-      metadata: {
-        sessionId: 'session-app-1',
-        artifactPath: '/tmp/specialist-delegation.jsonl',
-      },
-    }),
-  });
+  const run = await appDispatchRun();
 
   const item = run.items[0];
   assert.equal(item.actualAgent, 'engineer');
@@ -94,22 +109,8 @@ test('orchestration dispatch persists runtime ownership evidence for app workflo
   assert.equal(item.runtimeAttribution.delegated, true);
 
   const view = buildOrchestrationView({
-    relationships: {
-      child_task_ids: ['TSK-PILOT-1'],
-      child_dependencies: {},
-      orchestration_state: run,
-    },
-    childTaskSummaries: [
-      {
-        task_id: 'TSK-PILOT-1',
-        title: 'Implement app-dispatched proof',
-        task_type: 'engineer',
-        current_stage: 'TODO',
-        closed: false,
-        blocked: false,
-        waiting_state: null,
-      },
-    ],
+    relationships: singleChildRelationships(run),
+    childTaskSummaries: [readyChildTask()],
   });
 
   assert.equal(view.run.items[0].sessionId, 'session-app-1');

@@ -80,81 +80,98 @@ function assertAppDispatchEvidence(evidence) {
   }
 }
 
-async function runPilotDelegationReadiness(options = {}) {
-  const baseDir = resolveBaseDir(options, options.env || process.env);
+function createReadinessContext(options = {}) {
   const env = options.env || process.env;
-  const tenantId = options.tenantId || env.TENANT_ID || 'engineering-team';
-  const actorId = options.actorId || env.PILOT_AGENT_SEED_ACTOR_ID || 'system:pilot-readiness';
-  const runtimeConfig = resolveRuntimeConfig(options, env);
-  assertRuntimeConfig(runtimeConfig, options);
+  return {
+    options,
+    env,
+    baseDir: resolveBaseDir(options, env),
+    tenantId: options.tenantId || env.TENANT_ID || 'engineering-team',
+    actorId: options.actorId || env.PILOT_AGENT_SEED_ACTOR_ID || 'system:pilot-readiness',
+    runtimeConfig: resolveRuntimeConfig(options, env),
+  };
+}
 
-  const taskPlatform = options.taskPlatform || createTaskPlatformService({
+function createReadinessTaskPlatform({ options, env, baseDir }) {
+  return options.taskPlatform || createTaskPlatformService({
     baseDir,
     taskPlatformBackend: options.taskPlatformBackend || env.TASK_PLATFORM_BACKEND,
     connectionString: options.connectionString || env.DATABASE_URL,
     agentRegistry: [],
   });
-  const pilotAgents = await ensurePilotAgents({ taskPlatform, tenantId, actorId });
+}
+
+async function seedAndAssertPilotAgents(context) {
+  const taskPlatform = createReadinessTaskPlatform(context);
+  const pilotAgents = await ensurePilotAgents({
+    taskPlatform,
+    tenantId: context.tenantId,
+    actorId: context.actorId,
+  });
   if (!pilotAgents.ok) {
     throw new Error(`Pilot AI-agent roster is incomplete: missing roles ${pilotAgents.missingRoles.join(', ')}`);
   }
+  return pilotAgents;
+}
 
-  const taskId = options.taskId || 'TSK-PILOT-DELEGATION-PROOF';
-  const title = options.title || DEFAULT_PROOF_TASK_TITLE;
+function proofChildTask(taskId, title) {
+  return {
+    task_id: taskId,
+    title,
+    task_type: 'engineer',
+    current_stage: 'TODO',
+    closed: false,
+    blocked: false,
+    waiting_state: null,
+  };
+}
+
+function proofRelationships(taskId, run = null) {
+  return {
+    child_task_ids: [taskId],
+    child_dependencies: {},
+    ...(run ? { orchestration_state: run } : {}),
+  };
+}
+
+function readinessDispatchOptions(context) {
+  return {
+    baseDir: context.baseDir,
+    coordinatorAgent: context.actorId,
+    delegationRunnerCommand: context.runtimeConfig.specialistDelegationRunner,
+    runnerEnv: context.options.runnerEnv || context.env,
+  };
+}
+
+async function runReadinessDispatch(context) {
+  const taskId = context.options.taskId || 'TSK-PILOT-DELEGATION-PROOF';
+  const title = context.options.title || DEFAULT_PROOF_TASK_TITLE;
   const run = await evaluateOrchestrationStart({
     taskId: 'PILOT-ORCHESTRATION-PROOF',
-    relationships: {
-      child_task_ids: [taskId],
-      child_dependencies: {},
-    },
-    childTaskSummaries: [
-      {
-        task_id: taskId,
-        title,
-        task_type: 'engineer',
-        current_stage: 'TODO',
-        closed: false,
-        blocked: false,
-        waiting_state: null,
-      },
-    ],
-    coordinatorAgent: actorId,
+    relationships: proofRelationships(taskId),
+    childTaskSummaries: [proofChildTask(taskId, title)],
+    coordinatorAgent: context.actorId,
     concurrencyLimit: 1,
-    dispatchWork: options.dispatchWork || null,
-    dispatchOptions: {
-      baseDir,
-      coordinatorAgent: actorId,
-      delegationRunnerCommand: runtimeConfig.specialistDelegationRunner,
-      runnerEnv: options.runnerEnv || env,
-    },
+    dispatchWork: context.options.dispatchWork || null,
+    dispatchOptions: readinessDispatchOptions(context),
   });
-  const view = buildOrchestrationView({
-    relationships: {
-      child_task_ids: [taskId],
-      child_dependencies: {},
-      orchestration_state: run,
-    },
-    childTaskSummaries: [
-      {
-        task_id: taskId,
-        title,
-        task_type: 'engineer',
-        current_stage: 'TODO',
-        closed: false,
-        blocked: false,
-        waiting_state: null,
-      },
-    ],
-  });
-  const appWorkflowDispatch = appDispatchEvidenceFromRun(run);
-  assertAppDispatchEvidence(appWorkflowDispatch);
+  return { taskId, title, run };
+}
 
-  const evidence = {
+function buildReadinessView({ taskId, title, run }) {
+  return buildOrchestrationView({
+    relationships: proofRelationships(taskId, run),
+    childTaskSummaries: [proofChildTask(taskId, title)],
+  });
+}
+
+function buildReadinessEvidence({ context, pilotAgents, appWorkflowDispatch, run, view }) {
+  return {
     evidenceVersion: 'pilot-delegation-readiness.v1',
     validatedAt: new Date().toISOString(),
-    targetEnvironment: options.targetEnvironment || env.PILOT_TARGET_ENVIRONMENT || env.VERCEL_ENV || 'local',
-    tenantId,
-    runtimeConfig,
+    targetEnvironment: context.options.targetEnvironment || context.env.PILOT_TARGET_ENVIRONMENT || context.env.VERCEL_ENV || 'local',
+    tenantId: context.tenantId,
+    runtimeConfig: context.runtimeConfig,
     pilotAgents,
     appWorkflowDispatch,
     orchestration: {
@@ -167,7 +184,18 @@ async function runPilotDelegationReadiness(options = {}) {
       manualActionClassificationRequired: true,
     },
   };
-  const outputPath = writeEvidence(baseDir, evidence, options.outputPath);
+}
+
+async function runPilotDelegationReadiness(options = {}) {
+  const context = createReadinessContext(options);
+  assertRuntimeConfig(context.runtimeConfig, options);
+  const pilotAgents = await seedAndAssertPilotAgents(context);
+  const { taskId, title, run } = await runReadinessDispatch(context);
+  const view = buildReadinessView({ taskId, title, run });
+  const appWorkflowDispatch = appDispatchEvidenceFromRun(run);
+  assertAppDispatchEvidence(appWorkflowDispatch);
+  const evidence = buildReadinessEvidence({ context, pilotAgents, appWorkflowDispatch, run, view });
+  const outputPath = writeEvidence(context.baseDir, evidence, options.outputPath);
   return { evidence, outputPath };
 }
 
