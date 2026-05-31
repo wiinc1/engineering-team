@@ -51,3 +51,16 @@
 - Rollout or rollback notes: Apply `npm run audit:migrate` before enabling Postgres Projects; set `FF_PROJECTS=0` to disable routes; apply `db/migrations/012_projects.down.sql` only after confirming membership data is no longer needed.
 - Docs updated: `docs/api/task-platform-openapi.yml`; `docs/api/task-owner-surfaces-openapi.yml`; `docs/runbooks/task-platform-rollout.md`; `CONTEXT.md`; `DESIGN.md`; `docs/diagrams/*projects-planning-containers.mmd`; `docs/reports/test_report_ISSUE-203.md`; browser screenshot baselines under `tests/browser/__screenshots__/browser-quality-visual.browser.spec.ts/`.
 - Final command results are recorded in `docs/reports/test_report_ISSUE-203.md`.
+
+## Issue #252 Addendum - Canonical Task Workspace List Reads
+
+- Change or task ID: Issue #252, route task workspace list reads to the canonical task-platform API.
+- Owner: Codex implementation agent.
+- Date: 2026-05-31.
+- Scope summary: Updated the task-detail browser adapter list loading path to call `/v1/tasks` before the legacy `/tasks` projection path, normalize canonical task-platform records into the existing list item shape, and keep the legacy list endpoint as a compatibility fallback.
+- Standards baseline reviewed: `docs/standards/software-development-standards.md`.
+- Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring.
+- Standards gaps or exceptions: No new exception. The change intentionally avoids modifying task detail, mutation, or audit projection workflows while shifting the high-volume workspace list read to the healthier canonical API observed in production.
+- Tests added or updated: `tests/unit/task-detail-canonical-list.test.js`; `package.json` test unit manifest.
+- Validation evidence: `node --test tests/unit/task-detail-adapter.test.js tests/unit/task-detail-canonical-list.test.js`; `npm run lint`; `npm run build`.
+- Rollout and rollback: Deploy the browser adapter change with PR #253. Rollback by reverting the adapter list-read change, which restores the legacy `/tasks` list path for workspace loading.
