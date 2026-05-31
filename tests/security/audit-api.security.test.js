@@ -33,3 +33,91 @@ test("AI-agent management mutations require agents write permission", async () =
     assert.equal(response.status, 403);
   });
 });
+
+test("delegation-enabled AI-agent activation requires explicit delegation permission and confirmed passing preview", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const pm = {
+      authorization: `Bearer ${sign({ sub: "pm", tenant_id: "tenant-sec", roles: ["pm"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    const admin = {
+      authorization: `Bearer ${sign({ sub: "admin", tenant_id: "tenant-sec", roles: ["admin"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    const delegatedAgent = {
+      agentId: "qa-sec-delegated",
+      displayName: "Security Delegated QA",
+      role: "qa",
+      active: true,
+      delegation: {
+        enabled: true,
+        specialist: "qa",
+        runtimeAgent: "qa-engineer",
+        sampleTaskType: "test",
+        sampleRequest: "Test the checkout change.",
+      },
+    };
+
+    let response = await fetch(`${baseUrl}/api/v1/ai-agents/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...pm },
+      body: JSON.stringify(delegatedAgent),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /agent-delegation:write/);
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...admin },
+      body: JSON.stringify(delegatedAgent),
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, "preview_confirmation_required");
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...admin },
+      body: JSON.stringify(delegatedAgent),
+    });
+    assert.equal(response.status, 200);
+    const preview = (await response.json()).data;
+    assert.equal(preview.delegationImpact.dryRun.pass, true);
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...admin },
+      body: JSON.stringify({ ...delegatedAgent, previewConfirmation: { approved: true, token: preview.previewToken } }),
+    });
+    assert.equal(response.status, 201);
+  });
+});
+
+test("unsupported-role requests require role-request permission and do not trust client live-routing flags", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const headersFor = (roles, sub = roles[0]) => ({
+      authorization: `Bearer ${sign({ sub, tenant_id: "tenant-sec", roles, exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    });
+    let response = await fetch(`${baseUrl}/api/v1/agent-role-requests`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headersFor(["reader"]) },
+      body: JSON.stringify({ requestedRole: "designer", displayName: "Designer", liveRoutingEnabled: true }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /agent-role-requests:write/);
+
+    response = await fetch(`${baseUrl}/api/v1/agent-role-requests`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headersFor(["pm"]) },
+      body: JSON.stringify({ requestedRole: "designer", displayName: "Designer", liveRoutingEnabled: true, metadata: { active: true } }),
+    });
+    assert.equal(response.status, 201);
+    const body = await response.json();
+    assert.equal(body.data.status, "requested");
+    assert.equal(body.data.liveRoutingEnabled, false);
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents?includeInactive=true`, {
+      headers: headersFor(["pm"]),
+    });
+    assert.equal(response.status, 200);
+    const agents = (await response.json()).data;
+    assert.equal(agents.some((agent) => agent.role === "designer" || agent.agentId === body.data.requestId), false);
+  });
+});

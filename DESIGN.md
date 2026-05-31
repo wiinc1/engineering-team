@@ -749,6 +749,15 @@ Moving JSX, route ownership, adapters, or app-shell helpers without changing ren
 - Issue #240 persisted agent routing preserves the existing assignment select, role inbox, and PM overview visual contract while changing roster source and owner-routing semantics only.
 - Source-only UI refactors should update README, diagrams, or standards evidence to explain ownership changes, and should update this file only when the reusable visual contract changes.
 
+## Delegated AI-Agent Activation Preview
+
+Issue #239 adds a compact admin-only AI-agent activation surface. It follows the existing operational form pattern: dense labels, plain status text, no decorative imagery, no nested cards, and explicit disabled-state copy before live save.
+
+- Preview and save remain separate actions. Live save stays disabled until a passing preview is explicitly confirmed.
+- Preview result focus moves to the summary region after each dry run so keyboard and assistive-technology users receive the outcome before the next action.
+- The summary region uses a visible focus ring and a polite live-region status. Blocking dry-run results additionally use an alert with actionable blocker copy.
+- The surface reuses existing panel, form, status, and metadata-grid styles; no new reusable visual token is required.
+
 ## Agent Usage
 
 - Treat YAML front matter tokens as the design governance contract.

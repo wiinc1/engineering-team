@@ -32,6 +32,7 @@ import {
 import { AuthRoute } from "./routes/AuthRoute.jsx";
 import { CreateTaskRoute } from "./routes/CreateTaskRoute.jsx";
 import { AdminUsersRoute } from "./routes/AdminUsersRoute.jsx";
+import { AiAgentsAdminRoute } from "./routes/AiAgentsAdminRoute.jsx";
 import { TaskWorkspaceRoute } from "./routes/TaskWorkspaceRoute.jsx";
 import { TaskDetailRoute } from "./routes/TaskDetailRoute.jsx";
 import { ProjectsRoute, isProjectsPath } from "./routes/ProjectsRoute.jsx";
@@ -676,7 +677,8 @@ round" })] }) }), e("span", { className: "app-nav-rail__label", children: "Searc
   if (!X) return e(AuthRoute, { ctx: routeContext });
   ;
   if (Hn(i)) return e(CreateTaskRoute, { ctx: routeContext });
-  if (ga(i)) return e(AdminUsersRoute, { ctx: routeContext })
+  if (ga(i)) return e(AdminUsersRoute, { ctx: routeContext });
+  if (i === "/admin/ai-agents") return e(AiAgentsAdminRoute, { ctx: routeContext });
   return a("main", { className: appShellClass, children: [appNavToggle, collapsedNavRail, a("nav", { id: "primary-navigation", className: appNavClass, "aria-lab\
 el": "Primary navigation", "aria-hidden": !navOpen, inert: navOpen ? void 0 : true, children: [a("div", { className: "app-nav__links", children: [sidebarTaskSearch,
   a("div", { className: "app-nav__primary", role: "group", "aria-label": "Primary task navigation", children: [e("button", { type: "button", className: s.kind ===
@@ -688,7 +690,7 @@ eate"), children: "New task" })] }), a("div", { className: "app-nav__secondary",
 tton", { type: "button", className: _ ? "" : "button-secondary", onClick: () => l("/overview/pm"), children: "PM overview" }), e("button", { type: "button", className: P ?
   "" : "button-secondary", onClick: () => l("/overview/governance"), children: "Governance reviews" }), e("button", { type: "button", className: A ? "" : "butto\
 n-secondary", onClick: () => l("/deferred-considerations"), children: "Deferred considerations" }), e("button", { type: "button", className: autonomyMetricsRouteActive ? "" : "button-secondary", onClick: () => l("/metrics/autonomous-delivery"), children: "Autonomy metrics" }), I(h, ["admin"]) ? e("button", { type: "button", className: "\
-button-secondary", onClick: () => l("/admin/users"), children: "User admin" }) : null, a("label", { className: "app-nav__role-select", children: [e("span", { children: "\
+button-secondary", onClick: () => l("/admin/users"), children: "User admin" }) : null, I(h, ["admin", "pm"]) ? e("button", { type: "button", className: "button-secondary", onClick: () => l("/admin/ai-agents"), children: "AI agents" }) : null, a("label", { className: "app-nav__role-select", children: [e("span", { children: "\
 Role inboxes" }), a("select", { "aria-label": "Role inboxes", value: f || "", onChange: (t) => {
     const n = t.target.value;
     n && l("/inbox/" + n);

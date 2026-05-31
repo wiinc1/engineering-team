@@ -253,6 +253,7 @@ Verify:
 ## Observability Checks
 - review structured logs for `feature=ff_task_platform`
 - review backend selection logs for `feature=ff_canonical_task_runtime`
+- for delegation-enabled AI agents, verify `POST /api/v1/ai-agents/preview` returns a passing OpenClaw dry-run, no route/task-type collisions, `fallbackBehavior.failClosed=true`, and no coordinator fallback before sending a live create/update confirmation
 - confirm `feature_canonical_task_runtime_backend_mode{mode="postgres"}` or equivalent backend-mode telemetry is present in the target dashboard
 - confirm `feature_canonical_task_runtime_drift_total` remains zero after `npm run task-platform:verify`
 - confirm `feature_canonical_task_runtime_fallback_total` remains zero in staging and production

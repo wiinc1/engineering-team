@@ -10,6 +10,34 @@ info:
 servers:
   - url: /api/v1
 paths:
+  /ai-agents/preview:
+    post:
+      summary: Preview AI agent activation impact without mutating state
+      operationId: previewAiAgentActivation
+      tags: [AI Agents]
+      security:
+        - BearerAuth: []
+      description: |
+        Returns the normalized agent record, live-surface impact, audit preview, duplicate/id conflicts,
+        unsupported-role status, and delegation dry-run result before any delegation-enabled agent can
+        become live. Delegation-enabled previews require `agent-delegation:write`; activation fails closed
+        with `preview_confirmation_required` or `agent_activation_preview_failed` when runtime mapping,
+        route collision, or OpenClaw dry-run validation fails.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAiAgentRequest'
+      responses:
+        '200':
+          description: Non-mutating activation preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiAgentPreviewEnvelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /ai-agents:
     get:
       summary: List canonical AI agents that can own tasks
@@ -115,6 +143,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+  /agent-role-requests:
+    post:
+      summary: Request an unsupported AI-agent role without enabling live routing
+      operationId: createAgentRoleRequest
+      tags: [AI Agents]
+      security:
+        - BearerAuth: []
+      description: |
+        Records a PM/admin request for an unsupported role as `requested`. The request does not create an
+        assignable AI agent, does not alter role inboxes or PM overview buckets, and ignores client supplied
+        live-routing flags. Live activation must later use `/ai-agents/preview` and `/ai-agents`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRoleRequest'
+      responses:
+        '201':
+          description: Unsupported-role request recorded in draft/request state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRoleRequestEnvelope'
+        '400':
+          description: Validation failed; returns `missing_requested_role`, `invalid_requested_role`, or `invalid_role_request_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /projects:
     get:
       summary: List Projects for the caller tenant
@@ -557,6 +617,12 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        delegation:
+          $ref: '#/components/schemas/AiAgentDelegationRequest'
+        delegationEnabled:
+          type: boolean
+        previewConfirmation:
+          $ref: '#/components/schemas/AiAgentPreviewConfirmation'
         version:
           type: integer
           minimum: 1
@@ -572,6 +638,55 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/AiAgent'
+    AgentRoleRequest:
+      type: object
+      required: [requestId, requestedRole, displayName, status, liveRoutingEnabled]
+      properties:
+        requestId:
+          type: string
+          pattern: '^ARR-[A-F0-9]{8}$'
+        requestedRole:
+          type: string
+          pattern: '^[a-z][a-z0-9-]{1,63}$'
+        displayName:
+          type: string
+        justification:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [requested]
+        liveRoutingEnabled:
+          type: boolean
+          enum: [false]
+        metadata:
+          type: object
+          additionalProperties: true
+        requestedByActorId:
+          type: string
+          nullable: true
+    AgentRoleRequestEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AgentRoleRequest'
+    CreateAgentRoleRequest:
+      type: object
+      required: [requestedRole, displayName]
+      properties:
+        requestedRole:
+          type: string
+          pattern: '^[a-z][a-z0-9-]{1,63}$'
+        displayName:
+          type: string
+        justification:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        idempotencyKey:
+          type: string
     CreateAiAgentRequest:
       type: object
       required: [agentId, displayName, role]
@@ -605,6 +720,99 @@ components:
         metadata:
           type: object
           additionalProperties: true
+        delegation:
+          $ref: '#/components/schemas/AiAgentDelegationRequest'
+        delegationEnabled:
+          type: boolean
+        previewConfirmation:
+          $ref: '#/components/schemas/AiAgentPreviewConfirmation'
+    AiAgentDelegationRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        specialist:
+          type: string
+          enum: [architect, engineer, qa, sre]
+        runtimeAgent:
+          type: string
+        routeKeywords:
+          type: array
+          items: { type: string }
+        taskTypes:
+          type: array
+          items: { type: string }
+        sampleRequest:
+          type: string
+        sampleTaskType:
+          type: string
+    AiAgentPreviewConfirmation:
+      type: object
+      required: [approved, token]
+      properties:
+        approved:
+          type: boolean
+        token:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+    AiAgentPreviewEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AiAgentPreview'
+    AiAgentPreview:
+      type: object
+      required: [policyVersion, normalizedAgent, duplicateConflicts, unsupportedCanonicalRole, assignmentControlImpact, roleInboxImpact, pmOverviewBucketImpact, delegationImpact, fallbackBehavior, auditEventPreview, wouldCreateLiveAgent, wouldCreateDraftRequest, blockers, previewToken]
+      properties:
+        policyVersion:
+          type: string
+        normalizedAgent:
+          $ref: '#/components/schemas/AiAgent'
+        duplicateConflicts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        unsupportedCanonicalRole:
+          type: object
+          additionalProperties: true
+        assignmentControlImpact:
+          type: object
+          additionalProperties: true
+        roleInboxImpact:
+          type: object
+          additionalProperties: true
+        pmOverviewBucketImpact:
+          type: object
+          additionalProperties: true
+        delegationImpact:
+          type: object
+          additionalProperties: true
+        fallbackBehavior:
+          type: object
+          additionalProperties: true
+        permissionsImpact:
+          type: object
+          additionalProperties: true
+        reportingImpact:
+          type: object
+          additionalProperties: true
+        auditEventPreview:
+          type: object
+          additionalProperties: true
+        wouldCreateLiveAgent:
+          type: boolean
+        wouldCreateDraftRequest:
+          type: boolean
+        blockers:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        previewToken:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
     UpdateAiAgentRequest:
       type: object
       required: [version]
