@@ -409,6 +409,11 @@ Prometheus-style metrics exported include:
 - Postgres integration against disposable Docker Postgres: `npm run test:integration:docker`
 - Manual host-run Postgres integration: `DATABASE_URL=postgres://audit:audit@127.0.0.1:5432/engineering_team npm run test:integration:postgres`
 
+## Delegated AI-agent activation gate
+Delegation-enabled AI agents must be previewed before they can become active. Operators use `POST /api/v1/ai-agents/preview` to review normalized agent data, assignment/role-inbox/PM-bucket impact, delegation routing, OpenClaw dry-run proof, fallback behavior, permissions, reporting, and audit impact. Saving the active agent requires `agents:write`, `agent-delegation:write`, and a matching approved preview token.
+
+The gate fails closed. Missing or invalid delegation mappings, route/task-type collisions, runtime-agent mismatches, or sample routing mismatches block live activation and do not fall back to a coordinator owner. If preview fails in staging or production, keep the agent inactive/draft, correct the delegation config, rerun preview, and only then retry the create/update request with the new confirmation token.
+
 ## UI-linked validation note
 This repository now ships the browser-rendered task detail history / telemetry UI on `/tasks/:taskId`. Executable coverage exists today in the mounted app tests and Playwright browser suite.
 

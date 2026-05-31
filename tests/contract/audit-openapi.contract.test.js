@@ -19,3 +19,19 @@ test("task-platform contract documents persisted AI-agent management", () => {
   }
   assert.match(assignment, /canonical `\/api\/v1\/ai-agents` task-platform data/);
 });
+
+test("task-platform contract documents AI-agent activation preview gates", () => {
+  const platform = fs.readFileSync(path.join(__dirname, "../../docs/api/task-platform-openapi.yml"), "utf8");
+  for (const expected of [
+    "/ai-agents/preview:",
+    "previewAiAgentActivation",
+    "agent-delegation:write",
+    "previewConfirmation",
+    "delegationImpact",
+    "fallbackBehavior",
+    "preview_confirmation_required",
+    "OpenClaw dry-run",
+  ]) {
+    assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});

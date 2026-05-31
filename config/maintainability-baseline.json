@@ -9,7 +9,7 @@
     {
       "path": "src/app/routes/TaskDetailRoute.jsx",
       "rule": "maintainability:function-lines",
-      "line": 3,
+      "line": 5,
       "ordinal": 1,
       "name": "TaskDetailRoute",
       "actual": 692,
@@ -18,7 +18,7 @@
     {
       "path": "src/app/App.jsx",
       "rule": "maintainability:function-lines",
-      "line": 38,
+      "line": 40,
       "ordinal": 1,
       "name": "App",
       "actual": 668,
@@ -39,7 +39,7 @@
       "line": 203,
       "ordinal": 10,
       "name": "createTaskDetailApiClient",
-      "actual": 260,
+      "actual": 268,
       "cap": 50
     },
     {
@@ -54,7 +54,7 @@
     {
       "path": "src/app/routes/TaskWorkspaceRoute.jsx",
       "rule": "maintainability:function-lines",
-      "line": 3,
+      "line": 4,
       "ordinal": 1,
       "name": "TaskWorkspaceRoute",
       "actual": 213,
@@ -97,21 +97,21 @@
       "cap": 50
     },
     {
+      "path": "src/features/task-detail/adapter.js",
+      "rule": "maintainability:function-lines",
+      "line": 73,
+      "ordinal": 10,
+      "name": "createTaskDetailApiClient",
+      "actual": 122,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-detail/TaskDetailActivityShell.tsx",
       "rule": "maintainability:function-lines",
       "line": 102,
       "ordinal": 6,
       "name": "TaskDetailActivityShell",
       "actual": 121,
-      "cap": 50
-    },
-    {
-      "path": "src/features/task-detail/adapter.js",
-      "rule": "maintainability:function-lines",
-      "line": 73,
-      "ordinal": 10,
-      "name": "createTaskDetailApiClient",
-      "actual": 115,
       "cap": 50
     },
     {
@@ -318,7 +318,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 473,
+      "actual": 481,
       "cap": 400
     }
   ]

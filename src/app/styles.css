@@ -92,6 +92,11 @@ button {
   outline-offset: var(--focus-ring-offset);
 }
 
+.app-shell:not(.app-shell--auth) .ai-agent-preview-summary:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
 .app-shell:not(.app-shell--auth) input,
 .app-shell:not(.app-shell--auth) textarea,
 .app-shell:not(.app-shell--auth) select {

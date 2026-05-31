@@ -31,8 +31,36 @@ test("integration: persisted AI agents feed canonical task ownership and compati
     });
     assert.equal(response.status, 200);
 
+    response = await fetch(`${baseUrl}/ai-agents`, { headers: authHeaders(secret, ["reader"]) });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).items.some((agent) => agent.id === "qa-int"), false);
+
     response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}`, { headers: authHeaders(secret, ["reader"]) });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).data.owner.agentId, "qa-int");
+  });
+});
+
+test("integration: unsupported-role requests remain outside assignment and canonical ownership rosters", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/api/v1/agent-role-requests`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...authHeaders(secret, ["pm"]) },
+      body: JSON.stringify({ requestedRole: "designer", displayName: "Design Specialist" }),
+    });
+    assert.equal(response.status, 201);
+    const roleRequest = (await response.json()).data;
+    assert.equal(roleRequest.status, "requested");
+    assert.equal(roleRequest.liveRoutingEnabled, false);
+
+    response = await fetch(`${baseUrl}/api/v1/ai-agents?includeInactive=true`, { headers: authHeaders(secret, ["reader"]) });
+    assert.equal(response.status, 200);
+    const canonicalRoster = (await response.json()).data;
+    assert.equal(canonicalRoster.some((agent) => agent.role === "designer" || agent.agentId === roleRequest.requestId), false);
+
+    response = await fetch(`${baseUrl}/ai-agents`, { headers: authHeaders(secret, ["reader"]) });
+    assert.equal(response.status, 200);
+    const assignmentRoster = await response.json();
+    assert.equal(assignmentRoster.items.some((agent) => agent.role === "designer" || agent.id === roleRequest.requestId), false);
   });
 });
