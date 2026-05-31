@@ -19,7 +19,7 @@ paths:
         - BearerAuth: []
       description: |
         Returns the normalized agent record, live-surface impact, audit preview, duplicate/id conflicts,
-        unsupported-role status, and delegation dry-run result before any delegation-enabled agent can
+        unsupported-role status, preview/save permission impact, and delegation dry-run result before any delegation-enabled agent can
         become live. Delegation-enabled previews require `agent-delegation:write`; activation fails closed
         with `preview_confirmation_required` or `agent_activation_preview_failed` when runtime mapping,
         route collision, or OpenClaw dry-run validation fails.

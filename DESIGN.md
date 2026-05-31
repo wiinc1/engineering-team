@@ -751,7 +751,7 @@ Moving JSX, route ownership, adapters, or app-shell helpers without changing ren
 
 ## Delegated AI-Agent Activation Preview
 
-Issue #239 adds a compact admin-only AI-agent activation surface. It follows the existing operational form pattern: dense labels, plain status text, no decorative imagery, no nested cards, and explicit disabled-state copy before live save.
+Issue #239 adds a compact admin-only AI-agent activation surface. It follows the existing operational form pattern: dense labels, plain status text, no decorative imagery, no nested cards, and explicit disabled-state copy before live save. The preview result exposes permission impact alongside routing, fallback, and dry-run state so operators can confirm why delegation-enabled activation remains blocked.
 
 - Preview and save remain separate actions. Live save stays disabled until a passing preview is explicitly confirmed.
 - Preview result focus moves to the summary region after each dry run so keyboard and assistive-technology users receive the outcome before the next action.

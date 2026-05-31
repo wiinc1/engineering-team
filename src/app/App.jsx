@@ -31,8 +31,7 @@ import {
 } from "./app-model.jsx";
 import { AuthRoute } from "./routes/AuthRoute.jsx";
 import { CreateTaskRoute } from "./routes/CreateTaskRoute.jsx";
-import { AdminUsersRoute } from "./routes/AdminUsersRoute.jsx";
-import { AiAgentsAdminRoute } from "./routes/AiAgentsAdminRoute.jsx";
+import { AdminUsersRoute } from "./routes/AdminUsersRoute.jsx"; import { AiAgentsAdminRoute } from "./routes/AiAgentsAdminRoute.jsx";
 import { TaskWorkspaceRoute } from "./routes/TaskWorkspaceRoute.jsx";
 import { TaskDetailRoute } from "./routes/TaskDetailRoute.jsx";
 import { ProjectsRoute, isProjectsPath } from "./routes/ProjectsRoute.jsx";
@@ -677,8 +676,7 @@ round" })] }) }), e("span", { className: "app-nav-rail__label", children: "Searc
   if (!X) return e(AuthRoute, { ctx: routeContext });
   ;
   if (Hn(i)) return e(CreateTaskRoute, { ctx: routeContext });
-  if (ga(i)) return e(AdminUsersRoute, { ctx: routeContext });
-  if (i === "/admin/ai-agents") return e(AiAgentsAdminRoute, { ctx: routeContext });
+  if (ga(i)) return e(AdminUsersRoute, { ctx: routeContext }); if (i === "/admin/ai-agents") return e(AiAgentsAdminRoute, { ctx: routeContext });
   return a("main", { className: appShellClass, children: [appNavToggle, collapsedNavRail, a("nav", { id: "primary-navigation", className: appNavClass, "aria-lab\
 el": "Primary navigation", "aria-hidden": !navOpen, inert: navOpen ? void 0 : true, children: [a("div", { className: "app-nav__links", children: [sidebarTaskSearch,
   a("div", { className: "app-nav__primary", role: "group", "aria-label": "Primary task navigation", children: [e("button", { type: "button", className: s.kind ===

@@ -72,6 +72,7 @@ test('agent preview returns non-mutating routing, delegation, audit, permission,
     assert.equal(data.delegationImpact.dryRun.runtimeAgent, 'qa-engineer');
     assert.equal(data.fallbackBehavior.failClosed, true);
     assert.equal(data.fallbackBehavior.coordinatorFallbackAllowedOnActivationFailure, false);
+    assert.deepEqual(data.permissionsImpact.requiredToPreview, ['agents:write', 'agent-delegation:write']);
     assert.deepEqual(data.permissionsImpact.requiredToSave, ['agents:write', 'agent-delegation:write']);
     assert.equal(data.auditEventPreview.mutationType, 'agent_activation_previewed');
     assert.equal(data.wouldCreateLiveAgent, true);

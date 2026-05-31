@@ -7,3 +7,22 @@ test("AI agent API rejects malformed management fields and normalizes inactive c
 test("AI agent roster excludes persisted unsupported live roles",async()=>{const r=fs.mkdtempSync(path.join(os.tmpdir(),"task-platform-unsupported-agent-")),i=path.join(r,"data");fs.mkdirSync(i,{recursive:!0}),fs.writeFileSync(path.join(i,"task-platform.json"),JSON.stringify({ai_agents:{"engineering-team::designer-live":{tenant_id:"engineering-team",agent_id:"designer-live",display_name:"Designer Live",role:"designer",description:null,execution_kind:"software-factory",active:!0,assignable:!0,environment_scope:"default",metadata:{},version:1,created_at:"2026-05-26T00:00:00.000Z",updated_at:"2026-05-26T00:00:00.000Z"}},tasks:{},task_mutations:[],agent_mutations:[],idempotency:{},task_sync_checkpoints:{},merge_readiness_reviews:{}},null,2));const e="task-platform-secret",{server:t}=createAuditApiServer({baseDir:r,jwtSecret:e});await new Promise(s=>t.listen(0,"127.0.0.1",s));try{const s=`http://127.0.0.1:${t.address().port}`,o=await fetch(`${s}/api/v1/ai-agents?includeInactive=true`,{headers:authHeaders(e,{roles:["reader"]})});assert.equal(o.status,200);const a=await o.json();assert.equal(a.data.some(n=>n.agentId==="designer-live"),!1),assert.ok(a.data.every(n=>["pm","architect","engineer","qa","sre","human"].includes(n.role)))}finally{await new Promise((s,o)=>t.close(a=>a?o(a):s()))}});
 
 test("AI agent role requests stay out of canonical assignment rosters",async()=>{await withServer(async({baseUrl:r,secret:i})=>{let e=await fetch(`${r}/api/v1/agent-role-requests`,{method:"POST",headers:{"content-type":"application/json",...authHeaders(i,{roles:["reader"]})},body:JSON.stringify({requestedRole:"designer",displayName:"Designer"})});assert.equal(e.status,403),e=await fetch(`${r}/api/v1/agent-role-requests`,{method:"POST",headers:{"content-type":"application/json",...authHeaders(i,{roles:["pm"]})},body:JSON.stringify({requestedRole:"designer",displayName:"Designer",liveRoutingEnabled:true})}),assert.equal(e.status,201);const t=(await e.json()).data;assert.equal(t.status,"requested"),assert.equal(t.liveRoutingEnabled,!1),e=await fetch(`${r}/api/v1/ai-agents?includeInactive=true`,{headers:authHeaders(i,{roles:["reader"]})}),assert.equal(e.status,200);const s=(await e.json()).data;assert.equal(s.some(o=>o.role==="designer"||o.agentId===t.requestId),!1)})});
+
+test("AI agent preview reports delegation permission requirements", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const response = await fetch(`${baseUrl}/api/v1/ai-agents/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...authHeaders(secret, { roles: ["admin"] }) },
+      body: JSON.stringify({
+        agentId: "qa-permission-preview",
+        displayName: "QA Permission Preview",
+        role: "qa",
+        delegation: { enabled: true, specialist: "qa", sampleRequest: "qa regression verification dry run" },
+      }),
+    });
+    assert.equal(response.status, 200);
+    const preview = (await response.json()).data;
+    assert.deepEqual(preview.permissionsImpact.requiredToPreview, ["agents:write", "agent-delegation:write"]);
+    assert.deepEqual(preview.permissionsImpact.requiredToSave, ["agents:write", "agent-delegation:write"]);
+  });
+});

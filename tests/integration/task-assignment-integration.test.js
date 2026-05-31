@@ -31,6 +31,10 @@ test("integration: persisted AI agents feed canonical task ownership and compati
     });
     assert.equal(response.status, 200);
 
+    response = await fetch(`${baseUrl}/ai-agents`, { headers: authHeaders(secret, ["reader"]) });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).items.some((agent) => agent.id === "qa-int"), false);
+
     response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}`, { headers: authHeaders(secret, ["reader"]) });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).data.owner.agentId, "qa-int");

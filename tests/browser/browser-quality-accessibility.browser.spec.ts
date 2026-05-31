@@ -88,38 +88,7 @@ test('task creation and task detail support keyboard traversal and activation', 
 
 test('AI-agent activation preview announces dry-run state and gates live save accessibly', async ({ page }) => {
   await installBrowserQualityApp(page, { roles: ['admin', 'reader'] });
-  let savedAgent = false;
-  let requestedUnsupportedRole = false;
-  await page.route('**/api/v1/ai-agents/preview', async (route) => {
-    const payload = await route.request().postDataJSON();
-    const valid = payload.delegation?.runtimeAgent === 'qa-engineer'
-      && /qa regression/i.test(String(payload.delegation?.sampleRequest || ''));
-    await route.fulfill({
-      json: {
-        data: previewPayload(valid),
-      },
-    });
-  });
-  await page.route('**/api/v1/ai-agents', async (route) => {
-    savedAgent = true;
-    await route.fulfill({ status: 201, json: { data: { agentId: 'qa-preview-live', active: true } } });
-  });
-  await page.route('**/api/v1/agent-role-requests', async (route) => {
-    const payload = await route.request().postDataJSON();
-    requestedUnsupportedRole = payload.requestedRole === 'designer';
-    await route.fulfill({
-      status: 201,
-      json: {
-        data: {
-          requestId: 'ARR-BROWSER1',
-          requestedRole: payload.requestedRole,
-          displayName: payload.displayName,
-          status: 'requested',
-          liveRoutingEnabled: false,
-        },
-      },
-    });
-  });
+  const routeState = await installAiAgentActivationRoutes(page);
 
   await page.goto('/admin/ai-agents', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'AI Agent Activation' })).toBeVisible();
@@ -127,16 +96,59 @@ test('AI-agent activation preview announces dry-run state and gates live save ac
   await expect(saveButton).toBeDisabled();
   await expect(page.getByText('Save is disabled until preview runs.')).toBeVisible();
 
+  const previewRegion = page.getByRole('region', { name: 'Preview result' });
+  await assertInvalidPreviewFlow(page, previewRegion, saveButton);
+  await assertValidPreviewAndSave(page, previewRegion, saveButton, routeState);
+  await assertUnsupportedRoleRequest(page, routeState);
+  await runAxe(page);
+});
+
+async function installAiAgentActivationRoutes(page) {
+  const routeState = { savedAgent: false, requestedUnsupportedRole: false };
+  await installPreviewRoute(page);
+  await page.route('**/api/v1/ai-agents', async (route) => {
+    routeState.savedAgent = true;
+    await route.fulfill({ status: 201, json: { data: { agentId: 'qa-preview-live', active: true } } });
+  });
+  await page.route('**/api/v1/agent-role-requests', async (route) => {
+    const payload = await route.request().postDataJSON();
+    routeState.requestedUnsupportedRole = payload.requestedRole === 'designer';
+    await route.fulfill({ status: 201, json: { data: roleRequestPayload(payload) } });
+  });
+  return routeState;
+}
+
+async function installPreviewRoute(page) {
+  await page.route('**/api/v1/ai-agents/preview', async (route) => {
+    const payload = await route.request().postDataJSON();
+    const valid = payload.delegation?.runtimeAgent === 'qa-engineer'
+      && /qa regression/i.test(String(payload.delegation?.sampleRequest || ''));
+    await route.fulfill({ json: { data: previewPayload(valid) } });
+  });
+}
+
+function roleRequestPayload(payload) {
+  return {
+    requestId: 'ARR-BROWSER1',
+    requestedRole: payload.requestedRole,
+    displayName: payload.displayName,
+    status: 'requested',
+    liveRoutingEnabled: false,
+  };
+}
+
+async function assertInvalidPreviewFlow(page, previewRegion, saveButton) {
   await page.getByLabel('Runtime agent').fill('pm');
   await page.getByLabel('Sample request').fill('Implement backend routing.');
   await page.getByRole('button', { name: 'Preview activation' }).click();
-  const previewRegion = page.getByRole('region', { name: 'Preview result' });
   await expectVisibleFocus(previewRegion);
   await expect(page.getByRole('status').filter({ hasText: 'Preview failed. Live save remains disabled.' })).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('Sample dry-run input does not route to QA.');
   await expect(saveButton).toBeDisabled();
   await expect(page.getByText('Save is disabled because preview blockers must be resolved.')).toBeVisible();
+}
 
+async function assertValidPreviewAndSave(page, previewRegion, saveButton, routeState) {
   await page.getByLabel('Runtime agent').fill('qa-engineer');
   await page.getByLabel('Sample request').fill('qa regression verification dry run');
   await page.getByRole('button', { name: 'Preview activation' }).click();
@@ -144,19 +156,18 @@ test('AI-agent activation preview announces dry-run state and gates live save ac
   await expect(page.getByRole('status').filter({ hasText: 'Preview passed. Confirm before live save.' })).toBeVisible();
   await expect(page.getByText('Save is disabled until the passing preview is confirmed.')).toBeVisible();
   await expect(saveButton).toBeDisabled();
-
   await page.getByLabel('Confirm passing preview').check();
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
   await expect(page.getByRole('status').filter({ hasText: 'Delegated AI agent saved live.' })).toBeVisible();
-  expect(savedAgent).toBe(true);
+  expect(routeState.savedAgent).toBe(true);
+}
 
+async function assertUnsupportedRoleRequest(page, routeState) {
   await page.getByRole('button', { name: 'Request unsupported role' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Design Specialist recorded as requested and not live-routed.' })).toBeVisible();
-  expect(requestedUnsupportedRole).toBe(true);
-
-  await runAxe(page);
-});
+  expect(routeState.requestedUnsupportedRole).toBe(true);
+}
 
 async function assertAccessibleRoute(page, path: string, heading: string, routeAssertions: () => Promise<void>) {
   await page.goto(path, { waitUntil: 'domcontentloaded' });
