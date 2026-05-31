@@ -27,8 +27,11 @@
 9. Run `npm run metrics:delegation:push` with `PUSHGATEWAY_URL` set when you want to publish the latest delegation metrics snapshot to your monitoring stack.
 10. Confirm `observability/workflow-audit.log` shows structured attempt, success, fallback, and mismatch events.
 11. Run `npm run test:delegation:live-smoke` or `npm run test:delegation:live-smoke:openclaw` in the target environment and confirm it exits successfully only when runtime delegation is truly confirmed and writes `observability/specialist-delegation-smoke.json`. The default smoke request is a bounded no-op so it proves handoff evidence without asking the specialist to perform unrelated repository work.
-12. Enable in staging with log review for fallback volume and attribution mismatches.
-13. Promote to production only after no unexpected fallback or mismatch spikes are observed.
+12. For the supervised pilot, run `npm run pilot:agents:seed` against the target task-platform backend to persist active assignable `pm`, `architect`, `engineer`, `qa`, and `sre` agents. This uses canonical AI-agent storage instead of relying only on bootstrap defaults.
+13. Run `npm run pilot:delegation:readiness` in the target environment. This requires `FF_REAL_SPECIALIST_DELEGATION=true` and `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'`, dispatches a bounded no-op implementation task through the orchestration workflow, and writes `observability/pilot-delegation-readiness.json`.
+14. Confirm the readiness artifact includes `appWorkflowDispatch.agentId`, `appWorkflowDispatch.sessionId`, `appWorkflowDispatch.delegationArtifactPath`, and `appWorkflowDispatch.runtimeAttribution.delegated=true`.
+15. Enable in staging with log review for fallback volume and attribution mismatches.
+16. Promote to production only after no unexpected fallback or mismatch spikes are observed.
 
 ## Docker smoke runner
 - `docker compose run --rm delegation-smoke` runs the same live-smoke validator in a container built from this repo.
