@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 const {
   getChangedFiles,
-  getPullRequestShas,
   normalizePathList,
 } = require('./governance-lib');
+const { execFileSync } = require('child_process');
+const fs = require('fs');
 
 const eventPath = process.env.GITHUB_EVENT_PATH;
 
@@ -12,7 +13,31 @@ if (!eventPath) {
   process.exit(0);
 }
 
-const { body } = getPullRequestShas(eventPath);
+function readEvent(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return {};
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function currentPullRequestBody(filePath) {
+  if (process.env.PR_BODY_OVERRIDE) return process.env.PR_BODY_OVERRIDE;
+  const event = readEvent(filePath);
+  const eventBody = event.pull_request?.body || '';
+  const number = event.pull_request?.number;
+  const repo = process.env.GITHUB_REPOSITORY;
+  if (number && repo && process.env.GITHUB_TOKEN) {
+    try {
+      return execFileSync('gh', ['api', `repos/${repo}/pulls/${number}`, '--jq', '.body'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+    } catch {
+      return eventBody;
+    }
+  }
+  return eventBody;
+}
+
+const body = currentPullRequestBody(eventPath);
 const changedFiles = getChangedFiles();
 const violations = [];
 const PLACEHOLDER_PATTERN = /^(tbd|todo|n\/a|none|unknown)$/i;

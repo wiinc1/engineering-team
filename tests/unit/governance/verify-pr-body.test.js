@@ -66,6 +66,44 @@ test('verify-pr-body passes on a fully populated PR body', () => {
   assert.match(result.stdout, /pr body checks passed/);
 });
 
+test('verify-pr-body can use the current PR body when the event body is stale', () => {
+  const root = makeTempDir('governance-pr-override-');
+  const pathEnv = writeFakeGit(root, ['tests/unit/sample.test.js', 'docs/runbooks/sample.md']);
+  const eventPath = createEvent(root, `## Old body
+This payload was captured before the PR body was corrected.
+`);
+
+  const result = runScript('verify-pr-body.js', root, {
+    GITHUB_EVENT_PATH: eventPath,
+    GITHUB_EVENT_NAME: 'pull_request',
+    PATH: pathEnv,
+    PR_BODY_OVERRIDE: `## Linked Task
+- Task: TSK-123
+
+## Standards Compliance
+- Standards baseline reviewed: yes
+- Checklist completed or updated: yes
+- Compliance checklist path: docs/templates/STANDARDS_COMPLIANCE_CHECKLIST.md
+- Relevant standards areas: testing and quality assurance
+- Standards gaps or exceptions: No gaps or exceptions; rationale: metadata fallback preserves existing required fields.
+
+## Required Evidence
+- Standards check result: npm run standards:check
+- Lint result: npm run lint
+- Tests: npm run test:unit
+- Test evidence paths: tests/unit/sample.test.js
+- Docs updated: docs/standards/software-development-standards.md
+- Doc evidence paths: docs/runbooks/sample.md
+
+## Risk and Rollback
+- Risk level: low
+- Rollback path: revert governance changes
+`,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /pr body checks passed/);
+});
+
 test('verify-pr-body fails when required fields are missing', () => {
   const root = makeTempDir('governance-pr-fail-');
   const pathEnv = writeFakeGit(root, ['tests/unit/sample.test.js', 'docs/runbooks/sample.md']);
