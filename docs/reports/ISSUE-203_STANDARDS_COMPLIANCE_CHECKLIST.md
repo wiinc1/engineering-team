@@ -77,3 +77,16 @@
 - Tests added or updated: `tests/unit/task-detail-next-action.test.js`; `tests/contract/task-detail-next-action.contract.test.js`; `tests/browser/task-detail-next-action.browser.spec.ts`; `tests/visual/task-assignment.visual.spec.ts`; `tests/visual/__snapshots__/task-assignment.visual.spec.ts.snap`.
 - Validation evidence: `node --test tests/unit/task-detail-next-action.test.js tests/contract/task-detail-next-action.contract.test.js`; `npx playwright test tests/browser/task-detail-next-action.browser.spec.ts`; `npx vitest run tests/visual/task-assignment.visual.spec.ts`; `npm run lint`; `npm run standards:check`; `npm run build`.
 - Rollout and rollback: Deploy with PR #262. Rollback by reverting the PR or disabling the task detail next-action redesign with `VITE_FF_TASK_DETAIL_NEXT_ACTION_REDESIGN=false`.
+
+## PR #263 Addendum - PM Refinement Retry Precedence
+
+- Change or task ID: PR #263, keep pending PM refinement ahead of monitoring next actions.
+- Owner: Codex implementation agent.
+- Date: 2026-06-01.
+- Scope summary: Fixed the task-detail next-action resolver so a DRAFT intake task with pending PM refinement still renders `Retry PM refinement` even when stale or pending monitoring context is present.
+- Standards baseline reviewed: `docs/standards/software-development-standards.md` and `DESIGN.md`.
+- Applicable standards areas: task detail UX, PM refinement workflow recovery, role-specific next-action precedence, and browser coverage.
+- Standards gaps or exceptions: No new exception. The change preserves SRE monitoring precedence once PM refinement is no longer requested/pending.
+- Tests added or updated: `tests/unit/task-detail-next-action.test.js`; `tests/browser/task-detail-next-action.browser.spec.ts`.
+- Validation evidence: `node --test tests/unit/task-detail-next-action.test.js tests/contract/task-detail-next-action.contract.test.js`; `npx playwright test tests/browser/task-detail-next-action.browser.spec.ts`; `npm run lint`; `npm run standards:check`; `npm run build`.
+- Rollout and rollback: Deploy with PR #263. Rollback by reverting the PR to restore the previous SRE-before-PM next-action precedence.

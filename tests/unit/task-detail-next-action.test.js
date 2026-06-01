@@ -62,6 +62,26 @@ test('next-action resolver prioritizes PM refinement for intake drafts', async (
   assert.equal(result.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'Requested/pending');
 });
 
+test('next-action resolver keeps pending PM refinement ahead of monitoring state', async () => {
+  const { resolveTaskDetailNextAction } = await modulePromise;
+  const result = resolveTaskDetailNextAction(
+    screen({
+      stage: 'DRAFT',
+      status: 'waiting',
+      ownerId: 'pm',
+      ownerLabel: 'pm',
+      intakeDraft: true,
+      nextAction: 'PM refinement required',
+      monitoring: { state: 'pending_start', canApprove: false },
+    }),
+    principal('admin', 'pm', 'sre', 'reader'),
+  );
+  assert.equal(result.action, 'pm_refinement');
+  assert.equal(result.role, 'pm');
+  assert.equal(result.primaryAction, 'retry_pm_refinement');
+  assert.equal(result.primaryLabel, 'Retry PM refinement');
+});
+
 test('next-action resolver distinguishes active and completed PM refinement', async () => {
   const { resolveTaskDetailNextAction } = await modulePromise;
   const inProgress = resolveTaskDetailNextAction(

@@ -145,12 +145,17 @@ function roleMatch(roles, role) {
 
 function pickRole(roles, signals) {
   if (signals.closeGovernance?.humanDecision?.required && roleMatch(roles, 'human')) return 'human';
+  if (isPendingPmRefinement(signals) && roleMatch(roles, 'pm')) return 'pm';
   if (isSreAction(signals) && roleMatch(roles, 'sre')) return 'sre';
   if (isQaAction(signals) && roleMatch(roles, 'qa')) return 'qa';
   if (isPmAction(signals) && roleMatch(roles, 'pm')) return 'pm';
   if (isArchitectAction(signals) && roleMatch(roles, 'architect')) return 'architect';
   if (isEngineerAction(signals) && roleMatch(roles, 'engineer')) return 'engineer';
   return ROLE_PRIORITY.find((role) => roles.includes(role)) || roles[0] || 'reader';
+}
+
+function isPendingPmRefinement(signals) {
+  return signals.pmRefinementStatus?.value === 'Requested/pending';
 }
 
 function isPmAction(signals) {
