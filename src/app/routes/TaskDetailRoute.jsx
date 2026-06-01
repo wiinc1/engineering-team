@@ -682,7 +682,7 @@ History" }), a("p", { className: "task-list-meta", children: ["Telemetry: ", s.d
   "div", { children: [e("p", { className: "eyebrow", children: "Assignment" }), e("h2", { children: "Assign AI agent owner" }), e("p", { className: "lede", children: "\
 Writes to the task assignment endpoint and refreshes the projected owner after success." })] }) }), _s ? a("form", { className: "assignment-form", onSubmit: async (t) => {
     if (t.preventDefault(), !!s.route?.taskId) try {
-      Ut({ kind: "loading", message: "Saving assignment\u2026" }), await p.assignTaskOwner(s.route.taskId, Et || null), await k(), Ut({ kind: "success", message: Et ?
+      Ut({ kind: "loading", message: "Saving assignment\u2026" }); const n = await p.assignTaskOwner(s.route.taskId, Et || null), i = n?.data?.workflow || n?.workflow; await k(), Ut({ kind: "success", message: i?.nextRequiredAction ? `${Et ? `Assigned to ${Et}. ` : ""}${i.nextRequiredAction}.` : Et ?
       `Assigned to ${Et}.` : "Assignment cleared." });
     } catch (n) {
       Ut({ kind: "error", message: n.message || "Assignment update failed." });

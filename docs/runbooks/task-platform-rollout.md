@@ -232,6 +232,7 @@ GITHUB_TOKEN=<repo-read-token> npm run task-platform:verify-branch-protection --
 Verify:
 - responses return `200`
 - task payloads include `taskId`, `version`, and owner metadata when assigned
+- assigning `pm` to a `DRAFT` task through `/api/v1/tasks/<task-id>/owner` records PM refinement workflow evidence (`task.created` when absent, then `task.refinement_requested`) and returns `workflow.nextRequiredAction=PM refinement required`
 - previously audit-owned tasks are visible canonically after backfill
 - merge readiness review payloads include typed identity/status/version fields and linked `reviewedLogSources`, without copied full source logs
 - merge readiness review payloads include `sourceInventory.policy_version=merge-readiness-source-inventory.v1`, explicit `required_sources`, and `metadata.merge_readiness_check.conclusion`

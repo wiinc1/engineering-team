@@ -399,6 +399,10 @@ paths:
       summary: Assign, reassign, or clear task ownership
       operationId: updateTaskOwner
       tags: [Tasks]
+      description: |
+        Updates canonical ownership. When a draft task is assigned to the Product Manager agent, the route also
+        bootstraps the audit workflow if needed by recording `task.created` and `task.refinement_requested`, so
+        task detail and PM inbox views can show `PM refinement required` immediately after the save.
       security:
         - BearerAuth: []
       parameters:
@@ -959,6 +963,24 @@ components:
           type: integer
         owner:
           $ref: '#/components/schemas/TaskOwner'
+        workflow:
+          type: object
+          description: Additive workflow bootstrap metadata returned by owner updates that start PM refinement.
+          properties:
+            handled:
+              type: boolean
+            workflowStarted:
+              type: boolean
+            nextRequiredAction:
+              type: string
+              nullable: true
+            waitingState:
+              type: string
+              nullable: true
+            eventIds:
+              type: array
+              items:
+                type: string
         projectId:
           type: string
           nullable: true

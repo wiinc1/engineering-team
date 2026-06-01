@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   De,
@@ -55,5 +57,11 @@ describe('browser app route model helpers', () => {
     expect(authModeFromSearch('?mode=reset')).toBe('resetRequest');
     expect(authSearchWithMode('?next=%2Ftasks', 'register')).toBe('?next=%2Ftasks&mode=register');
     expect(authSearchWithMode('?next=%2Ftasks&mode=register', 'signIn')).toBe('?next=%2Ftasks');
+  });
+
+  it('documents assignment workflow feedback in the design contract', () => {
+    const design = fs.readFileSync(path.join(process.cwd(), 'DESIGN.md'), 'utf8');
+    expect(design).toContain('draftPmRefinementFeedback');
+    expect(design).toContain('workflow.nextRequiredAction');
   });
 });
