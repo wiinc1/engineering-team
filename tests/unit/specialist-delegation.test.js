@@ -15,6 +15,7 @@ const {
   classifySpecialistRequest,
   createDelegationMetrics,
   createSpecialistCoordinator,
+  resolveDelegationArtifactBaseDir,
 } = require('../../lib/software-factory/delegation');
 const { isSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
 const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
@@ -64,6 +65,33 @@ test('delegates through runtime evidence and returns truthful attribution with a
   assert.match(artifactLines[0].session_id, /^runtime-session-/);
   assert.equal(artifactLines[0].ownership.runtime, 'fixture-openclaw');
   assert.equal(result.metadata.metricsPath, delegationMetricsPath(baseDir));
+});
+
+test('uses writable serverless artifact storage while keeping runtime cwd stable', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-readonly-base-'));
+  const artifactBaseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-artifacts-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    artifactBaseDir,
+    delegateWork: async () => ({
+      agentId: 'engineer',
+      sessionId: 'runtime-session-serverless',
+      output: 'handled by writable artifact storage',
+    }),
+  });
+
+  const result = await coordinator.handleRequest('Please implement this fix', { coordinatorAgent: 'main' });
+
+  assert.equal(result.mode, 'delegated');
+  assert.equal(result.metadata.artifactPath, path.join(artifactBaseDir, 'observability', 'specialist-delegation.jsonl'));
+  assert.equal(result.metadata.metricsPath, delegationMetricsPath(artifactBaseDir));
+  assert.equal(fs.existsSync(path.join(baseDir, 'observability')), false);
+  assert.equal(fs.existsSync(result.metadata.artifactPath), true);
+});
+
+test('defaults Vercel artifact storage to /tmp when no explicit artifact directory is set', () => {
+  assert.equal(resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { VERCEL: '1' }), path.join('/tmp', 'engineering-team'));
+  assert.equal(resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { VERCEL: '1', SPECIALIST_DELEGATION_BASE_DIR: '/tmp/custom' }), '/tmp/custom');
 });
 
 test('falls back explicitly when delegation fails and records failure metrics', async () => {

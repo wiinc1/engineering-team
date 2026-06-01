@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { createSpecialistCoordinator } = require('../../lib/software-factory/delegation');
+const { createSpecialistCoordinator, resolveDelegationArtifactBaseDir } = require('../../lib/software-factory/delegation');
 const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
 
 test('delegation fallback messages stay sanitized when runtime execution fails', async () => {
@@ -47,4 +47,18 @@ test('default live smoke request is bounded against repository edits', () => {
   assert.match(DEFAULT_SMOKE_REQUEST, /replying OK only/i);
   assert.match(DEFAULT_SMOKE_REQUEST, /Do not inspect or edit files/i);
   assert.doesNotMatch(DEFAULT_SMOKE_REQUEST, /\bQA\b|\btest\b/i);
+});
+
+test('serverless artifact base selection avoids read-only Vercel bundle paths', () => {
+  assert.equal(
+    resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { VERCEL: '1' }),
+    path.join('/tmp', 'engineering-team'),
+  );
+  assert.equal(
+    resolveDelegationArtifactBaseDir(
+      { baseDir: '/var/task' },
+      { VERCEL: '1', SPECIALIST_DELEGATION_ARTIFACT_DIR: '/tmp/delegation-artifacts' },
+    ),
+    '/tmp/delegation-artifacts',
+  );
 });
