@@ -16,6 +16,7 @@
 2. Configure `SPECIALIST_DELEGATION_RUNNER` to invoke the real OpenClaw/runtime handoff path, then start the command router.
 3. Repo-local OpenClaw bridge command: `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'`.
 4. Default repo-local alias map:
+- `pm -> pm`
 - `architect -> architect`
 - `engineer -> sr-engineer`
 - `qa -> qa-engineer`

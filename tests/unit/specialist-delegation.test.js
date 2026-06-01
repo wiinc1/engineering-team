@@ -166,6 +166,33 @@ test('accepts runtime agent aliases when ownership carries the original speciali
   assert.equal(result.metadata.ownership.runtimeAgentId, 'sr-engineer');
 });
 
+test('delegates explicit PM refinement ownership through runtime evidence', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-pm-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegateWork: async ({ specialist }) => ({
+      agentId: 'pm',
+      sessionId: 'runtime-session-pm',
+      output: 'handled by product manager',
+      ownership: {
+        specialistId: specialist,
+        runtimeAgentId: 'pm',
+      },
+    }),
+  });
+
+  const result = await coordinator.handleRequest('Refine this intake task', {
+    coordinatorAgent: 'main',
+    targetSpecialist: 'pm',
+  });
+
+  assert.equal(result.mode, 'delegated');
+  assert.equal(result.agentId, 'pm');
+  assert.equal(result.specialist, 'pm');
+  assert.equal(result.metadata.sessionId, 'runtime-session-pm');
+  assert.equal(result.metadata.ownership.specialistId, 'pm');
+});
+
 test('classifyDelegationFailure maps runtime errors to stable fallback reasons', () => {
   assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_RUNTIME_NOT_CONFIGURED' }), FALLBACK_REASONS.NOT_CONFIGURED);
   assert.equal(classifyDelegationFailure({ code: 'SPECIALIST_RUNTIME_EXEC_FAILED' }), FALLBACK_REASONS.RUNTIME_EXEC_FAILED);

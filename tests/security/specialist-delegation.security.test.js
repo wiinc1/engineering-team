@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createSpecialistCoordinator, resolveDelegationArtifactBaseDir } = require('../../lib/software-factory/delegation');
+const { DEFAULT_SPECIALIST_MAP } = require('../../scripts/openclaw-specialist-runner');
 const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
 
 test('delegation fallback messages stay sanitized when runtime execution fails', async () => {
@@ -61,4 +62,11 @@ test('serverless artifact base selection avoids read-only Vercel bundle paths', 
     ),
     '/tmp/delegation-artifacts',
   );
+});
+
+test('default OpenClaw specialist map covers all assignable pilot roles', () => {
+  for (const role of ['pm', 'architect', 'engineer', 'qa', 'sre']) {
+    assert.equal(typeof DEFAULT_SPECIALIST_MAP[role], 'string');
+    assert.notEqual(DEFAULT_SPECIALIST_MAP[role].trim(), '');
+  }
 });
