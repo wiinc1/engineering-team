@@ -18,24 +18,31 @@ Authoritative references:
 
 1. Confirm the task is an Intake Draft in `DRAFT`, assigned to PM, and still
    tied to the original Task ID.
-2. PM creates the contract with `POST /api/v1/tasks/{taskId}/execution-contract`
+2. Intake Draft creation auto-starts PM refinement. The workflow records
+   `task.refinement_started` and either `task.refinement_completed` with
+   `agent_id`, OpenClaw `session_id`, delegation artifact path, and truthful
+   runtime attribution, or `task.refinement_failed` with the runtime fallback
+   reason.
+3. If an existing Intake Draft is still pending refinement, PM/admin can retry
+   with `POST /api/v1/tasks/{taskId}/refinement/start`.
+4. PM creates or updates the contract with `POST /api/v1/tasks/{taskId}/execution-contract`
    and selected `templateTier`.
-3. The reviewer routing policy selects required reviewers from template tier and
+5. The reviewer routing policy selects required reviewers from template tier and
    risk flags:
    - Architect, UX, and QA for Standard, Complex, and Epic contracts.
    - SRE for deployment, observability, reliability, auth, data, or production
      behavior risk.
    - Principal Engineer for high-risk engineering, security, auth, or Principal
      trigger conditions.
-4. Reviewers record section-level contribution or approval through
+6. Reviewers record section-level contribution or approval through
    `POST /api/v1/tasks/{taskId}/execution-contract/{version}/sections/{sectionId}/review`.
-5. PM validates the latest version, generates the Markdown review view, and
+7. PM validates the latest version, generates the Markdown review view, and
    resolves any blocking question cluster.
-6. Operator Approval commits the current latest version through
+8. Operator Approval commits the current latest version through
    `POST /api/v1/tasks/{taskId}/execution-contract/approve`.
-7. Generate the verification report skeleton when required, then generate and
+9. Generate the verification report skeleton when required, then generate and
    approve reviewable repo artifacts.
-8. Confirm Task detail shows the latest approved contract, reviewer statuses,
+10. Confirm Task detail shows the latest approved contract, reviewer statuses,
    non-blocking comments, committed scope, and dispatch readiness.
 
 ## Blocking Conditions
@@ -50,6 +57,11 @@ Authoritative references:
   was requested but eligibility failed. Record explicit Operator Approval.
 - `artifact_bundle_approval_blocked`: PM, section-owner, or operator approval is
   missing for generated artifacts.
+- `pm_refinement_already_started`: a start event exists without a later failed
+  or completed event. Inspect runtime logs and task history before retrying.
+- `task.refinement_failed`: runtime delegation did not produce verified PM
+  ownership. Check `fallback_reason`, `delegation_artifact_path`, and
+  `SPECIALIST_DELEGATION_RUNNER` configuration before retrying.
 
 ## Material Changes After Approval
 

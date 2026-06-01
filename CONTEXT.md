@@ -120,7 +120,7 @@ Refinement fills in the execution contract fields before Operator Approval.
 
 Only raw requirements text is strictly required to create an Intake Draft. Title, priority, urgency, desired outcome, and task type are optional at intake and may be suggested by the Product Manager during refinement.
 
-After an Intake Draft is created, it enters Product Manager refinement automatically. The control plane should create a PM-owned refinement work item or stage assignment, with Architect and UX Designer contribution requests created as needed based on task tier, user-facing impact, and technical ambiguity.
+After an Intake Draft is created, it enters Product Manager refinement automatically. The control plane records PM refinement start/completion/failure events with runtime delegation evidence, and PM/admin can retry pending drafts through the dedicated refinement start route. Architect and UX Designer contribution requests are created as needed based on task tier, user-facing impact, and technical ambiguity.
 
 Architect and UX Designer refinement contributions are conditional.
 
