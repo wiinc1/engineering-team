@@ -65,7 +65,8 @@ le" ? "degraded" : "ok", degraded: t.telemetry?.availability === "stale", stale:
   items || []).map(toHistoryTimelineItem), telemetryCards: toTelemetryCards(o), historyPageInfo: r.page_info, telemetryAccess: o.access } };
 }
 async function parseJsonResponse(n) {
-  const r = await n.json();
+  let r = null;
+  try { r = await n.json(); } catch { const o = new Error("Expected a JSON API response but received invalid JSON."); throw o.status = n.status, o.code = "invalid_json_response", o; }
   if (!n.ok) {
     const o = new Error(r?.error?.message || `Request failed with status ${n.status}`);
     throw o.status = n.status, o.code = r?.error?.code, o.details = r?.error?.details, o.requestId = r?.error?.request_id, o;
@@ -175,8 +176,8 @@ on/json" }, body: JSON.stringify(a) });
     } catch {
       return t("/ai-agents");
     }
-  }, assignTaskOwner(s, e) {
-    return t(`/tasks/${encodeURIComponent(s)}/assignment`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ agentId: e }) });
+  }, async assignTaskOwner(s, e) {
+    const a = await t(`/v1/tasks/${encodeURIComponent(s)}`), c = a?.data || a; return t(`/v1/tasks/${encodeURIComponent(s)}/owner`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ ownerAgentId: e, version: c.version }) });
   }, changeTaskStage(s, e, a = {}) {
     return t(`/tasks/${encodeURIComponent(s)}/events`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventType: "tas\
 k.stage_changed", payload: { to_stage: e, ...a } }) });

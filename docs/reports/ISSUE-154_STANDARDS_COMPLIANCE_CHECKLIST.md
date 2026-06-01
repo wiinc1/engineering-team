@@ -99,3 +99,11 @@
 - Evidence in this change: `src/features/task-detail/canonical-list.browser.js`, `src/features/task-detail/canonical-list.js`, `tests/unit/task-detail-canonical-list.test.js`, `tests/browser/task-detail.browser.spec.ts`, and `DESIGN.md`.
 - Validation evidence: `node --test tests/unit/task-detail-adapter.test.js tests/unit/task-detail-canonical-list.test.js`; `npx vitest run src/app/AppNavigation.test.tsx src/app/App.test.tsx`; `npm run standards:check`.
 - Rollout and rollback: Deploy PR #253 to move normal workspace list reads off the expensive legacy projection path. Roll back by reverting the adapter and canonical-list helper changes, which restores `/tasks` as the primary workspace list source.
+
+## Production Assignment Routing Addendum
+
+- Change or task ID: `TSK-7455C9C1`, task detail owner assignment route fix.
+- Scope summary: Task detail owner assignment now reads the canonical task version from `/v1/tasks/{taskId}` and saves through `/v1/tasks/{taskId}/owner`, avoiding SPA fallback HTML responses from legacy assignment URLs.
+- Evidence in this change: `src/features/task-detail/adapter.browser.js`, `src/features/task-detail/adapter.js`, `tests/unit/task-detail-adapter.test.js`, `tests/browser/task-detail-next-action.browser.spec.ts`, and `DESIGN.md`.
+- Gap observed: No remaining task-detail owner assignment routing gap is expected after deployment. Documented rationale: The browser test asserts the detail form posts `ownerAgentId` and `version` to the canonical v1 owner endpoint, and production unauthenticated route probing confirmed `/backend/v1/tasks/TSK-7455C9C1/owner` returns JSON auth enforcement rather than an HTML fallback (source `TSK-7455C9C1`).
+- Rollout and rollback: Deploy the client adapter change before continuing the supervised pilot. Roll back by reverting the adapter assignment endpoint change, which restores the legacy assignment path but may reintroduce HTML fallback errors in production.
