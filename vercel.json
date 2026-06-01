@@ -22,6 +22,14 @@
       "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/sre-monitoring/:action"
     },
     {
+      "source": "/api/tasks/:taskId",
+      "destination": "/api/v1/task-workflow-proxy?__audit_path=tasks/:taskId"
+    },
+    {
+      "source": "/api/tasks/:taskId/:action(detail|history|observability-summary|state)",
+      "destination": "/api/v1/task-workflow-proxy?__audit_path=tasks/:taskId/:action"
+    },
+    {
       "source": "/backend/v1/tasks/:taskId/execution-contract/:action",
       "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/execution-contract/:action"
     },
@@ -32,6 +40,14 @@
     {
       "source": "/backend/v1/tasks/:taskId/sre-monitoring/:action",
       "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/sre-monitoring/:action"
+    },
+    {
+      "source": "/backend/tasks/:taskId",
+      "destination": "/api/v1/task-workflow-proxy?__audit_path=tasks/:taskId"
+    },
+    {
+      "source": "/backend/tasks/:taskId/:action(detail|history|observability-summary|state)",
+      "destination": "/api/v1/task-workflow-proxy?__audit_path=tasks/:taskId/:action"
     },
     {
       "source": "/backend",

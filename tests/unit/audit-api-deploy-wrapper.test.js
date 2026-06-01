@@ -81,6 +81,43 @@ test('task workflow proxy restores the rewritten workflow URL before dispatch', 
   });
 });
 
+test('task workflow proxy restores unversioned audit read URLs before dispatch', () => {
+  let observedUrl = null;
+  const expected = Promise.resolve({ handled: true });
+  withStubbedServer(req => {
+    observedUrl = req.url;
+    return expected;
+  }, () => {
+    clearModule('../../api/v1/task-workflow-proxy.js');
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    const result = handler({
+      url: '/api/v1/task-workflow-proxy?__audit_path=tasks/TSK-1/history&limit=25',
+    }, {});
+
+    assert.equal(result, expected);
+    assert.equal(observedUrl, '/api/tasks/TSK-1/history?limit=25');
+  });
+});
+
+test('task workflow proxy rejects unversioned audit routes outside the read allowlist', () => {
+  let dispatched = false;
+  withStubbedServer(() => {
+    dispatched = true;
+  }, () => {
+    clearModule('../../api/v1/task-workflow-proxy.js');
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    const response = createResponseRecorder();
+
+    handler({
+      url: '/api/v1/task-workflow-proxy?__audit_path=tasks/TSK-1/events',
+    }, response);
+
+    assert.equal(dispatched, false);
+    assert.equal(response.statusCode, 400);
+    assert.equal(JSON.parse(response.body).error.code, 'invalid_audit_proxy_path');
+  });
+});
+
 test('task workflow proxy rejects routes outside the versioned workflow allowlist', () => {
   let dispatched = false;
   withStubbedServer(() => {
