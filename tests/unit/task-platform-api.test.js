@@ -74,3 +74,36 @@ test("canonical draft PM owner assignment bootstraps PM refinement workflow stat
     ]);
   });
 });
+
+test("canonical draft PM owner assignment drains async projections for immediate task detail reads", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...authHeaders(secret, { roles: ["admin"] }) },
+      body: JSON.stringify({
+        title: "Async canonical intake draft",
+        description: "Raw notes should show PM ownership immediately after save.",
+        status: "DRAFT",
+        priority: "P2",
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/owner`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", ...authHeaders(secret, { roles: ["pm", "reader"] }) },
+      body: JSON.stringify({ ownerAgentId: "pm", version: task.version }),
+    });
+    assert.equal(response.status, 200);
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/detail`, {
+      headers: authHeaders(secret, { roles: ["reader"] }),
+    });
+    assert.equal(response.status, 200);
+    const detail = await response.json();
+    assert.equal(detail.summary.owner.id, "pm");
+    assert.equal(detail.summary.nextAction.label, "PM refinement required");
+    assert.equal(detail.summary.blockedState.waitingOn, "Task refinement");
+  }, { projectionMode: "async" });
+});

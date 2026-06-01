@@ -402,7 +402,9 @@ paths:
       description: |
         Updates canonical ownership. When a draft task is assigned to the Product Manager agent, the route also
         bootstraps the audit workflow if needed by recording `task.created` and `task.refinement_requested`, so
-        task detail and PM inbox views can show `PM refinement required` immediately after the save.
+        task detail and PM inbox views can show `PM refinement required` immediately after the save. In async
+        projection mode, the owner route performs a bounded async projection drain before returning so the next
+        task-detail read does not show stale unassigned ownership.
       security:
         - BearerAuth: []
       parameters:

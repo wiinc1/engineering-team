@@ -17,6 +17,7 @@ test("task-platform contract documents persisted AI-agent management", () => {
     "task.refinement_requested",
     "workflowStarted",
     "PM refinement required",
+    "async projection drain",
   ]) {
     assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }

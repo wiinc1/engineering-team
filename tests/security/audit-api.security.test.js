@@ -165,5 +165,8 @@ test("reader cannot bootstrap PM refinement through canonical owner save", async
     const state = await response.json();
     assert.notEqual(state.assignee, "pm");
     assert.notEqual(state.waiting_state, "task_refinement");
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/history`, { headers: reader });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).items.some((item) => item.event_type === "task.refinement_requested"), false);
   });
 });
