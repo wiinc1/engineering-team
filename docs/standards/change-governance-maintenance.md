@@ -14,6 +14,8 @@ Canonical checks:
 - `npm run ownership:lint`
 - `npm run governance:drift`
 
+`npm run pr:check` validates the required PR-body fields against the changed-file set. In CI, the checker prefers the current pull-request body fetched from GitHub when `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, and the PR number are available; this prevents stale `pull_request` event payloads from failing a corrected PR description. If the API lookup is unavailable, the checker falls back to the event body.
+
 ## Coverage Artifacts
 `npm run standards:check` reads `.artifacts/coverage-summary.json`. That file may be produced by `npm run coverage` with per-suite JavaScript/UI coverage, or by `make verify` with Python coverage totals. The coverage policy checker accepts both schemas so developers can run the verification commands in either order without regenerating coverage only to satisfy a parser shape.
 
