@@ -20,6 +20,7 @@ test('audit foundation API contract documents Vercel workflow proxy aliases', ()
   );
 
   assert.match(spec, /versioned task workflow aliases/);
+  assert.match(spec, /\/api\/v1\/tasks\/\{taskId\}\/refinement\/start/);
   assert.match(spec, /\/api\/v1\/tasks\/\{taskId\}\/execution-contract\/\{action\}/);
   assert.match(spec, /api\/v1\/task-workflow-proxy\.js/);
 });

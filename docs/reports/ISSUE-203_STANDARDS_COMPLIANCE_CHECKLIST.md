@@ -90,3 +90,16 @@
 - Tests added or updated: `tests/unit/task-detail-next-action.test.js`; `tests/browser/task-detail-next-action.browser.spec.ts`.
 - Validation evidence: `node --test tests/unit/task-detail-next-action.test.js tests/contract/task-detail-next-action.contract.test.js`; `npx playwright test tests/browser/task-detail-next-action.browser.spec.ts`; `npm run lint`; `npm run standards:check`; `npm run build`.
 - Rollout and rollback: Deploy with PR #263. Rollback by reverting the PR to restore the previous SRE-before-PM next-action precedence.
+
+## PR #264 Addendum - PM Refinement Retry Deployment Route
+
+- Change or task ID: PR #264, deployable PM refinement retry route and failure feedback.
+- Owner: Codex implementation agent.
+- Date: 2026-06-01.
+- Scope summary: Added Vercel workflow-proxy rewrites for `/api/v1/tasks/{taskId}/refinement/start` and `/backend/v1/tasks/{taskId}/refinement/start`, allowlisted the PM refinement route in the proxy, and made task detail report accepted runtime fallback reasons as retry failures.
+- Standards baseline reviewed: `docs/standards/software-development-standards.md`, `DESIGN.md`, and `docs/runbooks/audit-foundation.md`.
+- Applicable standards areas: authenticated workflow recovery, Vercel deployment routing, role-gated PM refinement actions, and truthful runtime attribution feedback.
+- Standards gaps or exceptions: No new exception. The proxy remains allowlisted and traversal attempts are rejected before dispatch.
+- Tests added or updated: `tests/unit/audit-api-deploy-wrapper.test.js`; `tests/security/audit-api-deploy-wrapper.security.test.js`; `tests/contract/audit-api-deploy-wrapper.contract.test.js`; `tests/unit/task-detail-next-action.test.js`; `tests/browser/task-detail-next-action.browser.spec.ts`.
+- Validation evidence: Focused unit/security/contract API tests and task-detail browser tests were run locally before PR creation.
+- Rollout and rollback: Deploy with PR #264. Rollback by reverting the PR to remove the explicit Vercel refinement retry alias and restore prior retry response handling.

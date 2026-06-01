@@ -22,6 +22,10 @@
       "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/sre-monitoring/:action"
     },
     {
+      "source": "/api/v1/tasks/:taskId/refinement/start",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/refinement/start"
+    },
+    {
       "source": "/api/tasks/:taskId",
       "destination": "/api/v1/task-workflow-proxy?__audit_path=tasks/:taskId"
     },
@@ -40,6 +44,10 @@
     {
       "source": "/backend/v1/tasks/:taskId/sre-monitoring/:action",
       "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/sre-monitoring/:action"
+    },
+    {
+      "source": "/backend/v1/tasks/:taskId/refinement/start",
+      "destination": "/api/v1/task-workflow-proxy?__workflow_path=tasks/:taskId/refinement/start"
     },
     {
       "source": "/backend/tasks/:taskId",
