@@ -346,7 +346,8 @@ test.describe('task detail PM refinement retry', () => {
       status: 'waiting',
       intakeDraft: true,
       nextAction: 'PM refinement required',
-    }), ['pm', 'reader']);
+      monitoring: { state: 'pending_start', canApprove: false },
+    }), ['admin', 'pm', 'sre', 'reader']);
 
     await page.route(`**/api/v1/tasks/${TASK_ID}/refinement/start`, async (route) => {
       retryRequests.push(route.request().postDataJSON());

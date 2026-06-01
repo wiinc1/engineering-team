@@ -612,6 +612,7 @@ Task detail UX is governed by the task-detail read model, not by ad hoc client-s
 - Stale, degraded, restricted, empty, and error task-detail states must be visually distinct and must include direct recovery or next-step language when recovery exists.
 - Deterministic status precedence must be preserved: blocked, waiting, degraded/stale, review, done, and closed states should not compete through color alone.
 - Role-specific next-action panels may derive from the canonical read model plus session roles, but must not introduce a second task-detail source of truth or hide blocked, waiting, stale, or read-only states behind action-only copy.
+- Pending PM refinement is a blocking intake state; its retry action takes precedence over monitoring context until a refinement artifact or Execution Contract exists.
 - Linked child tasks, PR metadata, orchestration counts, and telemetry summaries must avoid N+1-style page behavior. Summaries should be pre-projected or loaded through explicit adjacent panels.
 - Truncated payloads, hidden orchestration, redacted owner data, and unavailable telemetry must identify the limitation and its source.
 - Manual refresh is the default recovery model for stale task-detail data unless a route defines a stronger live-update contract.
