@@ -52,5 +52,7 @@ test('contract: server-provided summary nextAction remains backwards-compatible 
   );
 
   assert.equal(result.action, 'pm_refinement');
+  assert.equal(result.primaryAction, 'retry_pm_refinement');
+  assert.equal(result.primaryLabel, 'Retry PM refinement');
   assert.match(result.reason, /PM refinement/i);
 });

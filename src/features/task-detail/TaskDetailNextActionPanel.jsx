@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   isTaskDetailNextActionRedesignEnabled,
   resolveTaskDetailNextAction,
@@ -11,13 +11,93 @@ function emitNextActionMetric(type, action) {
   window.dispatchEvent(new CustomEvent(`engineering-team:task-detail-next-action-${type}`, { detail: metric }));
 }
 
-function ActionLink({ action }) {
-  if (!action.controlsAvailable || !action.primaryHref || !action.primaryLabel) {
+function readCookie(name) {
+  const prefix = `${name}=`;
+  return String(typeof document === 'undefined' ? '' : document.cookie || '')
+    .split(';')
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix))
+    ?.slice(prefix.length) || '';
+}
+
+function readBrowserSession() {
+  try {
+    if (typeof sessionStorage === 'undefined') return {};
+    return JSON.parse(sessionStorage.getItem('engineering-team.task-browser-session') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+async function retryPmRefinement(taskId) {
+  const session = readBrowserSession();
+  const base = String(session.apiBaseUrl || '/api').replace(/\/+$/, '');
+  const headers = { 'content-type': 'application/json' };
+  if (session.bearerToken) headers.authorization = `Bearer ${session.bearerToken}`;
+  else {
+    const csrf = decodeURIComponent(readCookie('engineering_team_csrf') || '');
+    if (csrf) headers['x-csrf-token'] = csrf;
+  }
+
+  const response = await fetch(`${base}/v1/tasks/${encodeURIComponent(taskId)}/refinement/start`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers,
+    body: JSON.stringify({ trigger: 'task_detail_retry_button' }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload?.error?.message || 'PM refinement retry failed.');
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
+}
+
+function RetryPmRefinementButton({ action, taskId, onActionComplete }) {
+  const [status, setStatus] = useState({ kind: 'idle', message: '' });
+  const loading = status.kind === 'loading';
+
+  async function handleClick() {
+    if (!taskId) return;
+    emitNextActionMetric('click', action);
+    setStatus({ kind: 'loading', message: 'Starting PM refinement...' });
+    try {
+      const result = await retryPmRefinement(taskId);
+      const retryStatus = result?.data?.status || result?.status || 'started';
+      setStatus({ kind: 'success', message: `PM refinement ${retryStatus}. Refreshing task detail...` });
+      if (typeof onActionComplete === 'function') await onActionComplete(result);
+    } catch (error) {
+      setStatus({ kind: 'error', message: error?.message || 'PM refinement retry failed.' });
+    }
+  }
+
+  return (
+    <div className="task-next-action__primary-stack">
+      <button className="task-next-action__primary" type="button" disabled={loading || !taskId} onClick={handleClick}>
+        {loading ? 'Retrying...' : action.primaryLabel}
+      </button>
+      {status.kind !== 'idle' ? (
+        <p className={`task-next-action__status task-next-action__status--${status.kind}`} role={status.kind === 'error' ? 'alert' : 'status'}>
+          {status.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ActionLink({ action, taskId, onActionComplete }) {
+  if (!action.controlsAvailable || (!action.primaryHref && action.primaryAction !== 'retry_pm_refinement') || !action.primaryLabel) {
     return (
       <p className="task-next-action__permission" role="status">
         Action controls are unavailable for this session.
       </p>
     );
+  }
+
+  if (action.primaryAction === 'retry_pm_refinement') {
+    return <RetryPmRefinementButton action={action} taskId={taskId} onActionComplete={onActionComplete} />;
   }
 
   return (
@@ -74,9 +154,10 @@ function SecondaryLinks({ links = [] }) {
   );
 }
 
-export function TaskDetailNextActionPanel({ screen, principal, runtimeConfig }) {
+export function TaskDetailNextActionPanel({ screen, principal, runtimeConfig, onActionComplete }) {
   const enabled = isTaskDetailNextActionRedesignEnabled(runtimeConfig);
   const action = useMemo(() => resolveTaskDetailNextAction(screen, principal), [screen, principal]);
+  const taskId = screen?.detail?.task?.id || screen?.summary?.taskId || screen?.summary?.task_id || screen?.route?.taskId || null;
 
   useEffect(() => {
     if (enabled) emitNextActionMetric('impression', action);
@@ -95,7 +176,7 @@ export function TaskDetailNextActionPanel({ screen, principal, runtimeConfig }) 
         <p className="eyebrow">{action.roleLabel} next action</p>
         <h2 id="task-next-action-title">{action.title}</h2>
         <p>{action.reason}</p>
-        <ActionLink action={action} />
+        <ActionLink action={action} taskId={taskId} onActionComplete={onActionComplete} />
       </div>
       <div className="task-next-action__support">
         <StatusFacts facts={action.statusFacts} />

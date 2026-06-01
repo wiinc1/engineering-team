@@ -48,7 +48,7 @@ lved").map((t) => a("li", { children: [e("strong", { children: t.title }), e("sp
 task-detail-hero", "aria-label": "Task summary", children: [a("div", { className: "task-detail-hero__title", children: [a("div", { className: "task-status-pill",
   "data-status": s.detail?.task?.status || "active", children: [e("span", { "aria-hidden": "true", children: lo(s.detail?.task?.status) }), e("span", { children: rt(
   s.detail?.task?.status) })] }), e("div", { className: "priority-pill", children: s.summary.priority || "No priority" }), oa ? e("div", { className: "routing-b\
-adge routing-badge--intake", children: "Intake Draft" }) : null, Qs ? e("div", { className: "routing-badge", children: "Assigned to me" }) : null] }), e(TaskDetailNextActionPanel, { screen: s, principal: h }), a("div", {
+adge routing-badge--intake", children: "Intake Draft" }) : null, Qs ? e("div", { className: "routing-badge", children: "Assigned to me" }) : null] }), e(TaskDetailNextActionPanel, { screen: s, principal: h, onActionComplete: k }), a("div", {
   className: "summary-grid summary-grid--hero", children: [a("article", { children: [e("span", { children: "Owner" }), e("strong", { children: s.detail?.summary?.
   owner?.label || s.summary.currentOwner || "Unassigned" })] }), a("article", { children: [e("span", { children: "Workflow stage" }), e("strong", { children: s.
   detail?.summary?.workflowStage?.label || s.summary.currentStage || "\u2014" })] }), a("article", { children: [e("span", { children: "Status" }), e("strong", {

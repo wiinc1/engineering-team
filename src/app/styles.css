@@ -1134,6 +1134,7 @@ button {
 }
 
 .task-next-action__primary {
+  border: 0;
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -1146,6 +1147,28 @@ button {
   -webkit-text-fill-color: var(--design-color-palette-surface);
   font-weight: var(--design-typography-label-md-font-weight);
   text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.task-next-action__primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.task-next-action__primary-stack {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.task-next-action__status {
+  color: var(--color-on-muted-strong);
+  font-size: var(--design-typography-label-sm-font-size);
+}
+
+.task-next-action__status--error {
+  color: var(--danger);
 }
 
 .task-next-action__facts {
