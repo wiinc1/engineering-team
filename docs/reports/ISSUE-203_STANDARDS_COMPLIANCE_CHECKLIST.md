@@ -64,3 +64,16 @@
 - Tests added or updated: `tests/unit/task-detail-canonical-list.test.js`; `package.json` test unit manifest.
 - Validation evidence: `node --test tests/unit/task-detail-adapter.test.js tests/unit/task-detail-canonical-list.test.js`; `npm run lint`; `npm run build`.
 - Rollout and rollback: Deploy the browser adapter change with PR #253. Rollback by reverting the adapter list-read change, which restores the legacy `/tasks` list path for workspace loading.
+
+## PR #262 Addendum - PM Refinement Retry Button
+
+- Change or task ID: PR #262, task-detail PM refinement retry control.
+- Owner: Codex implementation agent.
+- Date: 2026-06-01.
+- Scope summary: Replaced the passive pending-refinement next-action link with a `Retry PM refinement` button that posts to the authenticated refinement start endpoint, shows local request status, and refreshes task detail after dispatch.
+- Standards baseline reviewed: `docs/standards/software-development-standards.md` and `DESIGN.md`.
+- Applicable standards areas: task detail UX, authenticated browser actions, workflow recovery controls, and browser coverage.
+- Standards gaps or exceptions: No new exception. The retry action uses the existing task detail next-action surface and primary button treatment.
+- Tests added or updated: `tests/unit/task-detail-next-action.test.js`; `tests/contract/task-detail-next-action.contract.test.js`; `tests/browser/task-detail-next-action.browser.spec.ts`; `tests/visual/task-assignment.visual.spec.ts`; `tests/visual/__snapshots__/task-assignment.visual.spec.ts.snap`.
+- Validation evidence: `node --test tests/unit/task-detail-next-action.test.js tests/contract/task-detail-next-action.contract.test.js`; `npx playwright test tests/browser/task-detail-next-action.browser.spec.ts`; `npx vitest run tests/visual/task-assignment.visual.spec.ts`; `npm run lint`; `npm run standards:check`; `npm run build`.
+- Rollout and rollback: Deploy with PR #262. Rollback by reverting the PR or disabling the task detail next-action redesign with `VITE_FF_TASK_DETAIL_NEXT_ACTION_REDESIGN=false`.
