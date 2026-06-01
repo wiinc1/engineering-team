@@ -170,3 +170,39 @@ test("reader cannot bootstrap PM refinement through canonical owner save", async
     assert.equal((await response.json()).items.some((item) => item.event_type === "task.refinement_requested"), false);
   });
 });
+
+test("reader cannot start PM refinement through the dedicated refinement route", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const admin = { "content-type": "application/json", ...securityHeaders(secret, ["admin"]) };
+    const reader = { "content-type": "application/json", ...securityHeaders(secret, ["reader"]) };
+    let response = await fetch(`${baseUrl}/tasks`, {
+      method: "POST",
+      headers: admin,
+      body: JSON.stringify({
+        title: "Unauthorized PM refinement start",
+        raw_requirements: "Verify a reader cannot trigger PM refinement runtime dispatch.",
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = await response.json();
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/history`, { headers: reader });
+    assert.equal(response.status, 200);
+    const before = await response.json();
+    const startedBefore = before.items.filter((item) => item.event_type === "task.refinement_started").length;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/refinement/start`, {
+      method: "POST",
+      headers: reader,
+      body: JSON.stringify({ trigger: "reader-security-test" }),
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /Only PM\/admin may start PM refinement/);
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/history`, { headers: reader });
+    assert.equal(response.status, 200);
+    const after = await response.json();
+    assert.equal(after.items.filter((item) => item.event_type === "task.refinement_started").length, startedBefore);
+    assert.equal(after.items.some((item) => item.event_type === "task.refinement_started" && item.actor_id === "reader"), false);
+  });
+});
