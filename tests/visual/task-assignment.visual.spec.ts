@@ -27,6 +27,7 @@ describe('task assignment visual baseline', () => {
     const { container } = render(renderTaskDetailNextActionApp(['pm', 'reader']));
 
     await screen.findByRole('heading', { name: /role-specific next action/i });
+    await screen.findByRole('button', { name: /retry pm refinement/i });
 
     expect(container.querySelector('.task-next-action')).toMatchSnapshot();
   });
