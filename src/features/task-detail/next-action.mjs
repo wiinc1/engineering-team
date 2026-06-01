@@ -66,6 +66,7 @@ function taskSignals(screen = {}) {
   const metaFreshness = detail.meta?.freshness || {};
   const summaryFreshness = summary.freshness || {};
   const closeGovernance = context.closeGovernance || {};
+  const pmRefinementStatus = refinementStatus(context);
   const monitoring = context.sreMonitoring || detail.monitoring || detailSummary.monitoring || null;
   const actionText = fieldText(
     detailSummary.nextAction?.label,
@@ -98,7 +99,40 @@ function taskSignals(screen = {}) {
     isIntakeDraft: Boolean(context.intakeDraft || summary.intakeDraft || summary.intake_draft),
     isUnassigned: !detailSummary.owner?.id && !summary.currentOwner && !summary.current_owner,
     isStale: normalize(metaFreshness.status || summaryFreshness.status || timers.freshness) === 'stale',
+    pmRefinementStatus,
   };
+}
+
+function refinementStatus(context = {}) {
+  const contract = context.executionContract || {};
+  const approval = contract.approval || null;
+  const latest = contract.latest || null;
+
+  if (approval?.approvedAt || approval?.approved_at || latest?.status === 'approved') {
+    return {
+      label: 'PM refinement',
+      value: 'Complete',
+      detail: 'Approved Execution Contract recorded.',
+    };
+  }
+
+  if (contract.active || latest) {
+    return {
+      label: 'PM refinement',
+      value: 'In progress',
+      detail: latest?.version ? `Execution Contract v${latest.version} is not approved yet.` : 'Draft Execution Contract exists.',
+    };
+  }
+
+  if (context.intakeDraft) {
+    return {
+      label: 'PM refinement',
+      value: 'Requested/pending',
+      detail: 'The task is queued for PM refinement; no refinement artifact is complete yet.',
+    };
+  }
+
+  return null;
 }
 
 function userCanAct(roles) {
@@ -177,11 +211,13 @@ function baseAction(role, signals) {
 }
 
 function statusFacts(signals) {
-  return [
+  const facts = [
     { label: 'State', value: signals.isDone ? 'Done' : signals.isBlocked ? 'Blocked' : signals.waitingState ? 'Waiting' : signals.stage || 'Active' },
     { label: 'Owner', value: signals.currentOwner },
     { label: 'Freshness', value: signals.lastUpdatedAt ? `${signals.freshness} · ${signals.lastUpdatedAt}` : signals.freshness },
   ];
+  if (signals.pmRefinementStatus) facts.push(signals.pmRefinementStatus);
+  return facts;
 }
 
 function pmAction(role, signals) {

@@ -207,6 +207,14 @@ const nextActionCases = [
     cta: 'Assign owner',
   },
   {
+    name: 'PM refinement',
+    roles: ['pm', 'reader'],
+    detail: detailPayload({ stage: 'DRAFT', status: 'waiting', intakeDraft: true, nextAction: 'PM refinement required' }),
+    action: 'pm_refinement',
+    title: 'PM refinement required',
+    cta: 'Review PM context',
+  },
+  {
     name: 'QA verification',
     roles: ['qa', 'reader'],
     detail: detailPayload({
@@ -296,7 +304,9 @@ test.describe('task detail next-action browser matrix', () => {
       await assertPrioritizedNextAction(page, item);
     });
   }
+});
 
+test.describe('task detail next-action controls', () => {
   test('shows status without unauthorized next-action controls for restricted readers', async ({ page }) => {
     await openTaskDetail(page, detailPayload({
       stage: 'QA_TESTING',
@@ -311,6 +321,23 @@ test.describe('task detail next-action browser matrix', () => {
     await expect(panel.getByRole('link', { name: 'Submit QA result' })).toHaveCount(0);
   });
 
+  test('labels PM refinement as requested until a refinement artifact exists', async ({ page }) => {
+    await openTaskDetail(page, detailPayload({
+      stage: 'DRAFT',
+      status: 'waiting',
+      intakeDraft: true,
+      nextAction: 'PM refinement required',
+    }), ['pm', 'reader']);
+
+    const panel = page.locator('.task-next-action');
+    await expect(panel).toHaveAttribute('data-next-action', 'pm_refinement');
+    await expect(panel).toContainText('PM refinement');
+    await expect(panel).toContainText('Requested/pending');
+    await expect(panel).toContainText('no refinement artifact is complete yet');
+  });
+});
+
+test.describe('task detail owner assignment route', () => {
   test('saves owner assignment through the canonical v1 owner route', async ({ page }) => {
     const ownerRequests: unknown[] = [];
     await page.route(`**/api/v1/tasks/${TASK_ID}`, async (route) => {

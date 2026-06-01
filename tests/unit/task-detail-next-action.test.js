@@ -31,6 +31,7 @@ function screen(overrides = {}) {
       context: {
         intakeDraft: Boolean(overrides.intakeDraft),
         closeGovernance: overrides.closeGovernance || null,
+        executionContract: overrides.executionContract || null,
         sreMonitoring: overrides.monitoring || null,
       },
       blockers: overrides.blocked ? [{ id: 'blk-1', label: overrides.waitingOn || 'External blocker' }] : [],
@@ -56,6 +57,25 @@ test('next-action resolver prioritizes PM refinement for intake drafts', async (
   assert.equal(result.role, 'pm');
   assert.equal(result.primaryHref, '#task-detail-overview-section');
   assert.match(result.reason, /PM refinement/i);
+  assert.equal(result.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'Requested/pending');
+});
+
+test('next-action resolver distinguishes active and completed PM refinement', async () => {
+  const { resolveTaskDetailNextAction } = await modulePromise;
+  const inProgress = resolveTaskDetailNextAction(
+    screen({ stage: 'DRAFT', intakeDraft: true, executionContract: { active: true, latest: { version: 1 } } }),
+    principal('pm', 'reader'),
+  );
+  const complete = resolveTaskDetailNextAction(
+    screen({
+      stage: 'DRAFT',
+      intakeDraft: true,
+      executionContract: { latest: { version: 1, status: 'approved' }, approval: { approvedAt: '2026-05-15T10:00:00.000Z' } },
+    }),
+    principal('pm', 'reader'),
+  );
+  assert.equal(inProgress.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'In progress');
+  assert.equal(complete.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'Complete');
 });
 
 test('next-action resolver routes unassigned PM work to assignment controls', async () => {

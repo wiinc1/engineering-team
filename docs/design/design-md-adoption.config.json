@@ -62,7 +62,7 @@
         "src/features/task-detail/TaskHistoryTimeline.module.css",
         "src/features/task-detail/TelemetrySummary.module.css"
       ],
-      "notes": "`StageTransition.module.css`, `TaskDetailActivityShell.module.css`, `TaskHistoryTimeline.module.css`, and `TelemetrySummary.module.css` import `TaskDetail.tokens.css`; enforcement scans every authored task-detail CSS module."
+      "notes": "`StageTransition.module.css`, `TaskDetailActivityShell.module.css`, `TaskHistoryTimeline.module.css`, and `TelemetrySummary.module.css` import `TaskDetail.tokens.css`; enforcement scans every authored task-detail CSS module. The task-detail next-action panel also exposes PM refinement status as requested/pending, in progress, or complete from existing workflow context."
     },
     {
       "area": "Inputs/forms",

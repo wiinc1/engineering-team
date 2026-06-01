@@ -51,7 +51,10 @@ function StatusFacts({ facts = [] }) {
       {facts.map((fact) => (
         <div key={fact.label}>
           <dt>{fact.label}</dt>
-          <dd>{fact.value || 'Unknown'}</dd>
+          <dd>
+            {fact.value || 'Unknown'}
+            {fact.detail ? <small>{fact.detail}</small> : null}
+          </dd>
         </div>
       ))}
     </dl>
