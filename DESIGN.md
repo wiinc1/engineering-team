@@ -9,6 +9,7 @@ runtimeContracts:
     notes: "Task detail assignment controls use canonical task-platform JSON endpoints so Vercel SPA fallbacks cannot return HTML to owner-save requests."
     draftPmRefinementFeedback: "When the owner save returns workflow.nextRequiredAction, the assignment status reports that PM refinement started instead of only confirming owner persistence."
     nullReadModelDefaults: "Task detail form defaults tolerate null optional read-model sections so incomplete draft tasks render owner, next action, and activity instead of white-screening."
+    pmRefinementStatusIndicator: "Task detail next-action facts distinguish requested/pending PM refinement, in-progress draft Execution Contract refinement, and completed approved refinement without implying an agent run exists when only a request event is recorded."
 colors:
   palette-page-bg: "#EEF2F7"
   palette-surface: "#FFFFFF"

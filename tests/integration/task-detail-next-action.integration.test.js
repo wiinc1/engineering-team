@@ -45,6 +45,35 @@ test('integration: derives QA next action from the existing task detail read mod
   assert.equal(result.statusFacts.find((fact) => fact.label === 'Owner').value, 'QA Engineer');
 });
 
+test('integration: surfaces PM refinement status from task detail context', async () => {
+  const { resolveTaskDetailNextAction } = await modulePromise;
+  const pending = resolveTaskDetailNextAction(modelFromDetail(detailPayload({
+    stage: 'DRAFT',
+    owner: { id: 'pm', label: 'PM', kind: 'assigned' },
+    nextAction: { label: 'PM refinement required', source: 'system' },
+    context: { intakeDraft: true },
+  })), { roles: ['pm', 'reader'] });
+  assert.equal(pending.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'Requested/pending');
+
+  const inProgress = resolveTaskDetailNextAction(modelFromDetail(detailPayload({
+    stage: 'DRAFT',
+    context: {
+      intakeDraft: true,
+      executionContract: { active: true, latest: { version: 1, status: 'draft' } },
+    },
+  })), { roles: ['pm', 'reader'] });
+  assert.equal(inProgress.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'In progress');
+
+  const complete = resolveTaskDetailNextAction(modelFromDetail(detailPayload({
+    stage: 'DRAFT',
+    context: {
+      intakeDraft: true,
+      executionContract: { latest: { version: 1, status: 'approved' }, approval: { approvedAt: '2026-05-15T10:00:00.000Z' } },
+    },
+  })), { roles: ['pm', 'reader'] });
+  assert.equal(complete.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'Complete');
+});
+
 test('integration: derives SRE action from embedded monitoring context without a new API field', async () => {
   const { resolveTaskDetailNextAction } = await modulePromise;
   const detail = detailPayload({

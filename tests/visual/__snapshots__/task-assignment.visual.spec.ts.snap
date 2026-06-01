@@ -130,6 +130,17 @@ exports[`task assignment visual baseline > matches the role-specific next-action
           fresh · 2026-05-15T10:00:00.000Z
         </dd>
       </div>
+      <div>
+        <dt>
+          PM refinement
+        </dt>
+        <dd>
+          Requested/pending
+          <small>
+            The task is queued for PM refinement; no refinement artifact is complete yet.
+          </small>
+        </dd>
+      </div>
     </dl>
     <div
       class="task-next-action__evidence"

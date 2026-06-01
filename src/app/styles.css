@@ -1179,6 +1179,14 @@ button {
   overflow-wrap: anywhere;
 }
 
+.task-next-action__facts dd small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-on-muted-strong);
+  font-size: var(--design-typography-body-sm-font-size);
+  font-weight: var(--design-typography-body-sm-font-weight);
+}
+
 .task-next-action__evidence ul {
   padding-left: 18px;
 }
