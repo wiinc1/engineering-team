@@ -1153,7 +1153,6 @@ button {
 
 .task-next-action__primary:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
 .task-next-action__primary-stack {
