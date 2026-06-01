@@ -189,7 +189,7 @@ function toTaskDetailScreenModel({ summary, history, telemetry, historyFilters, 
 }
 
 async function parseJsonResponse(response) {
-  const payload = await response.json();
+  let payload = null; try { payload = await response.json(); } catch { const error = new Error('Expected a JSON API response but received invalid JSON.'); error.status = response.status; error.code = 'invalid_json_response'; throw error; }
   if (!response.ok) {
     const error = new Error(payload?.error?.message || `Request failed with status ${response.status}`);
     error.status = response.status;
@@ -442,9 +442,7 @@ export function createTaskDetailApiClient({ baseUrl = '', fetchImpl = fetch, get
         return request('/ai-agents');
       }
     },
-    assignTaskOwner(taskId, agentId) {
-      return request(`/tasks/${encodeURIComponent(taskId)}/assignment`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId }) });
-    },
+    async assignTaskOwner(taskId, agentId) { const current = await request(`/v1/tasks/${encodeURIComponent(taskId)}`); const task = current?.data || current; return request(`/v1/tasks/${encodeURIComponent(taskId)}/owner`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ownerAgentId: agentId, version: task.version }) }); },
     changeTaskStage(taskId, toStage, payload = {}) {
       return request(`/tasks/${encodeURIComponent(taskId)}/events`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventType: 'task.stage_changed', payload: { to_stage: toStage, ...payload } }) });
     },

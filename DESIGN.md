@@ -2,6 +2,11 @@
 version: alpha
 name: Engineering Team Software Factory Control Plane
 description: Visual identity for the internal Engineering Team task orchestration, audit, auth, and software-factory control-plane UI.
+runtimeContracts:
+  taskDetailAssignment:
+    ownerMutationEndpoint: "/v1/tasks/:taskId/owner"
+    versionSourceEndpoint: "/v1/tasks/:taskId"
+    notes: "Task detail assignment controls use canonical task-platform JSON endpoints so Vercel SPA fallbacks cannot return HTML to owner-save requests."
 colors:
   palette-page-bg: "#EEF2F7"
   palette-surface: "#FFFFFF"

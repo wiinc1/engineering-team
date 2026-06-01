@@ -163,17 +163,23 @@ async function routeTaskDetailEndpoints(page, detail) {
     },
   }));
   await page.route(`**/api/tasks/${TASK_ID}`, async (route) => route.fulfill({ json: taskSummaryResponse(detail) }));
+  await page.route(`**/api/v1/tasks/${TASK_ID}`, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ json: { data: { taskId: TASK_ID, version: 3, owner: null } } });
+  });
 }
 
 async function routeAgents(page) {
+  const agents = [
+    { id: 'pm', agentId: 'pm', display_name: 'PM', displayName: 'PM', role: 'PM', active: true, assignable: true },
+    { id: 'architect', agentId: 'architect', display_name: 'Architect', displayName: 'Architect', role: 'Architect', active: true, assignable: true },
+    { id: 'engineer', agentId: 'engineer', display_name: 'Engineer', displayName: 'Engineer', role: 'Engineering', active: true, assignable: true },
+    { id: 'qa', agentId: 'qa', display_name: 'QA Engineer', displayName: 'QA Engineer', role: 'QA', active: true, assignable: true },
+  ];
+  await page.route('**/api/v1/ai-agents?includeInactive=true', async (route) => route.fulfill({ json: { data: agents } }));
   await page.route('**/api/ai-agents', async (route) => route.fulfill({
     json: {
-      items: [
-        { id: 'pm', display_name: 'PM', role: 'PM', active: true },
-        { id: 'architect', display_name: 'Architect', role: 'Architect', active: true },
-        { id: 'engineer', display_name: 'Engineer', role: 'Engineering', active: true },
-        { id: 'qa', display_name: 'QA Engineer', role: 'QA', active: true },
-      ],
+      items: agents,
     },
   }));
 }
@@ -303,5 +309,32 @@ test.describe('task detail next-action browser matrix', () => {
     await expect(panel).toHaveAttribute('data-next-action', 'read_only_status');
     await expect(panel).toContainText('Action controls are unavailable for this session.');
     await expect(panel.getByRole('link', { name: 'Submit QA result' })).toHaveCount(0);
+  });
+
+  test('saves owner assignment through the canonical v1 owner route', async ({ page }) => {
+    const ownerRequests: unknown[] = [];
+    await page.route(`**/api/v1/tasks/${TASK_ID}`, async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ json: { data: { taskId: TASK_ID, version: 3, owner: null } } });
+    });
+    await page.route(`**/api/v1/tasks/${TASK_ID}/owner`, async (route) => {
+      ownerRequests.push(route.request().postDataJSON());
+      await route.fulfill({ json: { data: { taskId: TASK_ID, version: 4, owner: { agentId: 'pm', displayName: 'PM', role: 'PM' } } } });
+    });
+
+    await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
+    const version = await page.evaluate(async (taskId) => {
+      const response = await fetch(`/api/v1/tasks/${taskId}`);
+      return (await response.json()).data.version;
+    }, TASK_ID);
+    await page.evaluate(async ({ taskId, currentVersion }) => {
+      await fetch(`/api/v1/tasks/${taskId}/owner`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ownerAgentId: 'pm', version: currentVersion }),
+      });
+    }, { taskId: TASK_ID, currentVersion: version });
+
+    expect(ownerRequests).toEqual([{ ownerAgentId: 'pm', version: 3 }]);
   });
 });
