@@ -14,6 +14,9 @@ test("task-platform contract documents persisted AI-agent management", () => {
     "Update or deactivate an operator-managed AI agent",
     "agent_version_conflict",
     "unsupported_agent_role",
+    "task.refinement_requested",
+    "workflowStarted",
+    "PM refinement required",
   ]) {
     assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }

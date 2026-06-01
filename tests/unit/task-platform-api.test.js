@@ -26,3 +26,51 @@ test("AI agent preview reports delegation permission requirements", async () => 
     assert.deepEqual(preview.permissionsImpact.requiredToSave, ["agents:write", "agent-delegation:write"]);
   });
 });
+
+test("canonical draft PM owner assignment bootstraps PM refinement workflow state", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...authHeaders(secret, { roles: ["admin"] }) },
+      body: JSON.stringify({
+        title: "Canonical intake draft",
+        description: "Raw operator notes that need Product Manager refinement.",
+        status: "DRAFT",
+        priority: "P2",
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/owner`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", ...authHeaders(secret, { roles: ["pm", "reader"] }) },
+      body: JSON.stringify({ ownerAgentId: "pm", version: task.version }),
+    });
+    assert.equal(response.status, 200);
+    const updated = (await response.json()).data;
+    assert.equal(updated.owner.agentId, "pm");
+    assert.equal(updated.workflow.workflowStarted, true);
+    assert.equal(updated.workflow.nextRequiredAction, "PM refinement required");
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ["reader"] }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.current_stage, "DRAFT");
+    assert.equal(state.assignee, "pm");
+    assert.equal(state.waiting_state, "task_refinement");
+    assert.equal(state.next_required_action, "PM refinement required");
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/history`, {
+      headers: authHeaders(secret, { roles: ["reader"] }),
+    });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.deepEqual(history.items.map((item) => item.event_type), [
+      "task.refinement_requested",
+      "task.created",
+    ]);
+  });
+});

@@ -140,3 +140,30 @@ test("unsupported-role requests require role-request permission and do not trust
     assert.equal(agents.some((agent) => agent.role === "designer" || agent.agentId === body.data.requestId), false);
   });
 });
+
+test("reader cannot bootstrap PM refinement through canonical owner save", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const admin = { "content-type": "application/json", ...securityHeaders(secret, ["admin"]) };
+    const reader = { "content-type": "application/json", ...securityHeaders(secret, ["reader"]) };
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: "POST",
+      headers: admin,
+      body: JSON.stringify({ title: "Unauthorized refinement bootstrap", status: "DRAFT" }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/owner`, {
+      method: "PATCH",
+      headers: reader,
+      body: JSON.stringify({ ownerAgentId: "pm", version: task.version }),
+    });
+    assert.equal(response.status, 403);
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/state`, { headers: reader });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.notEqual(state.assignee, "pm");
+    assert.notEqual(state.waiting_state, "task_refinement");
+  });
+});

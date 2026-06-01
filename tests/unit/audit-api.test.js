@@ -42,3 +42,37 @@ test("preview endpoint reports delegation dry-run impact and blocks invalid dele
     assert.equal((await response.json()).error.code, "agent_activation_preview_failed");
   });
 });
+
+test("canonical draft owner save starts PM refinement projection", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const admin = { "content-type": "application/json", ...authHeaders(secret, { roles: ["admin", "pm", "reader"] }) };
+    let response = await fetch(`${baseUrl}/api/v1/tasks`, {
+      method: "POST",
+      headers: admin,
+      body: JSON.stringify({
+        title: "Audit API canonical draft",
+        description: "Draft notes need PM shaping.",
+        status: "DRAFT",
+      }),
+    });
+    assert.equal(response.status, 201);
+    const task = (await response.json()).data;
+
+    response = await fetch(`${baseUrl}/api/v1/tasks/${task.taskId}/owner`, {
+      method: "PATCH",
+      headers: admin,
+      body: JSON.stringify({ ownerAgentId: "pm", version: task.version }),
+    });
+    assert.equal(response.status, 200);
+    const updated = (await response.json()).data;
+    assert.equal(updated.workflow.nextRequiredAction, "PM refinement required");
+
+    response = await fetch(`${baseUrl}/tasks/${task.taskId}/state`, {
+      headers: authHeaders(secret, { roles: ["reader"] }),
+    });
+    assert.equal(response.status, 200);
+    const state = await response.json();
+    assert.equal(state.assignee, "pm");
+    assert.equal(state.waiting_state, "task_refinement");
+  });
+});
