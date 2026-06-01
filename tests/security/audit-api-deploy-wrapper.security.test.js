@@ -84,6 +84,41 @@ test('task workflow proxy rejects unexpected rewritten paths before dispatch', (
   }
 });
 
+test('task workflow proxy allowlists PM refinement start without broadening traversal access', () => {
+  clearServerModules();
+  const serverPath = require.resolve('../../api/_server.js');
+  const observedUrls = [];
+  require.cache[serverPath] = {
+    id: serverPath,
+    filename: serverPath,
+    loaded: true,
+    exports: {
+      handleRequest: (req) => {
+        observedUrls.push(req.url);
+      },
+    },
+  };
+
+  try {
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    handler({
+      url: '/api/v1/task-workflow-proxy?__workflow_path=tasks/TSK-1/refinement/start',
+    }, createResponseRecorder());
+
+    const response = createResponseRecorder();
+    handler({
+      url: '/api/v1/task-workflow-proxy?__workflow_path=tasks/TSK-1/refinement/../events',
+    }, response);
+
+    assert.deepEqual(observedUrls, ['/api/v1/tasks/TSK-1/refinement/start']);
+    assert.equal(response.statusCode, 400);
+    assert.equal(response.headers['content-type'], 'application/json');
+    assert.equal(JSON.parse(response.body).error.code, 'invalid_workflow_proxy_path');
+  } finally {
+    clearServerModules();
+  }
+});
+
 test('task workflow proxy rejects unversioned audit write and traversal paths before dispatch', () => {
   clearServerModules();
   const serverPath = require.resolve('../../api/_server.js');

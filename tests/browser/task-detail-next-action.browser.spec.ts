@@ -352,14 +352,33 @@ test.describe('task detail PM refinement retry', () => {
     await page.route(`**/api/v1/tasks/${TASK_ID}/refinement/start`, async (route) => {
       retryRequests.push(route.request().postDataJSON());
       await route.fulfill({
-        status: 202,
-        json: { success: true, data: { taskId: TASK_ID, status: 'failed' } },
+        status: 201,
+        json: { success: true, data: { taskId: TASK_ID, status: 'completed' } },
       });
     });
 
     await page.getByRole('button', { name: 'Retry PM refinement' }).click();
     await expect.poll(() => retryRequests.length).toBe(1);
     expect(retryRequests).toEqual([{ trigger: 'task_detail_retry_button' }]);
+  });
+
+  test('surfaces runtime fallback reasons from failed PM refinement retry responses', async ({ page }) => {
+    await openTaskDetail(page, detailPayload({
+      stage: 'DRAFT',
+      status: 'waiting',
+      intakeDraft: true,
+      nextAction: 'PM refinement required',
+    }), ['pm', 'reader']);
+
+    await page.route(`**/api/v1/tasks/${TASK_ID}/refinement/start`, async (route) => {
+      await route.fulfill({
+        status: 202,
+        json: { success: false, data: { taskId: TASK_ID, status: 'failed', fallbackReason: 'runtime_unavailable' } },
+      });
+    });
+
+    await page.getByRole('button', { name: 'Retry PM refinement' }).click();
+    await expect(page.getByRole('alert')).toContainText('PM refinement retry failed: runtime_unavailable.');
   });
 });
 

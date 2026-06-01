@@ -82,6 +82,24 @@ test('next-action resolver keeps pending PM refinement ahead of monitoring state
   assert.equal(result.primaryLabel, 'Retry PM refinement');
 });
 
+test('next-action resolver exposes PM refinement retry as an action rather than a hash link', async () => {
+  const { resolveTaskDetailNextAction } = await modulePromise;
+  const result = resolveTaskDetailNextAction(
+    screen({
+      stage: 'DRAFT',
+      status: 'waiting',
+      ownerId: 'pm',
+      intakeDraft: true,
+      nextAction: 'PM refinement required',
+    }),
+    principal('pm', 'reader'),
+  );
+  assert.equal(result.controlsAvailable, true);
+  assert.equal(result.primaryAction, 'retry_pm_refinement');
+  assert.equal(result.primaryHref, null);
+  assert.equal(result.primaryLabel, 'Retry PM refinement');
+});
+
 test('next-action resolver distinguishes active and completed PM refinement', async () => {
   const { resolveTaskDetailNextAction } = await modulePromise;
   const inProgress = resolveTaskDetailNextAction(

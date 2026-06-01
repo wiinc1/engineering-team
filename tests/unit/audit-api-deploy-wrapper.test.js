@@ -81,6 +81,24 @@ test('task workflow proxy restores the rewritten workflow URL before dispatch', 
   });
 });
 
+test('task workflow proxy restores the PM refinement start URL before dispatch', () => {
+  let observedUrl = null;
+  const expected = Promise.resolve({ handled: true });
+  withStubbedServer(req => {
+    observedUrl = req.url;
+    return expected;
+  }, () => {
+    clearModule('../../api/v1/task-workflow-proxy.js');
+    const handler = require('../../api/v1/task-workflow-proxy.js');
+    const result = handler({
+      url: '/api/v1/task-workflow-proxy?__workflow_path=tasks/TSK-1/refinement/start&source=backend',
+    }, {});
+
+    assert.equal(result, expected);
+    assert.equal(observedUrl, '/api/v1/tasks/TSK-1/refinement/start?source=backend');
+  });
+});
+
 test('task workflow proxy restores unversioned audit read URLs before dispatch', () => {
   let observedUrl = null;
   const expected = Promise.resolve({ handled: true });

@@ -1,7 +1,7 @@
 const { handleRequest } = require('../_server');
 
 const workflowPathPattern =
-  /^tasks\/[^/?#]+\/(?:execution-contract|contract-coverage-audit|sre-monitoring)\/[^/?#]+$/;
+  /^tasks\/[^/?#]+\/(?:(?:execution-contract|contract-coverage-audit|sre-monitoring)\/[^/?#]+|refinement\/start)$/;
 const auditReadPathPattern =
   /^tasks\/[^/?#]+(?:\/(?:detail|history|observability-summary|state))?$/;
 

@@ -52,6 +52,13 @@ async function retryPmRefinement(taskId) {
     error.payload = payload;
     throw error;
   }
+  if (payload?.success === false || payload?.data?.status === 'failed') {
+    const reason = payload?.data?.fallbackReason || payload?.data?.userFacingReasonCategory || 'runtime unavailable';
+    const error = new Error(`PM refinement retry failed: ${reason}.`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
   return payload;
 }
 
