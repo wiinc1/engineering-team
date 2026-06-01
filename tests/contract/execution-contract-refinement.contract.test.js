@@ -110,8 +110,15 @@ test('execution-contract refinement OpenAPI documents the versioned section revi
   );
 
   for (const token of [
+    '/api/v1/tasks/{taskId}/refinement/start',
     '/api/v1/tasks/{taskId}/execution-contract',
     '/api/v1/tasks/{taskId}/execution-contract/{version}/sections/{sectionId}/review',
+    'PmRefinementStartRequest',
+    'PmRefinementStartResponse',
+    'task.refinement_started',
+    'task.refinement_failed',
+    'truthful runtime attribution',
+    'delegation_artifact_path',
     'ExecutionContractSectionReviewRequest',
     'stale_execution_contract_review',
     'execution_contract_approval_blocked',

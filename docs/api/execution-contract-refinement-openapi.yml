@@ -6,13 +6,57 @@ info:
     Canonical API surface for the Execution Contract refinement workflow introduced for issue #152.
     The `/api` prefix is stripped by the deployed wrapper before the audit HTTP server handles the
     request, so `/api/v1/tasks/...` is implemented by the same audit backend as `/v1/tasks/...`.
-    External routes include `/api/v1/tasks/{taskId}/execution-contract` and
+    External routes include `/api/v1/tasks/{taskId}/refinement/start`,
+    `/api/v1/tasks/{taskId}/execution-contract` and
     `/api/v1/tasks/{taskId}/execution-contract/{version}/sections/{sectionId}/review`.
 servers:
   - url: /api/v1
 security:
   - BearerAuth: []
 paths:
+  /tasks/{taskId}/refinement/start:
+    post:
+      summary: Start PM refinement for an Intake Draft
+      operationId: startPmRefinement
+      description: |
+        PM/admin mutation. Starts the app-dispatched PM refinement workflow for an Intake Draft and
+        records `task.refinement_started` plus either `task.refinement_completed` or
+        `task.refinement_failed`. Runtime evidence includes `agent_id`, OpenClaw `session_id`,
+        `delegation_artifact_path`, `delegation_id`, and truthful runtime attribution fields when a
+        specialist runner is available. If runtime delegation is disabled or unavailable, the route
+        returns an accepted failure response with fallback evidence and leaves the task waiting on PM
+        refinement.
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PmRefinementStartRequest'
+      responses:
+        '201':
+          description: PM refinement completed and an Execution Contract draft was recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PmRefinementStartResponse'
+        '202':
+          description: PM refinement start was accepted but runtime delegation failed with recorded fallback evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PmRefinementStartResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The task is not an Intake Draft, is already refined, or refinement is already running.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /tasks/{taskId}/execution-contract:
     get:
       summary: Read the latest Execution Contract projection
@@ -172,6 +216,47 @@ components:
     NotFound:
       description: Task, contract, or contract section was not found.
   schemas:
+    PmRefinementStartRequest:
+      type: object
+      properties:
+        trigger:
+          type: string
+          description: Operator or workflow trigger label for audit provenance.
+        templateTier:
+          type: string
+          enum: [Simple, Standard, Complex, Epic]
+          default: Standard
+        idempotencyKey:
+          type: string
+    PmRefinementStartResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          required: [taskId, status]
+          properties:
+            taskId: { type: string }
+            status:
+              type: string
+              enum: [completed, failed, already_refined]
+            startedEventId: { type: [string, 'null'] }
+            failedEventId: { type: [string, 'null'] }
+            completedEventId: { type: [string, 'null'] }
+            contractVersion: { type: [integer, 'null'] }
+            delegation:
+              type: object
+              additionalProperties: true
+              properties:
+                delegated: { type: boolean }
+                agentId: { type: [string, 'null'] }
+                sessionId: { type: [string, 'null'] }
+                delegationArtifactPath: { type: [string, 'null'] }
+                delegationId: { type: [string, 'null'] }
+                runtimeAttribution: { type: [string, 'null'] }
+                truthfulRuntimeAttribution: { type: [string, 'null'] }
+                fallbackReason: { type: [string, 'null'] }
     ExecutionContractUpsertRequest:
       type: object
       required: [templateTier, sections]

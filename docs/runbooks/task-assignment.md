@@ -28,7 +28,8 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - If SRE creates a monitoring-anomaly child task from task detail, the new child is intentionally assigned to `pm`; that route is distinct from `PATCH /tasks/{taskId}/assignment`.
 - Governed close-review cancellation recommendations and exceptional-dispute escalations are also distinct workflow routes; they may affect routing into `/inbox/human` without mutating canonical assignment state.
 - Human close decisions and two-step close-review backtrack approvals are also distinct workflow routes; they may affect `/inbox/human` visibility and task stage progression without mutating canonical assignment state directly.
-- Execution Contract refinement keeps Intake Draft ownership with `pm`; `POST /tasks/{taskId}/execution-contract` and related validation/Markdown routes are distinct from `PATCH /tasks/{taskId}/assignment`.
+- Execution Contract refinement keeps Intake Draft ownership with `pm`; Intake Draft creation and `POST /tasks/{taskId}/refinement/start` can start or retry PM refinement, while `POST /tasks/{taskId}/execution-contract` and related validation/Markdown routes are distinct from `PATCH /tasks/{taskId}/assignment`.
+- Saving an owner through `PATCH /tasks/{taskId}/assignment` only mutates canonical owner state. It must not be treated as an implicit PM refinement dispatch trigger.
 
 ## Responsible escalation and current-owner enforcement
 - Delivery-loop actions reserved for engineers now validate the task's current canonical assignee before mutating state.
@@ -63,6 +64,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - **400 Invalid agent** → verify selected agent exists, is active, is assignable, and has a supported canonical role in `/api/v1/ai-agents`.
 - **404 Task not found** → verify task id and tenant/workspace scope.
 - **No queue/list update visible** → this repo projects assignee into task state, but does not yet include a dedicated board/inbox UI. Downstream consumers should read `current_owner`/`assignee` from the projection.
+- **PM owner saved but refinement did not start** → expected for assignment-only requests. Use Intake Draft creation auto-start evidence or retry with `POST /tasks/{taskId}/refinement/start`.
 - **Intake Draft assignment rejected before approval** → expected until PM refinement and approval complete; Execution Contract generation alone does not make assignment mutable or dispatch-ready.
 
 ## Dashboards + alert links
@@ -73,6 +75,7 @@ Allows an authorized Product Manager to assign or reassign an AI agent as the ow
 - Changes to the assignment mutation path in `lib/audit/http.js` or the assignment controls in `src/app/App.jsx` should update this runbook or the matching assignment API contract in the same PR.
 - SRE anomaly child-task creation should continue to bypass assignment mutation and remain on its dedicated monitoring workflow endpoint.
 - Close-governance human decisions and backtrack approvals should continue to bypass assignment mutation and remain on their dedicated workflow endpoints.
+- PM refinement start/retry should continue to bypass assignment mutation. Assignment controls should report owner persistence only; refinement runtime status comes from `task.refinement_started`, `task.refinement_completed`, `task.refinement_failed`, and Execution Contract projection.
 - Execution Contract versioning, validation, and Markdown generation should continue to bypass assignment mutation and preserve PM ownership until approval. Approved-contract engineer assignment must preserve dispatch-policy evaluation and return `dispatch_policy_blocked` rather than silently assigning the wrong tier.
 - Nearest verification artifacts for that surface are:
 - `tests/unit/task-assignment.test.js`
