@@ -274,11 +274,11 @@ function po(i) {
   }
 }
 function Fn(i = {}) {
-  return { readyForEngineering: !!i.readyForEngineering, engineerTier: i.engineerTier || "Sr", tierRationale: i.tierRationale || "", technicalSpec: { summary: i.
-  technicalSpec?.summary || "", scope: i.technicalSpec?.scope || "", design: i.technicalSpec?.design || "", rolloutPlan: i.technicalSpec?.rolloutPlan || "" }, monitoringSpec: {
-  service: i.monitoringSpec?.service || "", dashboardUrls: Array.isArray(i.monitoringSpec?.dashboardUrls) ? i.monitoringSpec.dashboardUrls.join(`
-`) : "", alertPolicies: Array.isArray(i.monitoringSpec?.alertPolicies) ? i.monitoringSpec.alertPolicies.join(`
-`) : "", runbook: i.monitoringSpec?.runbook || "", successMetrics: Array.isArray(i.monitoringSpec?.successMetrics) ? i.monitoringSpec.successMetrics.join(`
+  return { readyForEngineering: !!i?.readyForEngineering, engineerTier: i?.engineerTier || "Sr", tierRationale: i?.tierRationale || "", technicalSpec: { summary: i?.
+  technicalSpec?.summary || "", scope: i?.technicalSpec?.scope || "", design: i?.technicalSpec?.design || "", rolloutPlan: i?.technicalSpec?.rolloutPlan || "" }, monitoringSpec: {
+  service: i?.monitoringSpec?.service || "", dashboardUrls: Array.isArray(i?.monitoringSpec?.dashboardUrls) ? i.monitoringSpec.dashboardUrls.join(`
+`) : "", alertPolicies: Array.isArray(i?.monitoringSpec?.alertPolicies) ? i.monitoringSpec.alertPolicies.join(`
+`) : "", runbook: i?.monitoringSpec?.runbook || "", successMetrics: Array.isArray(i?.monitoringSpec?.successMetrics) ? i.monitoringSpec.successMetrics.join(`
 `) : "" } };
 }
 function zn(i) {
@@ -292,47 +292,47 @@ function zn(i) {
   }
 }
 function Wn(i = {}) {
-  return { commitSha: i.commitSha || "", prUrl: i.prUrl || "" };
+  return { commitSha: i?.commitSha || "", prUrl: i?.prUrl || "" };
 }
 function jn(i = {}) {
-  return { reason: i.reason || "" };
+  return { reason: i?.reason || "" };
 }
 function Vn(i = {}) {
-  return { summary: i.lastActivity?.summary || "", evidence: Array.isArray(i.lastActivity?.evidence) ? i.lastActivity.evidence.join(`
+  return { summary: i?.lastActivity?.summary || "", evidence: Array.isArray(i?.lastActivity?.evidence) ? i.lastActivity.evidence.join(`
 `) : "" };
 }
 function Kn(i = {}) {
-  return { engineerTier: i.retiering?.engineerTier || i.architectHandoff?.engineerTier || "Sr", tierRationale: i.retiering?.tierRationale || "", reason: i.retiering?.
+  return { engineerTier: i?.retiering?.engineerTier || i?.architectHandoff?.engineerTier || "Sr", tierRationale: i?.retiering?.tierRationale || "", reason: i?.retiering?.
   reason || "" };
 }
 function Jn(i = {}) {
-  return { mode: i.reassignment?.mode || "inactivity", reason: i.reassignment?.reason || "", assignee: i.reassignment?.assignee || "", engineerTier: i.reassignment?.
-  engineerTier || i.retiering?.engineerTier || i.architectHandoff?.engineerTier || "" };
+  return { mode: i?.reassignment?.mode || "inactivity", reason: i?.reassignment?.reason || "", assignee: i?.reassignment?.assignee || "", engineerTier: i?.reassignment?.
+  engineerTier || i?.retiering?.engineerTier || i?.architectHandoff?.engineerTier || "" };
 }
 function go(i = {}) {
-  const o = String(i.commitSha || "").trim(), l = String(i.prUrl || "").trim(), u = [];
+  const o = String(i?.commitSha || "").trim(), l = String(i?.prUrl || "").trim(), u = [];
   return o && !Wi.test(o) && u.push("commitSha"), l && !ji.test(l) && u.push("prUrl"), { commitSha: o, prUrl: l, missingAll: !o && !l, invalidFields: u, isValid: u.
   length === 0 && (!!o || !!l), primaryReference: l || o || null };
 }
 function Yn(i = {}) {
-  return { commentType: i.commentType || "question", title: i.title || "", body: i.body || "", blocking: !!i.blocking, linkedEventId: i.linkedEventId || "" };
+  return { commentType: i?.commentType || "question", title: i?.title || "", body: i?.body || "", blocking: !!i?.blocking, linkedEventId: i?.linkedEventId || "" };
 }
 function Xn(i = {}) {
-  return { outcome: i.outcome || "fail", summary: i.summary || "", scenarios: Array.isArray(i.scenarios) ? i.scenarios.join(`
-`) : "", findings: Array.isArray(i.findings) ? i.findings.join(`
-`) : "", reproductionSteps: Array.isArray(i.reproductionSteps) ? i.reproductionSteps.join(`
-`) : "", stackTraces: Array.isArray(i.stackTraces) ? i.stackTraces.join(`
-`) : "", envLogs: Array.isArray(i.envLogs) ? i.envLogs.join(`
-`) : "", retestScope: Array.isArray(i.reTestScope) ? i.reTestScope.join(`
+  return { outcome: i?.outcome || "fail", summary: i?.summary || "", scenarios: Array.isArray(i?.scenarios) ? i.scenarios.join(`
+`) : "", findings: Array.isArray(i?.findings) ? i.findings.join(`
+`) : "", reproductionSteps: Array.isArray(i?.reproductionSteps) ? i.reproductionSteps.join(`
+`) : "", stackTraces: Array.isArray(i?.stackTraces) ? i.stackTraces.join(`
+`) : "", envLogs: Array.isArray(i?.envLogs) ? i.envLogs.join(`
+`) : "", retestScope: Array.isArray(i?.reTestScope) ? i.reTestScope.join(`
 `) : "" };
 }
 function Zn(i = {}) {
-  return { deploymentEnvironment: i.deployment?.environment || "production", deploymentUrl: i.deployment?.url || "", deploymentVersion: i.deployment?.version ||
-  "", evidence: Array.isArray(i.deployment?.evidence) ? i.deployment.evidence.join(`
+  return { deploymentEnvironment: i?.deployment?.environment || "production", deploymentUrl: i?.deployment?.url || "", deploymentVersion: i?.deployment?.version ||
+  "", evidence: Array.isArray(i?.deployment?.evidence) ? i.deployment.evidence.join(`
 `) : "" };
 }
 function es(i = {}) {
-  return { reason: i.approval?.reason || "", evidence: Array.isArray(i.approval?.evidence) ? i.approval.evidence.join(`
+  return { reason: i?.approval?.reason || "", evidence: Array.isArray(i?.approval?.evidence) ? i.approval.evidence.join(`
 `) : "" };
 }
 function ts(i = {}) {
