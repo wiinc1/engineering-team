@@ -23,3 +23,14 @@ test('audit foundation API contract documents Vercel workflow proxy aliases', ()
   assert.match(spec, /\/api\/v1\/tasks\/\{taskId\}\/execution-contract\/\{action\}/);
   assert.match(spec, /api\/v1\/task-workflow-proxy\.js/);
 });
+
+test('audit foundation API contract documents Vercel task detail read aliases', () => {
+  const spec = fs.readFileSync(
+    path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'),
+    'utf8'
+  );
+
+  assert.match(spec, /unversioned task detail read aliases/);
+  assert.match(spec, /\/api\/tasks\/\{taskId\}\/history/);
+  assert.match(spec, /__audit_path/);
+});
