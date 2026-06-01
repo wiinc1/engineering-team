@@ -93,12 +93,16 @@ exports[`task assignment visual baseline > matches the role-specific next-action
     <p>
       PM refinement required
     </p>
-    <a
-      class="task-next-action__primary"
-      href="#task-detail-overview-section"
+    <div
+      class="task-next-action__primary-stack"
     >
-      Review PM context
-    </a>
+      <button
+        class="task-next-action__primary"
+        type="button"
+      >
+        Retry PM refinement
+      </button>
+    </div>
   </div>
   <div
     class="task-next-action__support"

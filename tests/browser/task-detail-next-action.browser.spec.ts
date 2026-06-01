@@ -212,7 +212,7 @@ const nextActionCases = [
     detail: detailPayload({ stage: 'DRAFT', status: 'waiting', intakeDraft: true, nextAction: 'PM refinement required' }),
     action: 'pm_refinement',
     title: 'PM refinement required',
-    cta: 'Review PM context',
+    cta: 'Retry PM refinement',
   },
   {
     name: 'QA verification',
@@ -287,7 +287,8 @@ async function assertPrioritizedNextAction(page, item) {
   const panel = page.locator('.task-next-action');
   await expect(panel).toHaveAttribute('data-next-action', item.action);
   await expect(panel.getByRole('heading', { name: item.title })).toBeVisible();
-  await expect(panel.getByRole('link', { name: item.cta })).toBeVisible();
+  const cta = panel.getByRole('link', { name: item.cta }).or(panel.getByRole('button', { name: item.cta }));
+  await expect(cta).toBeVisible();
 
   const metrics = await panel.evaluate((node) => ({
     top: node.getBoundingClientRect().top,
@@ -306,7 +307,7 @@ test.describe('task detail next-action browser matrix', () => {
   }
 });
 
-test.describe('task detail next-action controls', () => {
+test.describe('task detail next-action read states', () => {
   test('shows status without unauthorized next-action controls for restricted readers', async ({ page }) => {
     await openTaskDetail(page, detailPayload({
       stage: 'QA_TESTING',
@@ -334,6 +335,30 @@ test.describe('task detail next-action controls', () => {
     await expect(panel).toContainText('PM refinement');
     await expect(panel).toContainText('Requested/pending');
     await expect(panel).toContainText('no refinement artifact is complete yet');
+  });
+});
+
+test.describe('task detail PM refinement retry', () => {
+  test('retries pending PM refinement from the next-action panel', async ({ page }) => {
+    const retryRequests: unknown[] = [];
+    await openTaskDetail(page, detailPayload({
+      stage: 'DRAFT',
+      status: 'waiting',
+      intakeDraft: true,
+      nextAction: 'PM refinement required',
+    }), ['pm', 'reader']);
+
+    await page.route(`**/api/v1/tasks/${TASK_ID}/refinement/start`, async (route) => {
+      retryRequests.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 202,
+        json: { success: true, data: { taskId: TASK_ID, status: 'failed' } },
+      });
+    });
+
+    await page.getByRole('button', { name: 'Retry PM refinement' }).click();
+    await expect.poll(() => retryRequests.length).toBe(1);
+    expect(retryRequests).toEqual([{ trigger: 'task_detail_retry_button' }]);
   });
 });
 

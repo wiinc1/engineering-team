@@ -55,7 +55,9 @@ test('next-action resolver prioritizes PM refinement for intake drafts', async (
   );
   assert.equal(result.action, 'pm_refinement');
   assert.equal(result.role, 'pm');
-  assert.equal(result.primaryHref, '#task-detail-overview-section');
+  assert.equal(result.primaryAction, 'retry_pm_refinement');
+  assert.equal(result.primaryHref, null);
+  assert.equal(result.primaryLabel, 'Retry PM refinement');
   assert.match(result.reason, /PM refinement/i);
   assert.equal(result.statusFacts.find((fact) => fact.label === 'PM refinement').value, 'Requested/pending');
 });
