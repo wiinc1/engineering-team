@@ -3,6 +3,7 @@
 const { spawn } = require('child_process');
 
 const DEFAULT_SPECIALIST_MAP = Object.freeze({
+  pm: 'pm',
   architect: 'architect',
   engineer: 'sr-engineer',
   qa: 'qa-engineer',

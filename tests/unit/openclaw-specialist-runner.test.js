@@ -18,11 +18,13 @@ test('resolveSpecialistMap merges defaults with overrides', () => {
   });
 
   assert.equal(map.engineer, 'jr-engineer');
+  assert.equal(map.pm, 'pm');
   assert.equal(map.architect, 'architect');
   assert.equal(map.qa, 'qa-engineer');
 });
 
 test('resolveRuntimeAgent uses the configured alias map', () => {
+  assert.equal(resolveRuntimeAgent('pm'), 'pm');
   assert.equal(resolveRuntimeAgent('engineer'), 'sr-engineer');
   assert.equal(resolveRuntimeAgent('qa'), 'qa-engineer');
   assert.equal(resolveRuntimeAgent('engineer', {

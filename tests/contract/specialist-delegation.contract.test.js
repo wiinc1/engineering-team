@@ -59,6 +59,32 @@ test('OpenClaw gateway responses satisfy the bridge evidence contract', () => {
   assert.equal(bridge.ownership.specialistId, 'engineer');
 });
 
+test('OpenClaw PM refinement responses satisfy the bridge evidence contract', () => {
+  const bridge = buildBridgeResponse({
+    payload: {
+      specialist: 'pm',
+      delegationId: 'contract-pm-refinement',
+    },
+    runtimeAgent: 'pm',
+    response: {
+      result: {
+        message: 'PM refinement complete',
+        meta: {
+          agentMeta: {
+            sessionId: 'specialist-delegation-contract-pm-refinement',
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(bridge.agentId, 'pm');
+  assert.equal(bridge.sessionId, 'specialist-delegation-contract-pm-refinement');
+  assert.equal(bridge.output, 'PM refinement complete');
+  assert.equal(bridge.ownership.specialistId, 'pm');
+  assert.equal(bridge.ownership.runtimeAgentId, 'pm');
+});
+
 test('delegation artifacts may be stored outside the runtime working directory', async () => {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-contract-cwd-'));
   const artifactBaseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'delegation-contract-artifacts-'));
