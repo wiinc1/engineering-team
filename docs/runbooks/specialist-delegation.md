@@ -33,6 +33,12 @@
 15. Enable in staging with log review for fallback volume and attribution mismatches.
 16. Promote to production only after no unexpected fallback or mismatch spikes are observed.
 
+For serverless deployments such as Vercel, delegation artifacts must be written
+to a writable runtime directory. Set `SPECIALIST_DELEGATION_BASE_DIR` or
+`SPECIALIST_DELEGATION_ARTIFACT_DIR` to a writable path when available; otherwise
+the runtime uses `/tmp/engineering-team` under `VERCEL=1` while keeping the
+specialist runner working directory unchanged.
+
 ## Docker smoke runner
 - `docker compose run --rm delegation-smoke` runs the same live-smoke validator in a container built from this repo.
 - `npm run docker:delegation-smoke:build` builds the image and `npm run docker:delegation-smoke` runs it.
