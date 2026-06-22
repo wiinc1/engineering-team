@@ -7,7 +7,7 @@ const path = require('node:path');
 const {
   buildForgeReadyApprovedContract,
   seedForgeLocalSmokeTask,
-} = require('../../scripts/seed-forge-local-smoke-task');
+} = require('../../lib/forge-local-smoke/seed-task');
 const { createFileAuditStore } = require('../../lib/audit/store');
 
 async function withTempBaseDir(callback) {
