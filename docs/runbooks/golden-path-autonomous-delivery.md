@@ -93,17 +93,28 @@ Docs-only marker: golden-path section in README + evidence report.
 Simple, reversible, no production data/auth/schema changes.
 ```
 
-### ET task creation (manual)
+### ET task creation (manual or scripted)
 
-Use task creation UI or API with `initial_stage: DRAFT`, link `github_issue_url`, copy issue body into intake fields.
-
-**Commands (local API example):**
+**Scripted bootstrap (preferred):**
 
 ```bash
-# Adjust base URL and auth for your environment
-export ET_API_BASE=https://engineering-team-zeta.vercel.app/api/v1
-# Create via UI or authenticated POST /tasks per your operator session
+# Production (requires production-capable AUTH_JWT_SECRET / operator token)
+node scripts/seed-golden-path-phase0.js \
+  --epic-issue 269 \
+  --child-issue <CHILD_ISSUE_NUMBER> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER> \
+  --base-url https://engineering-team-zeta.vercel.app
+
+# Local file-backend proof (ephemeral; not production persistence)
+node scripts/seed-golden-path-phase0.js --local \
+  --epic-issue 269 \
+  --child-issue <CHILD_ISSUE_NUMBER> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER>
 ```
+
+Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and completed steps `GP-001`, `GP-002`, `GP-005`.
+
+**Manual UI fallback:** task creation with `DRAFT`, link `github_issue_url`, copy issue body into intake fields.
 
 ---
 
