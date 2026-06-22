@@ -47,7 +47,13 @@ Supported roles:
 - `reader` — read history/state/relationships/observability
 - `contributor` — append audit events plus read
 - `sre` — read plus metrics access
-- `admin` — full access including metrics and projection processing
+- `admin` — full access including metrics, projection processing, and `forge:read`
+
+Forge execution-readiness reads (`GET /tasks/:taskId/forge-execution-readiness`) accept either:
+- `Authorization: Bearer <FORGE_SERVICE_TOKEN>` for forgeadapter service-to-service reads, or
+- JWT callers with `forge:read` (currently granted to `admin`).
+
+Unready tasks return `422 task_not_execution_ready` with structured details. Missing or invalid service tokens return `401`; JWT callers without `forge:read` return `403`.
 
 Autonomous delivery metrics are exposed behind `ff_autonomous_delivery_metrics_mvp`.
 PM, product-owner, SRE, and admin roles with `metrics:read` can read tenant metrics and task retrospective signals.

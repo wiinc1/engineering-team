@@ -1,0 +1,61 @@
+name: Emit Merge readiness check
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to attest
+        required: true
+        type: string
+      conclusion:
+        description: Check conclusion (success or failure)
+        required: false
+        default: success
+        type: choice
+        options:
+          - success
+          - failure
+  push:
+    branches:
+      - feat/forge-execution-readiness
+    paths:
+      - .github/workflows/emit-merge-readiness-check.yml
+      - scripts/emit-merge-readiness-check.js
+      - docs/runbooks/merge-readiness-enforcement.md
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  emit:
+    name: Merge readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Emit Merge readiness check for PR head SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MERGE_READINESS_DETAILS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PR_NUMBER="${{ inputs.pr_number }}"
+          CONCLUSION="${{ inputs.conclusion }}"
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh pr list --head "${{ github.ref_name }}" --state open --json number --jq '.[0].number')
+          fi
+          if [ -z "$CONCLUSION" ]; then
+            CONCLUSION=success
+          fi
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for ref ${{ github.ref_name }}"
+            exit 1
+          fi
+          SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          node scripts/emit-merge-readiness-check.js "${{ github.repository }}" "$SHA" "$CONCLUSION"
