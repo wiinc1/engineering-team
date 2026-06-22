@@ -10,7 +10,7 @@
 - Standards baseline reviewed: `docs/standards/software-development-standards.md`.
 - Applicable standards areas: architecture and design; coding and code quality; authentication and secret handling; testing and quality assurance; deployment and release; observability and monitoring.
 - Evidence expected for this change: route wrapper isolation, mapper unit tests, audit API auth tests, OpenAPI/runbook updates, maintainability compliance, and standards gate output.
-- Gap observed: No standards gaps or exceptions identified.
+- Gap observed: No functional standards gaps for this additive route wrapper. Documented rationale: Forge execution-readiness logic is isolated in new modules and tests without expanding legacy baselined long functions (source https://github.com/wiinc1/engineering-team/blob/main/docs/standards/software-development-standards.md).
 
 ## Architecture and Design
 - Evidence: `lib/audit/forge-execution-http.js`, `lib/task-platform/forge-canonical-task.js`, `lib/audit/http-projects.js`.
@@ -37,4 +37,6 @@
 
 ## Required Evidence
 - Commands run: `npm run maintainability:check`; `node --test tests/unit/forge-canonical-task.test.js`; `node --test tests/unit/audit-api.test.js --test-name-pattern=forge-execution-readiness`; `node --test tests/contract/forge-execution-readiness.contract.test.js`; `node --test tests/security/audit-api.security.test.js --test-name-pattern=forge execution-readiness`; `npm run change:check`; `npm run standards:check`.
-- Docs updated: `docs/api/audit-foundation-openapi.yml`, `docs/api/task-platform-openapi.yml`, `docs/runbooks/audit-foundation.md`, `docs/runbooks/task-platform-rollout.md`.
+- Tests added or updated: `tests/unit/forge-canonical-task.test.js`; `tests/unit/audit-api.test.js`; `tests/contract/forge-execution-readiness.contract.test.js`; `tests/security/audit-api.security.test.js`.
+- Rollout or rollback notes: Set `FORGE_SERVICE_TOKEN` before enabling forgeadapter Phase 2 reads; rollback by reverting PR #267 and keeping forgeadapter on the Phase 1 `:3003` bridge until client migration completes.
+- Docs updated: `docs/api/audit-foundation-openapi.yml`; `docs/api/task-platform-openapi.yml`; `docs/runbooks/audit-foundation.md`; `docs/runbooks/task-platform-rollout.md`; `docs/reports/ISSUE-267_STANDARDS_COMPLIANCE_CHECKLIST.md`.
