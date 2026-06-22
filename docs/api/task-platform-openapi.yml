@@ -8,6 +8,7 @@ info:
     `/api/v1` is the canonical task-platform read/write path for production, staging, and standard local development.
     Audit-backed `/tasks/...` routes remain compatibility adapters during the migration window.
     Forgeadapter canonical execution reads use the audit-foundation route `GET /tasks/{taskId}/forge-execution-readiness`; see `docs/api/audit-foundation-openapi.yml` for the camelCase execution-ready task contract and `FORGE_SERVICE_TOKEN` auth model.
+    Local Phase 2 smoke uses `npm run forge:local-smoke:seed` (see `docs/runbooks/forge-local-smoke.md`) to seed execution-ready `TSK-LOCAL001` before forgeadapter stack probes.
 servers:
   - url: /api/v1
 paths:

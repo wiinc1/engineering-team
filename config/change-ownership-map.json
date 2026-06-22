@@ -514,6 +514,7 @@
           "name": "integration",
           "patterns": [
             "^tests/contract/forge-execution-readiness\\.contract\\.test\\.js$",
+            "^tests/integration/forge-local-smoke-seed\\.integration\\.test\\.js$",
             "^tests/integration/task-assignment-integration\\.test\\.js$",
             "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
