@@ -34,10 +34,12 @@ export FF_WORKFLOW_ENGINE=false
 ### Seed `TSK-LOCAL001`
 
 ```bash
-npm run forge:local-smoke:seed -- --task-id TSK-LOCAL001
+npm run forge:local-smoke:seed -- --task-id TSK-LOCAL001 --tenant-id engineering-team
 ```
 
-The seed script is idempotent: it skips when the task is already execution-ready.
+The seed script skips when the task is already execution-ready in the current audit data directory. If a task exists with conflicting events under the fixed idempotency keys, seeding fails with `conflicting_task_state`; use a fresh isolated data directory or a different `--task-id`.
+
+`ALLOW_FILE_AUDIT_BACKEND=true` is required when `AUDIT_STORE_BACKEND=file`; the seed script enforces the same guard as `npm run audit:api`.
 
 ### Start audit-api
 
@@ -89,7 +91,7 @@ Common `422` causes:
 
 ## Postgres local path
 
-When using Docker Postgres (`npm run dev:postgres:up`), omit the file-backend flags and set `DATABASE_URL` before seeding and starting audit-api. The same seed script and `FORGE_SERVICE_TOKEN` contract apply.
+When using Docker Postgres (`npm run dev:postgres:up`), omit the file-backend flags and set `DATABASE_URL` before seeding and starting audit-api. Export the same `TENANT_ID` for both `npm run forge:local-smoke:seed` and `npm run audit:api` (default `engineering-team`). The same seed script and `FORGE_SERVICE_TOKEN` contract apply.
 
 ## Related docs
 

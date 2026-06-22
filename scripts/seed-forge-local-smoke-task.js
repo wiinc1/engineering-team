@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const {
   evaluateForgeExecutionReadiness,
-  buildAuditSummary,
 } = require('../lib/task-platform/forge-canonical-task');
 const {
   REQUIRED_SECTIONS_BY_TIER,
@@ -9,10 +8,14 @@ const {
   evaluateExecutionContractAutoApprovalPolicy,
   buildExecutionContractAutoApprovalRecord,
 } = require('../lib/audit/execution-contracts');
+const { assertAuditBackendConfiguration } = require('../lib/audit/config');
 const { createAuditStore } = require('../lib/audit/store');
 
 function parseArgs(argv) {
-  const args = { 'task-id': process.env.FORGE_LOCAL_SMOKE_TASK_ID || 'TSK-LOCAL001' };
+  const args = {
+    'task-id': process.env.FORGE_LOCAL_SMOKE_TASK_ID || 'TSK-LOCAL001',
+    'tenant-id': process.env.TENANT_ID || 'engineering-team',
+  };
   for (let index = 2; index < argv.length; index += 1) {
     const token = argv[index];
     if (!token.startsWith('--')) continue;
@@ -28,7 +31,7 @@ function parseArgs(argv) {
   return args;
 }
 
-function forgeReadySimpleSections() {
+function forgeReadySimpleSections(taskId) {
   const sections = Object.fromEntries(
     REQUIRED_SECTIONS_BY_TIER.Simple.map((sectionId) => [sectionId, { id: sectionId, body: `Completed ${sectionId}` }]),
   );
@@ -40,23 +43,33 @@ function forgeReadySimpleSections() {
       'GET /tasks/:id/runtime shows running state with review gates',
     ].join('\n'),
   };
-  sections['4'] = { id: '4', body: 'Run npm run smoke:local against forgeadapter with seeded TSK-LOCAL001.' };
+  sections['4'] = {
+    id: '4',
+    body: `Run npm run smoke:local against forgeadapter with seeded ${taskId}.`,
+  };
+  sections['11'] = {
+    id: '11',
+    body: 'Rollback by reverting the seeded local smoke task and clearing the isolated audit data directory.',
+  };
   return sections;
 }
 
 function buildForgeReadyApprovedContract(taskId) {
+  const title = `Local forgeadapter start smoke for ${taskId}.`;
+  const acceptanceCriteria = [
+    'POST /tasks/:id/start returns 202',
+    'GET /jobs/:id returns succeeded',
+    'GET /tasks/:id/runtime shows running state with review gates',
+  ].join('\n');
+
   const history = [{
     event_type: 'task.created',
     sequence_number: 1,
     payload: {
-      title: 'Local forgeadapter start smoke for TSK-LOCAL001.',
+      title,
       task_type: 'feature',
       priority: 'P1',
-      acceptance_criteria: [
-        'POST /tasks/:id/start returns 202',
-        'GET /jobs/:id returns succeeded',
-        'GET /tasks/:id/runtime shows running state with review gates',
-      ].join('\n'),
+      acceptance_criteria: acceptanceCriteria,
       assignee: 'main',
       initial_stage: 'DRAFT',
     },
@@ -66,17 +79,17 @@ function buildForgeReadyApprovedContract(taskId) {
     taskId,
     summary: {
       task_id: taskId,
-      title: 'Local forgeadapter start smoke for TSK-LOCAL001.',
+      title,
       task_type: 'feature',
       priority: 'P1',
-      acceptance_criteria: history[0].payload.acceptance_criteria,
+      acceptance_criteria: acceptanceCriteria,
       assignee: 'main',
     },
     history,
     actorId: 'pm-1',
     body: {
       templateTier: 'Simple',
-      sections: forgeReadySimpleSections(),
+      sections: forgeReadySimpleSections(taskId),
       forgeDispatch: {
         targetRepo: 'wiinc1/forgeadapter',
         projectId: 'forgeadapter',
@@ -151,18 +164,39 @@ async function persistForgeReadyTaskEvents(store, tenantId, taskId, createdPaylo
   return results;
 }
 
+function createSeedAuditStore(baseDir) {
+  assertAuditBackendConfiguration({
+    baseDir,
+    runtimeEnv: process.env.NODE_ENV || 'development',
+    allowFileBackend: process.env.ALLOW_FILE_AUDIT_BACKEND === 'true',
+  });
+
+  return createAuditStore({
+    baseDir,
+    workflowEngineEnabled: false,
+  });
+}
+
 async function seedForgeLocalSmokeTask(options = {}) {
   const taskId = options.taskId || 'TSK-LOCAL001';
   const tenantId = options.tenantId || process.env.TENANT_ID || 'engineering-team';
   const baseDir = options.baseDir || process.cwd();
-  const store = options.store || createAuditStore({
-    baseDir,
-    workflowEngineEnabled: false,
-  });
+  const store = options.store || createSeedAuditStore(baseDir);
 
   const state = await store.getTaskCurrentState(taskId, { tenantId });
   const history = await store.getTaskHistory(taskId, { tenantId, limit: 1000 });
-  if (state && history.length) {
+
+  if ((state && !history.length) || (!state && history.length)) {
+    return {
+      ok: false,
+      taskId,
+      tenantId,
+      reason: 'inconsistent_task_projection',
+      remediation: 'Use a fresh audit data directory or delete the conflicting task projection before re-seeding.',
+    };
+  }
+
+  if (history.length) {
     const readiness = evaluateForgeExecutionReadiness({
       taskId,
       state,
@@ -178,6 +212,15 @@ async function seedForgeLocalSmokeTask(options = {}) {
         task: readiness.task,
       };
     }
+
+    return {
+      ok: false,
+      taskId,
+      tenantId,
+      reason: 'conflicting_task_state',
+      remediation: 'Task exists but is not execution-ready. Use a fresh audit data directory or a different --task-id.',
+      details: readiness.details,
+    };
   }
 
   const { createdPayload, approvedContract } = buildForgeReadyApprovedContract(taskId);
@@ -211,7 +254,10 @@ async function seedForgeLocalSmokeTask(options = {}) {
 
 async function main() {
   const args = parseArgs(process.argv);
-  const result = await seedForgeLocalSmokeTask({ taskId: args['task-id'] });
+  const result = await seedForgeLocalSmokeTask({
+    taskId: args['task-id'],
+    tenantId: args['tenant-id'],
+  });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (!result.ok) {
     process.exitCode = 1;
