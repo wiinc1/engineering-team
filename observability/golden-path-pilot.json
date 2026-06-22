@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "not_started",
+  "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/269",
+  "engineeringTeam": {
+    "projectId": null,
+    "taskId": null
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDEN001",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "github": {
+    "prUrl": null,
+    "mergeCommitSha": null
+  },
+  "vercel": {
+    "deploymentId": null,
+    "productionUrl": null
+  },
+  "stepsCompleted": [],
+  "manualInterventions": [],
+  "startedAt": null,
+  "completedAt": null
+}

@@ -1,0 +1,46 @@
+flowchart TD
+  subgraph intake["Phase 0 — Intake (mostly manual today)"]
+    ghIssue([GitHub issue with requirements]) --> ghRead[Operator reads issue body]
+    ghRead --> etDraft[Create ET task / intake draft]
+    etDraft --> pmRefine[PM refines requirements]
+    pmRefine --> archSpec[Architect spec + tier + monitoring]
+  end
+
+  subgraph contract["Phase 1 — Execution contract"]
+    archSpec --> execContract[Record execution contract]
+    execContract --> projCatch[Bounded projection catch-up]
+    projCatch --> approve{Contract approved?}
+    approve -->|no| pmRefine
+    approve -->|yes| dispatchReady[Dispatch readiness gates pass]
+  end
+
+  subgraph forge["Phase 2 — Forge execution (manual bridge)"]
+    dispatchReady --> seedReady[Seed / verify forge-execution-readiness]
+    seedReady --> faStart[POST forgeadapter /tasks/:id/start]
+    faStart --> implement[Engineer implements in worktree / PR]
+  end
+
+  subgraph qaLoop["Phase 3–4 — QA loop"]
+    implement --> qa1[QA initial test]
+    qa1 --> qaPass1{Pass?}
+    qaPass1 -->|no| fix[Engineer fixes + new commit]
+    fix --> qaRetest[QA retest scoped to prior_run_id]
+    qaRetest --> qaPass1
+    qaPass1 -->|yes| faQaGate[forgeadapter qa review gate approved]
+  end
+
+  subgraph signoff["Phase 5 — PM + Architect sign-off"]
+    faQaGate --> etQaPass[ET task.qa_result_recorded pass]
+    etQaPass --> faArchGate[forge architect review gate]
+    faArchGate --> faPmGate[forge pm review gate]
+    faPmGate --> etCloseReview[ET close review PM + Architect]
+  end
+
+  subgraph deploy["Phase 6 — Deploy + SRE"]
+    etCloseReview --> mergePR[Merge PR]
+    mergePR --> vercelDeploy[Vercel production deploy]
+    vercelDeploy --> sreApprove[SRE monitoring approval]
+    sreApprove --> close[Task closeout + report]
+  end
+
+  close --> metrics[Compare manual-step log vs automation targets]
