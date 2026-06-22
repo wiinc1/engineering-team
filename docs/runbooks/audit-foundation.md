@@ -55,6 +55,8 @@ Forge execution-readiness reads (`GET /tasks/:taskId/forge-execution-readiness`)
 
 Unready tasks return `422 task_not_execution_ready` with structured details. Missing or invalid service tokens return `401`; JWT callers without `forge:read` return `403`.
 
+Local forgeadapter Phase 2 smoke: see `docs/runbooks/forge-local-smoke.md` for seeding `TSK-LOCAL001`, file-backend audit-api bootstrap, and `FORGE_SERVICE_TOKEN` pairing with forgeadapter `ENGINEERING_TEAM_SERVICE_TOKEN`.
+
 Autonomous delivery metrics are exposed behind `ff_autonomous_delivery_metrics_mvp`.
 PM, product-owner, SRE, and admin roles with `metrics:read` can read tenant metrics and task retrospective signals.
 Only admin role holders with `projections:rebuild` can rebuild the projection.
