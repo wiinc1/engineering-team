@@ -76,6 +76,7 @@
     "projects:production-smoke": "node scripts/verify-projects-production-smoke.js",
     "assignment:smoke": "node scripts/check-task-assignment-smoke.js",
     "audit:api": "node scripts/run-audit-api.js",
+    "forge:local-smoke:seed": "node scripts/seed-forge-local-smoke-task.js",
     "audit:workers": "node scripts/run-audit-workers.js",
     "dev:postgres:up": "docker compose up -d postgres",
     "dev:postgres:down": "docker compose down --remove-orphans",
