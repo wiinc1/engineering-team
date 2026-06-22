@@ -19,12 +19,17 @@ info:
     Vercel deployments expose versioned task workflow aliases at `/api/v1/tasks/{taskId}/refinement/start`, `/api/v1/tasks/{taskId}/execution-contract/{action}`, `/api/v1/tasks/{taskId}/contract-coverage-audit/{action}`, and `/api/v1/tasks/{taskId}/sre-monitoring/{action}` through `api/v1/task-workflow-proxy.js`; the proxy only restores the versioned route and the shared audit HTTP handler still enforces the same JWT/RBAC and route contracts documented below. Vercel also exposes unversioned task detail read aliases at `/api/tasks/{taskId}`, `/api/tasks/{taskId}/detail`, `/api/tasks/{taskId}/history`, `/api/tasks/{taskId}/observability-summary`, and `/api/tasks/{taskId}/state` through the same proxy with internal `__audit_path`; write routes are not allowed through that read alias.
     Canonical task-platform routes under `/api/v1` now include `/api/v1/tasks/{taskId}/merge-readiness-reviews`; the detailed create/read/update contract lives in `docs/api/task-platform-openapi.yml`.
     Autonomous delivery metrics MVP routes are mounted by the audit API wrapper and documented in `docs/api/autonomous-delivery-metrics-openapi.yml`: `/api/v1/metrics/autonomous-delivery`, `/api/v1/tasks/{taskId}/retrospective-signal`, and `/api/v1/metrics/autonomous-delivery/rebuild`.
+    Forgeadapter Phase 2 canonical task reads use `GET /tasks/{taskId}/forge-execution-readiness`, which returns camelCase execution-ready task JSON when the task has an approved execution contract, dispatch readiness, and `forge_dispatch` metadata. Service-to-service callers authenticate with `FORGE_SERVICE_TOKEN` bearer; JWT callers require `forge:read`.
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    ForgeServiceToken:
+      type: http
+      scheme: bearer
+      description: Service-to-service bearer token configured as `FORGE_SERVICE_TOKEN` on the audit API host.
   parameters:
     TenantHeader:
       name: x-tenant-id
@@ -44,6 +49,23 @@ components:
       properties:
         actor_id: { type: string }
         display_name: { type: string }
+    ForgeCanonicalTask:
+      type: object
+      required: [taskId, taskVersion, projectId, domain, taskType, priority, acceptanceCriteria, summary, affectsUi]
+      properties:
+        taskId: { type: string }
+        taskVersion: { type: string }
+        projectId: { type: string }
+        domain: { type: string }
+        targetRepo: { type: [string, 'null'] }
+        taskType: { type: string }
+        priority: { type: string }
+        acceptanceCriteria:
+          type: array
+          items: { type: string }
+        summary: { type: string }
+        affectsUi: { type: boolean }
+        requestedOwner: { type: [string, 'null'] }
     TaskSummaryResponse:
       type: object
       required: [task_id, tenant_id, title, current_stage, current_owner, owner, blocked, closed, freshness]
@@ -1896,6 +1918,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskSummaryResponse'
+  /tasks/{id}/forge-execution-readiness:
+    get:
+      summary: Return forge execution-ready canonical task JSON
+      operationId: getForgeExecutionReadiness
+      description: |
+        Returns camelCase canonical task fields for forgeadapter start/review/resume flows when the task has an
+        approved execution contract, dispatch readiness, and `forge_dispatch` metadata. Unready tasks return
+        `task_not_execution_ready` with structured details.
+      security:
+        - BearerAuth: []
+        - ForgeServiceToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Execution-ready canonical task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgeCanonicalTask'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Task not found
+        '422':
+          description: Task is not execution-ready for forge dispatch
+        '501':
+          description: Store does not support forge execution readiness reads
   /tasks/{id}/history:
     get:
       summary: Query projected task history

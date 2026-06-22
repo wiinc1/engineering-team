@@ -125,21 +125,19 @@ function forgeReadySimpleSections() {
   return sections;
 }
 
-async function seedForgeReadyTask(store, taskId = "TSK-FORGE-API") {
-  const history = [
-    {
-      event_type: "task.created",
-      sequence_number: 1,
-      payload: {
-        title: "Forge API readiness",
-        task_type: "feature",
-        priority: "P1",
-        acceptance_criteria: "one\ntwo",
-        assignee: "pm",
-        initial_stage: "DRAFT",
-      },
+function buildForgeReadyApprovedContract(taskId) {
+  const history = [{
+    event_type: "task.created",
+    sequence_number: 1,
+    payload: {
+      title: "Forge API readiness",
+      task_type: "feature",
+      priority: "P1",
+      acceptance_criteria: "one\ntwo",
+      assignee: "pm",
+      initial_stage: "DRAFT",
     },
-  ];
+  }];
 
   const draft = createExecutionContractDraft({
     taskId,
@@ -168,7 +166,10 @@ async function seedForgeReadyTask(store, taskId = "TSK-FORGE-API") {
   const approvedContract = { ...draft.contract, status: "approved" };
   const autoApproval = evaluateExecutionContractAutoApprovalPolicy({ contract: approvedContract });
   approvedContract.auto_approval = buildExecutionContractAutoApprovalRecord(autoApproval);
+  return { createdPayload: history[0].payload, approvedContract };
+}
 
+async function persistForgeReadyTaskEvents(store, taskId, createdPayload, approvedContract) {
   await store.appendEvent({
     tenantId: "tenant-a",
     taskId,
@@ -176,7 +177,7 @@ async function seedForgeReadyTask(store, taskId = "TSK-FORGE-API") {
     actorType: "agent",
     actorId: "pm-1",
     idempotencyKey: `create:${taskId}`,
-    payload: history[0].payload,
+    payload: createdPayload,
   });
   await store.appendEvent({
     tenantId: "tenant-a",
@@ -217,6 +218,11 @@ async function seedForgeReadyTask(store, taskId = "TSK-FORGE-API") {
     idempotencyKey: `assign:${taskId}:engineer-sr`,
     payload: { assignee: "engineer-sr" },
   });
+}
+
+async function seedForgeReadyTask(store, taskId = "TSK-FORGE-API") {
+  const { createdPayload, approvedContract } = buildForgeReadyApprovedContract(taskId);
+  await persistForgeReadyTaskEvents(store, taskId, createdPayload, approvedContract);
 }
 
 test("GET /tasks/:taskId/forge-execution-readiness supports service token auth", async () => {

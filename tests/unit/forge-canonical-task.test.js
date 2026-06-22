@@ -25,33 +25,30 @@ function lowRiskSimpleSections() {
   return sections;
 }
 
-function approvedSimpleContractHistory(taskId = 'TSK-FORGE-UNIT') {
-  const history = [
-    {
-      event_type: 'task.created',
-      sequence_number: 1,
-      payload: {
-        title: 'Forge canonical mapper',
-        task_type: 'Feature',
-        priority: 'P1',
-        acceptance_criteria: 'Criterion from string\nSecond criterion',
-        assignee: 'engineer-sr',
-        intake_draft: true,
-        raw_requirements: 'Promote to forge execution readiness.',
-      },
-    },
-  ];
+function forgeUnitCreatedPayload() {
+  return {
+    title: 'Forge canonical mapper',
+    task_type: 'Feature',
+    priority: 'P1',
+    acceptance_criteria: 'Criterion from string\nSecond criterion',
+    assignee: 'engineer-sr',
+    intake_draft: true,
+    raw_requirements: 'Promote to forge execution readiness.',
+  };
+}
 
+function buildApprovedForgeContract(taskId, history) {
+  const createdPayload = history[0].payload;
   const draft = createExecutionContractDraft({
     taskId,
     summary: {
       task_id: taskId,
-      title: 'Forge canonical mapper',
-      task_type: 'Feature',
-      priority: 'P1',
-      acceptance_criteria: 'Criterion from string\nSecond criterion',
-      assignee: 'engineer-sr',
-      intake_draft: true,
+      title: createdPayload.title,
+      task_type: createdPayload.task_type,
+      priority: createdPayload.priority,
+      acceptance_criteria: createdPayload.acceptance_criteria,
+      assignee: createdPayload.assignee,
+      intake_draft: createdPayload.intake_draft,
     },
     history,
     actorId: 'pm-1',
@@ -70,7 +67,10 @@ function approvedSimpleContractHistory(taskId = 'TSK-FORGE-UNIT') {
   const approvedContract = { ...draft.contract, status: 'approved' };
   const autoApproval = evaluateExecutionContractAutoApprovalPolicy({ contract: approvedContract });
   approvedContract.auto_approval = buildExecutionContractAutoApprovalRecord(autoApproval);
+  return approvedContract;
+}
 
+function prependApprovedContractEvents(history, approvedContract) {
   history.unshift({
     event_type: 'task.execution_contract_version_recorded',
     sequence_number: 2,
@@ -84,7 +84,16 @@ function approvedSimpleContractHistory(taskId = 'TSK-FORGE-UNIT') {
       auto_approval: approvedContract.auto_approval,
     },
   });
+}
 
+function approvedSimpleContractHistory(taskId = 'TSK-FORGE-UNIT') {
+  const history = [{
+    event_type: 'task.created',
+    sequence_number: 1,
+    payload: forgeUnitCreatedPayload(),
+  }];
+  const approvedContract = buildApprovedForgeContract(taskId, history);
+  prependApprovedContractEvents(history, approvedContract);
   return { history, approvedContract };
 }
 
