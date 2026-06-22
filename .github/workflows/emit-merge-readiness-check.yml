@@ -15,6 +15,12 @@ on:
         options:
           - success
           - failure
+  push:
+    branches:
+      - feat/forge-execution-readiness
+    paths:
+      - .github/workflows/emit-merge-readiness-check.yml
+      - scripts/emit-merge-readiness-check.js
 
 permissions:
   checks: write
@@ -38,5 +44,17 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           MERGE_READINESS_DETAILS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          SHA=$(gh pr view "${{ inputs.pr_number }}" --json headRefOid --jq .headRefOid)
-          node scripts/emit-merge-readiness-check.js "${{ github.repository }}" "$SHA" "${{ inputs.conclusion }}"
+          PR_NUMBER="${{ inputs.pr_number }}"
+          CONCLUSION="${{ inputs.conclusion }}"
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh pr list --head "${{ github.ref_name }}" --state open --json number --jq '.[0].number')
+          fi
+          if [ -z "$CONCLUSION" ]; then
+            CONCLUSION=success
+          fi
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for ref ${{ github.ref_name }}"
+            exit 1
+          fi
+          SHA=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)
+          node scripts/emit-merge-readiness-check.js "${{ github.repository }}" "$SHA" "$CONCLUSION"
