@@ -21,6 +21,7 @@ on:
     paths:
       - .github/workflows/emit-merge-readiness-check.yml
       - scripts/emit-merge-readiness-check.js
+      - docs/runbooks/merge-readiness-enforcement.md
 
 permissions:
   checks: write

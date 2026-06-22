@@ -490,7 +490,7 @@
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^db/migrations/012_projects(\\.down)?\\.sql$",
         "^db/migrations/014_ai_agents_management\\.sql$",
-        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|verify-projects-production-smoke)\\.js$"
+        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke)\\.js$"
       ],
       "test_requirements": [
         {
