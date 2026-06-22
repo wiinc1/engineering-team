@@ -1,0 +1,42 @@
+name: Emit Merge readiness check
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to attest
+        required: true
+        type: string
+      conclusion:
+        description: Check conclusion (success or failure)
+        required: false
+        default: success
+        type: choice
+        options:
+          - success
+          - failure
+
+permissions:
+  checks: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  emit:
+    name: Merge readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Emit Merge readiness check for PR head SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          MERGE_READINESS_DETAILS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          SHA=$(gh pr view "${{ inputs.pr_number }}" --json headRefOid --jq .headRefOid)
+          node scripts/emit-merge-readiness-check.js "${{ github.repository }}" "$SHA" "${{ inputs.conclusion }}"
