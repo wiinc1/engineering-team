@@ -206,3 +206,45 @@ test("reader cannot start PM refinement through the dedicated refinement route",
     assert.equal(after.items.some((item) => item.event_type === "task.refinement_started" && item.actor_id === "reader"), false);
   });
 });
+
+test("forge execution-readiness rejects missing and invalid service tokens", async () => {
+  const fs = require("fs");
+  const os = require("os");
+  const path = require("path");
+  const { createAuditApiServer } = require("../../lib/audit/http-projects");
+
+  async function withProjectsServer(callback) {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-security-forge-"));
+    const secret = "security-forge-secret";
+    const { server } = createAuditApiServer({
+      baseDir,
+      jwtSecret: secret,
+      forgeServiceToken: "forge-security-token",
+      workflowEngineEnabled: false,
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address();
+    try {
+      await callback({ baseUrl: `http://127.0.0.1:${port}`, secret });
+    } finally {
+      await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    }
+  }
+
+  await withProjectsServer(async ({ baseUrl, secret }) => {
+    let response = await fetch(`${baseUrl}/tasks/TSK-FORGE-SEC/forge-execution-readiness`);
+    assert.equal(response.status, 401);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-FORGE-SEC/forge-execution-readiness`, {
+      headers: { authorization: "Bearer forge-security-wrong" },
+    });
+    assert.equal(response.status, 401);
+
+    const reader = {
+      authorization: `Bearer ${sign({ sub: "reader", tenant_id: "tenant-sec", roles: ["reader"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    response = await fetch(`${baseUrl}/tasks/TSK-FORGE-SEC/forge-execution-readiness`, { headers: reader });
+    assert.equal(response.status, 403);
+    assert.match(JSON.stringify(await response.json()), /forge:read/);
+  });
+});

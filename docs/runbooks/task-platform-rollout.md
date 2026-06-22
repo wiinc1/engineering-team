@@ -12,6 +12,7 @@ It assumes:
 - the additive `/api/v1/tasks/{taskId}/merge-readiness-reviews` routes are deployed with the current repo code
 - the additive `/api/v1/projects` and `/api/v1/tasks/{taskId}/project` routes are deployed when `FF_PROJECTS` is enabled or unset
 - legacy audit-backed task routes remain available only as compatibility adapters during the rollout window
+- forgeadapter Phase 2 canonical reads use `GET /tasks/:taskId/forge-execution-readiness` on audit-api `:3000`; pair `FORGE_SERVICE_TOKEN` with forgeadapter `ENGINEERING_TEAM_SERVICE_TOKEN`
 
 ## Preconditions
 - target environment has a valid `DATABASE_URL`

@@ -174,7 +174,8 @@
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
             "^tests/integration/autonomous-delivery-metrics\\.integration\\.test\\.js$",
             "^tests/integration/audit-migrations\\.integration\\.test\\.js$",
-            "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$"
+            "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$",
+            "^tests/contract/forge-execution-readiness\\.contract\\.test\\.js$"
           ]
         },
         {
@@ -489,7 +490,8 @@
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^db/migrations/012_projects(\\.down)?\\.sql$",
         "^db/migrations/014_ai_agents_management\\.sql$",
-        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|verify-projects-production-smoke)\\.js$"
+        "^lib/forge-local-smoke/seed-task\\.js$",
+        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke|seed-forge-local-smoke-task)\\.js$"
       ],
       "test_requirements": [
         {
@@ -503,12 +505,16 @@
         "^tests/unit/task-platform-branch-protection\\.test\\.js$",
         "^tests/unit/task-platform-pr-summary\\.test\\.js$",
         "^tests/unit/task-platform-merge-readiness-gate\\.test\\.js$",
-        "^tests/unit/projects-production-smoke\\.test\\.js$"
+        "^tests/unit/projects-production-smoke\\.test\\.js$",
+        "^tests/unit/forge-canonical-task\\.test\\.js$",
+        "^tests/unit/seed-forge-local-smoke-task\\.test\\.js$"
       ]
     },
         {
           "name": "integration",
           "patterns": [
+            "^tests/contract/forge-execution-readiness\\.contract\\.test\\.js$",
+            "^tests/integration/forge-local-smoke-seed\\.integration\\.test\\.js$",
             "^tests/integration/task-assignment-integration\\.test\\.js$",
             "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
@@ -529,6 +535,7 @@
           "name": "runbook-or-adr",
           "patterns": [
             "^docs/runbooks/task-platform-rollout\\.md$",
+            "^docs/runbooks/forge-local-smoke\\.md$",
             "^docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership\\.md$"
           ]
         }

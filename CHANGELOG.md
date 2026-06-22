@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added an operator `emit-merge-readiness-check` workflow and script to publish the branch-protection `Merge readiness` context when autonomous review emission has not run yet
 - adopted the repo-local standards control plane
 - documented ADR evidence, artifact approval mode, Python dependency cache inputs,
   pull request traceability rules, pull request head SHA validation, and coverage
