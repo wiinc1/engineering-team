@@ -145,6 +145,8 @@ npm run golden-path:smoke:gp-013 -- --openclaw-url http://127.0.0.1:<gateway>   
 
 Phase 3 advances to `QA_TESTING` (through contract-coverage audit when required), waits for projection catch-up, then records the intentional QA fail (`GP-015`).
 
+Phase 4 waits for contract-coverage audit rows matching the current implementation attempt before leaving `IMPLEMENTATION`. Phase 5 waits for `task.sre_monitoring_started` to project before SRE approve.
+
 The `--local` file-backend path remains for fast isolated proofs (`observability/golden-path-local-stack/audit-data`); prefer the Postgres stack above for UI + forgeadapter + workflow fidelity.
 
 ---

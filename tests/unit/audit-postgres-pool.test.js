@@ -49,6 +49,18 @@ test('createPgPoolFromEnv constrains serverless pools by default', async () => {
   }
 });
 
+test('createPgPoolFromEnv honors connection-string sslmode over PGSSLMODE=disable', async () => {
+  const pool = withEnv({
+    PGSSLMODE: 'disable',
+  }, () => createPgPoolFromEnv(CONNECTION_STRING));
+
+  try {
+    assert.deepEqual(pool.options.ssl, { rejectUnauthorized: true });
+  } finally {
+    await pool.end();
+  }
+});
+
 test('createPgPoolFromEnv honors explicit pool sizing overrides', async () => {
   const pool = withEnv({
     VERCEL: '1',

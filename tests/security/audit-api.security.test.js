@@ -316,3 +316,46 @@ test("forge execution-readiness rejects missing and invalid service tokens", asy
     assert.match(JSON.stringify(await response.json()), /forge:read/);
   });
 });
+
+test("qa-results submission requires events:write authorization", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributor = {
+      "content-type": "application/json",
+      authorization: `Bearer ${sign({ sub: "contributor", tenant_id: "tenant-sec", roles: ["contributor"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    const reader = {
+      "content-type": "application/json",
+      authorization: `Bearer ${sign({ sub: "reader", tenant_id: "tenant-sec", roles: ["reader"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-QA/events`, {
+      method: "POST",
+      headers: contributor,
+      body: JSON.stringify({
+        eventType: "task.created",
+        actorType: "agent",
+        idempotencyKey: "create:TSK-SEC-QA",
+        payload: { title: "QA security task", initial_stage: "QA_TESTING" },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-QA/qa-results`, {
+      method: "POST",
+      headers: reader,
+      body: JSON.stringify({
+        outcome: "pass",
+        summary: "Reader attempted unauthorized QA submission.",
+        scenarios: ["browser matrix"],
+        findings: [],
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, "forbidden");
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-QA/history`, { headers: reader });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.equal(history.items.some((item) => item.event_type === "task.qa_result_recorded"), false);
+  });
+});

@@ -262,3 +262,8 @@ test("GET /tasks/:taskId/forge-execution-readiness enforces forge:read for JWT c
     assert.deepEqual(body.acceptanceCriteria, ["one", "two"]);
   }, { forgeServiceToken: "forge-service-token-test", workflowEngineEnabled: false });
 });
+
+test("qa-results POST drains postgres projection queue inline before stage routing", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../lib/audit/http.js"), "utf8");
+  assert.match(source, /e\.kind==="postgres"&&typeof e\.processProjectionQueue=="function"&&await e\.processProjectionQueue\(25\)/);
+});
