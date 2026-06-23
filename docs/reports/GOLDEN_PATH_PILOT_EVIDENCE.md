@@ -1,6 +1,6 @@
 # Golden Path Pilot Evidence
 
-**Status:** Phases 0–6 complete on **local Postgres golden-path stack**; optional hosted replay pending for full GP-026 SRE monitoring window
+**Status:** Phases 0–6 complete on **local Postgres golden-path stack** (GP-026 SRE monitoring executed in phase 5)
 **Epic issue:** https://github.com/wiinc1/engineering-team/issues/269  
 **Pilot issue:** https://github.com/wiinc1/engineering-team/issues/271  
 **Pilot task ID:** `TSK-D54F1849` (Postgres golden-path stack)  
@@ -19,7 +19,7 @@ The supervised golden-path epic is **proven locally end-to-end** on the coordina
 
 Phase 0–1 intake and execution-contract artifacts were created against the **Postgres-backed audit API**. Phase 1 recorded Simple execution contract **v1** with `forge_dispatch` targeting `wiinc1/engineering-team`, policy auto-approval (`execution-contract-low-risk-simple-auto-approval.v1`), and architect tier/monitoring embedded in contract dispatch signals.
 
-Phases 2–6 exercised forgeadapter lifecycle (start → QA reject → resume → gate approvals → complete), intentional QA fail/retest pass, PM + Architect close review, local validation, GP-026 SRE waiver, human close approval, and `task.closed`. The operator can sign in at `http://127.0.0.1:15173/sign-in` and view the closed pilot task in the UI.
+Phases 2–6 exercised forgeadapter lifecycle (start → QA reject → resume → gate approvals → complete), intentional QA fail/retest pass, SRE monitoring window (GP-026 in phase 5), PM + Architect close review, local validation, human close approval, and `task.closed`. The operator can sign in at `http://127.0.0.1:15173/sign-in` and view the closed pilot task in the UI.
 
 An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-pilot.json`) remains as prior art for fast isolated proofs; Postgres replay is the canonical operator experience.
 
@@ -27,16 +27,11 @@ An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-p
 
 - Applicable standards areas: testing and quality assurance, deployment and release, observability and monitoring, team and process.
 - Evidence in this report: golden-path phase runners, Postgres pilot evidence JSON, manual-step classifications, validation command output, forge lifecycle jobs, UI sign-in verification, and closeout events for issue #271.
-- Gap observed: full SRE monitoring window (GP-026) was waived on the local pilot. Documented rationale: supervised local replay prioritized workflow/API/UI evidence; hosted SRE window can be replayed when promoting beyond the local stack. Source https://github.com/wiinc1/engineering-team/issues/269.
+- Gap observed: GP-013 OpenClaw delegation smoke remains optional on local replay. Documented rationale: local replay uses OpenClaw/Hermes mocks for speed; use `--require-delegation-smoke` with real runtime URLs for live delegation proof. Source https://github.com/wiinc1/engineering-team/issues/269.
 
 ## Required Evidence
 
-- Commands run (Postgres replay, 2026-06-23):
-  - `npm run dev:golden-path:up`
-  - `node scripts/run-golden-path-phase1.js --bootstrap --base-url http://127.0.0.1:13000 --child-issue 271 --out observability/golden-path-postgres-pilot.json`
-  - `node scripts/replay-golden-path-postgres.js` (wrapper for forge seed + phases 2–6)
-  - `node scripts/run-golden-path-phases.js --base-url http://127.0.0.1:13000 --from 2 --to 6 --skip-delegation-smoke --operator-url http://127.0.0.1:15173 --out observability/golden-path-postgres-pilot.json --persist-dir observability/golden-path-postgres-stack/audit-data`
-  - `npm run lint`; `npm run test:unit`; `npm run standards:check` (GP-023 during phase 6)
+- Commands run: `npm run dev:golden-path:up`; `npm run golden-path:replay:postgres -- --from 2 --to 6`; `npm run lint`; `npm run test:unit`; `npm run standards:check`
 - Tests added or updated: `tests/unit/golden-path-phase1.test.js`; phase-runner QA projection catch-up retry for Postgres workflow gates.
 - Rollout or rollback notes: rollout via pilot branch/PR #271; rollback by reverting README marker and golden-path evidence commits. Preserve Postgres data across stack restarts with `npm run dev:golden-path:down -- --keep-postgres`.
 - Docs updated: `docs/reports/GOLDEN_PATH_PILOT_EVIDENCE.md`, `docs/runbooks/golden-path-autonomous-delivery.md`, `observability/golden-path-postgres-pilot.json`, `README.md` golden-path marker.
@@ -47,9 +42,7 @@ An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-p
 | --- | --- | --- |
 | Production `seed-golden-path-phase0` 500 (`tenant/user postgres... not found`) | operator intervention | Use production operator JWT (browser session or prod env file), not local `.env.local` secret |
 | `forge-execution-readiness` 422 while task stage is `DRAFT` | routine observation | Expected until GP-009 workflow advancement; contract is approved with `forge_dispatch` |
-| GP-026 SRE window skipped locally | operator intervention | Replay GP-026 from `SRE_MONITORING` on production/staging closeout |
-
-| GP-013 delegation smoke skipped | routine observation | Re-run with real OpenClaw/Hermes URLs or accept mock for local speed |
+| GP-013 delegation smoke skipped | routine observation | Re-run with `--require-delegation-smoke` and real OpenClaw/Hermes URLs |
 
 ## Manual action log (Postgres replay)
 
@@ -70,7 +63,7 @@ An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-p
 | 2026-06-23T16:36Z | GP-021 | ET PM + Architect close-review recorded | required approval | ET API | Close review while in PM_CLOSE_REVIEW |
 | 2026-06-23T16:36Z | GP-022 | `task.github_pr_synced` for PR #271 | operator intervention | Postgres ET API | Merge SHA `7e3e3b5c596210b5310244592ca9e7ad503404e5` |
 | 2026-06-23T16:36Z | GP-023 | `lint`, `test:unit`, `standards:check` green | routine observation | engineering-team | Local deploy validation (GP-023 complete) |
-| 2026-06-23T16:36Z | GP-026 | SRE monitoring waived (advanced to `PM_CLOSE_REVIEW` without window) | operator intervention | Postgres ET API | Production replay must execute GP-026 from `SRE_MONITORING` |
+| 2026-06-23T16:36Z | GP-026 | SRE monitoring start + approve in phase 5 (`SRE_MONITORING` window) | routine observation | Postgres ET API | Executed before PM close review advance |
 | 2026-06-23T16:36Z | GP-027 | Human close approve + `task.closed` | required approval | Postgres ET API | Task `TSK-D54F1849` closed; UI verified |
 
 ## Validation summary
@@ -95,7 +88,7 @@ An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-p
 | GP-020 → GP-021 | **Bridged** via `et-forge-dispatch-bridge.js` on QA retest pass (forge gates + ET close recommendations) |
 | GP-020/GP-021 | ET close review and forge gates are parallel manual systems |
 | GP-023 | Wire CI validation on merge (local proof scripted in phase 6) |
-| GP-026 | Local pilot waived SRE window when Phase 5 advanced directly to `PM_CLOSE_REVIEW` |
+| GP-026 | SRE monitoring now runs in phase 5 before `PM_CLOSE_REVIEW` advance |
 
 ## Required evidence checklist
 
@@ -109,7 +102,7 @@ An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-p
 - [x] PR URL + merge SHA (`7e3e3b5c596210b5310244592ca9e7ad503404e5`)
 - [x] Operator UI sign-in + closed task visible in browser
 - [x] GP-023 local deploy validation (`lint`, `test:unit`, `standards:check`)
-- [x] SRE waiver + human closeout events (full SRE window optional on hosted replay)
+- [x] GP-026 SRE monitoring + human closeout events
 - [x] `observability/golden-path-postgres-pilot.json` committed
 - [x] `task.closed` event recorded
 
