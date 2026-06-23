@@ -2,8 +2,8 @@
   "schemaVersion": "1.0",
   "epic": "golden-path-autonomous-delivery",
   "purpose": "Inventory every supervised step in the GitHub-issue-to-production path. Mark automation status so Phase A–E work can be prioritized.",
-  "lastUpdated": "2026-06-22",
-  "systems": ["github", "engineering-team", "forgeadapter", "openclaw", "hermes", "vercel", "supabase"],
+  "lastUpdated": "2026-06-23",
+  "systems": ["github", "engineering-team", "forgeadapter", "openclaw", "hermes"],
   "steps": [
     {
       "id": "GP-001",
@@ -206,11 +206,11 @@
     {
       "id": "GP-023",
       "phase": "6-deploy",
-      "action": "Vercel production deploy for target app",
-      "system": "vercel",
+      "action": "Local deploy validation (lint, test:unit, standards:check)",
+      "system": "engineering-team",
       "manual": true,
-      "automateAs": "vercel_api_deploy_on_merge",
-      "evidence": "deployment URL, deployment_version on task"
+      "automateAs": "ci_validation_on_merge",
+      "evidence": "validation command output in golden-path evidence JSON"
     },
     {
       "id": "GP-024",
@@ -253,6 +253,10 @@
     "totalSteps": 27,
     "manualToday": 27,
     "automatedToday": 0,
-    "criticalPathAutomation": ["GP-002", "GP-011", "GP-016", "GP-018", "GP-020", "GP-023"]
+    "criticalPathAutomation": ["GP-002", "GP-011", "GP-016", "GP-018", "GP-020", "GP-023"],
+    "bridgeAutomation": {
+      "GP-011": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
+      "GP-018": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)"
+    }
   }
 }

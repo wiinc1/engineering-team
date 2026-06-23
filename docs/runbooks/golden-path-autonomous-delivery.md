@@ -12,7 +12,7 @@ One GitHub issue with full requirements → implement → QA (fail) → fix → 
 
 **Prior art:** Issue #209 supervised pilot (`docs/runbooks/supervised-autonomous-pilot.md`) covers ET-only contract → delegation → PR. This epic extends that spine with **forgeadapter lifecycle**, **intentional QA fail/retest**, and **explicit deploy/closeout**.
 
-**Development default:** run the **entire app locally**. A Vercel UI + cloud Supabase + local OpenClaw/forgeadapter/Hermes split does not work without substantial integration work (auth, tenant mapping, CORS/tunnels, webhook bridges). Use the local dev stack below; treat Vercel/Supabase as a separate **production replay** milestone.
+**Development default:** run the **entire app locally** on one machine (Postgres + audit API + UI + forgeadapter). Do not split UI and API across hosted platforms for golden-path work — use the coordinated stack below.
 
 ---
 
@@ -31,7 +31,7 @@ This brings up (pinned ports by default):
 | --- | --- | --- |
 | Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`) |
 | ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true` |
-| ET audit workers | background | Projection + outbox on 3s interval |
+| ET audit workers | background | Projection + outbox on 3s interval; **ET→forge dispatch bridge** when `ET_FORGE_DISPATCH_ENABLED=true` |
 | ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
 | forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
 | OpenClaw | `http://127.0.0.1:14001` | **Mock** unless `--openclaw-url` points at a real runtime |
@@ -46,7 +46,7 @@ This brings up (pinned ports by default):
 
 The stack uses **registration auth** (`AUTH_PRODUCTION_AUTH_STRATEGY=registration`) with a seeded active admin. New accounts can register but require admin approval (`AUTH_REGISTRATION_MODE=admin-approved`). Trusted auth-code bootstrap is disabled for the default UI path.
 
-**If sign-in fails with "Request failed":** the golden-path UI must use same-origin API paths (`/auth/*`, `/tasks/*`), not Vercel's `/backend` prefix from `.env.local`. `dev:golden-path:up` forces `VITE_TASK_API_BASE_URL=` empty; restart the stack after pulling changes. Also clear `sessionStorage` key `engineering-team.task-browser-session` if a stale `apiBaseUrl` remains. Use `http://127.0.0.1:15173` exactly — not `localhost`.
+**If sign-in fails with "Request failed":** the golden-path UI must use same-origin API paths (`/auth/*`, `/tasks/*`). `dev:golden-path:up` forces `VITE_TASK_API_BASE_URL=` empty; restart the stack after pulling changes. Also clear `sessionStorage` key `engineering-team.task-browser-session` if a stale `apiBaseUrl` remains. Use `http://127.0.0.1:15173` exactly — not `localhost`.
 
 **Shared dev tokens** (also in `observability/golden-path-local-dev/stack.json` while running):
 
@@ -75,6 +75,23 @@ Use `--keep-postgres` when you want the UI to keep showing a completed golden-pa
 
 Logs: `observability/golden-path-local-dev/logs/`. State: `observability/golden-path-local-dev/stack.json`.
 
+### ET → forgeadapter dispatch bridge
+
+`dev:golden-path:up` enables `ET_FORGE_DISPATCH_ENABLED=true` on audit workers. The outbox publisher in `lib/task-platform/et-forge-dispatch-bridge.js` routes:
+
+| Audit event | Forge action | Golden-path step |
+| --- | --- | --- |
+| `task.execution_contract_approved` | `POST /tasks/:id/start` (when execution-ready) | GP-011 |
+| `task.qa_result_recorded` (initial fail) | `POST /tasks/:id/resume` | GP-018 |
+
+Environment (set automatically by the dev stack):
+
+- `FORGEADAPTER_BASE_URL=http://127.0.0.1:14010`
+- `ENGINEERING_TEAM_BASE_URL=http://127.0.0.1:13000`
+- `ET_FORGE_LIFECYCLE_TASK_ID=TSK-GOLDEN001` (maps ET pilot task events to forge lifecycle task)
+
+Phase scripts still perform explicit forge actions for supervised replay evidence; the bridge covers unattended operator gaps between ET and forgeadapter.
+
 **Run golden-path phase scripts against the local Postgres API** (with stack up):
 
 ```bash
@@ -88,7 +105,8 @@ node scripts/run-golden-path-phase1.js --bootstrap \
 
 node scripts/run-golden-path-phases.js \
   --base-url http://127.0.0.1:13000 \
-  --from 2 --to 6 --skip-delegation-smoke --skip-vercel-deploy \
+  --from 2 --to 6 --skip-delegation-smoke \
+  --operator-url http://127.0.0.1:15173 \
   --out observability/golden-path-postgres-pilot.json \
   --persist-dir observability/golden-path-postgres-stack/audit-data
 ```
@@ -148,13 +166,9 @@ Add a single visible marker proving the loop completed, e.g.:
 - [ ] OpenClaw + Hermes running locally **or** accept dev mocks for GP-013 (record which in evidence)
 - [ ] GitHub token for PR/checks (`GITHUB_TOKEN` / `gh` auth)
 
-### Production replay (optional, separate milestone)
+### Hosted deployment replay (optional)
 
-Do **not** block local golden-path progress on this list:
-
-- [ ] Production readiness accepted (Issue #208 or equivalent)
-- [ ] Deployed ET API + Supabase Postgres + operator JWT/session
-- [ ] Vercel production deploy + SRE monitoring window
+Do **not** block local golden-path progress on hosted deployment. When you promote beyond the local stack, replay Phase 6 with a real **SRE monitoring window** (GP-026) against your hosted operator URL.
 
 ---
 
@@ -182,7 +196,7 @@ As a Software Factory operator, I want one supervised end-to-end delivery loop d
 - [ ] Intentional QA fail recorded, then retest pass
 - [ ] forgeadapter local-stack lifecycle exercised (start + at least one gate)
 - [ ] PM + Architect close review recorded in ET task history
-- [ ] Local deploy validation (`lint`, `test:unit`, `standards:check`) recorded; Vercel prod deploy optional for production replay
+- [ ] Local deploy validation (`lint`, `test:unit`, `standards:check`) recorded (GP-023)
 - [ ] `observability/golden-path-pilot.json` committed with step timestamps
 
 ### Deliverable
@@ -212,14 +226,14 @@ node scripts/seed-golden-path-phase0.js --local \
   --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER>
 ```
 
-**Production replay** (only when deployed ET + operator JWT are available):
+**Hosted replay** (only when a deployed ET API + operator session are available):
 
 ```bash
 node scripts/seed-golden-path-phase0.js \
   --epic-issue 269 \
   --child-issue <CHILD_ISSUE_NUMBER> \
   --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER> \
-  --base-url https://engineering-team-zeta.vercel.app
+  --base-url https://<your-hosted-et-api>
 ```
 
 Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and completed steps `GP-001`, `GP-002`, `GP-005`.
@@ -283,11 +297,11 @@ node scripts/run-golden-path-phase1.js --local \
   --persist-dir observability/golden-path-local-stack/audit-data
 ```
 
-**Production replay:**
+**Hosted replay:**
 
 ```bash
 node scripts/run-golden-path-phase1.js \
-  --base-url https://engineering-team-zeta.vercel.app \
+  --base-url https://<your-hosted-et-api> \
   --task-id <TASK_ID> \
   --child-issue 271
 ```
@@ -319,7 +333,7 @@ node scripts/run-golden-path-phases.js \
   --base-url http://127.0.0.1:13000 \
   --from 2 --to 6 \
   --skip-delegation-smoke \
-  --skip-vercel-deploy
+  --operator-url http://127.0.0.1:15173
 ```
 
 Or use the file-backend persistent pilot dir from issue #271:
@@ -327,7 +341,8 @@ Or use the file-backend persistent pilot dir from issue #271:
 ```bash
 node scripts/run-golden-path-phases.js --local \
   --persist-dir observability/golden-path-local-stack/audit-data \
-  --from 2 --to 6 --skip-delegation-smoke --skip-vercel-deploy
+  --from 2 --to 6 --skip-delegation-smoke \
+  --operator-url http://127.0.0.1:15173
 ```
 
 ### Seed task for forgeadapter (manual / debugging)
@@ -362,7 +377,7 @@ curl -s -X POST \
   http://127.0.0.1:14010/tasks/TSK-GOLDEN001/start | jq .
 ```
 
-**Gap:** ET contract approval does **not** auto-call forgeadapter. Operator must bridge GP-009 → GP-011 until `et_dispatch_webhook` exists.
+**Bridge:** With `ET_FORGE_DISPATCH_ENABLED=true`, contract approval auto-calls forgeadapter start when execution-ready. Manual `curl` remains for debugging.
 
 ---
 
@@ -405,7 +420,7 @@ curl -s -X POST \
   http://127.0.0.1:14010/tasks/TSK-GOLDEN001/resume | jq .
 ```
 
-**Gap:** ET QA fail does **not** auto-trigger forge resume. Operator bridges GP-015 → GP-018.
+**Bridge:** With `ET_FORGE_DISPATCH_ENABLED=true`, initial QA fail auto-calls forgeadapter resume (via `ET_FORGE_LIFECYCLE_TASK_ID` when ET and forge task IDs differ). Manual `curl` remains for debugging.
 
 ---
 
@@ -452,14 +467,8 @@ npm run lint && npm run test:unit && npm run standards:check
 
 node scripts/run-golden-path-phases.js \
   --base-url http://127.0.0.1:13000 \
-  --from 6 --to 6 --skip-vercel-deploy
-```
-
-**Production replay (optional):**
-
-```bash
-npx vercel deploy --prod --yes   # requires Vercel auth
-# Re-run Phase 6 against production ET base URL + full SRE window
+  --from 6 --to 6 \
+  --operator-url http://127.0.0.1:15173
 ```
 
 ---
@@ -473,7 +482,7 @@ npx vercel deploy --prod --yes   # requires Vercel auth
 | Manual step inventory | `observability/golden-path-manual-steps.json` |
 | Forge lifecycle proof | `forgeadapter` local-stack test output or CI link |
 | Delegation proof | `observability/pilot-delegation-readiness.json` (if OpenClaw used) |
-| PR + deploy | PR URL, merge SHA; local validation log; Vercel deployment ID only for prod replay |
+| PR + deploy | PR URL, merge SHA; GP-023 validation log; operator UI URL (`deploy.operatorUrl`) |
 
 ### Manual-action classifications
 
@@ -489,12 +498,13 @@ Same as #209:
 
 | Priority | Step IDs | Why |
 | --- | --- | --- |
-| P0 | GP-002, GP-011 | Issue → task and contract → forge start |
-| P0 | GP-007 | Projection worker always-on (blocks production gates) |
-| P1 | GP-015, GP-016, GP-018 | QA fail ↔ forge reject/resume loop |
+| P0 | GP-002 | Issue → task intake normalizer |
+| P0 | GP-011, GP-018 | **Implemented:** `et-forge-dispatch-bridge` (enable via `ET_FORGE_DISPATCH_ENABLED`) |
+| P0 | GP-007 | Projection worker always-on (blocks workflow gates) |
+| P1 | GP-015, GP-016 | QA fail ↔ forge reject loop (reject still manual in bridge v1) |
 | P1 | GP-020, GP-021 | Unify ET close + forge gate approval |
 | P2 | GP-003, GP-004, GP-014 | Agent-driven refine + implement |
-| P2 | GP-023, GP-024 | Production deploy replay (Vercel + Supabase) after local loop is green |
+| P2 | GP-023 | CI validation on merge (local proof already scripted) |
 | P3 | GP-025 | Redis — only if target apps require it |
 
 ---

@@ -38,8 +38,8 @@ flowchart TD
 
   subgraph deploy["Phase 6 — Deploy + SRE"]
     etCloseReview --> mergePR[Merge PR]
-    mergePR --> vercelDeploy[Vercel production deploy]
-    vercelDeploy --> sreApprove[SRE monitoring approval]
+    mergePR --> deployValidation[Local deploy validation GP-023]
+    deployValidation --> sreApprove[SRE monitoring approval]
     sreApprove --> close[Task closeout + report]
   end
 

@@ -42,9 +42,8 @@
     "prUrl": "https://github.com/wiinc1/engineering-team/pull/271",
     "mergeCommitSha": "7e3e3b5c596210b5310244592ca9e7ad503404e5"
   },
-  "vercel": {
-    "deploymentId": null,
-    "productionUrl": "http://127.0.0.1:13000"
+  "deploy": {
+    "operatorUrl": "http://127.0.0.1:15173"
   },
   "stepsCompleted": [
     "GP-001",
@@ -236,12 +235,11 @@
           }
         }
       },
-      "vercel": {
-        "ok": false,
-        "skipped": true,
-        "productionUrl": "http://127.0.0.1:13000",
-        "deploymentId": null,
-        "stderr": null
+      "deploy": {
+        "operatorUrl": "http://127.0.0.1:15173",
+        "validation": {
+          "ok": true
+        }
       },
       "supabase": {
         "skipped": true,

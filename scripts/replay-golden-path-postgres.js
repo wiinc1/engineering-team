@@ -109,7 +109,7 @@ async function main() {
       '--from', String(Math.max(2, Number(fromPhase))),
       '--to', toPhase,
       '--skip-delegation-smoke',
-      '--skip-vercel-deploy',
+      '--operator-url', DEFAULTS.uiUrl,
       '--out', outputPath,
       '--persist-dir', persistDir,
       '--jwt-secret', env.AUTH_JWT_SECRET,
