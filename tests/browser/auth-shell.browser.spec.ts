@@ -1,3 +1,4 @@
+// Golden-path local dev sign-in uses proxied same-origin /auth/* when VITE_TASK_API_BASE_URL is empty.
 import { expect, test } from '@playwright/test';
 
 const tasksFixture = {

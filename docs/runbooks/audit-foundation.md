@@ -1,5 +1,6 @@
 # Audit Foundation Runbook
 
+> Golden-path GP-026: `lib/audit/linked-prs.js` orders PR history events deterministically before SRE `merged_pr_required` gate evaluation.
 > Issue #130 standards evidence: mechanical maintainability compaction only; no runbook procedure change.
 > Issue #193 standards evidence: lint-only whitespace cleanup in `lib/audit/workflow.js`; no audit runbook procedure change.
 

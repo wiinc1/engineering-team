@@ -1,3 +1,4 @@
+// Golden-path replay seeds forge tasks via Postgres audit store before GP-011 dispatch.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
