@@ -12,6 +12,97 @@ One GitHub issue with full requirements → implement → QA (fail) → fix → 
 
 **Prior art:** Issue #209 supervised pilot (`docs/runbooks/supervised-autonomous-pilot.md`) covers ET-only contract → delegation → PR. This epic extends that spine with **forgeadapter lifecycle**, **intentional QA fail/retest**, and **explicit deploy/closeout**.
 
+**Development default:** run the **entire app locally**. A Vercel UI + cloud Supabase + local OpenClaw/forgeadapter/Hermes split does not work without substantial integration work (auth, tenant mapping, CORS/tunnels, webhook bridges). Use the local dev stack below; treat Vercel/Supabase as a separate **production replay** milestone.
+
+---
+
+## Local development stack (default)
+
+Start one coordinated stack on the operator machine:
+
+```bash
+cd engineering-team
+npm run dev:golden-path:up
+```
+
+This brings up (pinned ports by default):
+
+| Service | URL | Notes |
+| --- | --- | --- |
+| Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`) |
+| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true` |
+| ET audit workers | background | Projection + outbox on 3s interval |
+| ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
+| forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
+| OpenClaw | `http://127.0.0.1:14001` | **Mock** unless `--openclaw-url` points at a real runtime |
+| Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
+
+**Browser sign-in** (seeded on stack startup):
+
+- URL: `http://127.0.0.1:15173/sign-in`
+- Email: `admin@golden-path.local`
+- Password: `GoldenPathAdmin1`
+- Tenant: `engineering-team` (matches golden-path scripts)
+
+The stack uses **registration auth** (`AUTH_PRODUCTION_AUTH_STRATEGY=registration`) with a seeded active admin. New accounts can register but require admin approval (`AUTH_REGISTRATION_MODE=admin-approved`). Trusted auth-code bootstrap is disabled for the default UI path.
+
+**If sign-in fails with "Request failed":** the golden-path UI must use same-origin API paths (`/auth/*`, `/tasks/*`), not Vercel's `/backend` prefix from `.env.local`. `dev:golden-path:up` forces `VITE_TASK_API_BASE_URL=` empty; restart the stack after pulling changes. Also clear `sessionStorage` key `engineering-team.task-browser-session` if a stale `apiBaseUrl` remains. Use `http://127.0.0.1:15173` exactly — not `localhost`.
+
+**Shared dev tokens** (also in `observability/golden-path-local-dev/stack.json` while running):
+
+- `FORGE_SERVICE_TOKEN=local-golden-path-forge-token`
+- `FORGEADAPTER_SERVICE_TOKEN=local-forgeadapter-token`
+- `AUTH_JWT_SECRET=golden-path-local-dev-secret`
+- `AUTH_SESSION_SECRET=golden-path-local-session-secret`
+
+**Use real OpenClaw/Hermes** when already running locally:
+
+```bash
+npm run dev:golden-path:up -- \
+  --openclaw-url http://127.0.0.1:<openclaw-port> \
+  --hermes-url http://127.0.0.1:<hermes-port>
+```
+
+**Stop / status:**
+
+```bash
+npm run dev:golden-path:down                    # kill child processes; stop Postgres container (wipes DB)
+npm run dev:golden-path:down -- --keep-postgres # stop app processes only; preserve pilot task data
+npm run dev:golden-path:status                  # print stack.json
+```
+
+Use `--keep-postgres` when you want the UI to keep showing a completed golden-path replay after restarting the stack. Without it, `dev:golden-path:down` removes the Docker Postgres volume and you must re-run phase scripts from Phase 0/1.
+
+Logs: `observability/golden-path-local-dev/logs/`. State: `observability/golden-path-local-dev/stack.json`.
+
+**Run golden-path phase scripts against the local Postgres API** (with stack up):
+
+```bash
+export AUTH_JWT_SECRET=golden-path-local-dev-secret
+export FORGE_SERVICE_TOKEN=local-golden-path-forge-token
+
+node scripts/run-golden-path-phase1.js --bootstrap \
+  --base-url http://127.0.0.1:13000 \
+  --child-issue 271 \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
+
+node scripts/run-golden-path-phases.js \
+  --base-url http://127.0.0.1:13000 \
+  --from 2 --to 6 --skip-delegation-smoke --skip-vercel-deploy \
+  --out observability/golden-path-postgres-pilot.json \
+  --persist-dir observability/golden-path-postgres-stack/audit-data
+```
+
+**One-command Postgres replay** (stack must already be up):
+
+```bash
+npm run golden-path:replay:postgres
+# fresh intake + phases 1–6 when evidence file is missing:
+npm run golden-path:replay:postgres -- --bootstrap
+```
+
+The `--local` file-backend path remains for fast isolated proofs (`observability/golden-path-local-stack/audit-data`); prefer the Postgres stack above for UI + forgeadapter + workflow fidelity.
+
 ---
 
 ## Epic goal
@@ -35,8 +126,9 @@ Prove the full delivery vision on **one low-risk task** while producing:
 | Change type | Docs/test-only or reversible one-file marker |
 | Production risk | No auth, schema, data, or infra changes |
 | Tasks per project | Exactly **one** pilot task until closeout |
-| Forgeadapter | Local stack OK (`RUN_LOCAL_STACK_SMOKE=1`); production forge host optional |
-| Redis | **Out of scope** — factory runs on Vercel + Supabase today |
+| Forgeadapter | **Local** via `dev:golden-path:up`; production forge host optional |
+| Data plane | **Local Docker Postgres** for dev; cloud Supabase only for staging/prod replay |
+| Redis | **Out of scope** for golden-path v1 |
 
 ### Suggested deliverable
 
@@ -47,15 +139,22 @@ Add a single visible marker proving the loop completed, e.g.:
 
 ---
 
-## Preconditions
+## Preconditions (local-first)
 
-- [ ] Production readiness accepted (Issue #208 closed or equivalent evidence current)
-- [ ] `engineering-team` production API reachable (`https://engineering-team-zeta.vercel.app` or current alias)
-- [ ] Operator has PM/Admin API access + production env files
-- [ ] `forgeadapter` checkout at `main` with Phase 2 local-stack e2e green
-- [ ] `engineering-team` checkout at `main` with `lib/forge-local-smoke/seed-task.js`
-- [ ] OpenClaw delegation reachable OR visible blocker recorded before Phase 2
+- [ ] Docker available (`docker compose` works)
+- [ ] `npm run dev:golden-path:up` reaches green (audit API `/metrics`, UI, forgeadapter `/health`)
+- [ ] `forgeadapter` checkout at `../forgeadapter` (or `FORGEADAPTER_DIR`) on `main` with lifecycle e2e green
+- [ ] `engineering-team` on branch with golden-path scripts + `lib/forge-local-smoke/seed-task.js`
+- [ ] OpenClaw + Hermes running locally **or** accept dev mocks for GP-013 (record which in evidence)
 - [ ] GitHub token for PR/checks (`GITHUB_TOKEN` / `gh` auth)
+
+### Production replay (optional, separate milestone)
+
+Do **not** block local golden-path progress on this list:
+
+- [ ] Production readiness accepted (Issue #208 or equivalent)
+- [ ] Deployed ET API + Supabase Postgres + operator JWT/session
+- [ ] Vercel production deploy + SRE monitoring window
 
 ---
 
@@ -83,7 +182,7 @@ As a Software Factory operator, I want one supervised end-to-end delivery loop d
 - [ ] Intentional QA fail recorded, then retest pass
 - [ ] forgeadapter local-stack lifecycle exercised (start + at least one gate)
 - [ ] PM + Architect close review recorded in ET task history
-- [ ] Vercel production deploy recorded on task
+- [ ] Local deploy validation (`lint`, `test:unit`, `standards:check`) recorded; Vercel prod deploy optional for production replay
 - [ ] `observability/golden-path-pilot.json` committed with step timestamps
 
 ### Deliverable
@@ -95,21 +194,32 @@ Simple, reversible, no production data/auth/schema changes.
 
 ### ET task creation (manual or scripted)
 
-**Scripted bootstrap (preferred):**
+**Scripted bootstrap (preferred — local Postgres stack running):**
 
 ```bash
-# Production (requires production-capable AUTH_JWT_SECRET / operator token)
+export AUTH_JWT_SECRET=golden-path-local-dev-secret
+
+node scripts/seed-golden-path-phase0.js \
+  --epic-issue 269 \
+  --child-issue <CHILD_ISSUE_NUMBER> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER> \
+  --base-url http://127.0.0.1:13000
+
+# Fast isolated proof (file backend, no UI/forgeadapter fidelity):
+node scripts/seed-golden-path-phase0.js --local \
+  --epic-issue 269 \
+  --child-issue <CHILD_ISSUE_NUMBER> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER>
+```
+
+**Production replay** (only when deployed ET + operator JWT are available):
+
+```bash
 node scripts/seed-golden-path-phase0.js \
   --epic-issue 269 \
   --child-issue <CHILD_ISSUE_NUMBER> \
   --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER> \
   --base-url https://engineering-team-zeta.vercel.app
-
-# Local file-backend proof (ephemeral; not production persistence)
-node scripts/seed-golden-path-phase0.js --local \
-  --epic-issue 269 \
-  --child-issue <CHILD_ISSUE_NUMBER> \
-  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER>
 ```
 
 Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and completed steps `GP-001`, `GP-002`, `GP-005`.
@@ -149,6 +259,41 @@ node scripts/run-projection-worker.js --max-events <bounded>
 
 See Issue #209 manual-action log for when this is `operator intervention` vs routine.
 
+**Scripted Phase 1 (local Postgres — with `dev:golden-path:up` running):**
+
+```bash
+export AUTH_JWT_SECRET=golden-path-local-dev-secret
+
+node scripts/run-golden-path-phase1.js --bootstrap \
+  --base-url http://127.0.0.1:13000 \
+  --child-issue 271 \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
+```
+
+Workers in the dev stack handle projection catch-up; no manual `run-projection-worker` needed locally.
+
+**Scripted Phase 1 (persistent file backend — fast proof, completed pilot #271):**
+
+```bash
+node scripts/run-golden-path-phase1.js --local --bootstrap \
+  --child-issue 271 \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
+
+node scripts/run-golden-path-phase1.js --local \
+  --persist-dir observability/golden-path-local-stack/audit-data
+```
+
+**Production replay:**
+
+```bash
+node scripts/run-golden-path-phase1.js \
+  --base-url https://engineering-team-zeta.vercel.app \
+  --task-id <TASK_ID> \
+  --child-issue 271
+```
+
+After each write on production Postgres, run bounded projection catch-up before the next gate.
+
 ---
 
 ## Phase 2 — Forge execution
@@ -162,30 +307,49 @@ See Issue #209 manual-action log for when this is `operator intervention` vs rou
 | GP-013 | `npm run test:delegation:live-smoke:openclaw` | OpenClaw | yes |
 | GP-014 | Engineer opens branch, implements, opens PR | GitHub | yes |
 
-### Seed task for forgeadapter
+### Phases 2–6 (scripted, local Postgres stack)
+
+With `dev:golden-path:up` running:
 
 ```bash
-cd engineering-team
-export AUDIT_STORE_BACKEND=file
-export ALLOW_FILE_AUDIT_BACKEND=true
-export FORGE_SERVICE_TOKEN=local-forge-smoke-token
+export AUTH_JWT_SECRET=golden-path-local-dev-secret
+export FORGE_SERVICE_TOKEN=local-golden-path-forge-token
+
+node scripts/run-golden-path-phases.js \
+  --base-url http://127.0.0.1:13000 \
+  --from 2 --to 6 \
+  --skip-delegation-smoke \
+  --skip-vercel-deploy
+```
+
+Or use the file-backend persistent pilot dir from issue #271:
+
+```bash
+node scripts/run-golden-path-phases.js --local \
+  --persist-dir observability/golden-path-local-stack/audit-data \
+  --from 2 --to 6 --skip-delegation-smoke --skip-vercel-deploy
+```
+
+### Seed task for forgeadapter (manual / debugging)
+
+```bash
+export DATABASE_URL=postgres://audit:audit@127.0.0.1:15432/engineering_team
+export AUDIT_STORE_BACKEND=postgres
+export FORGE_SERVICE_TOKEN=local-golden-path-forge-token
 npm run forge:local-smoke:seed -- --task-id TSK-GOLDEN001
 ```
 
 Verify:
 
 ```bash
-curl -s -H "Authorization: Bearer local-forge-smoke-token" \
-  http://127.0.0.1:3000/tasks/TSK-GOLDEN001/forge-execution-readiness | jq .
+curl -s -H "Authorization: Bearer local-golden-path-forge-token" \
+  http://127.0.0.1:13000/tasks/TSK-GOLDEN001/forge-execution-readiness | jq .
 ```
 
-### Start forgeadapter + lifecycle smoke
+### forgeadapter lifecycle smoke (CI-style, separate from dev stack)
 
 ```bash
 cd forgeadapter
-npm run smoke:local:phase2   # proves ET + mocks + start path
-
-# Full lifecycle suite (optional but recommended for GP-011 evidence)
 RUN_LOCAL_STACK_SMOKE=1 ENGINEERING_TEAM_DIR=../engineering-team \
   node --test tests/e2e/lifecycle-local-stack.test.js
 ```
@@ -195,9 +359,7 @@ RUN_LOCAL_STACK_SMOKE=1 ENGINEERING_TEAM_DIR=../engineering-team \
 ```bash
 curl -s -X POST \
   -H "Authorization: Bearer local-forgeadapter-token" \
-  http://127.0.0.1:4010/tasks/TSK-GOLDEN001/start | jq .
-
-# Poll job until succeeded, then check runtime projection
+  http://127.0.0.1:14010/tasks/TSK-GOLDEN001/start | jq .
 ```
 
 **Gap:** ET contract approval does **not** auto-call forgeadapter. Operator must bridge GP-009 → GP-011 until `et_dispatch_webhook` exists.
@@ -240,7 +402,7 @@ Record via task workflow API or task detail UI per `docs/runbooks/workflow-deliv
 ```bash
 curl -s -X POST \
   -H "Authorization: Bearer local-forgeadapter-token" \
-  http://127.0.0.1:4010/tasks/TSK-GOLDEN001/resume | jq .
+  http://127.0.0.1:14010/tasks/TSK-GOLDEN001/resume | jq .
 ```
 
 **Gap:** ET QA fail does **not** auto-trigger forge resume. Operator bridges GP-015 → GP-018.
@@ -264,7 +426,7 @@ Then:
 curl -s -X POST -H "Authorization: Bearer local-forgeadapter-token" \
   -H "Content-Type: application/json" \
   -d '{"requestedAction":"complete","actor":{"owner":"main","role":"operator"},"summary":"Golden path complete.","outcome":"accepted"}' \
-  http://127.0.0.1:4010/tasks/TSK-GOLDEN001/complete | jq .
+  http://127.0.0.1:14010/tasks/TSK-GOLDEN001/complete | jq .
 ```
 
 **Gap:** ET close review and forge gates are **parallel systems** — both must be satisfied manually.
@@ -276,18 +438,28 @@ curl -s -X POST -H "Authorization: Bearer local-forgeadapter-token" \
 | Step | Action | System | Manual? |
 | --- | --- | --- | --- |
 | GP-022 | Merge PR (checks green) | GitHub | yes |
-| GP-023 | Vercel production deploy | Vercel | yes |
-| GP-024 | Supabase (platform already on Supabase) | Supabase | n/a for docs-only |
+| GP-023 | **Local** deploy validation (`lint`, `test:unit`, `standards:check`) | engineering-team | yes |
+| GP-024 | Supabase | — | **n/a** locally (use Docker Postgres); prod replay only |
 | GP-025 | Redis | — | **out of scope** |
-| GP-026 | SRE monitoring approval | ET | yes |
+| GP-026 | SRE monitoring approval | ET | yes (waivable on local pilot) |
 | GP-027 | Closeout report + manual-action log | ET | yes |
 
-```bash
-# Deploy (engineering-team itself)
-npx vercel deploy --prod --yes
+**Local (default):**
 
-# Validation
+```bash
+# With dev stack up — validation only; UI already at http://127.0.0.1:15173
 npm run lint && npm run test:unit && npm run standards:check
+
+node scripts/run-golden-path-phases.js \
+  --base-url http://127.0.0.1:13000 \
+  --from 6 --to 6 --skip-vercel-deploy
+```
+
+**Production replay (optional):**
+
+```bash
+npx vercel deploy --prod --yes   # requires Vercel auth
+# Re-run Phase 6 against production ET base URL + full SRE window
 ```
 
 ---
@@ -301,7 +473,7 @@ npm run lint && npm run test:unit && npm run standards:check
 | Manual step inventory | `observability/golden-path-manual-steps.json` |
 | Forge lifecycle proof | `forgeadapter` local-stack test output or CI link |
 | Delegation proof | `observability/pilot-delegation-readiness.json` (if OpenClaw used) |
-| PR + deploy | PR URL, merge SHA, Vercel deployment ID |
+| PR + deploy | PR URL, merge SHA; local validation log; Vercel deployment ID only for prod replay |
 
 ### Manual-action classifications
 
@@ -322,7 +494,7 @@ Same as #209:
 | P1 | GP-015, GP-016, GP-018 | QA fail ↔ forge reject/resume loop |
 | P1 | GP-020, GP-021 | Unify ET close + forge gate approval |
 | P2 | GP-003, GP-004, GP-014 | Agent-driven refine + implement |
-| P2 | GP-023, GP-024 | Target-app deploy (Vercel + Supabase) |
+| P2 | GP-023, GP-024 | Production deploy replay (Vercel + Supabase) after local loop is green |
 | P3 | GP-025 | Redis — only if target apps require it |
 
 ---
@@ -335,6 +507,8 @@ Docs-only pilot: revert the PR. Preserve task history, evidence JSON, and this r
 
 ## Related docs
 
+- `scripts/dev-golden-path-stack.js` — local dev stack entrypoint (`npm run dev:golden-path:up`)
+- `docs/runbooks/audit-foundation.md` — Docker Postgres + audit workers
 - `docs/runbooks/supervised-autonomous-pilot.md` — Issue #209 ET-only pilot
 - `docs/runbooks/workflow-delivery-loop.md` — QA fail/retest schema
 - `../forgeadapter/docs/runbooks/phase2-local-smoke.md` — forge local stack
