@@ -189,6 +189,57 @@ All deployable audit runtimes call the backend guard before they create an API s
 
 Every guarded entrypoint emits a structured `backend_selection` log entry. Postgres selection logs `outcome=success`; explicit local/test file fallback logs `outcome=fallback_warning`, `warning_code=file_backend_fallback`, and a remediation telling the operator to start Dockerized Postgres or provide `DATABASE_URL`.
 
+## Production workers (GP-007)
+
+Vercel hosts the audit API only. **Projection + outbox workers must run as a separate long-lived process** against the same Supabase `DATABASE_URL`.
+
+### Start workers (Docker reference)
+
+```bash
+export DATABASE_URL='postgres://...'
+npm run audit:workers:up
+```
+
+Uses `docker-compose.production-workers.yml` + `Dockerfile.workers`. For Fly.io, deploy with `fly.toml` and set secrets for `DATABASE_URL`, `AUTH_JWT_SECRET`, and optional forge-bridge env vars.
+
+### Required env vars
+
+- `DATABASE_URL` — Supabase Postgres (same as API)
+- `FF_AUDIT_FOUNDATION=true`
+- `PROJECTION_INTERVAL_MS` / `OUTBOX_INTERVAL_MS` (default `5000`)
+- `ET_FORGE_DISPATCH_ENABLED=true` when enabling the ET→forge bridge in production
+- `FORGEADAPTER_BASE_URL`, `FORGEADAPTER_SERVICE_TOKEN`, `FORGE_SERVICE_TOKEN`, `AUTH_JWT_SECRET` — required when forge dispatch is enabled
+- `PUSHGATEWAY_URL` — optional; recommended so `monitoring/alerts/audit-foundation.yml` lag alerts fire
+
+### Smoke verification
+
+```bash
+export AUTH_JWT_SECRET='...'
+export AUDIT_WORKERS_SMOKE_BASE_URL='https://<hosted-et-api>'
+npm run audit:workers:production-smoke
+```
+
+Writes `observability/audit-workers-production-smoke.json`. Target: `workflow_projection_lag_seconds < 5` within one worker interval after an append.
+
+### Rollback
+
+1. Stop the worker process (`npm run audit:workers:down` or platform equivalent).
+2. Drain queues with admin fallback: `POST /projections/process?limit=100` and `npm run audit:project -- . 100`.
+3. Re-enable workers once `DATABASE_URL` and publisher targets are healthy.
+
+Golden-path phase runners treat manual projection scripts as **fallback only** when lag remains above the threshold (see `lib/audit/projection-catch-up.js`).
+
+## GitHub issue intake webhook (GP-002)
+
+`POST /github/webhooks` also accepts `issues` events when `FF_GITHUB_INTAKE_NORMALIZER=true`.
+
+1. Configure the GitHub webhook on `wiinc1/engineering-team` for **Issues** (and keep existing PR events for `ff_github_sync`).
+2. Set `GITHUB_WEBHOOK_SECRET` on the API and worker hosts.
+3. Add label `factory-intake` (override with `GITHUB_INTAKE_OPT_IN_LABEL`) to issues that should become Intake Drafts.
+4. Issues map to tenant `engineering-team` by default (`GITHUB_INTAKE_DEFAULT_TENANT` / `GITHUB_INTAKE_REPO_TENANT_MAP`).
+
+Successful intake creates `POST /tasks`-equivalent Intake Draft state: `task.created`, `task.refinement_requested`, PM refinement auto-start, and `github_issue_url` on the audit payload.
+
 ## Local Docker workflow
 ### Start disposable local Postgres
 ```bash
