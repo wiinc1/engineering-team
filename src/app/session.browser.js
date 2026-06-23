@@ -128,7 +128,16 @@ function buildAuthHeaders(sessionConfig = {}) {
   return headers;
 }
 
+function isProxiedDevApiMode(envBaseUrl = '') {
+  const proxyTarget = String(import.meta.env.VITE_TASK_API_PROXY_TARGET || '').trim();
+  const configuredBase = String(import.meta.env.VITE_TASK_API_BASE_URL || envBaseUrl || '').trim();
+  return Boolean(proxyTarget) && !configuredBase;
+}
+
 function resolveApiBaseUrl(sessionConfig = {}, envBaseUrl = '') {
+  if (isProxiedDevApiMode(envBaseUrl)) {
+    return '';
+  }
   return typeof sessionConfig?.apiBaseUrl === 'string' && sessionConfig.apiBaseUrl.trim()
     ? sessionConfig.apiBaseUrl.trim()
     : envBaseUrl.trim() || '';
@@ -364,7 +373,9 @@ async function requestJson(url, body, fetchImpl) {
     body: JSON.stringify(body),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error?.message || 'Request failed.');
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || `Request failed (${response.status}).`);
+  }
   return payload;
 }
 

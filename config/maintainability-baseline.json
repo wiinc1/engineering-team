@@ -70,6 +70,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1309,
+      "ordinal": 57,
+      "name": "runGoldenPathPhase5",
+      "actual": 183,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 137,
@@ -81,7 +90,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1462,
+      "line": 1493,
       "ordinal": 58,
       "name": "runGoldenPathPhases",
       "actual": 172,
@@ -94,15 +103,6 @@
       "ordinal": 17,
       "name": "runGoldenPathPhase1",
       "actual": 159,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/golden-path-phases.js",
-      "rule": "maintainability:function-lines",
-      "line": 1309,
-      "ordinal": 57,
-      "name": "runGoldenPathPhase5",
-      "actual": 152,
       "cap": 50
     },
     {
@@ -169,6 +169,15 @@
       "cap": 50
     },
     {
+      "path": "scripts/replay-golden-path-postgres.js",
+      "rule": "maintainability:function-lines",
+      "line": 98,
+      "ordinal": 7,
+      "name": "main",
+      "actual": 121,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-detail/TaskDetailActivityShell.tsx",
       "rule": "maintainability:function-lines",
       "line": 102,
@@ -211,15 +220,6 @@
       "ordinal": 7,
       "name": "toTaskDetailScreenModel",
       "actual": 95,
-      "cap": 50
-    },
-    {
-      "path": "scripts/replay-golden-path-postgres.js",
-      "rule": "maintainability:function-lines",
-      "line": 89,
-      "ordinal": 7,
-      "name": "main",
-      "actual": 94,
       "cap": 50
     },
     {
@@ -390,7 +390,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 1663,
+      "actual": 1694,
       "cap": 400
     },
     {

@@ -53,26 +53,35 @@ async function assertStackReady(baseUrl) {
   }
 }
 
-async function seedForgeTask(baseUrl, forgeServiceToken) {
+async function seedForgeTask(baseUrl, forgeServiceToken, forgeTaskId = 'TSK-GOLDEN001') {
   process.env.DATABASE_URL = process.env.DATABASE_URL || DEFAULTS.databaseUrl;
   process.env.AUDIT_STORE_BACKEND = process.env.AUDIT_STORE_BACKEND || 'postgres';
 
+  const { createAuditStore } = require('../lib/audit');
+  const { assertAuditBackendConfiguration } = require('../lib/audit/config');
   const { seedGoldenPathForgeTask } = require('../lib/task-platform/golden-path-forge-seed');
   const { apiSendServiceToken } = require('../lib/task-platform/golden-path-shared');
+  const backendConfig = assertAuditBackendConfiguration({ runtimeGuard: false });
 
   const seed = await seedGoldenPathForgeTask({
-    taskId: 'TSK-GOLDEN001',
+    taskId: forgeTaskId,
     tenantId: 'engineering-team',
     baseDir: process.cwd(),
+    store: createAuditStore({
+      baseDir: process.cwd(),
+      backend: backendConfig.backend,
+      connectionString: backendConfig.connectionString,
+      workflowEngineEnabled: false,
+    }),
   });
   const readiness = await apiSendServiceToken(
     baseUrl,
-    '/tasks/TSK-GOLDEN001/forge-execution-readiness',
+    `/tasks/${encodeURIComponent(forgeTaskId)}/forge-execution-readiness`,
     'GET',
     forgeServiceToken,
   );
   if (!readiness.ok) {
-    throw new Error(`TSK-GOLDEN001 forge readiness failed (${readiness.status}): ${JSON.stringify(readiness.body)}`);
+    throw new Error(`${forgeTaskId} forge readiness failed (${readiness.status}): ${JSON.stringify(readiness.body)}`);
   }
   return seed;
 }
@@ -117,9 +126,15 @@ async function main() {
   const forgeadapterUrl = readArg('--forgeadapter-url', process.env.FORGEADAPTER_BASE_URL || stackUrls.forgeadapterUrl);
   const skipDelegationSmoke = !hasFlag('--require-delegation-smoke')
     || hasFlag('--skip-delegation-smoke');
+  const forgeTaskId = readArg(
+    '--forge-task-id',
+    freshBootstrap
+      ? `TSK-GOLDEN${Date.now().toString(36).slice(-6).toUpperCase()}`
+      : 'TSK-GOLDEN001',
+  );
 
   await assertStackReady(baseUrl);
-  await seedForgeTask(baseUrl, DEFAULTS.forgeServiceToken);
+  await seedForgeTask(baseUrl, DEFAULTS.forgeServiceToken, forgeTaskId);
 
   const env = {
     AUTH_JWT_SECRET: readArg('--jwt-secret', DEFAULTS.jwtSecret),
@@ -168,7 +183,7 @@ async function main() {
     if (hermesUrl) {
       phaseArgs.push('--hermes-url', hermesUrl);
     }
-    phaseArgs.push('--forgeadapter-url', forgeadapterUrl);
+    phaseArgs.push('--forgeadapter-url', forgeadapterUrl, '--forge-task-id', forgeTaskId);
     const phases = await runScript('scripts/run-golden-path-phases.js', phaseArgs, {
       ...env,
       FORGEADAPTER_BASE_URL: forgeadapterUrl,

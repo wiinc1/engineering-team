@@ -39,7 +39,7 @@ import { AutonomyMetricsRoute } from "./routes/AutonomyMetricsRoute.jsx";
 
 function App() {
   const [{ pathname: i, search: o }, l] = Uo(), [u, b] = c.useState(() => ma()), [, S] = c.useState(() => !!(ma().bearerToken || ma().actorId)), [C, y] = c.useState(
-  () => eo(ma().apiBaseUrl || At)), [authPasswordVisible, setAuthPasswordVisible] = c.useState({}), [navOpen, setNavOpen] = c.useState(() => readNavPanelOpen()),
+  () => eo(Dn(ma(), At))), [authPasswordVisible, setAuthPasswordVisible] = c.useState({}), [navOpen, setNavOpen] = c.useState(() => readNavPanelOpen()),
   [E, M] = c.useState({ kind: "idle", message: "" }), [V, se] = c.useState(""), [s, O] = c.useState(() => za(i) || Ie(i) || De(i) || Pe(i) || qe(i) ? ja(i, o) :
   so(i) ? Wa(i, o) : Dt(i)), [Ne, ha] = c.useState([]), [lt, qt] = c.useState({ kind: "loading", message: "Loading canonical role roster." }), [Et, en] = c.useState(
   ""), [Ee, Ut] = c.useState({ kind: "idle", message: "" }), [ba, $t] = c.useState({ kind: "idle", message: "" }), [tn, an] = c.useState(""), [nn, sn] = c.useState(
@@ -499,7 +499,7 @@ acktracked to implementation." });
   }, [Y, D, C.apiBaseUrl, ue.next]), di = c.useCallback(async (t) => {
     t.preventDefault(), M({ kind: "loading", message: "Signing in..." });
     try {
-      const n = String(C.apiBaseUrl || D || "").trim().replace(/\/+$/, "");
+      const n = String(D || "").trim().replace(/\/+$/, "");
       const r = await loginWithPassword({ apiBaseUrl: n, email: C.email, password: C.password, next: ue.next, fetchImpl: (...d2) => window.fetch(...d2) });
       b(r), se(""), M({ kind: "success", message: "Signed in." });
       const d = Ha(ue.next);
@@ -510,7 +510,7 @@ acktracked to implementation." });
   }, [D, C.apiBaseUrl, C.email, C.password, ue.next, l]), handleRegistrationSubmit = c.useCallback(async (t) => {
     t.preventDefault(), M({ kind: "loading", message: "Creating account..." });
     try {
-      const n = String(C.apiBaseUrl || D || "").trim().replace(/\/+$/, "");
+      const n = String(D || "").trim().replace(/\/+$/, "");
       const r = await registerAccount({ apiBaseUrl: n, email: C.registrationEmail || C.email, password: C.registrationPassword, displayName: C.displayName, inviteCode: "",
       fetchImpl: (...d) => window.fetch(...d) });
       y((d) => ({ ...d, registrationPassword: "" })), M({ kind: "success", message: r.message || "If registration is available for that email, next steps have b\
@@ -521,7 +521,7 @@ een sent." });
   }, [D, C.apiBaseUrl, C.registrationEmail, C.email, C.registrationPassword, C.displayName]), handleResetSubmit = c.useCallback(async (t) => {
     t.preventDefault(), M({ kind: "loading", message: "Sending reset instructions..." });
     try {
-      const n = String(C.apiBaseUrl || D || "").trim().replace(/\/+$/, "");
+      const n = String(D || "").trim().replace(/\/+$/, "");
       const r = await requestPasswordReset({ apiBaseUrl: n, email: C.resetEmail || C.email, fetchImpl: (...d) => window.fetch(...d) });
       M({ kind: "success", message: r.message || "If the email is eligible, password reset instructions have been sent." });
     } catch (n) {
@@ -530,7 +530,7 @@ een sent." });
   }, [D, C.apiBaseUrl, C.resetEmail, C.email]), handleResetConfirmSubmit = c.useCallback(async (t) => {
     t.preventDefault(), M({ kind: "loading", message: "Resetting password..." });
     try {
-      const n = String(C.apiBaseUrl || D || "").trim().replace(/\/+$/, ""), r = readAuthTokenFromSearch(o);
+      const n = String(D || "").trim().replace(/\/+$/, ""), r = readAuthTokenFromSearch(o);
       await confirmPasswordReset({ apiBaseUrl: n, token: r, password: C.resetPassword, fetchImpl: (...d) => window.fetch(...d) }), y((d) => ({ ...d, resetPassword: "" })),
       M({ kind: "success", message: "Password reset complete. Sign in with your new password." }), l(ot, It(ue.next), { replace: true });
     } catch (n) {
