@@ -207,41 +207,40 @@ test("reader cannot start PM refinement through the dedicated refinement route",
   });
 });
 
-test("github issue intake webhook rejects invalid signatures", async () => {
+async function withGithubIntakeSecurityServer(callback) {
   const { createAuditApiServer } = require("../../lib/audit/http-projects");
-
-  async function withIntakeServer(callback) {
-    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-security-intake-"));
-    const secret = "github-intake-security-secret";
-    const previousBackend = process.env.AUDIT_STORE_BACKEND;
-    const previousAllowFile = process.env.ALLOW_FILE_AUDIT_BACKEND;
-    const previousDatabaseUrl = process.env.DATABASE_URL;
-    process.env.AUDIT_STORE_BACKEND = "file";
-    process.env.ALLOW_FILE_AUDIT_BACKEND = "true";
-    delete process.env.DATABASE_URL;
-    const { server } = createAuditApiServer({
-      baseDir,
-      jwtSecret: "jwt-security-secret",
-      githubWebhookSecret: secret,
-      ffGitHubIntakeNormalizer: "true",
-    });
-    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const { port } = server.address();
-    try {
-      await callback({ baseUrl: `http://127.0.0.1:${port}`, secret });
-    } finally {
-      await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-      if (previousBackend === undefined) delete process.env.AUDIT_STORE_BACKEND;
-      else process.env.AUDIT_STORE_BACKEND = previousBackend;
-      if (previousAllowFile === undefined) delete process.env.ALLOW_FILE_AUDIT_BACKEND;
-      else process.env.ALLOW_FILE_AUDIT_BACKEND = previousAllowFile;
-      if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
-      else process.env.DATABASE_URL = previousDatabaseUrl;
-      fs.rmSync(baseDir, { recursive: true, force: true });
-    }
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-security-intake-"));
+  const secret = "github-intake-security-secret";
+  const previousBackend = process.env.AUDIT_STORE_BACKEND;
+  const previousAllowFile = process.env.ALLOW_FILE_AUDIT_BACKEND;
+  const previousDatabaseUrl = process.env.DATABASE_URL;
+  process.env.AUDIT_STORE_BACKEND = "file";
+  process.env.ALLOW_FILE_AUDIT_BACKEND = "true";
+  delete process.env.DATABASE_URL;
+  const { server } = createAuditApiServer({
+    baseDir,
+    jwtSecret: "jwt-security-secret",
+    githubWebhookSecret: secret,
+    ffGitHubIntakeNormalizer: "true",
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  try {
+    await callback({ baseUrl: `http://127.0.0.1:${port}`, secret });
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    if (previousBackend === undefined) delete process.env.AUDIT_STORE_BACKEND;
+    else process.env.AUDIT_STORE_BACKEND = previousBackend;
+    if (previousAllowFile === undefined) delete process.env.ALLOW_FILE_AUDIT_BACKEND;
+    else process.env.ALLOW_FILE_AUDIT_BACKEND = previousAllowFile;
+    if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previousDatabaseUrl;
+    fs.rmSync(baseDir, { recursive: true, force: true });
   }
+}
 
-  await withIntakeServer(async ({ baseUrl, secret }) => {
+async function assertGithubIntakeRejectsInvalidSignature() {
+  await withGithubIntakeSecurityServer(async ({ baseUrl, secret }) => {
     const body = JSON.stringify({
       action: "opened",
       issue: {
@@ -272,7 +271,9 @@ test("github issue intake webhook rejects invalid signatures", async () => {
     assert.equal((await response.json()).error.code, "invalid_github_signature");
     assert.ok(secret.length > 0);
   });
-});
+}
+
+test("github issue intake webhook rejects invalid signatures", assertGithubIntakeRejectsInvalidSignature);
 
 test("forge execution-readiness rejects missing and invalid service tokens", async () => {
   const fs = require("fs");
