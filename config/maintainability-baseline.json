@@ -63,19 +63,19 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1110,
-      "ordinal": 56,
+      "line": 1160,
+      "ordinal": 66,
       "name": "runGoldenPathPhase6",
-      "actual": 198,
+      "actual": 206,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1309,
-      "ordinal": 57,
+      "line": 1367,
+      "ordinal": 67,
       "name": "runGoldenPathPhase5",
-      "actual": 183,
+      "actual": 202,
       "cap": 50
     },
     {
@@ -90,8 +90,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1493,
-      "ordinal": 58,
+      "line": 1570,
+      "ordinal": 68,
       "name": "runGoldenPathPhases",
       "actual": 172,
       "cap": 50
@@ -126,8 +126,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 617,
-      "ordinal": 42,
+      "line": 667,
+      "ordinal": 52,
       "name": "runGoldenPathPhase2",
       "actual": 146,
       "cap": 50
@@ -135,8 +135,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 764,
-      "ordinal": 43,
+      "line": 814,
+      "ordinal": 53,
       "name": "runGoldenPathPhase3",
       "actual": 146,
       "cap": 50
@@ -189,8 +189,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 911,
-      "ordinal": 46,
+      "line": 961,
+      "ordinal": 56,
       "name": "runGoldenPathPhase4",
       "actual": 119,
       "cap": 50
@@ -207,8 +207,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 446,
-      "ordinal": 37,
+      "line": 496,
+      "ordinal": 47,
       "name": "completeContractCoverageAuditGate",
       "actual": 97,
       "cap": 50
@@ -390,7 +390,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 1694,
+      "actual": 1771,
       "cap": 400
     },
     {

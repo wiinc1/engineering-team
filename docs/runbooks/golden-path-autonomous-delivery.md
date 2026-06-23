@@ -55,11 +55,25 @@ The stack uses **registration auth** (`AUTH_PRODUCTION_AUTH_STRATEGY=registratio
 - `AUTH_JWT_SECRET=golden-path-local-dev-secret`
 - `AUTH_SESSION_SECRET=golden-path-local-session-secret`
 
-**Use real OpenClaw/Hermes** when already running locally:
+**Use real OpenClaw for GP-013** (ET specialist delegation) while keeping the stack default mock for forgeadapter review gates:
+
+```bash
+# Stack default: OpenClaw mock on :14001 (forgeadapter review child sessions)
+npm run dev:golden-path:up
+
+# Postgres replay with live GP-013 delegation (ET path only)
+npm run golden-path:replay:postgres -- \
+  --require-delegation-smoke \
+  --openclaw-url http://127.0.0.1:<openclaw-gateway-port> \
+  ...
+```
+
+Point `--openclaw-url` at the live gateway (e.g. `http://127.0.0.1:18789`) for GP-013 smoke. Leave forgeadapter on the dev mock unless the live gateway implements `POST /sessions/:id/children`.
+
+**Use real Hermes** when already running locally:
 
 ```bash
 npm run dev:golden-path:up -- \
-  --openclaw-url http://127.0.0.1:<openclaw-port> \
   --hermes-url http://127.0.0.1:<hermes-port>
 ```
 

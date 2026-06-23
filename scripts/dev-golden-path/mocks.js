@@ -42,7 +42,11 @@ async function startOpenClawMock(port) {
       return;
     }
     if (request.method === 'POST' && /^\/sessions\/[^/]+\/children$/.test(url)) {
-      createJsonResponse(response, 200, { sessionId: 'child_local_specialist_1' });
+      let body = '';
+      for await (const chunk of request) body += chunk;
+      const payload = JSON.parse(body || '{}');
+      const targetAgent = String(payload.targetAgent || 'specialist').replace(/[^a-z0-9_-]/gi, '_');
+      createJsonResponse(response, 200, { sessionId: `child_local_${targetAgent}_1` });
       return;
     }
     if (request.method === 'POST' && /^\/sessions\/[^/]+\/notifications$/.test(url)) {
