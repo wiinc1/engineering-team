@@ -7,6 +7,11 @@ const {
   assertAuditBackendConfiguration,
   logAuditBackendSelection,
 } = require('../lib/audit');
+const {
+  createEtForgeDispatchOutboxPublisher,
+  createCombinedOutboxPublisher,
+  resolveEtForgeDispatchConfig,
+} = require('../lib/task-platform/et-forge-dispatch-bridge');
 
 const backendConfig = assertAuditBackendConfiguration();
 logAuditBackendSelection(backendConfig);
@@ -18,7 +23,7 @@ const store = createAuditStore({
   projectionMode: 'async',
 });
 
-async function publisher(event) {
+async function defaultOutboxPublisher(event) {
   if (process.env.OUTBOX_WEBHOOK_URL) {
     const response = await fetch(process.env.OUTBOX_WEBHOOK_URL, {
       method: 'POST',
@@ -30,6 +35,11 @@ async function publisher(event) {
   }
   process.stdout.write(`${JSON.stringify({ published: event.event_id, task_id: event.task_id, event_type: event.event_type })}\n`);
 }
+
+const publisher = createCombinedOutboxPublisher([
+  createEtForgeDispatchOutboxPublisher(resolveEtForgeDispatchConfig()),
+  defaultOutboxPublisher,
+]);
 
 (async () => {
   if (store.runMigrations) await store.runMigrations({ baseDir: process.cwd() });

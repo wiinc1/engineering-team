@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase0_started",
+  "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271",
+  "githubEpicIssueUrl": "https://github.com/wiinc1/engineering-team/issues/269",
+  "engineeringTeam": {
+    "projectId": "PRJ-7B7977DD",
+    "taskId": "TSK-458D32A2",
+    "projectName": "Golden Path Pilot - Issue 271",
+    "taskVersion": 4,
+    "workflow": {
+      "handled": true,
+      "workflowStarted": true,
+      "nextRequiredAction": "PM refinement required",
+      "waitingState": "task_refinement",
+      "eventIds": [
+        "e147f4e5-25c2-47a8-86d6-d23c97943c65"
+      ]
+    },
+    "auditStage": null
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDEN001",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "github": {
+    "prUrl": null,
+    "mergeCommitSha": null
+  },
+  "vercel": {
+    "deploymentId": null,
+    "productionUrl": "http://127.0.0.1:53282"
+  },
+  "stepsCompleted": [
+    "GP-001",
+    "GP-002",
+    "GP-005"
+  ],
+  "manualInterventions": [],
+  "startedAt": "2026-06-22T23:11:34.412Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "local_file_backend",
+    "localBaseDir": "/var/folders/b6/fwvd5_ys3k1g3x2n495027r80000gn/T/tmp.baebav9HGA/golden-path-phase0-rUCSvw",
+    "baseUrl": "http://127.0.0.1:53282",
+    "tenantId": "engineering-team",
+    "actorId": "golden-path-operator",
+    "api": {
+      "createProjectStatus": 201,
+      "createTaskStatus": 201,
+      "assignPmStatus": 200,
+      "attachTaskStatus": 200,
+      "auditStateStatus": 200
+    }
+  }
+}

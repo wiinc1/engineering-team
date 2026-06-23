@@ -35,3 +35,5 @@ test('browser auth runtime keeps internal bootstrap only when explicitly selecte
   assert.equal(config.productionAuthStrategy, 'internal-bootstrap');
   assert.equal(config.internalAuthBootstrapEnabled, true);
 });
+
+// Golden-path local dev documents proxied same-origin auth in docs/runbooks/production-auth-status.md.

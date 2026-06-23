@@ -39,7 +39,7 @@
       "line": 203,
       "ordinal": 10,
       "name": "createTaskDetailApiClient",
-      "actual": 268,
+      "actual": 266,
       "cap": 50
     },
     {
@@ -61,6 +61,24 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1160,
+      "ordinal": 66,
+      "name": "runGoldenPathPhase6",
+      "actual": 206,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1367,
+      "ordinal": 67,
+      "name": "runGoldenPathPhase5",
+      "actual": 202,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 137,
@@ -70,12 +88,57 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1570,
+      "ordinal": 68,
+      "name": "runGoldenPathPhases",
+      "actual": 172,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phase1.js",
+      "rule": "maintainability:function-lines",
+      "line": 319,
+      "ordinal": 17,
+      "name": "runGoldenPathPhase1",
+      "actual": 159,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phase0.js",
+      "rule": "maintainability:function-lines",
+      "line": 113,
+      "ordinal": 11,
+      "name": "runGoldenPathPhase0",
+      "actual": 149,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-detail/StageTransition.tsx",
       "rule": "maintainability:function-lines",
       "line": 62,
       "ordinal": 7,
       "name": "StageTransition",
       "actual": 148,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 667,
+      "ordinal": 52,
+      "name": "runGoldenPathPhase2",
+      "actual": 146,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 814,
+      "ordinal": 53,
+      "name": "runGoldenPathPhase3",
+      "actual": 146,
       "cap": 50
     },
     {
@@ -99,10 +162,19 @@
     {
       "path": "src/features/task-detail/adapter.js",
       "rule": "maintainability:function-lines",
-      "line": 73,
+      "line": 76,
       "ordinal": 10,
       "name": "createTaskDetailApiClient",
       "actual": 122,
+      "cap": 50
+    },
+    {
+      "path": "scripts/replay-golden-path-postgres.js",
+      "rule": "maintainability:function-lines",
+      "line": 98,
+      "ordinal": 7,
+      "name": "main",
+      "actual": 121,
       "cap": 50
     },
     {
@@ -115,6 +187,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 961,
+      "ordinal": 56,
+      "name": "runGoldenPathPhase4",
+      "actual": 119,
+      "cap": 50
+    },
+    {
       "path": "src/app/session-browser-registration.test.tsx",
       "rule": "maintainability:function-lines",
       "line": 24,
@@ -124,9 +205,18 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 496,
+      "ordinal": 47,
+      "name": "completeContractCoverageAuditGate",
+      "actual": 97,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-detail/adapter.browser.js",
       "rule": "maintainability:function-lines",
-      "line": 94,
+      "line": 95,
       "ordinal": 7,
       "name": "toTaskDetailScreenModel",
       "actual": 95,
@@ -205,11 +295,29 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 182,
+      "ordinal": 21,
+      "name": "<arrow>",
+      "actual": 60,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 636,
       "ordinal": 85,
       "name": "createEmailTransport",
+      "actual": 59,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 88,
+      "ordinal": 10,
+      "name": "<arrow>",
       "actual": 59,
       "cap": 50
     },
@@ -234,10 +342,19 @@
     {
       "path": "src/app/session.browser.js",
       "rule": "maintainability:function-lines",
-      "line": 304,
-      "ordinal": 32,
+      "line": 313,
+      "ordinal": 33,
       "name": "completeOidcSignIn",
       "actual": 54,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:function-lines",
+      "line": 258,
+      "ordinal": 21,
+      "name": "dispatchForgeCloseout",
+      "actual": 53,
       "cap": 50
     },
     {
@@ -250,6 +367,15 @@
       "cap": 50
     },
     {
+      "path": "lib/forge-local-smoke/seed-task.js",
+      "rule": "maintainability:function-lines",
+      "line": 36,
+      "ordinal": 3,
+      "name": "buildForgeReadyApprovedContract",
+      "actual": 51,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-creation/schema.js",
       "rule": "maintainability:function-lines",
       "line": 7,
@@ -257,6 +383,15 @@
       "name": "validateTaskCreatePayload",
       "actual": 51,
       "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 1771,
+      "cap": 400
     },
     {
       "path": "lib/auth/registration.js",
@@ -309,7 +444,16 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 488,
+      "actual": 499,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/golden-path-phase1.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 487,
       "cap": 400
     },
     {
@@ -318,7 +462,16 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 481,
+      "actual": 479,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 409,
       "cap": 400
     }
   ]

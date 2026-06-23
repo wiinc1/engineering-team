@@ -770,6 +770,10 @@ Issue #239 adds a compact admin-only AI-agent activation surface. It follows the
 - The summary region uses a visible focus ring and a polite live-region status. Blocking dry-run results additionally use an alert with actionable blocker copy.
 - The surface reuses existing panel, form, status, and metadata-grid styles; no new reusable visual token is required.
 
+## Golden Path Local Dev API Proxy
+
+Golden-path `dev:golden-path:up` runs the Vite UI with an empty `VITE_TASK_API_BASE_URL` so browser auth and task APIs use same-origin `/auth/*` and `/backend/*` proxies. `session.browser.js` resolves an empty API base in proxied dev mode; sign-in forms post to the proxy target, not a stale absolute audit URL stored in session storage. No palette, spacing, or component token changes.
+
 ## Agent Usage
 
 - Treat YAML front matter tokens as the design governance contract.

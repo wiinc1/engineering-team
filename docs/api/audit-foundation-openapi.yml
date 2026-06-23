@@ -9,6 +9,7 @@ info:
     PostgreSQL audit migrations record only forward `*.sql` files in `schema_migrations`; rollback `*.down.sql` files are operational artifacts and are not applied by the normal migration runner.
     The task-list projection now also carries additive queue/WIP metadata, optional SRE monitoring preview data, and close-governance escalation previews used by the human decision inbox.
     Human close decisions are accepted only when governed close review is decision-ready: either both PM and Architect cancellation recommendations exist or an active human escalation is present.
+    SRE monitoring start requires at least one merged linked PR derived from ordered `task.github_pr_synced` history (`lib/audit/linked-prs.js`).
     Close-review backtrack now uses a dual-party agreement handshake: the first PM/Architect request records a recommendation and the counterpart request completes the stage change to `IMPLEMENTATION`.
     SRE monitoring runtime accepts both `ff_sre_monitoring` and `ff-sre-monitoring` as equivalent feature-flag names.
     The shared feature-flag helper also treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical specialist-delegation rollout key while still accepting `FF_SPECIALIST_DELEGATION` as a legacy alias.

@@ -9,6 +9,7 @@ info:
     Audit-backed `/tasks/...` routes remain compatibility adapters during the migration window.
     Forgeadapter canonical execution reads use the audit-foundation route `GET /tasks/{taskId}/forge-execution-readiness`; see `docs/api/audit-foundation-openapi.yml` for the camelCase execution-ready task contract and `FORGE_SERVICE_TOKEN` auth model.
     Local Phase 2 smoke uses `npm run forge:local-smoke:seed` (see `docs/runbooks/forge-local-smoke.md`) to seed execution-ready `TSK-LOCAL001` before forgeadapter stack probes.
+    Golden-path Postgres replay uses `npm run golden-path:replay:postgres` to seed forge tasks and drive ET→forge bridge evidence (see `docs/runbooks/golden-path-autonomous-delivery.md`).
 servers:
   - url: /api/v1
 paths:

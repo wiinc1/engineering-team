@@ -1,5 +1,7 @@
 # Production Auth Status
 
+Golden-path local dev uses proxied same-origin `/auth/*` routes (`session.browser.js` empty API base in Vite proxy mode).
+
 Last updated: 2026-05-15
 Tracking issues: Issue #151, Issue #160, Issue #166, Issue #167
 Related production remediation issue: Issue #137
