@@ -1,0 +1,23 @@
+# Reference deployment for always-on audit projection + outbox workers (GP-007).
+# Point DATABASE_URL at staging or production Supabase Postgres before starting.
+services:
+  audit-workers:
+    build:
+      context: .
+      dockerfile: Dockerfile.workers
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      AUDIT_STORE_BACKEND: postgres
+      DATABASE_URL: ${DATABASE_URL}
+      PROJECTION_INTERVAL_MS: ${PROJECTION_INTERVAL_MS:-5000}
+      OUTBOX_INTERVAL_MS: ${OUTBOX_INTERVAL_MS:-5000}
+      PROJECTION_BATCH_SIZE: ${PROJECTION_BATCH_SIZE:-100}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-100}
+      PUSHGATEWAY_URL: ${PUSHGATEWAY_URL:-}
+      ET_FORGE_DISPATCH_ENABLED: ${ET_FORGE_DISPATCH_ENABLED:-false}
+      FORGEADAPTER_BASE_URL: ${FORGEADAPTER_BASE_URL:-}
+      ENGINEERING_TEAM_BASE_URL: ${ENGINEERING_TEAM_BASE_URL:-}
+      FORGEADAPTER_SERVICE_TOKEN: ${FORGEADAPTER_SERVICE_TOKEN:-}
+      FORGE_SERVICE_TOKEN: ${FORGE_SERVICE_TOKEN:-}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}

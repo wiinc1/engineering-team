@@ -284,7 +284,7 @@ Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and co
 
 ```bash
 # After each workflow write when read model is stale
-node scripts/run-projection-worker.js --max-events <bounded>
+npm run audit:project -- . 100
 ```
 
 See Issue #209 manual-action log for when this is `operator intervention` vs routine.
@@ -300,7 +300,7 @@ node scripts/run-golden-path-phase1.js --bootstrap \
   --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
 ```
 
-Workers in the dev stack handle projection catch-up; no manual `run-projection-worker` needed locally.
+Workers in the dev stack handle projection catch-up; golden-path phase runners only fall back to `npm run audit:project` when `workflow_projection_lag_seconds` stays above the threshold.
 
 **Scripted Phase 1 (persistent file backend — fast proof, completed pilot #271):**
 

@@ -19,8 +19,9 @@
       "phase": "0-intake",
       "action": "Copy issue requirements into engineering-team intake draft",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "intake_normalizer_from_github_issue",
+      "automatedBy": "lib/audit/github-intake-normalizer.js (FF_GITHUB_INTAKE_NORMALIZER=true)",
       "evidence": "task.created event, github_issue_url field"
     },
     {
@@ -64,9 +65,10 @@
       "phase": "1-contract",
       "action": "Run bounded projection catch-up after each production write",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "always_on_projection_worker",
-      "evidence": "projection queue processed, read model fresh"
+      "automatedBy": "scripts/run-audit-workers.js + docker-compose.production-workers.yml / fly.toml",
+      "evidence": "observability/audit-workers-production-smoke.json"
     },
     {
       "id": "GP-008",
@@ -251,9 +253,9 @@
   ],
   "summary": {
     "totalSteps": 27,
-    "manualToday": 27,
-    "automatedToday": 0,
-    "criticalPathAutomation": ["GP-002", "GP-011", "GP-016", "GP-018", "GP-020", "GP-023"],
+    "manualToday": 25,
+    "automatedToday": 2,
+    "criticalPathAutomation": ["GP-002", "GP-007", "GP-011", "GP-016", "GP-018", "GP-020", "GP-023"],
     "bridgeAutomation": {
       "GP-011": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
       "GP-016": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
