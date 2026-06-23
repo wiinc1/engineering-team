@@ -6,6 +6,19 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { createAuditApiServer } = require('../../lib/audit/http-projects');
 
+function signJwt(secret, claims = {}) {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    sub: 'github-intake-reader',
+    tenant_id: 'engineering-team',
+    roles: ['reader', 'admin'],
+    exp: Math.floor(Date.now() / 1000) + 120,
+    ...claims,
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
+  return `${header}.${payload}.${signature}`;
+}
+
 function githubSignature(secret, body) {
   return `sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`;
 }
@@ -111,6 +124,14 @@ test('issues.opened with factory-intake label creates an intake draft task', asy
     const duplicatePayload = await duplicate.json();
     assert.equal(duplicatePayload.reason, 'existing_intake_task');
     assert.equal(duplicatePayload.taskId, payload.taskId);
+
+    const state = await fetch(`${baseUrl}/tasks/${encodeURIComponent(payload.taskId)}/state`, {
+      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
+    });
+    assert.equal(state.status, 200);
+    const stateBody = await state.json();
+    const currentStage = stateBody.current_stage || stateBody.data?.current_stage;
+    assert.ok(currentStage === 'DRAFT' || currentStage === 'INTAKE_DRAFT');
   });
 });
 

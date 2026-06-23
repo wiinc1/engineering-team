@@ -4,6 +4,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { runProjectionCatchUp } = require('../../lib/audit/projection-catch-up');
+const {
+  mergeStepsCompleted,
+  pollForgeExecutionReadiness,
+} = require('../../lib/task-platform/golden-path-shared');
 
 test('runProjectionCatchUp skips file-backed local stack', async () => {
   const persistDir = fs.mkdtempSync(path.join(os.tmpdir(), 'projection-catchup-'));
@@ -29,6 +33,50 @@ test('runProjectionCatchUp uses worker lag when metrics are fresh', async () => 
     assert.equal(result.skipped, true);
     assert.equal(result.reason, 'worker_caught_up');
     assert.equal(result.mode, 'always_on_worker');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('mergeStepsCompleted keeps golden-path step ids in numeric order', () => {
+  assert.deepEqual(
+    mergeStepsCompleted(['GP-015', 'GP-013'], ['GP-002', 'GP-015']),
+    ['GP-002', 'GP-013', 'GP-015'],
+  );
+});
+
+test('pollForgeExecutionReadiness retries until forge execution-readiness succeeds', async () => {
+  const originalFetch = global.fetch;
+  let attempts = 0;
+  global.fetch = async (url, init = {}) => {
+    attempts += 1;
+    assert.match(String(url), /\/tasks\/TSK-GOLDEN001\/forge-execution-readiness$/);
+    assert.equal(init.method, 'GET');
+    assert.match(init.headers.authorization, /^Bearer /);
+    if (attempts < 2) {
+      return {
+        ok: false,
+        status: 422,
+        json: async () => ({ error: { code: 'task_not_execution_ready' } }),
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { taskId: 'TSK-GOLDEN001', executionReady: true } }),
+    };
+  };
+
+  try {
+    const readiness = await pollForgeExecutionReadiness(
+      'http://127.0.0.1:13000',
+      'TSK-GOLDEN001',
+      'local-forge-smoke-token',
+      { timeoutMs: 2000, intervalMs: 1 },
+    );
+    assert.equal(readiness.ok, true);
+    assert.equal(readiness.status, 200);
+    assert.equal(attempts, 2);
   } finally {
     global.fetch = originalFetch;
   }

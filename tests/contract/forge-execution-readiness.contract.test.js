@@ -7,6 +7,7 @@ const path = require('path');
 test('audit foundation OpenAPI documents forge execution-readiness route and canonical task shape', () => {
   const root = path.join(__dirname, '../..');
   const openapi = fs.readFileSync(path.join(root, 'docs/api/audit-foundation-openapi.yml'), 'utf8');
+  const platform = fs.readFileSync(path.join(root, 'docs/api/task-platform-openapi.yml'), 'utf8');
 
   for (const expected of [
     '/tasks/{id}/forge-execution-readiness:',
@@ -17,5 +18,14 @@ test('audit foundation OpenAPI documents forge execution-readiness route and can
     'task_not_execution_ready',
   ]) {
     assert.match(openapi, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const expected of [
+    'pollForgeExecutionReadiness',
+    'golden-path:smoke:gp-002',
+    'golden-path:smoke:gp-015',
+    'golden-path:smoke:gp-013',
+  ]) {
+    assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });

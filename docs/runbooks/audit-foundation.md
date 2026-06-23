@@ -107,6 +107,7 @@ Audit HTTP maintenance note:
 - Human close decisions now require explicit decision readiness. The runtime rejects stakeholder close decisions until either both PM and Architect cancellation recommendations are recorded or an escalation is active for the task.
 - Close-review backtrack now requires dual-party evidence. The first PM/Architect request records a backtrack recommendation for the supplied agreement artifact; the counterpart request with the same artifact completes the transition back to implementation.
 - PM refinement starts through the app workflow on Intake Draft creation and can be retried through `POST /api/v1/tasks/{taskId}/refinement/start` after runtime configuration is corrected. The route is PM/admin-only and records `task.refinement_started` with runtime evidence, followed by `task.refinement_completed` on successful Execution Contract drafting or `task.refinement_failed` with fallback evidence when delegation cannot run.
+- GitHub issue intake (`POST /github/webhooks` with `FF_GITHUB_INTAKE_NORMALIZER=true`) waits for projected task state before starting PM refinement in async Postgres mode so `task.refinement_requested` does not fail with `task_not_found`. If projection lag exceeds the bounded wait window, callers may observe `503 projection_not_ready`.
 
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.

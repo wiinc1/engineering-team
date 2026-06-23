@@ -135,6 +135,16 @@ npm run golden-path:replay:postgres
 npm run golden-path:replay:postgres -- --bootstrap
 ```
 
+**Standalone step smoke verifiers** (stack must already be up; read task id from `observability/golden-path-postgres-pilot.json` when omitted):
+
+```bash
+npm run golden-path:smoke:gp-002    # GitHub intake normalizer webhook path
+npm run golden-path:smoke:gp-015    # initial QA fail recorded before QA_TESTING stage advance
+npm run golden-path:smoke:gp-013 -- --openclaw-url http://127.0.0.1:<gateway>   # live delegation
+```
+
+Phase 3 records the intentional QA fail (`GP-015`) **before** advancing to `QA_TESTING` so workflow guards accept the structured QA result.
+
 The `--local` file-backend path remains for fast isolated proofs (`observability/golden-path-local-stack/audit-data`); prefer the Postgres stack above for UI + forgeadapter + workflow fidelity.
 
 ---
@@ -401,7 +411,7 @@ curl -s -X POST \
 
 | Step | Action | System | Manual? |
 | --- | --- | --- | --- |
-| GP-015 | Record QA **fail** (`runType=initial`) | ET | yes |
+| GP-015 | Record QA **fail** (`runType=initial`) | ET | no (`golden-path:smoke:gp-015`) |
 | GP-016 | Forge `review` rejected OR `revision_required` | forgeadapter | yes |
 
 **ET QA fail payload (example):**

@@ -152,7 +152,7 @@
         "^db/migrations/007_.*\\.sql$",
         "^db/migrations/008_.*\\.sql$",
         "^db/migrations/013_autonomous_delivery_metrics(\\.down)?\\.sql$",
-        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke)\\..+$",
+        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke|verify-gp-002-github-intake-smoke|verify-gp-013-delegation-smoke|verify-gp-015-qa-fail-smoke|golden-path-smoke-lib)\\..+$",
         "^Dockerfile\\.workers$",
         "^docker-compose\\.production-workers\\.yml$",
         "^fly\\.toml$"
