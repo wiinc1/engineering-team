@@ -120,9 +120,10 @@
       "phase": "2-forge",
       "action": "Run OpenClaw live delegation smoke",
       "system": "openclaw",
-      "manual": true,
+      "manual": false,
       "automateAs": "delegation_health_check_in_ci",
-      "evidence": "test:delegation:live-smoke:openclaw, sessionId"
+      "automatedBy": "scripts/verify-gp-013-delegation-smoke.js (npm run golden-path:smoke:gp-013; use --openclaw-url for live proof)",
+      "evidence": "observability/gp-013-delegation-smoke.json"
     },
     {
       "id": "GP-014",
@@ -138,8 +139,9 @@
       "phase": "3-qa",
       "action": "QA records initial fail (intentional on first pass for golden path)",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "qa_agent_test_runner_posts_qa_result",
+      "automatedBy": "lib/task-platform/golden-path-phases.js runGoldenPathPhase3 + scripts/verify-gp-015-qa-fail-smoke.js",
       "evidence": "task.qa_result_recorded outcome=fail runType=initial"
     },
     {
@@ -147,8 +149,9 @@
       "phase": "3-qa",
       "action": "Forge review gate rejected or revision_required path",
       "system": "forgeadapter",
-      "manual": true,
+      "manual": false,
       "automateAs": "sync_et_qa_fail_to_forge_review",
+      "automatedBy": "lib/task-platform/golden-path-phases.js + et-forge-dispatch-bridge (ET_FORGE_DISPATCH_ENABLED)",
       "evidence": "runtime executionState=revision_required"
     },
     {
@@ -253,9 +256,9 @@
   ],
   "summary": {
     "totalSteps": 27,
-    "manualToday": 25,
-    "automatedToday": 2,
-    "criticalPathAutomation": ["GP-002", "GP-007", "GP-011", "GP-016", "GP-018", "GP-020", "GP-023"],
+    "manualToday": 22,
+    "automatedToday": 5,
+    "criticalPathAutomation": ["GP-002", "GP-007", "GP-011", "GP-013", "GP-015", "GP-016", "GP-018", "GP-020", "GP-023"],
     "bridgeAutomation": {
       "GP-011": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
       "GP-016": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",

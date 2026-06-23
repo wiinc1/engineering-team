@@ -63,8 +63,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1160,
-      "ordinal": 66,
+      "line": 1156,
+      "ordinal": 68,
       "name": "runGoldenPathPhase6",
       "actual": 206,
       "cap": 50
@@ -72,8 +72,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1367,
-      "ordinal": 67,
+      "line": 1363,
+      "ordinal": 69,
       "name": "runGoldenPathPhase5",
       "actual": 202,
       "cap": 50
@@ -90,8 +90,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1570,
-      "ordinal": 68,
+      "line": 1566,
+      "ordinal": 70,
       "name": "runGoldenPathPhases",
       "actual": 172,
       "cap": 50
@@ -99,7 +99,7 @@
     {
       "path": "lib/task-platform/golden-path-phase1.js",
       "rule": "maintainability:function-lines",
-      "line": 319,
+      "line": 290,
       "ordinal": 17,
       "name": "runGoldenPathPhase1",
       "actual": 159,
@@ -126,8 +126,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 667,
-      "ordinal": 52,
+      "line": 672,
+      "ordinal": 53,
       "name": "runGoldenPathPhase2",
       "actual": 146,
       "cap": 50
@@ -135,10 +135,10 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 814,
-      "ordinal": 53,
+      "line": 819,
+      "ordinal": 54,
       "name": "runGoldenPathPhase3",
-      "actual": 146,
+      "actual": 137,
       "cap": 50
     },
     {
@@ -171,7 +171,7 @@
     {
       "path": "scripts/replay-golden-path-postgres.js",
       "rule": "maintainability:function-lines",
-      "line": 98,
+      "line": 93,
       "ordinal": 7,
       "name": "main",
       "actual": 121,
@@ -189,8 +189,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 961,
-      "ordinal": 56,
+      "line": 957,
+      "ordinal": 58,
       "name": "runGoldenPathPhase4",
       "actual": 119,
       "cap": 50
@@ -207,8 +207,8 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 496,
-      "ordinal": 47,
+      "line": 501,
+      "ordinal": 48,
       "name": "completeContractCoverageAuditGate",
       "actual": 97,
       "cap": 50
@@ -390,7 +390,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 1771,
+      "actual": 1767,
       "cap": 400
     },
     {
@@ -448,21 +448,21 @@
       "cap": 400
     },
     {
-      "path": "lib/task-platform/golden-path-phase1.js",
-      "rule": "maintainability:source-file-lines",
-      "line": 1,
-      "ordinal": null,
-      "name": null,
-      "actual": 487,
-      "cap": 400
-    },
-    {
       "path": "src/features/task-detail/adapter.browser.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
       "actual": 479,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/golden-path-phase1.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 458,
       "cap": 400
     },
     {

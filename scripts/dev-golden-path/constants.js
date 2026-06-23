@@ -23,6 +23,7 @@ const DEFAULTS = {
   adminEmail: 'admin@golden-path.local',
   adminPassword: 'GoldenPathAdmin1',
   adminRoles: 'admin,pm,reader',
+  githubWebhookSecret: 'golden-path-local-webhook-secret',
 };
 
 module.exports = {

@@ -60,7 +60,7 @@ async function seedForgeTask(baseUrl, forgeServiceToken, forgeTaskId = 'TSK-GOLD
   const { createAuditStore } = require('../lib/audit');
   const { assertAuditBackendConfiguration } = require('../lib/audit/config');
   const { seedGoldenPathForgeTask } = require('../lib/task-platform/golden-path-forge-seed');
-  const { apiSendServiceToken } = require('../lib/task-platform/golden-path-shared');
+  const { pollForgeExecutionReadiness } = require('../lib/task-platform/golden-path-shared');
   const backendConfig = assertAuditBackendConfiguration({ runtimeGuard: false });
 
   const seed = await seedGoldenPathForgeTask({
@@ -74,12 +74,7 @@ async function seedForgeTask(baseUrl, forgeServiceToken, forgeTaskId = 'TSK-GOLD
       workflowEngineEnabled: false,
     }),
   });
-  const readiness = await apiSendServiceToken(
-    baseUrl,
-    `/tasks/${encodeURIComponent(forgeTaskId)}/forge-execution-readiness`,
-    'GET',
-    forgeServiceToken,
-  );
+  const readiness = await pollForgeExecutionReadiness(baseUrl, forgeTaskId, forgeServiceToken);
   if (!readiness.ok) {
     throw new Error(`${forgeTaskId} forge readiness failed (${readiness.status}): ${JSON.stringify(readiness.body)}`);
   }
