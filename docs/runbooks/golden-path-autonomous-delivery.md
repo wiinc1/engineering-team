@@ -501,10 +501,10 @@ Same as #209:
 | Priority | Step IDs | Why |
 | --- | --- | --- |
 | P0 | GP-002 | Issue → task intake normalizer |
-| P0 | GP-011, GP-018 | **Implemented:** `et-forge-dispatch-bridge` (enable via `ET_FORGE_DISPATCH_ENABLED`) |
+| P0 | GP-011, GP-016, GP-018, GP-020, GP-021 | **Implemented:** `et-forge-dispatch-bridge` when `ET_FORGE_DISPATCH_ENABLED=true` |
 | P0 | GP-007 | Projection worker always-on (blocks workflow gates) |
-| P1 | GP-015, GP-016 | QA fail ↔ forge reject loop (reject still manual in bridge v1) |
-| P1 | GP-020, GP-021 | Unify ET close + forge gate approval |
+| P1 | GP-015 | QA fail recording + forge QA reject coordination (phase runner + bridge) |
+| P1 | GP-013 | Live OpenClaw delegation smoke (`--require-delegation-smoke` with real runtime URLs) |
 | P2 | GP-003, GP-004, GP-014 | Agent-driven refine + implement |
 | P2 | GP-023 | CI validation on merge (local proof already scripted) |
 | P3 | GP-025 | Redis — only if target apps require it |

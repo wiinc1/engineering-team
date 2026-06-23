@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { createAuditApiServer } = require('../lib/audit/http-projects');
+const { withLocalAuditApi } = require('../lib/task-platform/golden-path-local-stack');
 const { runGoldenPathPhase0 } = require('../lib/task-platform/golden-path-phase0');
 
 function readArg(name, fallback = '') {
@@ -14,28 +11,6 @@ function hasFlag(name) {
   return process.argv.includes(name);
 }
 
-async function withLocalAuditApi(run) {
-  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'golden-path-phase0-'));
-  const jwtSecret = process.env.AUTH_JWT_SECRET || 'golden-path-local-secret';
-  process.env.AUDIT_STORE_BACKEND = 'file';
-  process.env.ALLOW_FILE_AUDIT_BACKEND = 'true';
-  process.env.FF_WORKFLOW_ENGINE = 'true';
-
-  const { server } = createAuditApiServer({ baseDir, jwtSecret });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address();
-
-  try {
-    return await run({
-      baseUrl: `http://127.0.0.1:${port}`,
-      jwtSecret,
-      localBaseDir: baseDir,
-    });
-  } finally {
-    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  }
-}
-
 async function main() {
   const options = {
     baseUrl: readArg('--base-url'),
@@ -45,10 +20,14 @@ async function main() {
     childIssueNumber: readArg('--child-issue'),
     childIssueUrl: readArg('--child-issue-url'),
     outputPath: readArg('--out'),
+    persistDir: readArg('--persist-dir'),
   };
 
   if (hasFlag('--local')) {
-    return withLocalAuditApi((local) => runGoldenPathPhase0({ ...options, ...local }));
+    return withLocalAuditApi(
+      (local) => runGoldenPathPhase0({ ...options, ...local }),
+      { persistDir: options.persistDir || undefined },
+    );
   }
 
   return runGoldenPathPhase0(options);

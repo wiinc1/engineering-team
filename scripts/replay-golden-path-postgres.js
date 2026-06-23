@@ -87,11 +87,28 @@ async function runScript(scriptPath, args, env) {
 }
 
 async function main() {
+  const freshBootstrap = hasFlag('--fresh-bootstrap');
   const baseUrl = readArg('--base-url', DEFAULTS.baseUrl);
-  const outputPath = readArg('--out', DEFAULTS.outputPath);
-  const persistDir = readArg('--persist-dir', DEFAULTS.persistDir);
+  const outputPath = readArg(
+    '--out',
+    freshBootstrap
+      ? `observability/golden-path-postgres-pilot-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.json`
+      : DEFAULTS.outputPath,
+  );
+  const persistDir = readArg(
+    '--persist-dir',
+    freshBootstrap
+      ? `observability/golden-path-postgres-stack/bootstrap-${Date.now()}`
+      : DEFAULTS.persistDir,
+  );
   const childIssue = readArg('--child-issue', DEFAULTS.childIssue);
-  const bootstrapPhase1 = hasFlag('--bootstrap') || !fs.existsSync(path.resolve(process.cwd(), outputPath));
+  const projectName = readArg(
+    '--project-name',
+    freshBootstrap
+      ? `Golden Path Pilot - Issue ${childIssue} (${new Date().toISOString().slice(0, 10)} fresh)`
+      : '',
+  );
+  const bootstrapPhase1 = hasFlag('--bootstrap') || freshBootstrap || !fs.existsSync(path.resolve(process.cwd(), outputPath));
   const fromPhase = readArg('--from', bootstrapPhase1 ? '1' : '2');
   const toPhase = readArg('--to', '6');
   const stackUrls = loadLocalStackServiceUrls();
@@ -113,13 +130,17 @@ async function main() {
   };
 
   if (Number(fromPhase) <= 1) {
-    const phase1 = await runScript('scripts/run-golden-path-phase1.js', [
+    const phase1Args = [
       '--bootstrap',
       '--base-url', baseUrl,
       '--child-issue', childIssue,
       '--child-issue-url', `https://github.com/wiinc1/engineering-team/issues/${childIssue}`,
       '--out', outputPath,
-    ], env);
+    ];
+    if (projectName) {
+      phase1Args.push('--project-name', projectName);
+    }
+    const phase1 = await runScript('scripts/run-golden-path-phase1.js', phase1Args, env);
     process.stdout.write(phase1.stdout);
     if (phase1.stderr) {
       process.stderr.write(phase1.stderr);
