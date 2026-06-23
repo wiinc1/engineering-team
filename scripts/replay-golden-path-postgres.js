@@ -27,9 +27,26 @@ function hasFlag(name) {
   return process.argv.includes(name);
 }
 
+function loadLocalStackServiceUrls() {
+  const stackPath = path.resolve(process.cwd(), 'observability/golden-path-local-dev/stack.json');
+  if (!fs.existsSync(stackPath)) {
+    return { openclawUrl: '', hermesUrl: '', forgeadapterUrl: 'http://127.0.0.1:14010' };
+  }
+  try {
+    const stack = JSON.parse(fs.readFileSync(stackPath, 'utf8'));
+    return {
+      openclawUrl: stack.services?.openclaw?.url || '',
+      hermesUrl: stack.services?.hermes?.url || '',
+      forgeadapterUrl: stack.services?.forgeadapter?.url || 'http://127.0.0.1:14010',
+    };
+  } catch {
+    return { openclawUrl: '', hermesUrl: '', forgeadapterUrl: 'http://127.0.0.1:14010' };
+  }
+}
+
 async function assertStackReady(baseUrl) {
   const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/metrics`);
-  if (!response.ok) {
+  if (!response.ok && response.status !== 401) {
     throw new Error(
       `Golden-path stack is not ready (${response.status} from ${baseUrl}/metrics). Run: npm run dev:golden-path:up`,
     );
@@ -77,6 +94,12 @@ async function main() {
   const bootstrapPhase1 = hasFlag('--bootstrap') || !fs.existsSync(path.resolve(process.cwd(), outputPath));
   const fromPhase = readArg('--from', bootstrapPhase1 ? '1' : '2');
   const toPhase = readArg('--to', '6');
+  const stackUrls = loadLocalStackServiceUrls();
+  const openclawUrl = readArg('--openclaw-url', process.env.OPENCLAW_BASE_URL || stackUrls.openclawUrl);
+  const hermesUrl = readArg('--hermes-url', process.env.HERMES_BASE_URL || stackUrls.hermesUrl);
+  const forgeadapterUrl = readArg('--forgeadapter-url', process.env.FORGEADAPTER_BASE_URL || stackUrls.forgeadapterUrl);
+  const skipDelegationSmoke = !hasFlag('--require-delegation-smoke')
+    || hasFlag('--skip-delegation-smoke');
 
   await assertStackReady(baseUrl);
   await seedForgeTask(baseUrl, DEFAULTS.forgeServiceToken);
@@ -104,18 +127,34 @@ async function main() {
   }
 
   if (Number(toPhase) >= 2) {
-    const phases = await runScript('scripts/run-golden-path-phases.js', [
+    const phaseArgs = [
       '--base-url', baseUrl,
       '--from', String(Math.max(2, Number(fromPhase))),
       '--to', toPhase,
-      '--skip-delegation-smoke',
       '--operator-url', DEFAULTS.uiUrl,
       '--out', outputPath,
       '--persist-dir', persistDir,
       '--jwt-secret', env.AUTH_JWT_SECRET,
       '--forge-service-token', env.FORGE_SERVICE_TOKEN,
       '--forge-adapter-token', env.FORGEADAPTER_SERVICE_TOKEN,
-    ], env);
+    ];
+    if (skipDelegationSmoke) {
+      phaseArgs.push('--skip-delegation-smoke');
+    }
+    if (openclawUrl) {
+      phaseArgs.push('--openclaw-url', openclawUrl);
+    }
+    if (hermesUrl) {
+      phaseArgs.push('--hermes-url', hermesUrl);
+    }
+    phaseArgs.push('--forgeadapter-url', forgeadapterUrl);
+    const phases = await runScript('scripts/run-golden-path-phases.js', phaseArgs, {
+      ...env,
+      FORGEADAPTER_BASE_URL: forgeadapterUrl,
+      ...(openclawUrl ? { OPENCLAW_BASE_URL: openclawUrl } : {}),
+      ...(hermesUrl ? { HERMES_BASE_URL: hermesUrl } : {}),
+      ...(skipDelegationSmoke ? {} : { FF_REAL_SPECIALIST_DELEGATION: 'true' }),
+    });
     process.stdout.write(phases.stdout);
     if (phases.stderr) {
       process.stderr.write(phases.stderr);

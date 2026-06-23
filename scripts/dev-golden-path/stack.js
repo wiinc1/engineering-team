@@ -149,6 +149,8 @@ async function startEtCore(options, sharedEnv, logsDir) {
       FORGEADAPTER_BASE_URL: `http://127.0.0.1:${options.forgeadapterPort || DEFAULTS.forgeadapterPort}`,
       FORGEADAPTER_SERVICE_TOKEN: DEFAULTS.forgeadapterToken,
       ET_FORGE_LIFECYCLE_TASK_ID: 'TSK-GOLDEN001',
+      AUTH_JWT_SECRET: sharedEnv.AUTH_JWT_SECRET,
+      FORGE_SERVICE_TOKEN: DEFAULTS.forgeServiceToken,
     },
     path.join(logsDir, 'audit-workers.log'),
   ));

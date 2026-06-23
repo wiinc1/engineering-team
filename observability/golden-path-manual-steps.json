@@ -256,7 +256,10 @@
     "criticalPathAutomation": ["GP-002", "GP-011", "GP-016", "GP-018", "GP-020", "GP-023"],
     "bridgeAutomation": {
       "GP-011": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
-      "GP-018": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)"
+      "GP-016": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
+      "GP-018": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
+      "GP-020": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
+      "GP-021": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)"
     }
   }
 }

@@ -82,7 +82,9 @@ Logs: `observability/golden-path-local-dev/logs/`. State: `observability/golden-
 | Audit event | Forge action | Golden-path step |
 | --- | --- | --- |
 | `task.execution_contract_approved` | `POST /tasks/:id/start` (when execution-ready) | GP-011 |
-| `task.qa_result_recorded` (initial fail) | `POST /tasks/:id/resume` | GP-018 |
+| `task.qa_result_recorded` (initial fail) | `POST /tasks/:id/review-requests/qa` + rejected review packet | GP-016 |
+| `task.engineer_submission_recorded` (version ≥ 2) | `POST /tasks/:id/resume` | GP-018 |
+| `task.qa_result_recorded` (retest pass) | approve qa/architect/pm gates + `POST /tasks/:id/complete` + ET close recommendations | GP-020, GP-021 |
 
 Environment (set automatically by the dev stack):
 
@@ -420,7 +422,7 @@ curl -s -X POST \
   http://127.0.0.1:14010/tasks/TSK-GOLDEN001/resume | jq .
 ```
 
-**Bridge:** With `ET_FORGE_DISPATCH_ENABLED=true`, initial QA fail auto-calls forgeadapter resume (via `ET_FORGE_LIFECYCLE_TASK_ID` when ET and forge task IDs differ). Manual `curl` remains for debugging.
+**Bridge:** With `ET_FORGE_DISPATCH_ENABLED=true`, initial QA fail auto-submits a forge QA reject packet (GP-016). Engineer submission v2 auto-calls forgeadapter resume (GP-018). QA retest pass auto-approves forge gates and records ET close recommendations (GP-020/GP-021). Manual `curl` remains for debugging.
 
 ---
 

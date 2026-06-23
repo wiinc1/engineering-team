@@ -90,7 +90,9 @@ An earlier **file-backend** replay (`TSK-526A02DE`, `observability/golden-path-p
 | GP-007 | Postgres projection catch-up between gates (mitigated in phase runner with retry) |
 | GP-009 → GP-011 | **Bridged** via `et-forge-dispatch-bridge.js` when `ET_FORGE_DISPATCH_ENABLED=true` |
 | GP-013 | OpenClaw delegation smoke remains optional (`--skip-delegation-smoke`) |
-| GP-015 → GP-018 | **Bridged** via `et-forge-dispatch-bridge.js` on initial QA fail |
+| GP-016 | **Bridged** via `et-forge-dispatch-bridge.js` on initial QA fail (forge QA reject) |
+| GP-018 | **Bridged** via `et-forge-dispatch-bridge.js` on engineer submission v2 (forge resume) |
+| GP-020 → GP-021 | **Bridged** via `et-forge-dispatch-bridge.js` on QA retest pass (forge gates + ET close recommendations) |
 | GP-020/GP-021 | ET close review and forge gates are parallel manual systems |
 | GP-023 | Wire CI validation on merge (local proof scripted in phase 6) |
 | GP-026 | Local pilot waived SRE window when Phase 5 advanced directly to `PM_CLOSE_REVIEW` |

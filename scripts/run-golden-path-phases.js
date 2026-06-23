@@ -27,7 +27,10 @@ async function main() {
     baseUrl: readArg('--base-url'),
     forgeTaskId: readArg('--forge-task-id', 'TSK-GOLDEN001'),
     skipDelegationSmoke: hasFlag('--skip-delegation-smoke'),
+    openclawUrl: readArg('--openclaw-url', process.env.OPENCLAW_BASE_URL || ''),
+    hermesUrl: readArg('--hermes-url', process.env.HERMES_BASE_URL || ''),
     operatorUrl: readArg('--operator-url'),
+    allowSreWaiver: hasFlag('--allow-sre-waiver'),
     skipValidation: hasFlag('--skip-validation'),
     mergeCommitSha: readArg('--merge-commit-sha'),
     productionUrl: readArg('--production-url'),
@@ -40,6 +43,7 @@ async function main() {
     forgeAdapterToken: readArg('--forge-adapter-token')
       || process.env.FORGEADAPTER_SERVICE_TOKEN
       || DEFAULT_FORGE_ADAPTER_TOKEN,
+    forgeAdapterBaseUrl: readArg('--forgeadapter-url', process.env.FORGEADAPTER_BASE_URL || ''),
   };
 
   if (hasFlag('--local')) {
