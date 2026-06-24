@@ -500,7 +500,7 @@
         "^db/migrations/012_projects(\\.down)?\\.sql$",
         "^db/migrations/014_ai_agents_management\\.sql$",
         "^lib/forge-local-smoke/seed-task\\.js$",
-        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke|seed-forge-local-smoke-task|dev-golden-path-stack|replay-golden-path-postgres|run-golden-path-phase1|run-golden-path-phases|seed-golden-path-phase0|submit-factory-requirements|run-factory-orchestrator)\\.js$",
+        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke|seed-forge-local-smoke-task|dev-golden-path-stack|replay-golden-path-postgres|run-golden-path-phase1|run-golden-path-phases|seed-golden-path-phase0|submit-factory-requirements|run-factory-orchestrator|run-unit-tests)\\.js$",
         "^scripts/dev-golden-path/.+\\.js$",
         "^docker-compose\\.golden-path\\.yml$"
       ],
@@ -521,7 +521,8 @@
         "^tests/unit/seed-forge-local-smoke-task\\.test\\.js$",
         "^tests/unit/et-forge-dispatch-bridge\\.test\\.js$",
         "^tests/unit/projection-catch-up\\.test\\.js$",
-        "^tests/unit/factory-delivery\\.test\\.js$"
+        "^tests/unit/factory-delivery\\.test\\.js$",
+            "^tests/unit/audit-postgres-pool\\.test\\.js$"
       ]
     },
         {

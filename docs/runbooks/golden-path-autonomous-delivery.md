@@ -498,6 +498,8 @@ curl -s -X POST -H "Authorization: Bearer local-forgeadapter-token" \
 
 `vitest.config.ts` excludes `observability/**` so forgeadapter worktrees under `observability/golden-path-local-dev/` do not pollute GP-023 `test:unit` during phase 6 closeout.
 
+`scripts/run-unit-tests.js` clears shell `DATABASE_URL`, `VERCEL`, and related golden-path env vars before `npm run test:unit` so local stack sessions do not route unit tests to shared Postgres.
+
 ```bash
 # With dev stack up — validation only; UI already at http://127.0.0.1:15173
 npm run lint && npm run test:unit && npm run standards:check
