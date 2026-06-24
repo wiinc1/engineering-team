@@ -67,11 +67,36 @@ test('ensurePilotAgents creates active assignable supported-role pilot agents', 
   const result = await ensurePilotAgents({ taskPlatform, tenantId: 'tenant-pilot', actorId: 'pm-pilot' });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), ['architect', 'engineer', 'pm', 'qa', 'sre']);
+  assert.deepEqual(result.created.sort(), [
+    'architect',
+    'engineer',
+    'engineer-jr',
+    'engineer-principal',
+    'engineer-sr',
+    'pm',
+    'qa',
+    'sre',
+  ]);
   assert.deepEqual(result.missingRoles, []);
 
   const agents = taskPlatform.listAiAgents({ tenantId: 'tenant-pilot' });
-  assert.deepEqual(agents.map(agent => agent.role).sort(), ['architect', 'engineer', 'pm', 'qa', 'sre']);
+  assert.deepEqual(agents.map(agent => agent.agentId).sort(), [
+    'architect',
+    'engineer',
+    'engineer-jr',
+    'engineer-principal',
+    'engineer-sr',
+    'pm',
+    'qa',
+    'sre',
+  ]);
+  assert.deepEqual([...new Set(agents.map(agent => agent.role))].sort(), [
+    'architect',
+    'engineer',
+    'pm',
+    'qa',
+    'sre',
+  ]);
   assert.ok(agents.every(agent => agent.active && agent.assignable));
   assert.ok(agents.every(agent => agent.metadata.requiredBy === 'issue-247'));
 });

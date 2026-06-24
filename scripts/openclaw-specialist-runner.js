@@ -6,8 +6,15 @@ const DEFAULT_SPECIALIST_MAP = Object.freeze({
   pm: 'pm',
   architect: 'architect',
   engineer: 'sr-engineer',
+  principal: 'principal',
+  'jr-engineer': 'jr-engineer',
+  'sr-engineer': 'sr-engineer',
   qa: 'qa-engineer',
   sre: 'sre',
+  'engineer-jr': 'jr-engineer',
+  'engineer-sr': 'sr-engineer',
+  'engineer-principal': 'principal',
+  'product-manager': 'pm',
 });
 
 function readStdin() {

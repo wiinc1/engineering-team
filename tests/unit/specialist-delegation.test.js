@@ -15,8 +15,12 @@ const {
   classifySpecialistRequest,
   createDelegationMetrics,
   createSpecialistCoordinator,
+  normalizeSpecialistForDelegation,
   resolveDelegationArtifactBaseDir,
 } = require('../../lib/software-factory/delegation');
+const { resolveTaskSpecialist } = require('../../lib/software-factory/task-dispatch');
+const { engineerAssigneeForTier, evaluateExecutionContractDispatchPolicy } = require('../../lib/audit/execution-contracts');
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
 const { isSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
 const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
 
@@ -164,6 +168,126 @@ test('accepts runtime agent aliases when ownership carries the original speciali
   assert.equal(result.specialist, 'engineer');
   assert.equal(result.metadata.sessionId, 'runtime-session-alias');
   assert.equal(result.metadata.ownership.runtimeAgentId, 'sr-engineer');
+});
+
+test('normalizeSpecialistForDelegation maps owner ids and engineer tiers to granular specialists', () => {
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'engineer-jr' }), 'jr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'engineer-sr' }), 'sr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'engineer-principal' }), 'principal');
+  assert.equal(normalizeSpecialistForDelegation({ engineerTier: 'Jr' }), 'jr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ engineerTier: 'Sr' }), 'sr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ engineerTier: 'Principal' }), 'principal');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'engineer-jr' }), 'jr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'pm' }), 'pm');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'engineer' }), 'engineer');
+});
+
+test('resolveRuntimeAgent maps granular persona keys to spawnable agent ids', () => {
+  const personas = {
+    pm: 'pm',
+    architect: 'architect',
+    engineer: 'sr-engineer',
+    principal: 'principal',
+    'jr-engineer': 'jr-engineer',
+    'sr-engineer': 'sr-engineer',
+    qa: 'qa-engineer',
+    sre: 'sre',
+    'engineer-jr': 'jr-engineer',
+    'engineer-sr': 'sr-engineer',
+    'engineer-principal': 'principal',
+  };
+  for (const [specialist, expected] of Object.entries(personas)) {
+    assert.equal(resolveRuntimeAgent(specialist), expected, specialist);
+  }
+});
+
+test('engineerAssigneeForTier returns granular engineer owner ids', () => {
+  assert.equal(engineerAssigneeForTier('Jr'), 'engineer-jr');
+  assert.equal(engineerAssigneeForTier('Sr'), 'engineer-sr');
+  assert.equal(engineerAssigneeForTier('Principal'), 'engineer-principal');
+});
+
+test('dispatch policy selects granular assignees from proposed engineer tiers', () => {
+  const jrPolicy = evaluateExecutionContractDispatchPolicy({
+    contract: {
+      template_tier: 'Simple',
+      sections: {},
+      dispatch_signals: {
+        work_category: 'docs',
+        clear_test_plan: true,
+        proposed_engineer_tier: 'Jr',
+      },
+    },
+  });
+  assert.equal(jrPolicy.selectedAssignee, 'engineer-jr');
+  assert.equal(jrPolicy.selectedEngineerTier, 'Jr');
+
+  const principalPolicy = evaluateExecutionContractDispatchPolicy({
+    contract: { template_tier: 'Complex', sections: {}, risk_flags: ['security'] },
+    proposedEngineerTier: 'Principal',
+  });
+  assert.equal(principalPolicy.selectedAssignee, 'engineer-principal');
+  assert.equal(principalPolicy.selectedEngineerTier, 'Principal');
+});
+
+test('resolveTaskSpecialist keeps coarse task types while delegation normalizes granular owners', () => {
+  assert.equal(resolveTaskSpecialist('dev'), 'engineer');
+  assert.equal(resolveTaskSpecialist('qa'), 'qa');
+  assert.equal(normalizeSpecialistForDelegation({
+    targetSpecialist: resolveTaskSpecialist('dev'),
+    ownerAgentId: 'engineer-jr',
+  }), 'jr-engineer');
+});
+
+async function delegatedPersonaResult(baseDir, specialist, runtimeAgentId = specialist) {
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegateWork: async ({ specialist: routedSpecialist }) => ({
+      agentId: runtimeAgentId,
+      sessionId: `runtime-session-${routedSpecialist}`,
+      output: `handled by ${routedSpecialist}`,
+      ownership: {
+        specialistId: routedSpecialist,
+        runtimeAgentId: runtimeAgentId,
+      },
+    }),
+  });
+  return coordinator.handleRequest(`Work owned by ${specialist}`, {
+    coordinatorAgent: 'main',
+    targetSpecialist: specialist,
+  });
+}
+
+test('delegates explicit persona targets through runtime evidence', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-personas-'));
+  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre']) {
+    const result = await delegatedPersonaResult(baseDir, persona);
+    assert.equal(result.mode, 'delegated', persona);
+    assert.equal(result.specialist, persona, persona);
+    assert.equal(result.agentId, persona, persona);
+  }
+});
+
+test('delegates tier-selected engineer implementation without coordinator fallback', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-tier-engineer-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegateWork: async ({ specialist }) => ({
+      agentId: specialist,
+      sessionId: `runtime-session-${specialist}`,
+      output: `handled by ${specialist}`,
+      ownership: { specialistId: specialist, runtimeAgentId: specialist },
+    }),
+  });
+
+  const result = await coordinator.handleRequest('Please implement this docs-only change', {
+    coordinatorAgent: 'main',
+    engineerTier: 'Jr',
+  });
+
+  assert.equal(result.mode, 'delegated');
+  assert.equal(result.specialist, 'jr-engineer');
+  assert.equal(result.agentId, 'jr-engineer');
 });
 
 test('delegates explicit PM refinement ownership through runtime evidence', async () => {
