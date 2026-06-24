@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-hosted-phase6-verify",
+  "generatedAt": "2026-06-24T21:11:28.094Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "operatorUrl": "http://127.0.0.1:15173",
+  "outputDir": "observability/milestone-hosted-staging",
+  "summary": {
+    "passed": true,
+    "phase6Complete": true,
+    "gp026SreAgent": true,
+    "gp022AutoMerge": true,
+    "validationOk": true
+  },
+  "artifacts": {
+    "factoryEvidence": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsk9itj.json"
+  },
+  "factory": {
+    "taskId": "TSK-008",
+    "stage": "phase6_complete"
+  }
+}

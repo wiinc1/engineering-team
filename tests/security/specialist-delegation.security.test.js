@@ -65,7 +65,19 @@ test('serverless artifact base selection avoids read-only Vercel bundle paths', 
 });
 
 test('default OpenClaw specialist map covers all assignable pilot roles', () => {
-  for (const role of ['pm', 'architect', 'engineer', 'qa', 'sre']) {
+  for (const role of [
+    'pm',
+    'architect',
+    'engineer',
+    'principal',
+    'jr-engineer',
+    'sr-engineer',
+    'qa',
+    'sre',
+    'engineer-jr',
+    'engineer-sr',
+    'engineer-principal',
+  ]) {
     assert.equal(typeof DEFAULT_SPECIALIST_MAP[role], 'string');
     assert.notEqual(DEFAULT_SPECIALIST_MAP[role].trim(), '');
   }

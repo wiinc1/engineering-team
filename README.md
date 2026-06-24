@@ -290,3 +290,7 @@ Browser gate flake policy:
 - Core Web Vitals budgets run against the local Vite preview fixture routes. Production RUM comparison is still handled after deploy through the production-auth and synthetic-monitoring evidence paths.
 - Visual screenshot baselines are pinned to Chromium for deterministic pixel comparison. Firefox, mobile Chrome, and CI WebKit still execute route behavior and accessibility coverage.
 - The browser app includes a shared authenticated shell, sign-in flow, task list/board/PM overview/inbox navigation, and task detail routing. Production auth status is tracked in `docs/runbooks/production-auth-status.md`; production-auth issue closure is blocked until `npm run auth:status:check -- --require-complete` passes with fresh redacted smoke evidence for the selected strategy.
+## Golden Path Pilot
+
+Supervised end-to-end delivery loop for epic [#269](https://github.com/wiinc1/engineering-team/issues/269).
+Evidence: `docs/reports/GOLDEN_PATH_PILOT_EVIDENCE.md` and `observability/golden-path-pilot.json`.

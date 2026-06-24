@@ -207,6 +207,74 @@ test("reader cannot start PM refinement through the dedicated refinement route",
   });
 });
 
+async function withGithubIntakeSecurityServer(callback) {
+  const { createAuditApiServer } = require("../../lib/audit/http-projects");
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-security-intake-"));
+  const secret = "github-intake-security-secret";
+  const previousBackend = process.env.AUDIT_STORE_BACKEND;
+  const previousAllowFile = process.env.ALLOW_FILE_AUDIT_BACKEND;
+  const previousDatabaseUrl = process.env.DATABASE_URL;
+  process.env.AUDIT_STORE_BACKEND = "file";
+  process.env.ALLOW_FILE_AUDIT_BACKEND = "true";
+  delete process.env.DATABASE_URL;
+  const { server } = createAuditApiServer({
+    baseDir,
+    jwtSecret: "jwt-security-secret",
+    githubWebhookSecret: secret,
+    ffGitHubIntakeNormalizer: "true",
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  try {
+    await callback({ baseUrl: `http://127.0.0.1:${port}`, secret });
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+    if (previousBackend === undefined) delete process.env.AUDIT_STORE_BACKEND;
+    else process.env.AUDIT_STORE_BACKEND = previousBackend;
+    if (previousAllowFile === undefined) delete process.env.ALLOW_FILE_AUDIT_BACKEND;
+    else process.env.ALLOW_FILE_AUDIT_BACKEND = previousAllowFile;
+    if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previousDatabaseUrl;
+    fs.rmSync(baseDir, { recursive: true, force: true });
+  }
+}
+
+async function assertGithubIntakeRejectsInvalidSignature() {
+  await withGithubIntakeSecurityServer(async ({ baseUrl, secret }) => {
+    const body = JSON.stringify({
+      action: "opened",
+      issue: {
+        number: 991001,
+        title: "Security intake webhook",
+        body: "Reject unsigned deliveries.",
+        html_url: "https://github.com/wiinc1/engineering-team/issues/991001",
+        labels: [{ name: "factory-intake" }],
+      },
+      repository: {
+        full_name: "wiinc1/engineering-team",
+        owner: { login: "wiinc1" },
+        name: "engineering-team",
+      },
+      sender: { login: "wiinc1" },
+    });
+    const response = await fetch(`${baseUrl}/github/webhooks`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-github-event": "issues",
+        "x-github-delivery": "security-intake-invalid-signature",
+        "x-hub-signature-256": `sha256=${crypto.createHmac("sha256", "wrong-secret").update(body).digest("hex")}`,
+      },
+      body,
+    });
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, "invalid_github_signature");
+    assert.ok(secret.length > 0);
+  });
+}
+
+test("github issue intake webhook rejects invalid signatures", assertGithubIntakeRejectsInvalidSignature);
+
 test("forge execution-readiness rejects missing and invalid service tokens", async () => {
   const fs = require("fs");
   const os = require("os");
@@ -246,5 +314,48 @@ test("forge execution-readiness rejects missing and invalid service tokens", asy
     response = await fetch(`${baseUrl}/tasks/TSK-FORGE-SEC/forge-execution-readiness`, { headers: reader });
     assert.equal(response.status, 403);
     assert.match(JSON.stringify(await response.json()), /forge:read/);
+  });
+});
+
+test("qa-results submission requires events:write authorization", async () => {
+  await withServer(async ({ baseUrl, secret }) => {
+    const contributor = {
+      "content-type": "application/json",
+      authorization: `Bearer ${sign({ sub: "contributor", tenant_id: "tenant-sec", roles: ["contributor"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+    const reader = {
+      "content-type": "application/json",
+      authorization: `Bearer ${sign({ sub: "reader", tenant_id: "tenant-sec", roles: ["reader"], exp: Math.floor(Date.now() / 1e3) + 60 }, secret)}`,
+    };
+
+    let response = await fetch(`${baseUrl}/tasks/TSK-SEC-QA/events`, {
+      method: "POST",
+      headers: contributor,
+      body: JSON.stringify({
+        eventType: "task.created",
+        actorType: "agent",
+        idempotencyKey: "create:TSK-SEC-QA",
+        payload: { title: "QA security task", initial_stage: "QA_TESTING" },
+      }),
+    });
+    assert.equal(response.status, 202);
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-QA/qa-results`, {
+      method: "POST",
+      headers: reader,
+      body: JSON.stringify({
+        outcome: "pass",
+        summary: "Reader attempted unauthorized QA submission.",
+        scenarios: ["browser matrix"],
+        findings: [],
+      }),
+    });
+    assert.equal(response.status, 403);
+    assert.equal((await response.json()).error.code, "forbidden");
+
+    response = await fetch(`${baseUrl}/tasks/TSK-SEC-QA/history`, { headers: reader });
+    assert.equal(response.status, 200);
+    const history = await response.json();
+    assert.equal(history.items.some((item) => item.event_type === "task.qa_result_recorded"), false);
   });
 });

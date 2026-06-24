@@ -9,6 +9,14 @@ info:
     Audit-backed `/tasks/...` routes remain compatibility adapters during the migration window.
     Forgeadapter canonical execution reads use the audit-foundation route `GET /tasks/{taskId}/forge-execution-readiness`; see `docs/api/audit-foundation-openapi.yml` for the camelCase execution-ready task contract and `FORGE_SERVICE_TOKEN` auth model.
     Local Phase 2 smoke uses `npm run forge:local-smoke:seed` (see `docs/runbooks/forge-local-smoke.md`) to seed execution-ready `TSK-LOCAL001` before forgeadapter stack probes.
+    Golden-path Postgres replay uses `npm run golden-path:replay:postgres` to seed forge tasks and drive ET→forge bridge evidence (see `docs/runbooks/golden-path-autonomous-delivery.md`).
+    Golden-path phase scripts prefer always-on worker lag from `/metrics` via `lib/audit/projection-catch-up.js`, falling back to manual projection catch-up only when worker metrics are stale.
+    `lib/task-platform/golden-path-shared.js` exposes `pollForgeExecutionReadiness` for bounded forge readiness polling during Postgres replay seeding.
+    Standalone golden-path smoke verifiers: `npm run golden-path:smoke:gp-002`, `npm run golden-path:smoke:gp-015`, and `npm run golden-path:smoke:gp-013` (GP-013 accepts `--openclaw-url` for live delegation).
+    Hosted worker preflight uses `npm run audit:workers:production-smoke` against `/api/v1/tasks/{taskId}/events` and `/state` on the deployed operator URL.
+    Single-server factory delivery uses `npm run factory:submit` and `npm run factory:orchestrator` (`lib/task-platform/factory-delivery.js`) to queue requirements and advance golden-path phases on the local stack.
+    `npm run test:unit` runs through `scripts/run-unit-tests.js`, which clears shell `DATABASE_URL` and deployment env vars so unit tests stay on isolated file backends.
+    Golden-path phase 4 waits for contract-coverage audit history rows matching the current implementation attempt before leaving `IMPLEMENTATION`; phase 5 waits for `task.sre_monitoring_started` to project before SRE approve (`lib/task-platform/golden-path-phases.js`).
 servers:
   - url: /api/v1
 paths:

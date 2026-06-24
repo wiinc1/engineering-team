@@ -1,0 +1,25 @@
+# GP-007: long-running audit workers (projection + outbox). Deploy separately from Vercel API.
+app = "engineering-team-audit-workers"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.workers"
+
+[env]
+  NODE_ENV = "production"
+  AUDIT_STORE_BACKEND = "postgres"
+  PROJECTION_INTERVAL_MS = "5000"
+  OUTBOX_INTERVAL_MS = "5000"
+  # Set via `fly secrets set` (not committed):
+  # DATABASE_URL, AUTH_JWT_SECRET, ET_FORGE_DISPATCH_ENABLED=true,
+  # FORGEADAPTER_BASE_URL, FORGEADAPTER_SERVICE_TOKEN, FORGE_SERVICE_TOKEN,
+  # ENGINEERING_TEAM_BASE_URL, ET_FORGE_LIFECYCLE_TASK_ID (optional),
+  # PUSHGATEWAY_URL (optional)
+
+[processes]
+  worker = "sh -c 'node scripts/migrate-audit-postgres.js && node scripts/run-audit-workers.js'"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

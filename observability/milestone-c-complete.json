@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-c-complete",
+  "milestone": "C",
+  "title": "Agent implements and verifies",
+  "generatedAt": "2026-06-24T19:07:33.738Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "standardsCheck": true,
+    "verifyPassed": true,
+    "factoryPhase6Complete": true,
+    "gp014ImplementerAgent": true,
+    "gp019QaAgent": true,
+    "gp017FixLoop": true,
+    "gp023CiValidationEvidence": true,
+    "agentSessionEvidence": true
+  },
+  "exitCriteria": {
+    "factoryPhase6Complete": true,
+    "gp014ImplementerAgent": true,
+    "gp019QaAgent": true,
+    "gp017FixLoop": true,
+    "gp023CiValidationEvidence": true,
+    "agentSessionEvidence": true,
+    "validationWithoutSkip": true
+  },
+  "artifacts": {
+    "verify": "observability/milestone-c-staging/milestone-c-agent-verify.json",
+    "factoryQueue": "observability/milestone-c-staging/factory-milestone-c-queue-mqsg3rvv.json",
+    "factoryEvidence": "observability/milestone-c-staging/factory-delivery/factory-milestone-c-mqsg3rvv.json"
+  },
+  "factoryDelivery": {
+    "queueId": "factory-milestone-c-mqsg3rvv",
+    "taskId": "TSK-021",
+    "forgeTaskId": "TSK-GOLDENSG3RVV",
+    "stage": "phase6_complete"
+  },
+  "notes": [
+    "Milestone C enables FF_FACTORY_AGENT_DRIVEN_PHASES with fixture specialist runtime for implementer, QA, and fix-loop agents.",
+    "Fixture delegation runs from repo root so relative runner paths resolve inside factory stack worktrees.",
+    "Phase 3 evidence now includes qaAgent session metadata for GP-019 verification."
+  ]
+}

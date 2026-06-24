@@ -1,2 +1,36 @@
 const test=require("node:test"),assert=require("node:assert/strict"),fs=require("fs"),os=require("os"),path=require("path"),{performance}=require("perf_hooks"),{createFileAuditStore}=require("../../lib/audit/store"),{createExecutionContractDraft,REQUIRED_SECTIONS_BY_TIER}=require("../../lib/audit/execution-contracts");function makeTempDir(){return fs.mkdtempSync(path.join(os.tmpdir(),"audit-perf-"))}test("file-backed audit store stays within baseline append/query budgets",()=>{const e=createFileAuditStore({baseDir:makeTempDir(),projectionMode:"sync"}),n=250,a=process.env.CI?5e3:2500,r=performance.now();for(let c=0;c<n;c+=1)e.appendEvent({tenantId:"tenant-perf",taskId:`TSK-PERF-${String(c%25).padStart(3,"0")}`,eventType:c%5===0?"task.stage_changed":"task.comment_workflow_recorded",actorId:"perf-runner",actorType:"agent",idempotencyKey:`perf:${c}`,payload:c%5===0?{from_stage:"BACKLOG",to_stage:"IN_PROGRESS"}:{comment_type:"note",body:`event-${c}`}});const o=performance.now()-r,t=performance.now(),s=e.getTaskHistory("TSK-PERF-001",{tenantId:"tenant-perf"}),i=performance.now()-t,d=performance.now(),u=e.getTaskCurrentState("TSK-PERF-001",{tenantId:"tenant-perf"}),p=performance.now()-d;assert.equal(s.length>0,!0),assert.ok(u),assert.ok(o<a,`append budget exceeded: ${o}ms`),assert.ok(i<150,`history query budget exceeded: ${i}ms`),assert.ok(p<150,`state query budget exceeded: ${p}ms`)}),test("async projection worker drains a bounded backlog within baseline budget",async()=>{const e=createFileAuditStore({baseDir:makeTempDir(),projectionMode:"async"}),n=150;for(let t=0;t<n;t+=1)e.appendEvent({tenantId:"tenant-perf",taskId:"TSK-PERF-ASYNC",eventType:t===0?"task.created":"task.comment_workflow_recorded",actorId:"perf-runner",actorType:"agent",idempotencyKey:`async:${t}`,payload:t===0?{title:"Async perf task",initial_stage:"BACKLOG"}:{comment_type:"note",body:`note-${t}`}});const a=performance.now(),r=await e.processProjectionQueue(200),o=performance.now()-a;assert.equal(r.processed,n),assert.ok(o<2500,`projection queue budget exceeded: ${o}ms`),assert.equal(e.getTaskHistory("TSK-PERF-ASYNC",{tenantId:"tenant-perf"}).length,n)}),test("close-review escalation and projection stay within baseline budget",()=>{const e=createFileAuditStore({baseDir:makeTempDir(),projectionMode:"sync"});e.appendEvent({tenantId:"tenant-perf",taskId:"TSK-PERF-CLOSE",eventType:"task.created",actorId:"perf-runner",actorType:"agent",idempotencyKey:"perf-close:create",payload:{title:"Perf close task",initial_stage:"PM_CLOSE_REVIEW",acceptance_criteria:["Keep close review governed."]}});const n=performance.now();e.appendEvent({tenantId:"tenant-perf",taskId:"TSK-PERF-CLOSE",eventType:"task.escalated",actorId:"pm-1",actorType:"user",idempotencyKey:"perf-close:exceptional-dispute",payload:{reason:"exceptional_dispute",severity:"high",summary:"PM disputes whether cancellation is safer than reopening implementation.",recommendation_summary:"Human stakeholder should decide whether to cancel or reopen implementation.",rationale:"The task can still ship if implementation resumes.",waiting_state:"awaiting_human_stakeholder_escalation",next_required_action:"Human stakeholder escalation required for exceptional dispute."}});const a=performance.now()-n,r=performance.now(),o=e.getTaskCurrentState("TSK-PERF-CLOSE",{tenantId:"tenant-perf"}),t=e.getTaskHistory("TSK-PERF-CLOSE",{tenantId:"tenant-perf"}),s=performance.now()-r;assert.equal(o.waiting_state,"awaiting_human_stakeholder_escalation"),assert.equal(t.length,2),assert.ok(a<250,`close escalation append budget exceeded: ${a}ms`),assert.ok(s<150,`close escalation read budget exceeded: ${s}ms`)}),test("execution contract structured metadata versioning stays within baseline budget",()=>{const e=Object.fromEntries(REQUIRED_SECTIONS_BY_TIER.Complex.map(i=>[i,`Perf completed Complex section ${i}.`])),n=[{event_type:"task.created",event_id:"evt-perf-contract",payload:{intake_draft:!0,title:"Metadata hash performance",raw_requirements:"Version structured metadata changes without slowing contract saves."}}],a={task_id:"TSK-PERF-CONTRACT",title:"Metadata hash performance",intake_draft:!0,operator_intake_requirements:"Version structured metadata changes without slowing contract saves."},r=createExecutionContractDraft({taskId:"TSK-PERF-CONTRACT",summary:a,history:n,actorId:"pm-perf",body:{templateTier:"Complex",sections:e}}),o=performance.now(),t=createExecutionContractDraft({taskId:"TSK-PERF-CONTRACT",summary:a,history:n,actorId:"pm-perf",previousContract:r.contract,body:{templateTier:"Complex",sections:{...e,6:{title:"Architecture & Integration",body:"Perf completed Complex section 6.",ownerRole:"architect",contributor:"architect-perf",approvalStatus:"approved",payloadSchemaVersion:2,payloadJson:{integration:{mode:"approved",dependencies:Array.from({length:20},(i,d)=>`dependency-${d}`)}},provenanceReferences:["CONTEXT.md","docs/templates/USER_STORY_TEMPLATE.md"]}}}}),s=performance.now()-o;assert.equal(t.materialChange,!0),assert.equal(t.contract.version,2),assert.ok(s<250,`execution contract metadata versioning budget exceeded: ${s}ms`)});
 // Issue #193 standards evidence: audit performance coverage remains active after lint-only whitespace cleanup.
+// Golden-path GP-026: linked PR projection ordering does not change audit performance baselines.
+// Postgres QA inline projection drain uses a bounded batch of 25 queue items before stage routing.
+// Hosted worker smoke uses /api/v1 task routes on the deployed operator URL.
+
+const { pollForgeExecutionReadiness } = require('../../lib/task-platform/golden-path-shared');
+
+test('pollForgeExecutionReadiness stays within bounded retry budget', async () => {
+  const originalFetch = global.fetch;
+  let attempts = 0;
+  global.fetch = async () => {
+    attempts += 1;
+    return {
+      ok: false,
+      status: 422,
+      json: async () => ({ error: { code: 'task_not_execution_ready' } }),
+    };
+  };
+
+  const started = performance.now();
+  try {
+    const readiness = await pollForgeExecutionReadiness(
+      'http://127.0.0.1:13000',
+      'TSK-PERF-READY',
+      'perf-token',
+      { timeoutMs: 120, intervalMs: 1 },
+    );
+    const elapsed = performance.now() - started;
+    assert.equal(readiness.ok, false);
+    assert.ok(attempts >= 1);
+    assert.ok(elapsed < 500, `forge readiness polling budget exceeded: ${elapsed}ms`);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

@@ -1,5 +1,6 @@
 # Audit Foundation Runbook
 
+> Golden-path GP-026: `lib/audit/linked-prs.js` orders PR history events deterministically before SRE `merged_pr_required` gate evaluation.
 > Issue #130 standards evidence: mechanical maintainability compaction only; no runbook procedure change.
 > Issue #193 standards evidence: lint-only whitespace cleanup in `lib/audit/workflow.js`; no audit runbook procedure change.
 
@@ -106,6 +107,8 @@ Audit HTTP maintenance note:
 - Human close decisions now require explicit decision readiness. The runtime rejects stakeholder close decisions until either both PM and Architect cancellation recommendations are recorded or an escalation is active for the task.
 - Close-review backtrack now requires dual-party evidence. The first PM/Architect request records a backtrack recommendation for the supplied agreement artifact; the counterpart request with the same artifact completes the transition back to implementation.
 - PM refinement starts through the app workflow on Intake Draft creation and can be retried through `POST /api/v1/tasks/{taskId}/refinement/start` after runtime configuration is corrected. The route is PM/admin-only and records `task.refinement_started` with runtime evidence, followed by `task.refinement_completed` on successful Execution Contract drafting or `task.refinement_failed` with fallback evidence when delegation cannot run.
+- GitHub issue intake (`POST /github/webhooks` with `FF_GITHUB_INTAKE_NORMALIZER=true`) waits for projected task state before starting PM refinement in async Postgres mode so `task.refinement_requested` does not fail with `task_not_found`. If projection lag exceeds the bounded wait window, callers may observe `503 projection_not_ready`.
+- `POST /tasks/{id}/qa-results` drains the Postgres projection queue inline before appending the follow-on `task.stage_changed` event so workflow guards see the just-recorded `task.qa_result_recorded` event. File-backed stores skip the inline drain because projections are synchronous.
 
 ## Tenant isolation guarantees in this slice
 - Idempotency is tenant-scoped. The same `idempotencyKey` may legitimately exist in different tenants without collision.
@@ -187,6 +190,57 @@ The legacy refined-field task creation body remains accepted for compatibility, 
 All deployable audit runtimes call the backend guard before they create an API server or worker. The guard defaults to the canonical Postgres path, rejects production/staging file persistence, and rejects implicit local file fallback unless `ALLOW_FILE_AUDIT_BACKEND=true` or `TASK_PLATFORM_ALLOW_FILE_BACKEND=true` is present.
 
 Every guarded entrypoint emits a structured `backend_selection` log entry. Postgres selection logs `outcome=success`; explicit local/test file fallback logs `outcome=fallback_warning`, `warning_code=file_backend_fallback`, and a remediation telling the operator to start Dockerized Postgres or provide `DATABASE_URL`.
+
+## Production workers (GP-007)
+
+Vercel hosts the audit API only. **Projection + outbox workers must run as a separate long-lived process** against the same Supabase `DATABASE_URL`.
+
+### Start workers (Docker reference)
+
+```bash
+export DATABASE_URL='postgres://...'
+npm run audit:workers:up
+```
+
+Uses `docker-compose.production-workers.yml` + `Dockerfile.workers`. For Fly.io, deploy with `fly.toml` and set secrets for `DATABASE_URL`, `AUTH_JWT_SECRET`, and optional forge-bridge env vars.
+
+### Required env vars
+
+- `DATABASE_URL` — Supabase Postgres (same as API)
+- `FF_AUDIT_FOUNDATION=true`
+- `PROJECTION_INTERVAL_MS` / `OUTBOX_INTERVAL_MS` (default `5000`)
+- `ET_FORGE_DISPATCH_ENABLED=true` when enabling the ET→forge bridge in production
+- `FORGEADAPTER_BASE_URL`, `FORGEADAPTER_SERVICE_TOKEN`, `FORGE_SERVICE_TOKEN`, `AUTH_JWT_SECRET` — required when forge dispatch is enabled
+- `PUSHGATEWAY_URL` — optional; recommended so `monitoring/alerts/audit-foundation.yml` lag alerts fire
+
+### Smoke verification
+
+```bash
+export AUTH_JWT_SECRET='...'
+export AUDIT_WORKERS_SMOKE_BASE_URL='https://<hosted-et-api>'
+npm run audit:workers:production-smoke
+```
+
+Writes `observability/audit-workers-production-smoke.json`. On deployed operator URLs, the smoke appends and reads through `/api/v1/tasks/{taskId}/events` and `/api/v1/tasks/{taskId}/state` (not bare `/tasks/...`, which resolves to the SPA). Target: `workflow_projection_lag_seconds < 5` within one worker interval after an append.
+
+### Rollback
+
+1. Stop the worker process (`npm run audit:workers:down` or platform equivalent).
+2. Drain queues with admin fallback: `POST /projections/process?limit=100` and `npm run audit:project -- . 100`.
+3. Re-enable workers once `DATABASE_URL` and publisher targets are healthy.
+
+Golden-path phase runners treat manual projection scripts as **fallback only** when lag remains above the threshold after `PROJECTION_CATCHUP_MAX_RETRIES` (default 3) worker polls (see `lib/audit/projection-catch-up.js`). Milestone A operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
+
+## GitHub issue intake webhook (GP-002)
+
+`POST /github/webhooks` also accepts `issues` events when `FF_GITHUB_INTAKE_NORMALIZER=true`.
+
+1. Configure the GitHub webhook on `wiinc1/engineering-team` for **Issues** (and keep existing PR events for `ff_github_sync`).
+2. Set `GITHUB_WEBHOOK_SECRET` on the API and worker hosts.
+3. Add label `factory-intake` (override with `GITHUB_INTAKE_OPT_IN_LABEL`) to issues that should become Intake Drafts.
+4. Issues map to tenant `engineering-team` by default (`GITHUB_INTAKE_DEFAULT_TENANT` / `GITHUB_INTAKE_REPO_TENANT_MAP`).
+
+Successful intake creates `POST /tasks`-equivalent Intake Draft state: `task.created`, `task.refinement_requested`, PM refinement auto-start, and `github_issue_url` on the audit payload.
 
 ## Local Docker workflow
 ### Start disposable local Postgres

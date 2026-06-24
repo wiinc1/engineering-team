@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-06-23T22:08:34.284Z",
+  "step": "GP-002",
+  "baseUrl": "http://127.0.0.1:13000",
+  "issueNumber": 980474,
+  "status": 201,
+  "ok": true,
+  "body": {
+    "received": true,
+    "created": true,
+    "deliveryId": "gp-002-smoke-980474",
+    "taskId": "TSK-6293B609",
+    "tenantId": "engineering-team",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/980474",
+    "githubIssueNumber": 980474,
+    "intakeDraft": true,
+    "nextRequiredAction": "PM refinement required",
+    "pmRefinement": {
+      "status": "failed"
+    },
+    "duplicate": false
+  },
+  "summary": {
+    "passed": "TSK-6293B609",
+    "taskId": "TSK-6293B609"
+  }
+}

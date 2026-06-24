@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-b-complete",
+  "milestone": "B",
+  "title": "Factory runs without scripted contracts",
+  "generatedAt": "2026-06-24T18:51:19.141Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "standardsCheck": true,
+    "verifyPassed": true,
+    "factoryPhase6Complete": true,
+    "projectionWorkerPreference": true,
+    "workerModes": 3,
+    "manualModes": 0
+  },
+  "exitCriteria": {
+    "milestoneABaseline": true,
+    "gp012IntakeAgentsSeeded": true,
+    "gp009ForgeSeedOnPhase1": true,
+    "gp013DelegationSmoke": true,
+    "agentDrivenPhase1Contract": true,
+    "projectionWorkerPreference": true,
+    "factoryPhase6Complete": true,
+    "validationWithoutSkip": true
+  },
+  "artifacts": {
+    "verify": "observability/milestone-b-staging/milestone-b-orchestration-verify.json",
+    "milestoneA": "observability/milestone-b-staging/milestone-a-staging-verify.json",
+    "factoryQueue": "observability/milestone-b-staging/factory-milestone-b-queue-mqsfjeoy.json",
+    "factoryEvidence": "observability/milestone-b-staging/factory-delivery/factory-milestone-b-mqsfjeoy.json"
+  },
+  "factoryDelivery": {
+    "queueId": "factory-milestone-b-mqsfjeoy",
+    "taskId": "TSK-017",
+    "forgeTaskId": "TSK-GOLDENSFJEOY",
+    "stage": "phase6_complete"
+  },
+  "notes": [
+    "Milestone B verify uses FF_FACTORY_AGENT_DRIVEN_PHASE1 with fixture delegation runner (FACTORY_USE_FIXTURE_DELEGATION=true).",
+    "Projection catch-up prefers always-on workers when /metrics is queried with JWT auth; lag polling waits before first read.",
+    "Verify scripts use per-run queue files to avoid stale queue items from prior runs."
+  ]
+}

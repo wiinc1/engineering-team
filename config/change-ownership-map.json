@@ -90,6 +90,7 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/audit-api\\.test\\.js$",
+            "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/unit/audit-api-deploy-wrapper\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
             "^tests/unit/audit-jwt-auth\\.test\\.js$",
@@ -109,6 +110,7 @@
           "name": "security",
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
+            "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/security/audit-api-deploy-wrapper\\.security\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
             "^tests/security/projects-security\\.test\\.js$"
@@ -150,13 +152,18 @@
         "^db/migrations/007_.*\\.sql$",
         "^db/migrations/008_.*\\.sql$",
         "^db/migrations/013_autonomous_delivery_metrics(\\.down)?\\.sql$",
-        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker)\\..+$"
+        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke|verify-et-forge-bridge-smoke|verify-factory-staging-smoke|verify-milestone-a-staging|replay-golden-path-staging|verify-gp-002-github-intake-smoke|verify-gp-013-delegation-smoke|verify-gp-015-qa-fail-smoke|golden-path-smoke-lib)\\..+$",
+        "^Dockerfile\\.workers$",
+        "^docker-compose\\.production-workers\\.yml$",
+        "^fly\\.toml$"
       ],
       "test_requirements": [
         {
           "name": "unit",
           "patterns": [
             "^tests/unit/audit-.*\\.test\\.js$",
+            "^tests/unit/github-intake-normalizer\\.test\\.js$",
+            "^tests/unit/projection-catch-up\\.test\\.js$",
             "^tests/unit/autonomous-delivery-metrics\\.test\\.js$",
             "^tests/unit/execution-contracts\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
@@ -172,6 +179,7 @@
             "^tests/contract/autonomous-delivery-metrics\\.contract\\.test\\.js$",
             "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
+            "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/integration/autonomous-delivery-metrics\\.integration\\.test\\.js$",
             "^tests/integration/audit-migrations\\.integration\\.test\\.js$",
             "^tests/e2e/audit-foundation\\.e2e\\.test\\.js$",
@@ -182,6 +190,7 @@
           "name": "security-or-performance",
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
+            "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
             "^tests/security/live-task-updates\\.security\\.test\\.js$",
             "^tests/performance/live-task-updates\\.performance\\.test\\.js$",
@@ -491,7 +500,9 @@
         "^db/migrations/012_projects(\\.down)?\\.sql$",
         "^db/migrations/014_ai_agents_management\\.sql$",
         "^lib/forge-local-smoke/seed-task\\.js$",
-        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke|seed-forge-local-smoke-task)\\.js$"
+        "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke|seed-forge-local-smoke-task|dev-golden-path-stack|replay-golden-path-postgres|run-golden-path-phase1|run-golden-path-phases|seed-golden-path-phase0|submit-factory-requirements|run-factory-orchestrator|run-unit-tests)\\.js$",
+        "^scripts/dev-golden-path/.+\\.js$",
+        "^docker-compose\\.golden-path\\.yml$"
       ],
       "test_requirements": [
         {
@@ -507,7 +518,11 @@
         "^tests/unit/task-platform-merge-readiness-gate\\.test\\.js$",
         "^tests/unit/projects-production-smoke\\.test\\.js$",
         "^tests/unit/forge-canonical-task\\.test\\.js$",
-        "^tests/unit/seed-forge-local-smoke-task\\.test\\.js$"
+        "^tests/unit/seed-forge-local-smoke-task\\.test\\.js$",
+        "^tests/unit/et-forge-dispatch-bridge\\.test\\.js$",
+        "^tests/unit/projection-catch-up\\.test\\.js$",
+        "^tests/unit/factory-delivery\\.test\\.js$",
+            "^tests/unit/audit-postgres-pool\\.test\\.js$"
       ]
     },
         {
@@ -515,6 +530,7 @@
           "patterns": [
             "^tests/contract/forge-execution-readiness\\.contract\\.test\\.js$",
             "^tests/integration/forge-local-smoke-seed\\.integration\\.test\\.js$",
+            "^tests/unit/projection-catch-up\\.test\\.js$",
             "^tests/integration/task-assignment-integration\\.test\\.js$",
             "^tests/integration/task-platform-source-policy\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
@@ -536,6 +552,7 @@
           "patterns": [
             "^docs/runbooks/task-platform-rollout\\.md$",
             "^docs/runbooks/forge-local-smoke\\.md$",
+            "^docs/runbooks/golden-path-autonomous-delivery\\.md$",
             "^docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership\\.md$"
           ]
         }

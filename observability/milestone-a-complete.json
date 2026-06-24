@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-a-complete",
+  "milestone": "A",
+  "title": "Coordinated stack factory is reliable",
+  "generatedAt": "2026-06-24T18:08:30.000Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "standardsCheck": true,
+    "verifyPassed": true,
+    "factoryPhase6Complete": true,
+    "projectionLagSeconds": 0
+  },
+  "exitCriteria": {
+    "stackUp": true,
+    "projectionLagUnderThreshold": true,
+    "gp002IntakeSmoke": true,
+    "etForgeBridgeSmoke": true,
+    "milestoneAVerify": true,
+    "factoryPhase1Complete": true,
+    "factoryPhase6Complete": true,
+    "validationWithoutSkip": true
+  },
+  "artifacts": {
+    "verify": "observability/milestone-a-staging/milestone-a-staging-verify.json",
+    "workers": "observability/milestone-a-staging/audit-workers-production-smoke.json",
+    "bridge": "observability/milestone-a-staging/et-forge-bridge-smoke.json",
+    "intake": "observability/milestone-a-staging/gp-002-github-intake-smoke.json",
+    "factoryStagingSmoke": "observability/milestone-a-staging/factory-staging-smoke.json",
+    "factoryQueue": "observability/factory-milestone-a-queue.json",
+    "factoryEvidence": "observability/factory-delivery/factory-mqsdwq7q-b74ec4.json"
+  },
+  "factoryDelivery": {
+    "queueId": "factory-mqsdwq7q-b74ec4",
+    "taskId": "TSK-006",
+    "projectId": "PRJ-26B01369",
+    "stage": "phase6_complete",
+    "stepsCompleted": 27,
+    "durationMs": 121319
+  },
+  "notes": [
+    "Milestone A proof uses npm run dev:golden-path:up (Postgres :15432, audit API :13000, workers, forgeadapter :14010, UI :15173).",
+    "Factory orchestrator advanced intake → phase1 → phase6 with GP-023 validation (lint, test:unit, standards:check) — no --skip-validation.",
+    "Worker smoke confirms projection lag 0 without manual scripts; phase1 contract steps may still fall back to manual_script when lag spikes during writes (Milestone B hardening)."
+  ]
+}

@@ -11,3 +11,25 @@ docs/design/no-design-impact.txt
 __pycache__/
 *.pyc
 .env*
+
+# Transient golden-path / factory observability (canonical evidence is committed explicitly)
+.openclaw/
+observability/golden-path-local-dev/
+observability/golden-path-local-stack/
+observability/golden-path-postgres-stack/
+observability/factory-delivery/stack/
+observability/factory-delivery/factory-*.json
+observability/factory-delivery-queue.json
+observability/factory-e2e-delivery/
+observability/factory-e2e-queue.json
+observability/factory-full-e2e-delivery/
+observability/factory-full-e2e-queue.json
+observability/factory-milestone-a-queue.json
+observability/factory-prd-gap-close-queue.json
+observability/golden-path-pilot-debug.json
+observability/golden-path-postgres-pilot-2026-*.json
+observability/milestone-*-staging/factory-milestone-c-queue-*.json
+observability/milestone-*-staging/factory-delivery/stack/
+observability/workflow-audit.log
+observability/specialist-delegation.jsonl
+observability/*.png

@@ -25,8 +25,16 @@ test('resolveSpecialistMap merges defaults with overrides', () => {
 
 test('resolveRuntimeAgent uses the configured alias map', () => {
   assert.equal(resolveRuntimeAgent('pm'), 'pm');
+  assert.equal(resolveRuntimeAgent('architect'), 'architect');
   assert.equal(resolveRuntimeAgent('engineer'), 'sr-engineer');
+  assert.equal(resolveRuntimeAgent('principal'), 'principal');
+  assert.equal(resolveRuntimeAgent('jr-engineer'), 'jr-engineer');
+  assert.equal(resolveRuntimeAgent('sr-engineer'), 'sr-engineer');
   assert.equal(resolveRuntimeAgent('qa'), 'qa-engineer');
+  assert.equal(resolveRuntimeAgent('sre'), 'sre');
+  assert.equal(resolveRuntimeAgent('engineer-jr'), 'jr-engineer');
+  assert.equal(resolveRuntimeAgent('engineer-sr'), 'sr-engineer');
+  assert.equal(resolveRuntimeAgent('engineer-principal'), 'principal');
   assert.equal(resolveRuntimeAgent('engineer', {
     OPENCLAW_SPECIALIST_MAP: JSON.stringify({ engineer: 'jr-engineer' }),
   }), 'jr-engineer');
