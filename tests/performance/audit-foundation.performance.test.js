@@ -2,6 +2,7 @@ const test=require("node:test"),assert=require("node:assert/strict"),fs=require(
 // Issue #193 standards evidence: audit performance coverage remains active after lint-only whitespace cleanup.
 // Golden-path GP-026: linked PR projection ordering does not change audit performance baselines.
 // Postgres QA inline projection drain uses a bounded batch of 25 queue items before stage routing.
+// Hosted worker smoke uses /api/v1 task routes on the deployed operator URL.
 
 const { pollForgeExecutionReadiness } = require('../../lib/task-platform/golden-path-shared');
 

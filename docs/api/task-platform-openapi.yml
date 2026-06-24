@@ -13,6 +13,7 @@ info:
     Golden-path phase scripts prefer always-on worker lag from `/metrics` via `lib/audit/projection-catch-up.js`, falling back to manual projection catch-up only when worker metrics are stale.
     `lib/task-platform/golden-path-shared.js` exposes `pollForgeExecutionReadiness` for bounded forge readiness polling during Postgres replay seeding.
     Standalone golden-path smoke verifiers: `npm run golden-path:smoke:gp-002`, `npm run golden-path:smoke:gp-015`, and `npm run golden-path:smoke:gp-013` (GP-013 accepts `--openclaw-url` for live delegation).
+    Hosted worker preflight uses `npm run audit:workers:production-smoke` against `/api/v1/tasks/{taskId}/events` and `/state` on the deployed operator URL.
     Golden-path phase 4 waits for contract-coverage audit history rows matching the current implementation attempt before leaving `IMPLEMENTATION`; phase 5 waits for `task.sre_monitoring_started` to project before SRE approve (`lib/task-platform/golden-path-phases.js`).
 servers:
   - url: /api/v1

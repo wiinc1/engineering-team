@@ -54,8 +54,7 @@ async function assertStackReady(baseUrl) {
 }
 
 async function seedForgeTask(baseUrl, forgeServiceToken, forgeTaskId = 'TSK-GOLDEN001') {
-  process.env.DATABASE_URL = process.env.DATABASE_URL || DEFAULTS.databaseUrl;
-  process.env.AUDIT_STORE_BACKEND = process.env.AUDIT_STORE_BACKEND || 'postgres';
+  ensurePostgresProcessEnv();
 
   const { createAuditStore } = require('../lib/audit');
   const { assertAuditBackendConfiguration } = require('../lib/audit/config');
@@ -128,17 +127,10 @@ async function main() {
       : 'TSK-GOLDEN001',
   );
 
+  ensurePostgresProcessEnv();
   await assertStackReady(baseUrl);
   await seedForgeTask(baseUrl, DEFAULTS.forgeServiceToken, forgeTaskId);
-
-  const env = {
-    AUTH_JWT_SECRET: readArg('--jwt-secret', DEFAULTS.jwtSecret),
-    FORGE_SERVICE_TOKEN: readArg('--forge-service-token', DEFAULTS.forgeServiceToken),
-    FORGEADAPTER_SERVICE_TOKEN: readArg('--forge-adapter-token', DEFAULTS.forgeAdapterToken),
-    DATABASE_URL: process.env.DATABASE_URL || DEFAULTS.databaseUrl,
-    AUDIT_STORE_BACKEND: 'postgres',
-    PGSSLMODE: process.env.PGSSLMODE || 'disable',
-  };
+  const env = buildReplayChildEnv();
 
   if (Number(fromPhase) <= 1) {
     const phase1Args = [
@@ -211,6 +203,24 @@ async function main() {
     uiTasksUrl: `${DEFAULTS.uiUrl}/tasks`,
     preserveDataHint: 'npm run dev:golden-path:down -- --keep-postgres',
   }, null, 2)}\n`);
+}
+
+function ensurePostgresProcessEnv() {
+  process.env.DATABASE_URL = process.env.DATABASE_URL || DEFAULTS.databaseUrl;
+  process.env.AUDIT_STORE_BACKEND = process.env.AUDIT_STORE_BACKEND || 'postgres';
+  process.env.PGSSLMODE = process.env.PGSSLMODE || 'disable';
+}
+
+function buildReplayChildEnv() {
+  ensurePostgresProcessEnv();
+  return {
+    AUTH_JWT_SECRET: readArg('--jwt-secret', DEFAULTS.jwtSecret),
+    FORGE_SERVICE_TOKEN: readArg('--forge-service-token', DEFAULTS.forgeServiceToken),
+    FORGEADAPTER_SERVICE_TOKEN: readArg('--forge-adapter-token', DEFAULTS.forgeAdapterToken),
+    DATABASE_URL: process.env.DATABASE_URL,
+    AUDIT_STORE_BACKEND: 'postgres',
+    PGSSLMODE: process.env.PGSSLMODE,
+  };
 }
 
 main().catch((error) => {
