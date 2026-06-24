@@ -17,6 +17,7 @@
 | Factory evidence | `observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqslnf5q.json` |
 | Closeout report | `observability/factory-closeout/TSK-013.json` |
 | Milestone complete | `observability/milestone-d-complete.json`, `observability/milestone-e-complete.json` |
+| Live GP-013 verify | `npm run milestone-c:verify:live` passed 2026-06-24T22:03Z (`factory-milestone-c-mqsmdppp`) |
 
 ### Prior Postgres delegation replay
 
@@ -52,7 +53,7 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 - Evidence in this report: golden-path phase runners, Postgres pilot evidence JSON, manual-step classifications, validation command output, forge lifecycle jobs, live OpenClaw delegation smoke, UI sign-in verification, and closeout events for issue #271.
 - GP-013: executed in replay path with `--require-delegation-smoke` and `FF_REAL_SPECIALIST_DELEGATION=true` against `http://127.0.0.1:18789`.
 - GP-023: `validation.ok: true` for `lint`, `test:unit`, `standards:check` (vitest worktree exclusion fix, PR #277).
-- Factory orchestrator milestones A–E proven on coordinated stack only. Vercel and Supabase are **not** part of engineering-team factory runtime; GP-024/GP-025 apply to target apps under delivery.
+- Gap observed: GP-022 auto-merge remains simulated until `FF_FACTORY_AUTO_MERGE` and `GITHUB_TOKEN` are set in verify runs. Documented rationale: coordinated local stack proves factory milestones A–E; Vercel and Supabase are not part of engineering-team factory runtime; GP-024/GP-025 apply to target apps under delivery. Source https://github.com/wiinc1/engineering-team/issues/269.
 
 ## Required Evidence
 
