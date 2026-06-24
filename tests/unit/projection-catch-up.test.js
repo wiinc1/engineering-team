@@ -8,6 +8,10 @@ const {
   mergeStepsCompleted,
   pollForgeExecutionReadiness,
 } = require('../../lib/task-platform/golden-path-shared');
+const {
+  readmeHasGoldenPathMarker,
+  addReadmeGoldenPathMarker,
+} = require('../../lib/task-platform/golden-path-phases');
 
 test('runProjectionCatchUp skips file-backed local stack', async () => {
   const persistDir = fs.mkdtempSync(path.join(os.tmpdir(), 'projection-catchup-'));
@@ -80,4 +84,16 @@ test('pollForgeExecutionReadiness retries until forge execution-readiness succee
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('golden-path readme marker helpers stay idempotent for phase 4 retest setup', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gp-projection-readme-'));
+  const readme = path.join(dir, 'README.md');
+  fs.writeFileSync(readme, '# App\n');
+  assert.equal(readmeHasGoldenPathMarker(readme), false);
+  const first = addReadmeGoldenPathMarker(readme);
+  const second = addReadmeGoldenPathMarker(readme);
+  assert.equal(first.changed, true);
+  assert.equal(second.changed, false);
+  assert.equal(readmeHasGoldenPathMarker(readme), true);
 });

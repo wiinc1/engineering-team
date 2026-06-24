@@ -25,6 +25,9 @@ test('audit foundation OpenAPI documents forge execution-readiness route and can
     'golden-path:smoke:gp-002',
     'golden-path:smoke:gp-015',
     'golden-path:smoke:gp-013',
+    'contract-coverage audit history rows matching the current implementation attempt',
+    'task.sre_monitoring_started',
+    'golden-path-phases.js',
   ]) {
     assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
