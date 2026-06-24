@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
+
 let input = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk) => {
@@ -21,14 +23,15 @@ process.stdin.on('end', () => {
     }));
     return;
   }
-  const agentId = process.env.FIXTURE_RUNTIME_AGENT_ID || payload.specialist;
+  const runtimeAgentId = process.env.FIXTURE_RUNTIME_AGENT_ID || resolveRuntimeAgent(payload.specialist);
   const sessionId = process.env.FIXTURE_RUNTIME_SESSION_ID || `runtime-session-${payload.delegationId}`;
   process.stdout.write(JSON.stringify({
-    agentId,
+    agentId: runtimeAgentId,
     sessionId,
-    output: `runtime handled by ${agentId}`,
+    output: `runtime handled by ${runtimeAgentId}`,
     ownership: {
-      agentId,
+      specialistId: payload.specialist,
+      runtimeAgentId,
       sessionId,
       runtime: 'fixture-openclaw',
     },

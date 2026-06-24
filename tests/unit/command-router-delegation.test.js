@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const runtimeRunnerPath = path.join(__dirname, '..', 'fixtures', 'specialist-runtime-runner.js');
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
 const repoRoot = path.join(__dirname, '..', '..');
 const tasksDir = path.join(repoRoot, 'tasks');
 const taskPath = path.join(tasksDir, 'TSK-998-runtime-test.md');
@@ -33,7 +34,9 @@ test('taskMove wires runtime-backed specialist delegation into IN_PROGRESS flow'
   const artifactLines = fs.readFileSync(artifactPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
   const artifact = artifactLines.at(-1);
   assert.equal(artifact.target_specialist, 'engineer');
-  assert.equal(artifact.actual_agent, 'engineer');
+  assert.equal(artifact.actual_agent, resolveRuntimeAgent('engineer'));
+  assert.equal(artifact.ownership.specialistId, 'engineer');
+  assert.equal(artifact.ownership.runtimeAgentId, resolveRuntimeAgent('engineer'));
   assert.equal(artifact.ownership.runtime, 'fixture-openclaw');
 });
 

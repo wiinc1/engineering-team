@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const { buildOrchestrationView, evaluateOrchestrationStart } = require('../../lib/audit/orchestration');
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
 const { createTaskPlatformService } = require('../../lib/task-platform');
 const { ensurePilotAgents } = require('../../lib/task-platform/pilot-agents');
 const {
@@ -180,7 +181,8 @@ test('runPilotDelegationReadiness writes app-dispatched evidence with fixture ru
 
   assert.equal(evidence.pilotAgents.ok, true);
   assert.equal(evidence.appWorkflowDispatch.delegated, true);
-  assert.equal(evidence.appWorkflowDispatch.agentId, 'engineer');
+  assert.equal(evidence.appWorkflowDispatch.agentId, resolveRuntimeAgent('engineer'));
+  assert.equal(evidence.appWorkflowDispatch.specialist, 'engineer');
   assert.match(evidence.appWorkflowDispatch.sessionId, /^runtime-session-/);
   assert.ok(evidence.appWorkflowDispatch.delegationArtifactPath.endsWith('specialist-delegation.jsonl'));
   assert.equal(evidence.appWorkflowDispatch.runtimeAttribution.delegated, true);
