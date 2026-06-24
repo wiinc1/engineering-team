@@ -33,6 +33,7 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 - Evidence in this report: golden-path phase runners, Postgres pilot evidence JSON, manual-step classifications, validation command output, forge lifecycle jobs, live OpenClaw delegation smoke, UI sign-in verification, and closeout events for issue #271.
 - GP-013: executed in replay path with `--require-delegation-smoke` and `FF_REAL_SPECIALIST_DELEGATION=true` against `http://127.0.0.1:18789`.
 - GP-023: `validation.ok: true` for `lint`, `test:unit`, `standards:check` (vitest worktree exclusion fix, PR #277).
+- Gap observed: hosted staging replay (Supabase `DATABASE_URL`, projection workers, webhooks) not yet executed. Documented rationale: local golden-path stack proves phases 0–6; hosted promotion requires deployed ET API, operator session, and Supabase-backed workers. Source https://github.com/wiinc1/engineering-team/issues/269.
 
 ## Required Evidence
 
