@@ -531,6 +531,41 @@ Same as #209:
 
 ---
 
+## Factory orchestrator (single-server autonomous loop)
+
+With the golden-path stack running on this server (`npm run dev:golden-path:up`), submit requirements and let the orchestrator advance each queued item through intake → phase 1 → phases 2–6.
+
+```bash
+# 1) Start stack (optionally enable continuous orchestrator ticks)
+FF_FACTORY_ORCHESTRATOR_ENABLED=true \
+OPENCLAW_BASE_URL=http://127.0.0.1:18789 \
+npm run dev:golden-path:up
+
+# 2) Submit requirements (JSON file or inline)
+cat > /tmp/factory-requirements.json <<'EOF'
+[
+  {
+    "title": "Add README factory marker",
+    "requirements": "Docs-only Simple tier change proving autonomous SDLC on local stack.",
+    "templateTier": "Simple"
+  }
+]
+EOF
+npm run factory:submit -- --file /tmp/factory-requirements.json
+
+# 3) Advance queue (one-shot or loop)
+npm run factory:orchestrator -- --once
+# or continuous:
+npm run factory:orchestrator -- --interval-ms 15000
+```
+
+Queue state: `observability/factory-delivery-queue.json`  
+Per-item evidence: `observability/factory-delivery/<queue-id>.json`
+
+The orchestrator reuses golden-path phase runners (`run-golden-path-phase1.js`, `run-golden-path-phases.js`) and existing `ET_FORGE_DISPATCH_ENABLED` bridge behavior from `audit-workers`.
+
+---
+
 ## Automation priority (from manual-step inventory)
 
 | Priority | Step IDs | Why |

@@ -1,5 +1,6 @@
 // Golden-path replay seeds forge tasks via Postgres audit store before GP-011 dispatch.
 // Hosted worker preflight uses task-platform `/api/v1/tasks/{taskId}/events` append routes on the operator URL.
+// Factory orchestrator advances queued requirements through golden-path phases on the local stack.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

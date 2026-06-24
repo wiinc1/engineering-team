@@ -14,6 +14,10 @@ const {
   seedAuthAdmin,
   killPid,
 } = require('./runtime');
+const {
+  factoryOrchestratorEnabled,
+  startFactoryOrchestrator,
+} = require('./factory-orchestrator');
 
 function parseArgs(argv) {
   const args = new Set(argv.slice(2));
@@ -204,6 +208,27 @@ function bindShutdown(options, processes, mockServers) {
   process.on('SIGTERM', shutdown);
 }
 
+function attachFactoryOrchestrator(processes, ctx) {
+  if (!factoryOrchestratorEnabled()) return;
+  processes.push(startFactoryOrchestrator(ctx));
+  process.stdout.write('Factory orchestrator enabled (FF_FACTORY_ORCHESTRATOR_ENABLED=true)\n');
+}
+
+function persistStackState({ etApiUrl, ui, forgeadapter, openclawUrl, hermesUrl, processes, logsDir }) {
+  writeState({
+    startedAt: new Date().toISOString(),
+    services: {
+      auditApi: { url: etApiUrl },
+      ui: ui ? { url: ui.url } : null,
+      forgeadapter: forgeadapter ? { url: forgeadapter.url, token: DEFAULTS.forgeadapterToken } : null,
+      openclaw: { url: openclawUrl },
+      hermes: { url: hermesUrl },
+    },
+    processes: processes.map(({ name, pid, logPath }) => ({ name, pid, logPath })),
+    logsDir,
+  });
+}
+
 async function commandUp(options) {
   if (readState()) {
     throw new Error(`Stack already running (see ${STATE_FILE}). Run: npm run dev:golden-path:down`);
@@ -231,18 +256,15 @@ async function commandUp(options) {
     processes.push(ui.process);
   }
 
-  writeState({
-    startedAt: new Date().toISOString(),
-    services: {
-      auditApi: { url: etApiUrl },
-      ui: ui ? { url: ui.url } : null,
-      forgeadapter: forgeadapter ? { url: forgeadapter.url, token: DEFAULTS.forgeadapterToken } : null,
-      openclaw: { url: openclawUrl },
-      hermes: { url: hermesUrl },
-    },
-    processes: processes.map(({ name, pid, logPath }) => ({ name, pid, logPath })),
+  attachFactoryOrchestrator(processes, {
+    sharedEnv,
     logsDir,
+    etApiUrl,
+    forgeadapterUrl: forgeadapter?.url || `http://127.0.0.1:${options.forgeadapterPort}`,
+    uiUrl: ui?.url || `http://127.0.0.1:${options.uiPort}`,
+    openclawUrl,
   });
+  persistStackState({ etApiUrl, ui, forgeadapter, openclawUrl, hermesUrl, processes, logsDir });
 
   printStackSummary(etApiUrl, ui, forgeadapter);
   bindShutdown(options, processes, mockServers);
