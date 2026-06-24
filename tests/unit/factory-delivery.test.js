@@ -9,7 +9,10 @@ const {
   submitFactoryRequirements,
   loadFactoryQueue,
   advanceFactoryItem,
+  resolveFactoryExecutionPhaseRange,
 } = require('../../lib/task-platform/factory-delivery');
+const { resolveGoldenPathStackPersistDir } = require('../../lib/task-platform/golden-path-phases');
+const { persistDirForItem } = require('../../lib/task-platform/factory-delivery-shared');
 
 test('normalizeRequirement requires body text', () => {
   assert.throws(
@@ -29,6 +32,28 @@ test('resolveDeliveryStage maps evidence status to orchestrator stage', () => {
   assert.equal(resolveDeliveryStage(item, { status: 'phase6_complete' }), 'completed');
   assert.equal(resolveDeliveryStage({ stage: 'queued' }), 'queued');
   assert.equal(resolveDeliveryStage({ stage: 'queued', taskId: 'TSK-1', projectId: 'PRJ-1' }), 'intake_complete');
+});
+
+test('resolveFactoryExecutionPhaseRange resumes at phase6 after phase5 evidence', () => {
+  const range = resolveFactoryExecutionPhaseRange({ status: 'phase5_complete' });
+  assert.equal(range.fromPhase, 6);
+  assert.equal(range.toPhase, 6);
+  assert.equal(range.resumePhase6Only, true);
+  const full = resolveFactoryExecutionPhaseRange({ status: 'phase1_complete' });
+  assert.equal(full.fromPhase, 2);
+  assert.equal(full.resumePhase6Only, false);
+});
+
+test('factory stack persistDir resolves before path.join forge seed', () => {
+  const item = { id: 'factory-persist-test', taskId: 'TSK-PERSIST' };
+  const deliveryDir = 'observability/factory-delivery';
+  const stackPersistDir = persistDirForItem(item, deliveryDir);
+  const resolved = resolveGoldenPathStackPersistDir(
+    { persistDir: null },
+    { phase0: { persistDir: stackPersistDir } },
+    { persistDir: null, stackPersistDir },
+  );
+  assert.equal(resolved, path.resolve(process.cwd(), stackPersistDir));
 });
 
 test('submitFactoryRequirements appends queue entries', () => {
