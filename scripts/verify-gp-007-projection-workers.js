@@ -11,8 +11,11 @@ runGp007ProjectionWorkersVerify({
   jwtSecret: readArg('--jwt-secret'),
   outputDir: readArg('--output-dir', process.env.GP_007_EVIDENCE_DIR || 'observability/gp-007-staging'),
   stackStatePath: readArg('--stack-state'),
+  forgeAdapterUrl: readArg('--forgeadapter-url'),
   waitMs: readArg('--wait-ms'),
   lagThresholdSeconds: readArg('--lag-threshold'),
+  hosted: process.argv.includes('--hosted'),
+  includeBridgeSmoke: !process.argv.includes('--skip-bridge-smoke'),
 })
   .then(({ evidence, complete }) => {
     process.stdout.write(`${JSON.stringify({

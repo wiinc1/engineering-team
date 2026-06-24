@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "kind": "audit-workers-production-smoke",
-  "generatedAt": "2026-06-24T22:52:11.211Z",
+  "generatedAt": "2026-06-24T22:56:27.004Z",
   "baseUrl": "http://127.0.0.1:13000",
   "tenantId": "engineering-team",
   "summary": {
@@ -22,22 +22,49 @@
         "name": "projected_state_visible",
         "ok": true,
         "status": 200
+      },
+      {
+        "name": "projection_events_processed_increased",
+        "ok": true,
+        "delta": 1
+      },
+      {
+        "name": "outbox_events_published_increased",
+        "ok": true,
+        "delta": 0
+      },
+      {
+        "name": "intake_next_required_action_projected",
+        "ok": true,
+        "taskId": "TSK-016"
       }
     ]
   },
   "metrics": {
-    "projectionLagSecondsBefore": 0.039917,
-    "projectionLagSecondsAfter": 0
+    "before": {
+      "projectionLagSeconds": 0,
+      "projectionEventsProcessedTotal": 492,
+      "outboxEventsPublishedTotal": 308
+    },
+    "projectionLagSecondsBefore": 0.021896,
+    "projectionLagSecondsAfter": 0,
+    "after": {
+      "projectionLagSeconds": 0,
+      "projectionEventsProcessedTotal": 493,
+      "outboxEventsPublishedTotal": 308
+    },
+    "projectionEventsProcessedDelta": 1,
+    "outboxEventsPublishedDelta": 0
   },
   "task": {
     "createStatus": 202,
     "stateStatus": 200,
     "state": {
       "tenant_id": "engineering-team",
-      "task_id": "TSK-C257E475",
-      "last_event_id": "845cfeaf-ff7e-41e4-9c47-3f2dc49371f5",
+      "task_id": "TSK-1780CDE9",
+      "last_event_id": "c26ccc12-9887-4794-b832-7c565217a219",
       "last_event_type": "task.created",
-      "last_occurred_at": "2026-06-24T22:52:11.250Z",
+      "last_occurred_at": "2026-06-24T22:56:27.050Z",
       "last_actor_id": "audit-workers-smoke",
       "current_stage": "BACKLOG",
       "assignee": null,
@@ -46,7 +73,7 @@
       "closed": false,
       "waiting_state": null,
       "next_required_action": null,
-      "queue_entered_at": "2026-06-24T22:52:11.250Z",
+      "queue_entered_at": "2026-06-24T22:56:27.050Z",
       "wip_owner": null,
       "wip_started_at": null,
       "engineer_tier": null,
@@ -68,6 +95,73 @@
       "latest_qa_retest_scope": [],
       "latest_qa_submission_version": 0,
       "latest_qa_routed_stage": null
+    }
+  },
+  "workflow": {
+    "schemaVersion": "1.0",
+    "kind": "audit-workers-workflow-smoke",
+    "generatedAt": "2026-06-24T22:56:34.168Z",
+    "baseUrl": "http://127.0.0.1:13000",
+    "summary": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "intake_draft_created",
+          "ok": true,
+          "status": 201,
+          "taskId": "TSK-016"
+        },
+        {
+          "name": "intake_next_required_action_projected",
+          "ok": true,
+          "nextRequiredAction": "PM refinement required",
+          "waitingState": "task_refinement",
+          "attempts": 0
+        }
+      ]
+    },
+    "intake": {
+      "createStatus": 201,
+      "taskId": "TSK-016",
+      "projected": {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-016",
+        "last_event_id": "f0120d06-7492-4749-b0b3-f1193cf49052",
+        "last_event_type": "task.created",
+        "last_occurred_at": "2026-06-24T22:56:34.193Z",
+        "last_actor_id": "audit-workers-smoke",
+        "current_stage": "DRAFT",
+        "assignee": "pm",
+        "priority": null,
+        "blocked": false,
+        "closed": false,
+        "waiting_state": "task_refinement",
+        "next_required_action": "PM refinement required",
+        "queue_entered_at": "2026-06-24T22:56:34.193Z",
+        "wip_owner": null,
+        "wip_started_at": null,
+        "engineer_tier": null,
+        "engineer_tier_rationale": null,
+        "architect_handoff_version": 0,
+        "ready_for_engineering": false,
+        "implementation_commit_sha": null,
+        "implementation_pr_url": null,
+        "implementation_primary_reference": null,
+        "implementation_submission_version": 0,
+        "lock_owner": null,
+        "lock_acquired_at": null,
+        "lock_expires_at": null,
+        "lock_reason": null,
+        "lock_action": null,
+        "latest_qa_outcome": null,
+        "latest_qa_run_id": null,
+        "latest_qa_actor_id": null,
+        "latest_qa_retest_scope": [],
+        "latest_qa_submission_version": 0,
+        "latest_qa_routed_stage": null
+      },
+      "ok": true,
+      "attempts": 0
     }
   }
 }

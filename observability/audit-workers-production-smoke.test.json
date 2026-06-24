@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "audit-workers-production-smoke",
+  "generatedAt": "2026-06-24T22:56:53.486Z",
+  "baseUrl": "https://engineering-team-zeta.vercel.app",
+  "tenantId": "engineering-team",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "append_event",
+        "ok": true,
+        "status": 202
+      },
+      {
+        "name": "projection_lag_under_threshold",
+        "ok": true,
+        "thresholdSeconds": 5,
+        "lagSeconds": 0
+      },
+      {
+        "name": "projected_state_visible",
+        "ok": true,
+        "status": 200
+      },
+      {
+        "name": "projection_events_processed_increased",
+        "ok": true,
+        "delta": 2
+      },
+      {
+        "name": "outbox_events_published_increased",
+        "ok": true,
+        "delta": 1
+      },
+      {
+        "name": "intake_next_required_action_projected",
+        "ok": true,
+        "taskId": "TSK-INTAKE01"
+      }
+    ]
+  },
+  "metrics": {
+    "before": {
+      "projectionLagSeconds": 0,
+      "projectionEventsProcessedTotal": 10,
+      "outboxEventsPublishedTotal": 5
+    },
+    "projectionLagSecondsBefore": 0,
+    "projectionLagSecondsAfter": 0,
+    "after": {
+      "projectionLagSeconds": 0,
+      "projectionEventsProcessedTotal": 12,
+      "outboxEventsPublishedTotal": 6
+    },
+    "projectionEventsProcessedDelta": 2,
+    "outboxEventsPublishedDelta": 1
+  },
+  "task": {
+    "createStatus": 202,
+    "stateStatus": 200,
+    "state": {
+      "task_id": "TSK-SMOKE01",
+      "title": "smoke",
+      "next_required_action": null
+    }
+  },
+  "workflow": {
+    "schemaVersion": "1.0",
+    "kind": "audit-workers-workflow-smoke",
+    "generatedAt": "2026-06-24T22:56:53.488Z",
+    "baseUrl": "https://engineering-team-zeta.vercel.app",
+    "summary": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "intake_draft_created",
+          "ok": true,
+          "status": 201,
+          "taskId": "TSK-INTAKE01"
+        },
+        {
+          "name": "intake_next_required_action_projected",
+          "ok": true,
+          "nextRequiredAction": "PM refinement required",
+          "waitingState": null,
+          "attempts": 0
+        }
+      ]
+    },
+    "intake": {
+      "createStatus": 201,
+      "taskId": "TSK-INTAKE01",
+      "projected": {
+        "task_id": "TSK-INTAKE01",
+        "title": "smoke",
+        "next_required_action": "PM refinement required"
+      },
+      "ok": true,
+      "attempts": 0
+    }
+  }
+}

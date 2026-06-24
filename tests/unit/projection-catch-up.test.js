@@ -87,6 +87,30 @@ test('runProjectionCatchUp uses worker lag when metrics are fresh', async () => 
   }
 });
 
+test('runProjectionCatchUp logs structured warning when manual fallback is invoked', async () => {
+  const originalDatabaseUrl = process.env.DATABASE_URL;
+  const originalStderr = process.stderr.write;
+  const stderrLines = [];
+  process.env.DATABASE_URL = 'postgres://audit:audit@127.0.0.1:15432/engineering_team';
+  process.stderr.write = (chunk) => {
+    stderrLines.push(String(chunk));
+    return true;
+  };
+
+  try {
+    const result = await runProjectionCatchUp(
+      { baseUrl: 'http://127.0.0.1:13000' },
+      { waitMs: 0, maxRetries: 0 },
+    );
+    assert.equal(result.warning, 'projection_worker_lag_detected_manual_catchup_invoked');
+    assert.ok(stderrLines.some((line) => line.includes('manual_fallback')));
+  } finally {
+    process.stderr.write = originalStderr;
+    if (originalDatabaseUrl == null) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = originalDatabaseUrl;
+  }
+});
+
 test('runProjectionCatchUp retries worker lag polling before manual fallback', async () => {
   const originalFetch = global.fetch;
   const originalDatabaseUrl = process.env.DATABASE_URL;

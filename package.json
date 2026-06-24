@@ -83,6 +83,7 @@
     "audit:workers:up": "docker compose -f docker-compose.production-workers.yml up -d audit-workers",
     "audit:workers:down": "docker compose -f docker-compose.production-workers.yml down --remove-orphans",
     "gp-007:verify": "node scripts/verify-gp-007-projection-workers.js --base-url http://127.0.0.1:13000",
+    "gp-007:verify:hosted": "node scripts/verify-gp-007-projection-workers.js --hosted",
     "dev:postgres:up": "docker compose up -d postgres",
     "dev:postgres:down": "docker compose down --remove-orphans",
     "dev:postgres:reset": "docker compose down -v --remove-orphans",

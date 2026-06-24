@@ -229,7 +229,7 @@ Writes `observability/audit-workers-production-smoke.json`. On deployed operator
 2. Drain queues with admin fallback: `POST /projections/process?limit=100` and `npm run audit:project -- . 100`.
 3. Re-enable workers once `DATABASE_URL` and publisher targets are healthy.
 
-Golden-path phase runners treat manual projection scripts as **fallback only** when lag remains above the threshold after `PROJECTION_CATCHUP_MAX_RETRIES` (default 3) worker polls (see `lib/audit/projection-catch-up.js`). Milestone A operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
+Golden-path phase runners treat manual projection scripts as **fallback only** when lag remains above the threshold after `PROJECTION_CATCHUP_MAX_RETRIES` (default 5) worker polls (see `lib/audit/projection-catch-up.js`). Manual fallback emits a structured stderr warning. Milestone A operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
 
 ## GitHub issue intake webhook (GP-002)
 

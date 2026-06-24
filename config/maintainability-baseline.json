@@ -115,6 +115,15 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/gp-007-projection-workers-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 39,
+      "ordinal": 5,
+      "name": "runGp007ProjectionWorkersVerify",
+      "actual": 158,
+      "cap": 50
+    },
+    {
       "path": "lib/task-platform/golden-path-phase0.js",
       "rule": "maintainability:function-lines",
       "line": 113,
@@ -214,15 +223,6 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/gp-007-projection-workers-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 23,
-      "ordinal": 4,
-      "name": "runGp007ProjectionWorkersVerify",
-      "actual": 115,
-      "cap": 50
-    },
-    {
       "path": "scripts/replay-golden-path-postgres.js",
       "rule": "maintainability:function-lines",
       "line": 92,
@@ -247,6 +247,15 @@
       "ordinal": 3,
       "name": "<arrow>",
       "actual": 108,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/audit-workers-production-smoke.js",
+      "rule": "maintainability:function-lines",
+      "line": 127,
+      "ordinal": 13,
+      "name": "runAuditWorkersProductionSmoke",
+      "actual": 106,
       "cap": 50
     },
     {
@@ -367,6 +376,15 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/projection-catch-up.js",
+      "rule": "maintainability:function-lines",
+      "line": 118,
+      "ordinal": 8,
+      "name": "runProjectionCatchUp",
+      "actual": 71,
+      "cap": 50
+    },
+    {
       "path": "scripts/replay-golden-path-staging.js",
       "rule": "maintainability:function-lines",
       "line": 16,
@@ -466,6 +484,15 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/gp-007-projection-workers-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 17,
+      "ordinal": 2,
+      "name": "<arrow>",
+      "actual": 58,
+      "cap": 50
+    },
+    {
       "path": "tests/unit/registration-production-smoke.test.js",
       "rule": "maintainability:function-lines",
       "line": 23,
@@ -508,15 +535,6 @@
       "ordinal": 14,
       "name": "buildButtonCss",
       "actual": 53,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/projection-catch-up.js",
-      "rule": "maintainability:function-lines",
-      "line": 118,
-      "ordinal": 8,
-      "name": "runProjectionCatchUp",
-      "actual": 52,
       "cap": 50
     },
     {

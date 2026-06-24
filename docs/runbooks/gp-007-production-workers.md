@@ -60,6 +60,16 @@ npm run audit:workers:down
 # npm run audit:project -- . 100
 ```
 
+### Option C — systemd (VM)
+
+Reference unit: `scripts/deploy/audit-workers.systemd.service`
+
+```bash
+sudo cp scripts/deploy/audit-workers.systemd.service /etc/systemd/system/engineering-team-audit-workers.service
+sudo cp audit-workers.env.example /etc/engineering-team/audit-workers.env  # fill secrets
+sudo systemctl enable --now engineering-team-audit-workers
+```
+
 ### Option B — Fly.io
 
 ```bash

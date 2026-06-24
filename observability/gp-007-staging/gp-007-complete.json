@@ -3,7 +3,7 @@
   "kind": "gp-007-complete",
   "milestone": "GP-007",
   "title": "Always-on projection + outbox workers",
-  "generatedAt": "2026-06-24T22:52:11.210Z",
+  "generatedAt": "2026-06-24T22:56:27.003Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "summary": {

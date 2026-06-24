@@ -88,6 +88,10 @@ As a Software Factory operator, I want audit read models to stay fresh automatic
 
 **Simple** — operational/deployment change using existing worker code. Rollback: stop worker process; operators use `POST /projections/process` + `audit:project` fallback (current behavior).
 
+### Adversarial audit
+
+See `docs/issues/gp-007-adversarial-audit.md` for gap analysis and resolution status (2026-06-24).
+
 ### Related
 
 - `docs/runbooks/audit-foundation.md` — Worker operations, failure modes
