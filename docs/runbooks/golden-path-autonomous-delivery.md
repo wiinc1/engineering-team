@@ -257,12 +257,19 @@ node scripts/seed-golden-path-phase0.js --local \
 **Hosted replay** (only when a deployed ET API + operator session are available):
 
 ```bash
+# Preflight: workers + projection on Supabase (uses /api/v1 routes)
+export AUTH_PROD_BASE_URL=https://engineering-team-zeta.vercel.app
+export AUDIT_WORKERS_SMOKE_BASE_URL="$AUTH_PROD_BASE_URL"
+npm run audit:workers:production-smoke
+
 node scripts/seed-golden-path-phase0.js \
   --epic-issue 269 \
   --child-issue <CHILD_ISSUE_NUMBER> \
   --child-issue-url https://github.com/wiinc1/engineering-team/issues/<CHILD_ISSUE_NUMBER> \
   --base-url https://<your-hosted-et-api>
 ```
+
+`replay-golden-path-postgres.js` sets `PGSSLMODE=disable` before forge seed for local Docker Postgres; hosted replay uses Vercel `DATABASE_URL` with verified TLS.
 
 Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and completed steps `GP-001`, `GP-002`, `GP-005`.
 

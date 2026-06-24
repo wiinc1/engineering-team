@@ -13,6 +13,12 @@ const {
   addReadmeGoldenPathMarker,
 } = require('../../lib/task-platform/golden-path-phases');
 
+test('postgres replay sets PGSSLMODE before forge seed for local Docker', () => {
+  const script = fs.readFileSync(path.join(__dirname, '../../scripts/replay-golden-path-postgres.js'), 'utf8');
+  assert.match(script, /ensurePostgresProcessEnv/);
+  assert.match(script, /PGSSLMODE/);
+});
+
 test('runProjectionCatchUp skips file-backed local stack', async () => {
   const persistDir = fs.mkdtempSync(path.join(os.tmpdir(), 'projection-catchup-'));
   const result = await runProjectionCatchUp({ persistDir, baseUrl: 'http://127.0.0.1:13000' }, { label: 'phase-1' });

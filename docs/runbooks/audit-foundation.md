@@ -221,7 +221,7 @@ export AUDIT_WORKERS_SMOKE_BASE_URL='https://<hosted-et-api>'
 npm run audit:workers:production-smoke
 ```
 
-Writes `observability/audit-workers-production-smoke.json`. Target: `workflow_projection_lag_seconds < 5` within one worker interval after an append.
+Writes `observability/audit-workers-production-smoke.json`. On deployed operator URLs, the smoke appends and reads through `/api/v1/tasks/{taskId}/events` and `/api/v1/tasks/{taskId}/state` (not bare `/tasks/...`, which resolves to the SPA). Target: `workflow_projection_lag_seconds < 5` within one worker interval after an append.
 
 ### Rollback
 
