@@ -137,6 +137,7 @@ async function main() {
     FORGEADAPTER_SERVICE_TOKEN: readArg('--forge-adapter-token', DEFAULTS.forgeAdapterToken),
     DATABASE_URL: process.env.DATABASE_URL || DEFAULTS.databaseUrl,
     AUDIT_STORE_BACKEND: 'postgres',
+    PGSSLMODE: process.env.PGSSLMODE || 'disable',
   };
 
   if (Number(fromPhase) <= 1) {
