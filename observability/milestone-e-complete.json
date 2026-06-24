@@ -3,29 +3,39 @@
   "kind": "milestone-e-complete",
   "milestone": "E",
   "title": "Hosted deploy closeout replay",
-  "generatedAt": "2026-06-24T21:11:28.094Z",
-  "profile": "coordinated-stack-local-hosted",
-  "baseUrl": "http://127.0.0.1:13000",
-  "operatorUrl": "http://127.0.0.1:15173",
+  "generatedAt": "2026-06-24T21:24:00.000Z",
+  "profile": "hosted-staging-partial",
+  "baseUrl": "https://engineering-team-zeta.vercel.app",
+  "operatorUrl": "https://engineering-team-zeta.vercel.app",
   "summary": {
-    "passed": true,
-    "phase6Complete": true,
-    "gp026SreAgent": true,
-    "gp022AutoMerge": true,
-    "validationOk": true
+    "passed": false,
+    "localProofPassed": true,
+    "hostedApiReachable": true,
+    "hostedFactoryBlocked": true,
+    "phase6Complete": false,
+    "blockers": [
+      "Vercel deployment uses registration auth; factory orchestrator issues HMAC JWT (invalid jwt signature on /api/v1/projects).",
+      "Hosted Postgres intermittent ENOTFOUND on Supabase pooler host.",
+      "Full Milestone E requires factory evidence created on the same hosted API (not local TSK-* tasks)."
+    ]
   },
   "exitCriteria": {
-    "hostedPhase6Replay": true,
+    "hostedPhase6Replay": false,
+    "localPhase6Replay": true,
     "gp026SreAgent": true,
     "validationOk": true,
-    "gp022AutoMergeEvidence": true
+    "gp022AutoMergeEvidence": true,
+    "branchPushed": true
   },
   "artifacts": {
-    "verify": "observability/milestone-hosted-staging/milestone-hosted-phase6-verify.json",
-    "factoryEvidence": "observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsk9itj.json"
+    "localVerify": "observability/milestone-hosted-staging/milestone-hosted-phase6-verify.json",
+    "hostedAttemptQueue": "observability/milestone-hosted-staging/factory-milestone-c-queue-mqskxwja.json",
+    "localFactoryEvidence": "observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsknx58.json"
   },
   "notes": [
-    "Local coordinated-stack proof via --allow-local-hosted; rerun against production API/operator URL for full hosted promotion.",
-    "Replay command: npm run milestone-e:hosted-phase6:verify -- --base-url <api> --operator-url <app> --evidence-path <factory-evidence.json>"
+    "Branch feat/factory-orchestrator pushed to origin (b27c3a6+).",
+    "Added useVersionedTaskApi routing (/api/v1/tasks/*) for hosted base URLs.",
+    "Local coordinated-stack Milestone E proof remains green with --allow-local-hosted.",
+    "Next: align hosted API auth (service JWT or registration session token) before rerunning milestone-d:verify --base-url https://engineering-team-zeta.vercel.app."
   ]
 }

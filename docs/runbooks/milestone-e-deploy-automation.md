@@ -64,6 +64,12 @@ Artifacts:
 
 Proof artifact: `observability/milestone-hosted-staging/milestone-hosted-phase6-verify.json`
 
+### Hosted API prerequisites
+
+- Factory scripts use **HMAC JWT** (`AUTH_JWT_SECRET`). Vercel deployments on **registration auth** reject those tokens (`invalid jwt signature`).
+- Hosted task routes use `/api/v1/tasks/*` (auto-enabled when `baseUrl` is not the local `:13000` stack).
+- Factory evidence must be created on the **same** hosted API before phase-6 replay (local `TSK-*` tasks are not visible on Vercel Postgres).
+
 ## Related
 
 - [milestone-d-closeout-automation.md](milestone-d-closeout-automation.md)

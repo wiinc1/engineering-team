@@ -14,7 +14,8 @@ test('resolveStagingRuntime prefers STAGING_BASE_URL over local factory default'
   try {
     const resolved = resolveStagingRuntime();
     assert.equal(resolved.baseUrl, 'https://staging.example');
-    assert.equal(resolved.profile, 'coordinated-stack');
+    assert.equal(resolved.profile, 'hosted-staging');
+    assert.equal(resolved.useVersionedTaskApi, true);
     assert.equal(resolved.skipForgePhases, true);
   } finally {
     if (original == null) delete process.env.STAGING_BASE_URL;
@@ -24,10 +25,33 @@ test('resolveStagingRuntime prefers STAGING_BASE_URL over local factory default'
 });
 
 test('resolveStagingRuntime defaults to golden-path local stack endpoints', () => {
-  const runtime = resolveStagingRuntime({});
-  assert.equal(runtime.baseUrl, 'http://127.0.0.1:13000');
-  assert.equal(runtime.forgeAdapterUrl, 'http://127.0.0.1:14010');
-  assert.equal(runtime.jwtSecret, 'golden-path-local-dev-secret');
+  const keys = ['STAGING_BASE_URL', 'AUTH_JWT_SECRET', 'GOLDEN_PATH_JWT_SECRET'];
+  const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  for (const key of keys) delete process.env[key];
+  try {
+    const runtime = resolveStagingRuntime({});
+    assert.equal(runtime.baseUrl, 'http://127.0.0.1:13000');
+    assert.equal(runtime.forgeAdapterUrl, 'http://127.0.0.1:14010');
+    assert.equal(runtime.jwtSecret, 'golden-path-local-dev-secret');
+    assert.equal(runtime.useVersionedTaskApi, false);
+  } finally {
+    for (const key of keys) {
+      if (saved[key] == null) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  }
+});
+
+test('resolveWorkflowRoute maps legacy task paths to /api/v1 on hosted URLs', () => {
+  const { resolveWorkflowRoute } = require('../../lib/task-platform/golden-path-shared');
+  assert.equal(
+    resolveWorkflowRoute('/tasks/TSK-001/events', { useVersionedTaskApi: true }),
+    '/api/v1/tasks/TSK-001/events',
+  );
+  assert.equal(
+    resolveWorkflowRoute('/tasks/TSK-001/events', { useVersionedTaskApi: false }),
+    '/tasks/TSK-001/events',
+  );
 });
 
 test('resolveStagingRuntime honors explicit skipValidation false', () => {
