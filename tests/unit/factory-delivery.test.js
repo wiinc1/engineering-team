@@ -10,7 +10,10 @@ const {
   loadFactoryQueue,
   advanceFactoryItem,
   resolveFactoryExecutionPhaseRange,
+  summarizeFactoryPersonaProgression,
+  assertRequiredFactoryPersonas,
 } = require('../../lib/task-platform/factory-delivery');
+const { savePilotEvidence } = require('../../lib/task-platform/golden-path-shared');
 const { resolveGoldenPathStackPersistDir } = require('../../lib/task-platform/golden-path-phases');
 const { persistDirForItem } = require('../../lib/task-platform/factory-delivery-shared');
 
@@ -96,6 +99,70 @@ function createFactoryIntakeFetchMock(calls) {
     return { ok: false, status: 404, json: async () => ({}) };
   };
 }
+
+test('advanceFactoryItem advances phase1_complete to phase6_complete via injected runPhasesFn', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-phases-'));
+  const deliveryDir = path.join(tmp, 'delivery');
+  const evidencePath = path.join(deliveryDir, 'factory-phase-stub.json');
+  fs.mkdirSync(deliveryDir, { recursive: true });
+  savePilotEvidence({
+    schemaVersion: '1.0',
+    status: 'phase1_complete',
+    engineeringTeam: { taskId: 'TSK-STUB1', projectId: 'PRJ-STUB1' },
+    phase0: { mode: 'factory_intake', actorId: 'factory-orchestrator' },
+    phase1: {
+      api: {
+        pmRefinementMode: 'refinement_start',
+        architectHandoffMode: 'embedded_in_execution_contract',
+      },
+      architectSpec: { engineerTier: 'Jr' },
+    },
+  }, evidencePath);
+
+  const runPhasesFn = async (options) => {
+    const evidence = options.pilot;
+    evidence.status = 'phase6_complete';
+    evidence.phase2 = { personas: { engineer: 'engineer-jr', forge: 'main' } };
+    evidence.phase3 = { personas: { qa: 'qa', engineer: 'engineer-jr' } };
+    evidence.phase4 = { personas: { engineer: 'engineer-jr', qa: 'qa-reviewer' } };
+    evidence.phase5 = {
+      personas: { sre: 'sre', pm: 'pm', architect: 'architect', qa: 'qa' },
+      api: { sreMonitoring: { start: { ok: true }, approve: { ok: true } } },
+    };
+    evidence.phase6 = {
+      personas: { sre: 'sre', human: 'admin' },
+      api: { humanClose: { ok: true }, taskClosed: { ok: true } },
+    };
+    savePilotEvidence(evidence, options.outputPath);
+    return { evidence };
+  };
+
+  const outcome = await advanceFactoryItem({
+    id: 'factory-phase-stub',
+    title: 'Stub phases',
+    requirements: 'Exercise persona routing.',
+    templateTier: 'Standard',
+    stage: 'phase1_complete',
+    taskId: 'TSK-STUB1',
+    projectId: 'PRJ-STUB1',
+    evidencePath,
+    forgeTaskId: 'TSK-GOLDENSTUB1',
+    createdAt: new Date().toISOString(),
+  }, {
+    jwtSecret: 'factory-test-secret',
+    baseUrl: 'http://127.0.0.1:13000',
+    deliveryDir,
+    runPhasesFn,
+    skipForgeSeed: true,
+  });
+
+  assert.equal(outcome.action, 'phases_2_6');
+  assert.equal(outcome.item.stage, 'phase6_complete');
+  const progression = summarizeFactoryPersonaProgression(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
+  const personaCheck = assertRequiredFactoryPersonas(progression);
+  assert.equal(personaCheck.ok, true);
+  assert.equal(progression.personas.engineer, 'engineer-jr');
+});
 
 test('advanceFactoryItem performs factory intake against API', async () => {
   const calls = [];
