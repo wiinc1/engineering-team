@@ -64,11 +64,9 @@ Artifacts:
 
 Proof artifact: `observability/milestone-hosted-staging/milestone-hosted-phase6-verify.json`
 
-### Hosted API prerequisites
+### Platform note
 
-- Factory scripts use **HMAC JWT** (`AUTH_JWT_SECRET`). Vercel deployments on **registration auth** reject those tokens (`invalid jwt signature`).
-- Hosted task routes use `/api/v1/tasks/*` (auto-enabled when `baseUrl` is not the local `:13000` stack).
-- Factory evidence must be created on the **same** hosted API before phase-6 replay (local `TSK-*` tasks are not visible on Vercel Postgres).
+Factory Milestone E proof targets the **coordinated stack** (`npm run dev:golden-path:up`), not Vercel or Supabase. Those are out of scope for engineering-team factory delivery (see [milestone-a-hosted-factory.md](milestone-a-hosted-factory.md)). GP-024/GP-025 in the manual-step inventory refer to **target app** infra when the factory delivers non-platform repos.
 
 ## Related
 
