@@ -23,7 +23,7 @@
       "manual": false,
       "automateAs": "intake_normalizer_from_github_issue",
       "automatedBy": "lib/audit/github-intake-normalizer.js (FF_GITHUB_INTAKE_NORMALIZER=true)",
-      "evidence": "task.created event, github_issue_url field"
+      "evidence": "observability/gp-002-staging/gp-002-complete.json, npm run gp-002:verify"
     },
     {
       "id": "GP-003",

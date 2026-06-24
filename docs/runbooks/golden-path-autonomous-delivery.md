@@ -138,7 +138,8 @@ npm run golden-path:replay:postgres -- --bootstrap
 **Standalone step smoke verifiers** (stack must already be up; read task id from `observability/golden-path-postgres-pilot.json` when omitted):
 
 ```bash
-npm run golden-path:smoke:gp-002    # GitHub intake normalizer webhook path
+npm run gp-002:verify               # GP-002 intake normalizer (webhook + projection + evidence)
+npm run golden-path:smoke:gp-002    # lightweight GP-002 webhook smoke only
 npm run golden-path:smoke:gp-015    # initial QA fail recorded before QA_TESTING stage advance
 npm run golden-path:smoke:gp-013 -- --openclaw-url http://127.0.0.1:<gateway>   # live delegation
 ```

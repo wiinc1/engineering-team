@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-002-complete",
+  "milestone": "GP-002",
+  "title": "GitHub issue intake normalizer",
+  "generatedAt": "2026-06-24T23:04:18.159Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "taskId": "TSK-017",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/996190"
+  },
+  "exitCriteria": {
+    "intakeDraftCreated": true,
+    "idempotentDuplicate": true,
+    "pmRefinementWaiting": true,
+    "githubIssueUrlRecorded": true
+  },
+  "artifacts": {
+    "verify": "observability/gp-002-staging/gp-002-github-intake-verify.json",
+    "smoke": "observability/gp-002-staging/gp-002-github-intake-smoke.json",
+    "canonicalSmoke": "observability/gp-002-github-intake-smoke.json"
+  },
+  "notes": [
+    "Coordinated stack proof: npm run dev:golden-path:up with FF_GITHUB_INTAKE_NORMALIZER=true.",
+    "Opt-in via factory-intake label; webhook signature required (GITHUB_WEBHOOK_SECRET).",
+    "Replaces manual seed-golden-path-phase0.js intake transcription for GP-002."
+  ]
+}

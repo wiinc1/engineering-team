@@ -132,6 +132,17 @@ test('issues.opened with factory-intake label creates an intake draft task', asy
     const stateBody = await state.json();
     const currentStage = stateBody.current_stage || stateBody.data?.current_stage;
     assert.ok(currentStage === 'DRAFT' || currentStage === 'INTAKE_DRAFT');
+    assert.equal(stateBody.waiting_state, 'task_refinement');
+    assert.equal(stateBody.assignee, 'pm');
+
+    const history = await fetch(`${baseUrl}/tasks/${encodeURIComponent(payload.taskId)}/history`, {
+      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
+    });
+    assert.equal(history.status, 200);
+    const historyBody = await history.json();
+    const created = historyBody.items.find((item) => item.event_type === 'task.created');
+    assert.equal(created.payload.github_issue_url, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
+    assert.ok(historyBody.items.some((item) => item.event_type === 'task.refinement_requested'));
   });
 });
 
