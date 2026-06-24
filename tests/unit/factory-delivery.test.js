@@ -119,12 +119,22 @@ test('advanceFactoryItem advances phase1_complete to phase6_complete via injecte
     },
   }, evidencePath);
 
+  const { buildEngineerPersonaRouting } = require('../../lib/task-platform/factory-persona-progression');
+  const routing = buildEngineerPersonaRouting('Standard');
+
   const runPhasesFn = async (options) => {
     const evidence = options.pilot;
     evidence.status = 'phase6_complete';
-    evidence.phase2 = { personas: { engineer: 'engineer-jr', forge: 'main' } };
-    evidence.phase3 = { personas: { qa: 'qa', engineer: 'engineer-jr' } };
-    evidence.phase4 = { personas: { engineer: 'engineer-jr', qa: 'qa-reviewer' } };
+    evidence.engineeringTeam = { ...evidence.engineeringTeam, templateTier: 'Standard' };
+    evidence.phase2 = {
+      personaRouting: routing,
+      personas: { engineer: 'engineer-sr', engineerPersonas: routing.engineerPersonas, forge: 'main' },
+    };
+    evidence.phase3 = { personas: { qa: 'qa', qaOutcome: 'fail_intentional', engineer: 'engineer-sr' } };
+    evidence.phase4 = {
+      personas: { engineer: 'engineer-sr', qa: 'qa', qaOutcome: 'pass' },
+      api: { qaPass: { ok: true } },
+    };
     evidence.phase5 = {
       personas: { sre: 'sre', pm: 'pm', architect: 'architect', qa: 'qa' },
       api: { sreMonitoring: { start: { ok: true }, approve: { ok: true } } },
@@ -161,7 +171,8 @@ test('advanceFactoryItem advances phase1_complete to phase6_complete via injecte
   const progression = summarizeFactoryPersonaProgression(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
   const personaCheck = assertRequiredFactoryPersonas(progression);
   assert.equal(personaCheck.ok, true);
-  assert.equal(progression.personas.engineer, 'engineer-jr');
+  assert.equal(progression.personas.engineer, 'engineer-sr');
+  assert.equal(progression.engineerPersonas.principal, 'engineer-principal');
 });
 
 test('advanceFactoryItem performs factory intake against API', async () => {
