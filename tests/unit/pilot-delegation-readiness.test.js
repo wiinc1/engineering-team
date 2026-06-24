@@ -77,6 +77,7 @@ test('ensurePilotAgents creates active assignable supported-role pilot agents', 
     'pm',
     'qa',
     'sre',
+    'ux',
   ]);
   assert.deepEqual(result.missingRoles, []);
 
@@ -90,6 +91,7 @@ test('ensurePilotAgents creates active assignable supported-role pilot agents', 
     'pm',
     'qa',
     'sre',
+    'ux',
   ]);
   assert.deepEqual([...new Set(agents.map(agent => agent.role))].sort(), [
     'architect',
@@ -97,6 +99,7 @@ test('ensurePilotAgents creates active assignable supported-role pilot agents', 
     'pm',
     'qa',
     'sre',
+    'ux',
   ]);
   assert.ok(agents.every(agent => agent.active && agent.assignable));
   assert.ok(agents.every(agent => agent.metadata.requiredBy === 'issue-247'));

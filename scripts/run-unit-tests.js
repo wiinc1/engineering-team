@@ -47,6 +47,27 @@ const UNIT_TEST_FILES = [
   'tests/unit/command-router-delegation.test.js',
   'tests/unit/validate-specialist-runtime.test.js',
   'tests/unit/openclaw-specialist-runner.test.js',
+  'tests/unit/task-id.test.js',
+  'tests/unit/task-id-allocation.test.js',
+  'tests/unit/task-id-http.test.js',
+  'tests/unit/factory-delivery.test.js',
+  'tests/unit/factory-persona-progression.test.js',
+  'tests/unit/projection-catch-up.test.js',
+  'tests/unit/audit-workers-production-smoke.test.js',
+  'tests/unit/et-forge-dispatch-bridge.test.js',
+  'tests/unit/et-forge-bridge-smoke.test.js',
+  'tests/unit/staging-runtime.test.js',
+  'tests/unit/milestone-a-staging-verify.test.js',
+  'tests/unit/factory-orchestration.test.js',
+  'tests/unit/factory-agent-phases.test.js',
+  'tests/unit/milestone-b-orchestration-verify.test.js',
+  'tests/unit/milestone-c-agent-verify.test.js',
+  'tests/unit/milestone-d-closeout-verify.test.js',
+  'tests/unit/milestone-hosted-phase6-verify.test.js',
+  'tests/unit/github-auto-merge.test.js',
+  'tests/unit/golden-path-stack-probe.test.js',
+  'tests/unit/factory-closeout.test.js',
+  'tests/unit/github-intake-normalizer.test.js',
   'tests/unit/governance/*.test.js',
 ];
 
@@ -77,6 +98,10 @@ const ENV_KEYS_TO_DELETE = [
   'FACTORY_DELIVERY_DIR',
   'TENANT_ID',
   'SPECIALIST_DELEGATION_BASE_DIR',
+  'SPECIALIST_DELEGATION_RUNNER',
+  'FF_FACTORY_AGENT_DRIVEN_PHASE1',
+  'FF_FACTORY_AGENT_DRIVEN_PHASES',
+  'FACTORY_USE_FIXTURE_DELEGATION',
 ];
 
 function buildSanitizedEnv() {

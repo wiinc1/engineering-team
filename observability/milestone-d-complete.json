@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-d-complete",
+  "milestone": "D",
+  "title": "Closeout automation and delivery report",
+  "generatedAt": "2026-06-24T21:18:34.188Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "standardsCheck": true,
+    "verifyPassed": true,
+    "factoryPhase6Complete": true,
+    "gp027CloseoutReport": true,
+    "gp027TaskClosed": true,
+    "gp027StepClassification": true,
+    "gp023ValidationInCloseout": true,
+    "automatedSteps": 22,
+    "stillManualSteps": 2
+  },
+  "exitCriteria": {
+    "milestoneDVerify": true,
+    "gp027CloseoutReport": true,
+    "gp027TaskClosed": true,
+    "gp027StepClassification": true,
+    "gp023ValidationInCloseout": true,
+    "factoryPhase6Complete": true,
+    "validationWithoutSkip": true,
+    "automatedStepsAtLeast12": true
+  },
+  "artifacts": {
+    "verify": "observability/milestone-d-staging/milestone-d-closeout-verify.json",
+    "milestoneC": "observability/milestone-d-staging/milestone-c-agent-verify.json",
+    "factoryQueue": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-milestone-c-queue-mqsknx58.json",
+    "factoryEvidence": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsknx58.json",
+    "closeoutReport": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-010.json"
+  },
+  "factoryDelivery": {
+    "queueId": "factory-milestone-c-mqsknx58",
+    "taskId": "TSK-010",
+    "projectId": "PRJ-5E667CAA",
+    "stage": "phase6_complete",
+    "stepsCompleted": 27
+  },
+  "notes": [
+    "Milestone D extends Milestone C with GP-027 closeout report generation and GP-023 validation embedded in closeout.",
+    "Closeout classification reads observability/golden-path-manual-steps.json against factory evidence stepsCompleted.",
+    "P3.2 GP-022 auto-merge and P3.3 GP-026 SRE agent gate ship via lib/task-platform/github-auto-merge.js and factory-agent-phases runSreAgentPhase.",
+    "Hosted phase 6 promotion replay: npm run golden-path:replay:hosted-phase6 (see docs/runbooks/milestone-e-deploy-automation.md)."
+  ]
+}

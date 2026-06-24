@@ -15,7 +15,16 @@ const {
 } = require('../../lib/task-platform/factory-delivery');
 const { savePilotEvidence } = require('../../lib/task-platform/golden-path-shared');
 const { resolveGoldenPathStackPersistDir } = require('../../lib/task-platform/golden-path-phases');
-const { persistDirForItem } = require('../../lib/task-platform/factory-delivery-shared');
+const { persistDirForItem, resolveFactoryConfig } = require('../../lib/task-platform/factory-delivery-shared');
+
+test('resolveFactoryConfig defaults to live delegation and validation enabled', () => {
+  const config = resolveFactoryConfig({});
+  assert.equal(config.requireDelegationSmoke, true);
+  assert.equal(config.skipValidation, false);
+  const skipped = resolveFactoryConfig({ skipDelegationSmoke: true, skipValidation: true });
+  assert.equal(skipped.requireDelegationSmoke, false);
+  assert.equal(skipped.skipValidation, true);
+});
 
 test('normalizeRequirement requires body text', () => {
   assert.throws(
@@ -191,9 +200,10 @@ test('advanceFactoryItem performs factory intake against API', async () => {
     jwtSecret: 'factory-test-secret',
     baseUrl: 'http://127.0.0.1:13000',
     deliveryDir: path.join(tmp, 'delivery'),
+    skipPilotAgentsSeed: true,
   });
 
-  assert.equal(outcome.action, 'intake');
+  assert.equal(outcome.action, 'intake', outcome.error?.message || outcome.item?.lastError);
   assert.equal(outcome.item.stage, 'intake_complete');
   assert.equal(outcome.item.taskId, 'TSK-FACTORY1');
   assert.ok(calls.some((entry) => entry.url.includes('/api/v1/projects')));

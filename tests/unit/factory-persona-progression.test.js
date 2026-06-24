@@ -26,7 +26,13 @@ function buildSyntheticFactoryEvidence(templateTier = 'Standard') {
     },
     phase2: {
       personaRouting: routing,
-      personas: buildPhasePersonaSnapshot(2, { engineeringTeam: { templateTier } }, { personaRouting: routing }),
+      personas: {
+        ...buildPhasePersonaSnapshot(2, { engineeringTeam: { templateTier } }, {
+          personaRouting: routing,
+          uxReview: { owner: 'ux' },
+        }),
+        ux: 'ux',
+      },
     },
     phase3: {
       personas: { qa: 'qa', qaOutcome: 'fail_intentional', engineer: routing.assignedOwner },
@@ -75,7 +81,12 @@ test('summarizeFactoryPersonaProgression extracts all personas from synthetic ev
   assert.equal(summary.phase4.qaOutcome, 'pass');
 });
 
-test('assertRequiredFactoryPersonas passes when pm/architect/qa/sre and jr/sr/principal are present', () => {
+test('buildEngineerPersonaRouting includes ux runtime agent mapping', () => {
+  const routing = buildEngineerPersonaRouting('Standard');
+  assert.equal(routing.runtimeAgents.ux, 'ux-designer');
+});
+
+test('assertRequiredFactoryPersonas passes when pm/architect/qa/sre/ux and jr/sr/principal are present', () => {
   const summary = summarizeFactoryPersonaProgression(buildSyntheticFactoryEvidence('Standard'));
   const check = assertRequiredFactoryPersonas(summary);
   assert.equal(check.ok, true);

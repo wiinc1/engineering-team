@@ -11,6 +11,8 @@ const DEFAULT_SPECIALIST_MAP = Object.freeze({
   'sr-engineer': 'sr-engineer',
   qa: 'qa-engineer',
   sre: 'sre',
+  ux: 'ux-designer',
+  'ux-designer': 'ux-designer',
   'engineer-jr': 'jr-engineer',
   'engineer-sr': 'sr-engineer',
   'engineer-principal': 'principal',

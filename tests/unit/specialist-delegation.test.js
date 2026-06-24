@@ -32,6 +32,7 @@ test('routes clear specialist-owned requests to the expected specialist', () => 
   assert.deepEqual(classifySpecialistRequest('Need architecture review for this service boundary').specialist, 'architect');
   assert.deepEqual(classifySpecialistRequest('Can QA verify the regression coverage?').specialist, 'qa');
   assert.deepEqual(classifySpecialistRequest('SRE should inspect the latency spike and alerts').specialist, 'sre');
+  assert.deepEqual(classifySpecialistRequest('UX should review accessibility and task-detail hierarchy').specialist, 'ux');
 });
 
 test('routes the default live smoke request to engineering only', () => {
@@ -182,6 +183,8 @@ test('normalizeSpecialistForDelegation maps owner ids and engineer tiers to gran
   assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'engineer-jr' }), 'jr-engineer');
   assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'pm' }), 'pm');
   assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'engineer' }), 'engineer');
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'ux' }), 'ux');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'ux-designer' }), 'ux');
 });
 
 test('resolveRuntimeAgent maps granular persona keys to spawnable agent ids', () => {
@@ -197,6 +200,8 @@ test('resolveRuntimeAgent maps granular persona keys to spawnable agent ids', ()
     'engineer-jr': 'jr-engineer',
     'engineer-sr': 'sr-engineer',
     'engineer-principal': 'principal',
+    ux: 'ux-designer',
+    'ux-designer': 'ux-designer',
   };
   for (const [specialist, expected] of Object.entries(personas)) {
     assert.equal(resolveRuntimeAgent(specialist), expected, specialist);
@@ -246,7 +251,7 @@ test('createRuntimeDelegateWork resolves personas through map-aware fixture runn
     baseDir: fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-map-delegate-')),
     delegationRunnerCommand: `node ${runtimeRunnerPath}`,
   });
-  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre']) {
+  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre', 'ux']) {
     const result = await delegateWork({
       specialist: persona,
       request: `delegate ${persona}`,
@@ -264,7 +269,7 @@ test('delegates explicit persona targets through map-aware runtime runner eviden
     baseDir,
     delegationRunnerCommand: `node ${runtimeRunnerPath}`,
   });
-  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre']) {
+  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre', 'ux']) {
     const result = await coordinator.handleRequest(`Work owned by ${persona}`, {
       coordinatorAgent: 'main',
       targetSpecialist: persona,

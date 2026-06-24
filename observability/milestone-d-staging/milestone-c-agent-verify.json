@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-c-agent-verify",
+  "generatedAt": "2026-06-24T21:15:12.139Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "observability/milestone-d-staging",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "factory_phase6_complete",
+        "ok": true,
+        "stage": "phase6_complete",
+        "error": null
+      },
+      {
+        "name": "gp014_implementer_agent",
+        "ok": true
+      },
+      {
+        "name": "gp019_qa_agent",
+        "ok": true
+      },
+      {
+        "name": "gp017_fix_loop",
+        "ok": true
+      },
+      {
+        "name": "gp023_ci_validation_evidence",
+        "ok": true
+      },
+      {
+        "name": "agent_session_evidence",
+        "ok": true
+      }
+    ]
+  },
+  "artifacts": {
+    "factoryQueue": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-milestone-c-queue-mqsknx58.json",
+    "factoryEvidence": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsknx58.json"
+  },
+  "factory": {
+    "ticks": [
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-milestone-c-queue-mqsknx58.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-c-mqsknx58",
+            "action": "intake",
+            "stage": "intake_complete",
+            "taskId": "TSK-010",
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      },
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-milestone-c-queue-mqsknx58.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-c-mqsknx58",
+            "action": "phase1",
+            "stage": "phase1_complete",
+            "taskId": "TSK-010",
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      },
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-milestone-c-queue-mqsknx58.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-c-mqsknx58",
+            "action": "phases_2_6",
+            "stage": "phase6_complete",
+            "taskId": "TSK-010",
+            "error": null
+          }
+        ],
+        "pendingCount": 0
+      }
+    ],
+    "queueId": "factory-milestone-c-mqsknx58",
+    "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsknx58.json"
+  }
+}

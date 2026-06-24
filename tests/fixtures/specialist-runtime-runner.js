@@ -25,10 +25,20 @@ process.stdin.on('end', () => {
   }
   const runtimeAgentId = process.env.FIXTURE_RUNTIME_AGENT_ID || resolveRuntimeAgent(payload.specialist);
   const sessionId = process.env.FIXTURE_RUNTIME_SESSION_ID || `runtime-session-${payload.delegationId}`;
+  const specialist = String(payload.specialist || '').trim().toLowerCase();
+  let output = `runtime handled by ${runtimeAgentId}`;
+  if (['jr-engineer', 'sr-engineer', 'engineer-jr', 'engineer-sr', 'principal', 'engineer-principal'].includes(specialist)) {
+    output = JSON.stringify({
+      commitSha: 'a'.repeat(40),
+      prUrl: 'https://github.com/wiinc1/engineering-team/pull/271',
+    });
+  } else if (specialist === 'qa') {
+    output = JSON.stringify({ outcome: 'pass', findings: [] });
+  }
   process.stdout.write(JSON.stringify({
     agentId: runtimeAgentId,
     sessionId,
-    output: `runtime handled by ${runtimeAgentId}`,
+    output,
     ownership: {
       specialistId: payload.specialist,
       runtimeAgentId,

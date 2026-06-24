@@ -128,7 +128,21 @@ async function seedAuthAdmin(sharedEnv) {
     throw new Error(`Auth admin seed validation failed: ${plan.errors.join('; ')}`);
   }
   process.stdout.write('Seeding golden-path registration admin...\n');
-  await applyAdminSeed(plan.input);
+  const savedEnv = {};
+  for (const key of ['DATABASE_URL', 'PGSSLMODE', 'PGSSLMODE_REQUIRE']) {
+    if (key in seedEnv) {
+      savedEnv[key] = process.env[key];
+      process.env[key] = seedEnv[key];
+    }
+  }
+  try {
+    await applyAdminSeed(plan.input);
+  } finally {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 }
 
 function killPid(pid) {

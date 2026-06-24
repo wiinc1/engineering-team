@@ -24,7 +24,8 @@ async function main() {
     forgeAdapterUrl: readArg('--forgeadapter-url', process.env.FORGEADAPTER_BASE_URL || 'http://127.0.0.1:14010'),
     openclawUrl: readArg('--openclaw-url', process.env.OPENCLAW_BASE_URL || ''),
     operatorUrl: readArg('--operator-url', process.env.FACTORY_OPERATOR_URL || 'http://127.0.0.1:15173'),
-    requireDelegationSmoke: hasFlag('--require-delegation-smoke'),
+    requireDelegationSmoke: !hasFlag('--skip-delegation-smoke'),
+    skipValidation: hasFlag('--skip-validation'),
     maxItems,
   };
 

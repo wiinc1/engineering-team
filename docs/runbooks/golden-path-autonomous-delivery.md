@@ -589,6 +589,18 @@ Docs-only pilot: revert the PR. Preserve task history, evidence JSON, and this r
 
 ---
 
+## Milestone A — coordinated stack factory reliability
+
+Before agent-driven autonomy (Milestone B), prove the **local golden-path stack** (not Vercel/Supabase) runs workers, bridge, intake, and factory orchestrator reliably:
+
+```bash
+npm run dev:golden-path:up
+export AUTH_JWT_SECRET=golden-path-local-dev-secret
+npm run milestone-a:verify
+```
+
+Operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
+
 ## Related docs
 
 - `scripts/dev-golden-path-stack.js` — local dev stack entrypoint (`npm run dev:golden-path:up`)

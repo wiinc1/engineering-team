@@ -2,7 +2,7 @@
   "schemaVersion": "1.0",
   "epic": "golden-path-autonomous-delivery",
   "purpose": "Inventory every supervised step in the GitHub-issue-to-production path. Mark automation status so Phase A–E work can be prioritized.",
-  "lastUpdated": "2026-06-23",
+  "lastUpdated": "2026-06-24T22:00:00Z",
   "systems": ["github", "engineering-team", "forgeadapter", "openclaw", "hermes"],
   "steps": [
     {
@@ -10,8 +10,9 @@
       "phase": "0-intake",
       "action": "Open or select GitHub issue with full requirements template",
       "system": "github",
-      "manual": true,
+      "manual": false,
       "automateAs": "github_issue_webhook_or_poller",
+      "automatedBy": "lib/task-platform/factory-intake.js writeIntakeEvidence (githubIssueUrl on factory queue item)",
       "evidence": "issue URL, body, labels"
     },
     {
@@ -29,8 +30,9 @@
       "phase": "0-intake",
       "action": "PM refines title, acceptance criteria, priority, task type",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "pm_agent_refinement_job",
+      "automatedBy": "lib/task-platform/factory-orchestration.js + refinement/start API (FF_FACTORY_AGENT_DRIVEN_PHASE1)",
       "evidence": "task refinement events, contract draft"
     },
     {
@@ -38,8 +40,9 @@
       "phase": "0-intake",
       "action": "Architect adds technical spec, tier, monitoring spec",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "architect_agent_spec_job",
+      "automatedBy": "lib/task-platform/factory-orchestration.js runArchitectAgentHandoff",
       "evidence": "architect handoff, tier assignment"
     },
     {
@@ -47,8 +50,9 @@
       "phase": "1-contract",
       "action": "Create pilot Project and link single task",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "project_auto_create_from_issue_label",
+      "automatedBy": "lib/task-platform/factory-intake.js createFactoryIntake",
       "evidence": "projectId, task.project_links"
     },
     {
@@ -56,8 +60,9 @@
       "phase": "1-contract",
       "action": "Record execution contract with forge_dispatch targetRepo",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "contract_generator_from_acceptance_criteria",
+      "automatedBy": "lib/task-platform/factory-orchestration.js buildFactoryExecutionContractBody",
       "evidence": "execution_contract_version_recorded"
     },
     {
@@ -75,8 +80,9 @@
       "phase": "1-contract",
       "action": "Approve execution contract (policy or explicit operator)",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "policy_auto_approval_for_simple_tier",
+      "automatedBy": "lib/task-platform/golden-path-phase1.js approveExecutionContractWithRetry (Simple tier policy)",
       "evidence": "task.execution_contract_approved"
     },
     {
@@ -84,8 +90,9 @@
       "phase": "2-forge",
       "action": "Seed task for forge-execution-readiness or verify existing seed",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "auto_seed_on_contract_approval",
+      "automatedBy": "lib/task-platform/factory-delivery.js seedFactoryForgeTask + et-forge-dispatch-bridge ensureForgeExecutionReady",
       "evidence": "GET /tasks/:id/forge-execution-readiness returns 200"
     },
     {
@@ -93,17 +100,19 @@
       "phase": "2-forge",
       "action": "Start local forgeadapter + upstream mocks (or production forge host)",
       "system": "forgeadapter",
-      "manual": true,
+      "manual": false,
       "automateAs": "deploy_forgeadapter_service",
-      "evidence": "GET /ready 200, smoke:local:phase2 pass"
+      "automatedBy": "lib/task-platform/golden-path-stack-probe.js + npm run dev:golden-path:up",
+      "evidence": "GET /ready 200, phase2 stackHealth evidence"
     },
     {
       "id": "GP-011",
       "phase": "2-forge",
       "action": "POST forgeadapter /tasks/:id/start",
       "system": "forgeadapter",
-      "manual": true,
+      "manual": false,
       "automateAs": "et_dispatch_webhook_on_contract_approved",
+      "automatedBy": "lib/task-platform/golden-path-phases.js phase2 + et-forge-dispatch-bridge (ET_FORGE_DISPATCH_ENABLED)",
       "evidence": "job succeeded, runtime executionState=running"
     },
     {
@@ -111,8 +120,9 @@
       "phase": "2-forge",
       "action": "Seed pilot AI-agent roster",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "pilot_agents_seed_on_project_create",
+      "automatedBy": "lib/task-platform/factory-intake.js bootstrapFactoryIntakeAgents",
       "evidence": "npm run pilot:agents:seed output"
     },
     {
@@ -130,8 +140,9 @@
       "phase": "2-forge",
       "action": "Engineer implements change (branch, commits, PR)",
       "system": "github",
-      "manual": true,
+      "manual": false,
       "automateAs": "openclaw_implementer_in_worktree",
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runImplementerAgentPhase (FF_FACTORY_AGENT_DRIVEN_PHASES)",
       "evidence": "PR URL, commit SHA, implementation reference on task"
     },
     {
@@ -159,8 +170,9 @@
       "phase": "4-fix",
       "action": "Engineer fixes findings and pushes new commit",
       "system": "github",
-      "manual": true,
+      "manual": false,
       "automateAs": "implementer_agent_resume_after_qa_fail",
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runImplementerFixAgentPhase (FF_FACTORY_AGENT_DRIVEN_PHASES)",
       "evidence": "new commit on PR, engineer submission event"
     },
     {
@@ -168,8 +180,9 @@
       "phase": "4-fix",
       "action": "POST forgeadapter /tasks/:id/resume after QA fail",
       "system": "forgeadapter",
-      "manual": true,
+      "manual": false,
       "automateAs": "auto_resume_on_et_qa_fail",
+      "automatedBy": "lib/task-platform/golden-path-phases.js phase4 + et-forge-dispatch-bridge",
       "evidence": "job succeeded, executionState=running"
     },
     {
@@ -177,8 +190,9 @@
       "phase": "4-fix",
       "action": "QA records retest pass with prior_run_id scope",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "qa_agent_retest_runner",
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runQaAgentPhase + golden-path-phases phase4",
       "evidence": "task.qa_result_recorded outcome=pass runType=retest"
     },
     {
@@ -186,8 +200,9 @@
       "phase": "5-signoff",
       "action": "Approve forgeadapter qa/architect/pm review gates",
       "system": "forgeadapter",
-      "manual": true,
+      "manual": false,
       "automateAs": "specialist_agents_submit_review_packets",
+      "automatedBy": "lib/task-platform/golden-path-phases.js phase5 + et-forge-dispatch-bridge closeout",
       "evidence": "reviewGates all approved, local-stack e2e parity"
     },
     {
@@ -195,8 +210,9 @@
       "phase": "5-signoff",
       "action": "ET close review — PM + Architect approve",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "pm_architect_close_review_agents",
+      "automatedBy": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
       "evidence": "close review events, merge-readiness gate"
     },
     {
@@ -204,17 +220,19 @@
       "phase": "6-deploy",
       "action": "Merge PR after required GitHub checks",
       "system": "github",
-      "manual": true,
+      "manual": false,
       "automateAs": "auto_merge_when_gates_green",
-      "evidence": "merged PR, merge commit SHA"
+      "automatedBy": "lib/task-platform/github-auto-merge.js mergePullRequestWhenReady (FF_FACTORY_AUTO_MERGE + GITHUB_TOKEN)",
+      "evidence": "merged PR, merge commit SHA, phase6 autoMerge evidence"
     },
     {
       "id": "GP-023",
       "phase": "6-deploy",
       "action": "Local deploy validation (lint, test:unit, standards:check)",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "ci_validation_on_merge",
+      "automatedBy": "lib/task-platform/factory-agent-phases.js buildCiValidationEvidence + golden-path-phases phase6",
       "evidence": "validation command output in golden-path evidence JSON"
     },
     {
@@ -240,25 +258,29 @@
       "phase": "6-deploy",
       "action": "SRE monitoring approval and 48h window",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "sre_agent_monitoring_gate",
-      "evidence": "sre monitoring approval event"
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runSreAgentPhase + golden-path-phases phase5/6",
+      "evidence": "sre monitoring approval event, agentSessionId in phase evidence"
     },
     {
       "id": "GP-027",
       "phase": "6-deploy",
       "action": "Task closeout report with manual-action classification",
       "system": "engineering-team",
-      "manual": true,
+      "manual": false,
       "automateAs": "auto_closeout_when_all_gates_satisfied",
-      "evidence": "closeout report, observability/golden-path-pilot.json"
+      "automatedBy": "lib/task-platform/factory-closeout.js writeFactoryCloseoutReport (phase6)",
+      "evidence": "observability/factory-closeout/{taskId}.json"
     }
   ],
   "summary": {
     "totalSteps": 27,
-    "manualToday": 22,
-    "automatedToday": 5,
-    "criticalPathAutomation": ["GP-002", "GP-007", "GP-011", "GP-013", "GP-015", "GP-016", "GP-018", "GP-020", "GP-023"],
+    "manualToday": 2,
+    "automatedToday": 25,
+    "milestonesCompleted": ["A", "B", "C", "D"],
+    "nextMilestone": "E-hosted-deploy",
+    "criticalPathAutomation": ["GP-002", "GP-007", "GP-011", "GP-013", "GP-015", "GP-016", "GP-018", "GP-020", "GP-022", "GP-023", "GP-026"],
     "bridgeAutomation": {
       "GP-011": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
       "GP-016": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)",
