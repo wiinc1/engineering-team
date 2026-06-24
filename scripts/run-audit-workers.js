@@ -57,7 +57,25 @@ const publisher = createCombinedOutboxPublisher([
   process.on('SIGTERM', () => { projectionWorker.stop(); outboxWorker.stop(); });
   process.on('SIGINT', () => { projectionWorker.stop(); outboxWorker.stop(); });
 
+  process.stdout.write(`${JSON.stringify({
+    feature: 'gp_007_audit_workers',
+    action: 'worker_startup',
+    outcome: 'starting',
+    backend: backendConfig.backend,
+    projectionIntervalMs: Number(process.env.PROJECTION_INTERVAL_MS || 5000),
+    outboxIntervalMs: Number(process.env.OUTBOX_INTERVAL_MS || 5000),
+    etForgeDispatchEnabled: resolveEtForgeDispatchConfig().enabled,
+    pushgateway: Boolean(process.env.PUSHGATEWAY_URL),
+  })}\n`);
+
   await Promise.all([projectionWorker.start(), outboxWorker.start()]);
+
+  process.stdout.write(`${JSON.stringify({
+    feature: 'gp_007_audit_workers',
+    action: 'worker_startup',
+    outcome: 'ready',
+    pid: process.pid,
+  })}\n`);
 })().catch(error => {
   process.stderr.write(`${error.stack}\n`);
   process.exit(1);

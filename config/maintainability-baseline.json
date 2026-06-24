@@ -214,6 +214,15 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/gp-007-projection-workers-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 23,
+      "ordinal": 4,
+      "name": "runGp007ProjectionWorkersVerify",
+      "actual": 115,
+      "cap": 50
+    },
+    {
       "path": "scripts/replay-golden-path-postgres.js",
       "rule": "maintainability:function-lines",
       "line": 92,

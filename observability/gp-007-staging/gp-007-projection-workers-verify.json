@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-007-projection-workers-verify",
+  "generatedAt": "2026-06-24T22:52:11.210Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "observability/gp-007-staging",
+  "stackStatePath": "observability/golden-path-local-dev/stack.json",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "stack_state_present",
+        "ok": true,
+        "stackStatePath": "observability/golden-path-local-dev/stack.json"
+      },
+      {
+        "name": "audit_workers_process_registered",
+        "ok": true,
+        "processes": [
+          "audit-api",
+          "audit-workers",
+          "forgeadapter",
+          "vite-ui"
+        ]
+      },
+      {
+        "name": "append_event_without_manual_projection",
+        "ok": true,
+        "status": 202
+      },
+      {
+        "name": "projection_lag_under_threshold",
+        "ok": true,
+        "lagSeconds": 0,
+        "thresholdSeconds": 5
+      },
+      {
+        "name": "projected_state_visible",
+        "ok": true,
+        "status": 200
+      }
+    ]
+  },
+  "artifacts": {
+    "workersSmoke": "observability/gp-007-staging/audit-workers-production-smoke.json",
+    "canonicalSmoke": "observability/audit-workers-production-smoke.json"
+  }
+}

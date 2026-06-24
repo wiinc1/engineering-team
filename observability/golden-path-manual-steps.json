@@ -73,7 +73,7 @@
       "manual": false,
       "automateAs": "always_on_projection_worker",
       "automatedBy": "scripts/run-audit-workers.js + docker-compose.production-workers.yml / fly.toml",
-      "evidence": "observability/audit-workers-production-smoke.json"
+      "evidence": "observability/gp-007-staging/gp-007-complete.json, observability/audit-workers-production-smoke.json"
     },
     {
       "id": "GP-008",
