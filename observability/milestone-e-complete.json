@@ -3,7 +3,7 @@
   "kind": "milestone-e-complete",
   "milestone": "E",
   "title": "Deploy closeout replay (coordinated stack)",
-  "generatedAt": "2026-06-24T21:11:28.094Z",
+  "generatedAt": "2026-06-24T21:46:08.853Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "operatorUrl": "http://127.0.0.1:15173",
@@ -23,7 +23,9 @@
   },
   "artifacts": {
     "verify": "observability/milestone-hosted-staging/milestone-hosted-phase6-verify.json",
-    "factoryEvidence": "observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqsknx58.json"
+    "factoryEvidence": "observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqslnf5q.json",
+    "closeoutReport": "observability/factory-closeout/TSK-013.json",
+    "pilotRollup": "observability/golden-path-pilot.json"
   },
   "notes": [
     "Factory delivery runs on the coordinated stack (dev:golden-path:up): local Postgres :15432, API :13000, UI :15173, forgeadapter :14010.",

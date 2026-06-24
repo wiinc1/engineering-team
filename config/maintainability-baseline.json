@@ -84,7 +84,7 @@
       "line": 1898,
       "ordinal": 80,
       "name": "runGoldenPathPhases",
-      "actual": 192,
+      "actual": 196,
       "cap": 50
     },
     {
@@ -408,7 +408,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 2121,
+      "actual": 2125,
       "cap": 400
     },
     {
@@ -471,7 +471,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 576,
+      "actual": 577,
       "cap": 400
     },
     {
@@ -615,7 +615,7 @@
       "line": 7,
       "ordinal": 1,
       "name": "runMilestoneHostedPhase6Verify",
-      "actual": 80,
+      "actual": 81,
       "cap": 50
     },
     {
@@ -642,7 +642,7 @@
       "line": 11,
       "ordinal": 3,
       "name": "resolveStagingRuntime",
-      "actual": 72,
+      "actual": 79,
       "cap": 50
     }
   ]
