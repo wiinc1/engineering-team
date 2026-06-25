@@ -3,14 +3,14 @@
   "kind": "gp-005-complete",
   "milestone": "GP-005",
   "title": "GitHub intake project bootstrap",
-  "generatedAt": "2026-06-25T00:14:53.062Z",
+  "generatedAt": "2026-06-25T00:27:05.375Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "summary": {
     "passed": true,
-    "taskId": "TSK-001",
-    "projectId": "PRJ-E0652D7E",
-    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/945880"
+    "taskId": "TSK-003",
+    "projectId": "PRJ-36D018B6",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/956280"
   },
   "exitCriteria": {
     "intakeDraftCreated": true,

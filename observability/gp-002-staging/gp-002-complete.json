@@ -3,13 +3,13 @@
   "kind": "gp-002-complete",
   "milestone": "GP-002",
   "title": "GitHub issue intake normalizer",
-  "generatedAt": "2026-06-24T23:04:18.159Z",
+  "generatedAt": "2026-06-25T00:27:02.975Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "summary": {
     "passed": true,
-    "taskId": "TSK-017",
-    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/996190"
+    "taskId": "TSK-002",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401"
   },
   "exitCriteria": {
     "intakeDraftCreated": true,
