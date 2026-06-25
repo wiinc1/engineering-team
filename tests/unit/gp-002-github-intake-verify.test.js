@@ -25,8 +25,9 @@ test('runGp002GithubIntakeVerify writes smoke and complete evidence', async () =
 
   const issueNumber = 991_234;
   let webhookPosts = 0;
+  const expectedIssueUrl = `http://192.168.1.116/wiinc1/engineering-team/-/issues/${issueNumber}`;
   const fetchImpl = async (url, options = {}) => {
-    if (String(url).endsWith('/github/webhooks') && options.method === 'POST') {
+    if (String(url).endsWith('/gitlab/webhooks') && options.method === 'POST') {
       webhookPosts += 1;
       if (webhookPosts === 1) {
         return {
@@ -36,7 +37,9 @@ test('runGp002GithubIntakeVerify writes smoke and complete evidence', async () =
             received: true,
             created: true,
             taskId: 'TSK-GP002',
-            githubIssueUrl: `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`,
+            intakeProvider: 'gitlab',
+            forgeIssueUrl: expectedIssueUrl,
+            gitlabIssueUrl: expectedIssueUrl,
             intakeDraft: true,
           }),
         };
@@ -74,7 +77,8 @@ test('runGp002GithubIntakeVerify writes smoke and complete evidence', async () =
             {
               event_type: 'task.created',
               payload: {
-                github_issue_url: `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`,
+                forge_issue_url: expectedIssueUrl,
+                gitlab_issue_url: expectedIssueUrl,
               },
             },
             { event_type: 'task.refinement_requested' },

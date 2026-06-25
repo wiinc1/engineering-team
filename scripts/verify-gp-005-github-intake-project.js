@@ -19,7 +19,7 @@ runGp005GithubIntakeProjectVerify({
     process.stdout.write(`${JSON.stringify({
       ok: evidence.summary.passed,
       milestone: 'GP-005',
-      title: 'GitHub intake project bootstrap',
+      title: 'Forge intake project bootstrap (GitLab default)',
       outputDir: evidence.outputDir,
       summary: evidence.summary,
       complete: complete.summary,

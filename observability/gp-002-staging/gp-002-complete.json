@@ -2,20 +2,21 @@
   "schemaVersion": "1.0",
   "kind": "gp-002-complete",
   "milestone": "GP-002",
-  "title": "GitHub issue intake normalizer",
-  "generatedAt": "2026-06-25T20:55:32.739Z",
+  "title": "GitLab issue intake normalizer",
+  "generatedAt": "2026-06-25T21:12:46.814Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "summary": {
     "passed": true,
-    "taskId": "TSK-012",
-    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/988461"
+    "taskId": "TSK-001",
+    "intakeProvider": "gitlab",
+    "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959"
   },
   "exitCriteria": {
     "intakeDraftCreated": true,
     "idempotentDuplicate": true,
     "pmRefinementWaiting": true,
-    "githubIssueUrlRecorded": true
+    "forgeIssueUrlRecorded": true
   },
   "artifacts": {
     "verify": "observability/gp-002-staging/gp-002-github-intake-verify.json",
@@ -23,8 +24,9 @@
     "canonicalSmoke": "observability/gp-002-github-intake-smoke.json"
   },
   "notes": [
-    "Coordinated stack proof: npm run dev:golden-path:up with FF_GITHUB_INTAKE_NORMALIZER=true.",
-    "Opt-in via factory-intake label; webhook signature required (GITHUB_WEBHOOK_SECRET).",
+    "Coordinated stack proof: npm run dev:golden-path:up with FF_GITLAB_INTAKE_NORMALIZER=true (default provider: gitlab).",
+    "GitHub optional: FORGE_INTAKE_PROVIDER=github with FF_GITHUB_INTAKE_NORMALIZER=true.",
+    "Opt-in via factory-intake label; GitLab uses X-Gitlab-Token (GITLAB_WEBHOOK_SECRET), GitHub uses signature (GITHUB_WEBHOOK_SECRET).",
     "Replaces manual seed-golden-path-phase0.js intake transcription for GP-002."
   ]
 }

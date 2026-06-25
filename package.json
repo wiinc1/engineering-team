@@ -86,6 +86,8 @@
     "gp-002:verify:hosted": "node scripts/verify-gp-002-github-intake.js --hosted",
     "gp-005:verify": "node scripts/verify-gp-005-github-intake-project.js --base-url http://127.0.0.1:13000",
     "gp-005:verify:hosted": "node scripts/verify-gp-005-github-intake-project.js --hosted",
+    "gitlab:intake:webhook:setup": "node scripts/setup-gitlab-intake-webhook.js",
+    "forge:intake:webhook:setup": "node scripts/setup-gitlab-intake-webhook.js",
     "github:intake:webhook:setup": "node scripts/setup-github-intake-webhook.js",
     "gp-007:verify": "node scripts/verify-gp-007-projection-workers.js --base-url http://127.0.0.1:13000",
     "gp-007:verify:hosted": "node scripts/verify-gp-007-projection-workers.js --hosted",
