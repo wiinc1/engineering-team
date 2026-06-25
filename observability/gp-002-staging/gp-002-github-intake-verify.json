@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1.0",
   "kind": "gp-002-github-intake-verify",
-  "generatedAt": "2026-06-25T00:27:02.975Z",
+  "generatedAt": "2026-06-25T17:19:39.954Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "outputDir": "observability/gp-002-staging",
-  "issueNumber": 914401,
+  "issueNumber": 979495,
   "summary": {
     "passed": true,
     "checks": [
@@ -17,21 +17,21 @@
       {
         "name": "audit_api_process_alive",
         "ok": true,
-        "pid": 20263
+        "pid": 56411
       },
       {
         "name": "issues_opened_creates_intake_draft",
         "ok": true,
         "status": 201,
-        "taskId": "TSK-002",
-        "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401",
+        "taskId": "TSK-001",
+        "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/979495",
         "intakeDraft": true
       },
       {
         "name": "duplicate_webhook_returns_existing_task",
         "ok": true,
         "status": 202,
-        "taskId": "TSK-002"
+        "taskId": "TSK-001"
       },
       {
         "name": "task_waiting_for_pm_refinement",
@@ -43,7 +43,7 @@
       {
         "name": "task_created_records_github_issue_url",
         "ok": true,
-        "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401"
+        "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/979495"
       },
       {
         "name": "task_refinement_requested_recorded",
@@ -57,28 +57,28 @@
     "body": {
       "received": true,
       "created": true,
-      "deliveryId": "gp-002-verify-create-914401",
-      "taskId": "TSK-002",
+      "deliveryId": "gp-002-verify-create-979495",
+      "taskId": "TSK-001",
       "tenantId": "engineering-team",
-      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401",
-      "githubIssueNumber": 914401,
+      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/979495",
+      "githubIssueNumber": 979495,
       "intakeDraft": true,
       "nextRequiredAction": "PM refinement required",
       "pmRefinement": {
         "status": "failed"
       },
       "duplicate": false,
-      "projectId": "PRJ-F98352CE",
-      "projectName": "Factory delivery — GP-002 verify intake draft [#914401]",
+      "projectId": "PRJ-55C84AD4",
+      "projectName": "Factory delivery — GP-002 verify intake draft [#979495]",
       "projectBootstrap": {
         "skipped": false,
         "created": true,
         "existing": false,
         "attached": true,
-        "projectId": "PRJ-F98352CE"
+        "projectId": "PRJ-55C84AD4"
       }
     },
-    "taskId": "TSK-002"
+    "taskId": "TSK-001"
   },
   "duplicate": {
     "status": 202,
@@ -86,18 +86,18 @@
       "received": true,
       "ignored": true,
       "reason": "existing_intake_task",
-      "taskId": "TSK-002",
+      "taskId": "TSK-001",
       "tenantId": "engineering-team",
-      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401",
+      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/979495",
       "duplicate": false,
-      "projectId": "PRJ-F98352CE",
+      "projectId": "PRJ-55C84AD4",
       "projectName": null,
       "projectBootstrap": {
         "skipped": false,
         "created": false,
         "existing": true,
         "attached": false,
-        "projectId": "PRJ-F98352CE"
+        "projectId": "PRJ-55C84AD4"
       }
     }
   },
@@ -105,10 +105,10 @@
     "ok": true,
     "projected": {
       "tenant_id": "engineering-team",
-      "task_id": "TSK-002",
-      "last_event_id": "850bb328-0279-49f6-b1ee-1330a3ed2905",
-      "last_event_type": "task.created",
-      "last_occurred_at": "2026-06-25T00:27:03.068Z",
+      "task_id": "TSK-001",
+      "last_event_id": "b061b84c-478f-4a1a-85eb-79697591c9eb",
+      "last_event_type": "task.refinement_requested",
+      "last_occurred_at": "2026-06-25T17:19:40.051Z",
       "last_actor_id": "github-intake-normalizer",
       "current_stage": "DRAFT",
       "assignee": "pm",
@@ -117,7 +117,7 @@
       "closed": false,
       "waiting_state": "task_refinement",
       "next_required_action": "PM refinement required",
-      "queue_entered_at": "2026-06-25T00:27:03.068Z",
+      "queue_entered_at": "2026-06-25T17:19:40.051Z",
       "wip_owner": null,
       "wip_started_at": null,
       "engineer_tier": null,
@@ -144,7 +144,7 @@
   },
   "history": {
     "status": 200,
-    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/979495",
     "hasRefinementRequested": true
   }
 }

@@ -1,37 +1,37 @@
 {
   "schemaVersion": "1.0",
   "kind": "gp-002-staging-smoke",
-  "generatedAt": "2026-06-25T00:27:02.975Z",
+  "generatedAt": "2026-06-25T17:19:39.954Z",
   "baseUrl": "http://127.0.0.1:13000",
-  "issueNumber": 914401,
+  "issueNumber": 979495,
   "status": 201,
   "ok": true,
   "body": {
     "received": true,
     "created": true,
-    "deliveryId": "gp-002-verify-create-914401",
-    "taskId": "TSK-002",
+    "deliveryId": "gp-002-verify-create-979495",
+    "taskId": "TSK-001",
     "tenantId": "engineering-team",
-    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/914401",
-    "githubIssueNumber": 914401,
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/979495",
+    "githubIssueNumber": 979495,
     "intakeDraft": true,
     "nextRequiredAction": "PM refinement required",
     "pmRefinement": {
       "status": "failed"
     },
     "duplicate": false,
-    "projectId": "PRJ-F98352CE",
-    "projectName": "Factory delivery — GP-002 verify intake draft [#914401]",
+    "projectId": "PRJ-55C84AD4",
+    "projectName": "Factory delivery — GP-002 verify intake draft [#979495]",
     "projectBootstrap": {
       "skipped": false,
       "created": true,
       "existing": false,
       "attached": true,
-      "projectId": "PRJ-F98352CE"
+      "projectId": "PRJ-55C84AD4"
     }
   },
   "summary": {
     "passed": true,
-    "taskId": "TSK-002"
+    "taskId": "TSK-001"
   }
 }
