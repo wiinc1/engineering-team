@@ -19,7 +19,7 @@ Audit of `docs/issues/gp-007-projection-worker-production.md` requirements vs sh
 
 ## Still operator-owned after code fixes
 
-- Deploy workers to staging/prod Supabase (`fly deploy` / `audit:workers:up`)
+- Coordinated stack is canonical (`dev:golden-path:up`); remote deploy (`fly` / `audit:workers:up`) only for non-platform homelab use
 - Hosted UI verification (intake visible in browser within one interval)
 - Full QA gate smoke on hosted API (needs staged task in QA — covered locally by milestone verify)
 

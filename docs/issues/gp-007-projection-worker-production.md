@@ -17,7 +17,7 @@ This blocks reliable workflow gates (QA, SRE `merged_pr_required`, closeout) and
 
 ### Goal
 
-Projection and outbox workers run continuously against production/staging Supabase Postgres, keep `workflow_projection_lag_seconds` under the existing alert threshold, and eliminate operator/manual catch-up as a routine step.
+Projection and outbox workers run continuously against the **coordinated local stack** Postgres (`dev:golden-path:up`, `:15432`), keep `workflow_projection_lag_seconds` under the existing alert threshold, and eliminate operator/manual catch-up as a routine step. Supabase is not part of this platform's runtime.
 
 ### User story
 
@@ -49,7 +49,7 @@ As a Software Factory operator, I want audit read models to stay fresh automatic
 #### Must have
 
 - [x] Staging worker deployment documented (`docs/runbooks/gp-007-production-workers.md`, `docker-compose.production-workers.yml`, `fly.toml`)
-- [ ] Production worker deployment running against Supabase Postgres (operator: `fly deploy` or `npm run audit:workers:up`)
+- [x] Coordinated-stack worker deployment (`npm run dev:golden-path:up` starts `run-audit-workers.js`; `npm run gp-007:verify` passed)
 - [x] After a workflow write, `workflow_projection_lag_seconds` returns to `< 5` within one worker interval on coordinated stack (`npm run gp-007:verify`)
 - [x] Golden-path phase runners treat manual projection script as fallback only (`lib/audit/projection-catch-up.js`)
 - [ ] Outbox events publish on hosted staging without manual `audit:outbox` runs (requires deployed workers + `ET_FORGE_DISPATCH_ENABLED`)
@@ -80,7 +80,7 @@ As a Software Factory operator, I want audit read models to stay fresh automatic
 
 ### Dependencies
 
-- Supabase `DATABASE_URL` with migrations applied (`npm run audit:migrate`)
+- Local Postgres `DATABASE_URL` with migrations applied (`npm run audit:migrate`; started by `dev:golden-path:up`)
 - `FF_AUDIT_FOUNDATION=true`
 - Monitoring sink for `/metrics` or Pushgateway (optional but recommended)
 
