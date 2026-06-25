@@ -1,43 +1,37 @@
 {
-  "updatedAt": "2026-06-25T20:56:20.566Z",
+  "updatedAt": "2026-06-25T22:47:29.611Z",
   "snapshot": {
     "runtimeBridgeInvocationCount": 1,
-    "liveDelegationSuccessCount": 0,
+    "liveDelegationSuccessCount": 1,
     "delegationAttemptsByAgent": {
-      "pm": 1
+      "engineer": 1
     },
-    "delegationSuccessByAgent": {},
-    "delegationFailureByAgent": {
-      "pm": 1
+    "delegationSuccessByAgent": {
+      "engineer": 1
     },
-    "delegationFailureByReason": {
-      "not_configured": 1
-    },
-    "delegationFailureByCategory": {
-      "runtime_not_available": 1
-    },
-    "fallbackToCoordinatorCount": 1,
+    "delegationFailureByAgent": {},
+    "delegationFailureByReason": {},
+    "delegationFailureByCategory": {},
+    "fallbackToCoordinatorCount": 0,
     "attributionMismatchCount": 0,
     "delegationLatencyHistogram": {
       "count": 1,
-      "min_ms": 0,
-      "p50_ms": 0,
-      "p95_ms": 0,
-      "max_ms": 0
+      "min_ms": 4169,
+      "p50_ms": 4169,
+      "p95_ms": 4169,
+      "max_ms": 4169
     }
   },
   "prometheus": {
     "real_specialist_delegation_runtime_bridge_invocation_total": 1,
-    "real_specialist_delegation_live_success_total": 0,
-    "real_specialist_delegation_fallback_total": 1,
+    "real_specialist_delegation_live_success_total": 1,
+    "real_specialist_delegation_fallback_total": 0,
     "real_specialist_delegation_attribution_mismatch_total": 0,
     "real_specialist_delegation_latency_count": 1,
-    "real_specialist_delegation_latency_p50_ms": 0,
-    "real_specialist_delegation_latency_p95_ms": 0,
-    "real_specialist_delegation_latency_max_ms": 0,
-    "real_specialist_delegation_attempts_pm_total": 1,
-    "real_specialist_delegation_failures_pm_total": 1,
-    "real_specialist_delegation_failure_reason_not_configured_total": 1,
-    "real_specialist_delegation_failure_category_runtime_not_available_total": 1
+    "real_specialist_delegation_latency_p50_ms": 4169,
+    "real_specialist_delegation_latency_p95_ms": 4169,
+    "real_specialist_delegation_latency_max_ms": 4169,
+    "real_specialist_delegation_attempts_engineer_total": 1,
+    "real_specialist_delegation_success_engineer_total": 1
   }
 }

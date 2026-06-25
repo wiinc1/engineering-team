@@ -1,25 +1,25 @@
 {
-  "validatedAt": "2026-06-25T20:55:42.345Z",
+  "validatedAt": "2026-06-25T22:47:29.612Z",
   "request": "Implement a no-op delegation smoke by replying OK only. Do not inspect or edit files.",
   "mode": "delegated",
   "specialist": "engineer",
   "agentId": "sr-engineer",
-  "sessionId": "specialist-delegation-34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
+  "sessionId": "specialist-delegation-7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
   "attribution": {
     "handledBy": "sr-engineer",
     "delegated": true,
     "coordinator": "main"
   },
   "metadata": {
-    "delegationId": "34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
+    "delegationId": "7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
     "routeConfidence": "clear",
-    "sessionId": "specialist-delegation-34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
+    "sessionId": "specialist-delegation-7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
     "ownership": {
       "specialistId": "engineer",
       "runtimeAgentId": "sr-engineer",
-      "sessionId": "specialist-delegation-34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
+      "sessionId": "specialist-delegation-7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
       "response": {
-        "runId": "097278b1-79b2-4fe0-8000-614a9a6549ee",
+        "runId": "a946036b-55d8-47fd-9788-eb5cd9d04994",
         "status": "ok",
         "summary": "completed",
         "result": {
@@ -30,34 +30,34 @@
             }
           ],
           "meta": {
-            "durationMs": 3292,
+            "durationMs": 3121,
             "agentMeta": {
-              "sessionId": "specialist-delegation-34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
+              "sessionId": "specialist-delegation-7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
               "provider": "codex",
               "model": "gpt-5.5",
               "contextTokens": 272000,
               "agentHarnessId": "codex",
               "usage": {
-                "input": 19569,
-                "output": 17,
+                "input": 19567,
+                "output": 62,
                 "cacheRead": 2432,
-                "total": 22018
+                "total": 22061
               },
               "lastCallUsage": {
-                "input": 19569,
-                "output": 17,
+                "input": 19567,
+                "output": 62,
                 "cacheRead": 2432,
                 "cacheWrite": 0,
-                "total": 22018
+                "total": 22061
               },
-              "promptTokens": 22001
+              "promptTokens": 21999
             },
             "aborted": false,
             "systemPromptReport": {
               "source": "run",
-              "generatedAt": 1782420939081,
-              "sessionId": "specialist-delegation-34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
-              "sessionKey": "agent:sr-engineer:explicit:specialist-delegation-34e9ae7b-ae88-4ffe-b4ee-9c3fd694e26d",
+              "generatedAt": 1782427646510,
+              "sessionId": "specialist-delegation-7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
+              "sessionKey": "agent:sr-engineer:explicit:specialist-delegation-7bc8deae-1204-4ee7-a8bd-bd01ea573c10",
               "provider": "codex",
               "model": "gpt-5.5",
               "workspaceDir": "/Users/wiinc2/.openclaw/workspace",
@@ -476,7 +476,7 @@
     "artifactLogged": true,
     "artifactPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/specialist-delegation.jsonl",
     "metricsPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/specialist-delegation-metrics.json",
-    "latencyMs": 4385
+    "latencyMs": 4169
   },
   "message": "OK"
 }

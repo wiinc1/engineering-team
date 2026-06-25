@@ -3,14 +3,14 @@
   "kind": "gp-002-complete",
   "milestone": "GP-002",
   "title": "GitLab issue intake normalizer",
-  "generatedAt": "2026-06-25T21:12:46.814Z",
+  "generatedAt": "2026-06-25T22:45:29.789Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "summary": {
     "passed": true,
-    "taskId": "TSK-001",
+    "taskId": "TSK-003",
     "intakeProvider": "gitlab",
-    "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959"
+    "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051"
   },
   "exitCriteria": {
     "intakeDraftCreated": true,
