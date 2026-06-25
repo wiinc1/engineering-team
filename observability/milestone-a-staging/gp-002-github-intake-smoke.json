@@ -1,37 +1,37 @@
 {
   "schemaVersion": "1.0",
   "kind": "gp-002-staging-smoke",
-  "generatedAt": "2026-06-25T20:55:32.739Z",
+  "generatedAt": "2026-06-25T20:55:49.618Z",
   "baseUrl": "http://127.0.0.1:13000",
-  "issueNumber": 988461,
+  "issueNumber": 942998,
   "status": 201,
   "ok": true,
   "body": {
     "received": true,
     "created": true,
-    "deliveryId": "gp-002-verify-create-988461",
-    "taskId": "TSK-012",
+    "deliveryId": "milestone-a-gp-002-942998",
+    "taskId": "TSK-014",
     "tenantId": "engineering-team",
-    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/988461",
-    "githubIssueNumber": 988461,
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/942998",
+    "githubIssueNumber": 942998,
     "intakeDraft": true,
     "nextRequiredAction": "PM refinement required",
     "pmRefinement": {
       "status": "failed"
     },
     "duplicate": false,
-    "projectId": "PRJ-C0117321",
-    "projectName": "Factory delivery — GP-002 verify intake draft [#988461]",
+    "projectId": "PRJ-258DA505",
+    "projectName": "Factory delivery — Milestone A staging intake smoke [#942998]",
     "projectBootstrap": {
       "skipped": false,
       "created": true,
       "existing": false,
       "attached": true,
-      "projectId": "PRJ-C0117321"
+      "projectId": "PRJ-258DA505"
     }
   },
   "summary": {
     "passed": true,
-    "taskId": "TSK-012"
+    "taskId": "TSK-014"
   }
 }

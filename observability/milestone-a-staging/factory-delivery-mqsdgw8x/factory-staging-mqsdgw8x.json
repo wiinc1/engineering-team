@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase1_complete",
+  "factoryQueueId": "factory-staging-mqsdgw8x",
+  "githubIssueUrl": null,
+  "engineeringTeam": {
+    "projectId": "PRJ-7DD6B7CD",
+    "taskId": "TSK-002",
+    "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-24T17:53:47.073Z [factory-staging-mqsdgw8x]",
+    "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+    "templateTier": "Simple",
+    "contractVersion": 1,
+    "contractValidationStatus": "valid",
+    "approvalMode": "policy",
+    "forgeDispatch": {
+      "targetRepo": "wiinc1/engineering-team",
+      "projectId": "engineering-team",
+      "domain": "workflow",
+      "affectsUi": false
+    },
+    "forgeExecutionReadiness": null
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDENSDGW8X",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "stepsCompleted": [
+    "GP-001",
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008"
+  ],
+  "startedAt": "2026-06-24T17:53:47.073Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "observability/milestone-a-staging/factory-delivery-mqsdgw8x/stack/factory-staging-mqsdgw8x"
+  },
+  "phase1": {
+    "completedAt": "2026-06-24T17:54:18.103Z",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": null,
+    "bootstrappedPhase0": false,
+    "projectionRuns": [
+      {
+        "skipped": false,
+        "fallback": true,
+        "mode": "manual_script",
+        "processed": 3,
+        "failed": 0,
+        "raw": {
+          "baseDir": "/Users/wiinc2/.openclaw/workspace/engineering-team",
+          "backend": "postgres",
+          "processed": 3,
+          "failed": 0,
+          "expiredProcessed": 0
+        },
+        "label": "pre-contract-record",
+        "retries": 3,
+        "warning": "projection_worker_lag_detected_manual_catchup_invoked",
+        "remediation": "Start always-on audit workers (npm run audit:workers:up) or POST /projections/process as admin fallback."
+      },
+      {
+        "skipped": false,
+        "fallback": true,
+        "mode": "manual_script",
+        "processed": 1,
+        "failed": 0,
+        "raw": {
+          "baseDir": "/Users/wiinc2/.openclaw/workspace/engineering-team",
+          "backend": "postgres",
+          "processed": 1,
+          "failed": 0,
+          "expiredProcessed": 0
+        },
+        "label": "execution-contract-recorded",
+        "retries": 3,
+        "warning": "projection_worker_lag_detected_manual_catchup_invoked",
+        "remediation": "Start always-on audit workers (npm run audit:workers:up) or POST /projections/process as admin fallback."
+      },
+      {
+        "skipped": false,
+        "fallback": true,
+        "mode": "manual_script",
+        "processed": 1,
+        "failed": 0,
+        "raw": {
+          "baseDir": "/Users/wiinc2/.openclaw/workspace/engineering-team",
+          "backend": "postgres",
+          "processed": 1,
+          "failed": 0,
+          "expiredProcessed": 0
+        },
+        "label": "execution-contract-approved",
+        "retries": 3,
+        "warning": "projection_worker_lag_detected_manual_catchup_invoked",
+        "remediation": "Start always-on audit workers (npm run audit:workers:up) or POST /projections/process as admin fallback."
+      }
+    ],
+    "api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    },
+    "contract": {
+      "version": 1,
+      "templateTier": "Simple",
+      "factoryTemplateTier": "Simple",
+      "validationStatus": "valid",
+      "autoApprovalPolicy": {
+        "policy_version": "execution-contract-low-risk-simple-auto-approval.v1",
+        "status": "ready",
+        "canAutoApprove": true,
+        "operatorApprovalRequired": false,
+        "rationale": "Low-risk Simple Execution Contract meets all policy criteria: complete acceptance criteria, no risk flags, no unresolved dependencies, no production auth/security/data-model paths, and a clear rollback path.",
+        "criteria": {
+          "templateTier": "Simple",
+          "riskFlags": [],
+          "acceptanceCriteriaComplete": true,
+          "acceptanceCriteriaCount": 6,
+          "unresolvedDependencies": [],
+          "productionSensitivePaths": [],
+          "rollbackPathClear": true,
+          "rollbackPath": "Rollback by reverting the pilot PR and removing the README golden-path marker.",
+          "reviewerApprovalReady": true
+        },
+        "blockingReasons": [],
+        "metricsPolicy": {
+          "measuredBy": [
+            "feature_operator_trusted_autonomous_delivery_rate",
+            "feature_execution_contract_auto_approvals_total",
+            "feature_operator_trusted_autonomous_deliveries_total"
+          ],
+          "reason": "Autonomous delivery is trusted only when low-risk policy approval later closes successfully."
+        }
+      },
+      "autoApprovalApproved": true
+    },
+    "architectSpec": {
+      "mode": "embedded_in_execution_contract",
+      "engineerTier": "Jr",
+      "monitoringRunbook": "docs/runbooks/golden-path-autonomous-delivery.md"
+    },
+    "forgeReadinessNote": "Forge execution readiness remains GP-009; intake-draft DRAFT stage blocks readiness until workflow advances post-approval."
+  }
+}
