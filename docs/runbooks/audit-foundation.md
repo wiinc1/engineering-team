@@ -242,6 +242,8 @@ Golden-path phase runners treat manual projection scripts as **fallback only** w
 
 Successful intake creates `POST /tasks`-equivalent Intake Draft state: `task.created`, `task.refinement_requested`, PM refinement auto-start, and `github_issue_url` on the audit payload.
 
+When `FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP=true`, issues with `factory-intake` or `golden-path` also auto-create an ACTIVE Project (mirroring `golden-path-phase0.js`) and attach the intake task via `PATCH /api/v1/tasks/{id}/project`. Verify with `npm run gp-005:verify`.
+
 ## Local Docker workflow
 ### Start disposable local Postgres
 ```bash

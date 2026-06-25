@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-005-complete",
+  "milestone": "GP-005",
+  "title": "GitHub intake project bootstrap",
+  "generatedAt": "2026-06-25T17:19:41.424Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "taskId": "TSK-002",
+    "projectId": "PRJ-7881559D",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/967405"
+  },
+  "exitCriteria": {
+    "intakeDraftCreated": true,
+    "projectBootstrapped": true,
+    "idempotentProjectLink": true,
+    "taskShowsProject": true
+  },
+  "artifacts": {
+    "verify": "observability/gp-005-staging/gp-005-github-intake-project-verify.json"
+  },
+  "notes": [
+    "Requires FF_GITHUB_INTAKE_NORMALIZER=true and FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP=true.",
+    "Mirrors golden-path-phase0.js project bootstrap for GitHub issue intake (factory-intake / golden-path labels)."
+  ]
+}

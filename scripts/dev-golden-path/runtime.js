@@ -103,6 +103,8 @@ function buildSharedEnv(options = {}) {
     FF_WORKFLOW_ENGINE: 'true',
     FF_INTAKE_DRAFT_CREATION: 'true',
     FF_GITHUB_INTAKE_NORMALIZER: 'true',
+    FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP: 'true',
+    FF_PROJECTS: 'true',
     GITHUB_WEBHOOK_SECRET: DEFAULTS.githubWebhookSecret,
     GITHUB_INTAKE_OPT_IN_LABEL: 'factory-intake',
     GITHUB_INTAKE_DEFAULT_TENANT: DEFAULTS.tenantId,

@@ -58,6 +58,7 @@ function getServer() {
     githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
     ffGitHubSync: process.env.FF_GITHUB_SYNC,
     ffGitHubIntakeNormalizer: process.env.FF_GITHUB_INTAKE_NORMALIZER,
+    ffGitHubIntakeProjectBootstrap: process.env.FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP,
     githubIntakeOptInLabel: process.env.GITHUB_INTAKE_OPT_IN_LABEL,
     githubIntakeRepoTenantMap: process.env.GITHUB_INTAKE_REPO_TENANT_MAP,
     githubIntakeDefaultTenant: process.env.GITHUB_INTAKE_DEFAULT_TENANT,

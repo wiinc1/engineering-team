@@ -13,7 +13,7 @@ The Vercel-hosted audit API accepts Postgres writes but does not run long-lived 
 | --- | --- | --- |
 | Audit API | Vercel / `run-audit-api.js` | Append events, enqueue projection + outbox work |
 | Audit workers | `run-audit-workers.js` | Drain projection queue + publish outbox (incl. ET→forge bridge) |
-| Postgres | Supabase (prod/staging) or Docker `:15432` (local) | Shared `DATABASE_URL` between API and workers |
+| Postgres | Docker `:15432` on coordinated stack (`dev:golden-path:up`) | Shared `DATABASE_URL` between API and workers |
 
 Workers are **not** serverless. Deploy them as a separate long-running process.
 
@@ -34,12 +34,28 @@ Evidence:
 
 Workers log to `observability/golden-path-local-dev/logs/audit-workers.log`.
 
-## Staging / production deploy
+## Coordinated stack (canonical for this platform)
+
+Workers start automatically with the golden-path stack:
+
+```bash
+npm run dev:golden-path:up
+npm run gp-007:verify
+```
+
+Workers log to `observability/golden-path-local-dev/logs/audit-workers.log`.  
+`DATABASE_URL=postgres://audit:audit@127.0.0.1:15432/engineering_team` (same Postgres as API `:13000`).
+
+Vercel and Supabase are **not** part of the engineering-team factory runtime. GP-024/GP-025 apply to **target apps** the factory delivers, not this repo.
+
+## Optional remote worker deploy (non-platform / homelab)
+
+Use only when running workers against a **remote** Postgres (not the default coordinated stack).
 
 ### Option A — Docker Compose (homelab / VM)
 
 ```bash
-export DATABASE_URL='postgres://...'   # Supabase connection string
+export DATABASE_URL='postgres://...'   # remote Postgres connection string
 export AUTH_JWT_SECRET='...'
 export ET_FORGE_DISPATCH_ENABLED=true  # when bridge is enabled
 export FORGEADAPTER_BASE_URL='...'
@@ -103,7 +119,7 @@ Target: `workflow_projection_lag_seconds < 5` within one worker interval (defaul
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | yes (prod) | — | Same Supabase Postgres as API |
+| `DATABASE_URL` | yes | — | Same Postgres as API (`:15432` on coordinated stack) |
 | `FF_AUDIT_FOUNDATION` | yes | — | Must be `true` |
 | `PROJECTION_INTERVAL_MS` | no | `5000` | Worker poll interval |
 | `OUTBOX_INTERVAL_MS` | no | `5000` | Outbox poll interval |
