@@ -1,41 +1,41 @@
 {
   "schemaVersion": "1.0",
   "kind": "factory-staging-smoke",
-  "generatedAt": "2026-06-25T20:56:00.410Z",
+  "generatedAt": "2026-06-25T22:46:00.754Z",
   "baseUrl": "http://127.0.0.1:13000",
-  "queuePath": "observability/milestone-a-staging/factory-staging-queue-mqtzeusy.json",
-  "deliveryDir": "observability/milestone-a-staging/factory-delivery-mqtzeusy",
+  "queuePath": "observability/milestone-a-staging/factory-staging-queue-mqu3cbog.json",
+  "deliveryDir": "observability/milestone-a-staging/factory-delivery-mqu3cbog",
   "requirement": {
-    "id": "factory-staging-mqtzeusy",
-    "title": "Milestone A staging factory smoke 2026-06-25T20:55:49.618Z",
+    "id": "factory-staging-mqu3cbog",
+    "title": "Milestone A staging factory smoke 2026-06-25T22:45:49.984Z",
     "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
     "templateTier": "Simple",
     "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271"
   },
   "ticks": [
     {
-      "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-a-staging/factory-staging-queue-mqtzeusy.json",
+      "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-a-staging/factory-staging-queue-mqu3cbog.json",
       "processed": 1,
       "results": [
         {
-          "id": "factory-staging-mqtzeusy",
+          "id": "factory-staging-mqu3cbog",
           "action": "intake",
           "stage": "intake_complete",
-          "taskId": "TSK-015",
+          "taskId": "TSK-007",
           "error": null
         }
       ],
       "pendingCount": 1
     },
     {
-      "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-a-staging/factory-staging-queue-mqtzeusy.json",
+      "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-a-staging/factory-staging-queue-mqu3cbog.json",
       "processed": 1,
       "results": [
         {
-          "id": "factory-staging-mqtzeusy",
+          "id": "factory-staging-mqu3cbog",
           "action": "phase1",
           "stage": "phase1_complete",
-          "taskId": "TSK-015",
+          "taskId": "TSK-007",
           "error": null
         }
       ],
@@ -45,7 +45,7 @@
   "summary": {
     "passed": true,
     "stage": "phase1_complete",
-    "taskId": "TSK-015",
+    "taskId": "TSK-007",
     "projectId": null,
     "note": "Staging smoke stops after phase1 when STAGING_SKIP_FORGE_PHASES=true (default)."
   }

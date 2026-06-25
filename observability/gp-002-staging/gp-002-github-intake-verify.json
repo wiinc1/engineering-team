@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
   "kind": "gp-002-gitlab-intake-verify",
-  "generatedAt": "2026-06-25T21:12:46.814Z",
+  "generatedAt": "2026-06-25T22:45:29.789Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "outputDir": "observability/gp-002-staging",
   "intakeProvider": "gitlab",
-  "issueNumber": 958959,
+  "issueNumber": 972051,
   "summary": {
     "passed": true,
     "checks": [
@@ -24,8 +24,8 @@
         "name": "issues_opened_creates_intake_draft",
         "ok": true,
         "status": 201,
-        "taskId": "TSK-001",
-        "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
+        "taskId": "TSK-003",
+        "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
         "intakeDraft": true,
         "intakeProvider": "gitlab"
       },
@@ -33,7 +33,7 @@
         "name": "duplicate_webhook_returns_existing_task",
         "ok": true,
         "status": 202,
-        "taskId": "TSK-001"
+        "taskId": "TSK-003"
       },
       {
         "name": "task_waiting_for_pm_refinement",
@@ -45,8 +45,8 @@
       {
         "name": "task_created_records_forge_issue_url",
         "ok": true,
-        "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
-        "expectedIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959"
+        "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
+        "expectedIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051"
       },
       {
         "name": "task_refinement_requested_recorded",
@@ -60,8 +60,8 @@
     "body": {
       "received": true,
       "created": true,
-      "deliveryId": "gp-002-verify-create-958959",
-      "taskId": "TSK-001",
+      "deliveryId": "gp-002-verify-create-972051",
+      "taskId": "TSK-003",
       "tenantId": "engineering-team",
       "intakeDraft": true,
       "intakeProvider": "gitlab",
@@ -70,22 +70,22 @@
         "status": "failed"
       },
       "duplicate": false,
-      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
-      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
-      "gitlabIssueIid": 958959,
+      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
+      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
+      "gitlabIssueIid": 972051,
       "githubIssueUrl": null,
       "githubIssueNumber": null,
-      "projectId": "PRJ-F58660CD",
-      "projectName": "Factory delivery — GP-002 verify intake draft [#958959]",
+      "projectId": "PRJ-184300F1",
+      "projectName": "Factory delivery — GP-002 verify intake draft [#972051]",
       "projectBootstrap": {
         "skipped": false,
         "created": true,
         "existing": false,
         "attached": true,
-        "projectId": "PRJ-F58660CD"
+        "projectId": "PRJ-184300F1"
       }
     },
-    "taskId": "TSK-001"
+    "taskId": "TSK-003"
   },
   "duplicate": {
     "status": 202,
@@ -93,22 +93,22 @@
       "received": true,
       "ignored": true,
       "reason": "existing_intake_task",
-      "taskId": "TSK-001",
+      "taskId": "TSK-003",
       "tenantId": "engineering-team",
       "duplicate": false,
-      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
-      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
-      "gitlabIssueIid": 958959,
+      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
+      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
+      "gitlabIssueIid": 972051,
       "githubIssueUrl": null,
       "githubIssueNumber": null,
-      "projectId": "PRJ-F58660CD",
+      "projectId": "PRJ-184300F1",
       "projectName": null,
       "projectBootstrap": {
         "skipped": false,
         "created": false,
         "existing": true,
         "attached": false,
-        "projectId": "PRJ-F58660CD"
+        "projectId": "PRJ-184300F1"
       }
     }
   },
@@ -116,10 +116,10 @@
     "ok": true,
     "projected": {
       "tenant_id": "engineering-team",
-      "task_id": "TSK-001",
-      "last_event_id": "da0248b7-7748-4233-9464-468cf600d46b",
-      "last_event_type": "task.refinement_requested",
-      "last_occurred_at": "2026-06-25T21:12:46.930Z",
+      "task_id": "TSK-003",
+      "last_event_id": "1ef83390-b518-44c1-9dbc-ea94a1f96099",
+      "last_event_type": "task.created",
+      "last_occurred_at": "2026-06-25T22:45:29.871Z",
       "last_actor_id": "gitlab-intake-normalizer",
       "current_stage": "DRAFT",
       "assignee": "pm",
@@ -128,7 +128,7 @@
       "closed": false,
       "waiting_state": "task_refinement",
       "next_required_action": "PM refinement required",
-      "queue_entered_at": "2026-06-25T21:12:46.930Z",
+      "queue_entered_at": "2026-06-25T22:45:29.871Z",
       "wip_owner": null,
       "wip_started_at": null,
       "engineer_tier": null,
@@ -155,7 +155,7 @@
   },
   "history": {
     "status": 200,
-    "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/958959",
+    "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/972051",
     "hasRefinementRequested": true
   }
 }

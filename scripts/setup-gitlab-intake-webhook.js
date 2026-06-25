@@ -81,6 +81,7 @@ async function main() {
     || String(hook.url || '').includes('/gitlab/webhooks')
   ));
 
+  const enableSslVerification = hookUrl.startsWith('https://');
   const payload = {
     url: hookUrl,
     token: secret,
@@ -91,7 +92,7 @@ async function main() {
     pipeline_events: false,
     push_events: false,
     tag_push_events: false,
-    enable_ssl_verification: true,
+    enable_ssl_verification: enableSslVerification,
   };
 
   if (dryRun) {
@@ -122,7 +123,10 @@ async function main() {
   }
 
   if (!result.ok) {
-    throw new Error(`Webhook ${existing ? 'update' : 'create'} failed (${result.status}): ${JSON.stringify(result.body)}`);
+    const hint = result.status === 422 && String(result.body?.error || '').includes('Invalid url')
+      ? ' GitLab may block local/private webhook URLs until an admin enables allow_local_requests_from_web_hooks_and_services, or use a public HTTPS ET API URL.'
+      : '';
+    throw new Error(`Webhook ${existing ? 'update' : 'create'} failed (${result.status}): ${JSON.stringify(result.body)}.${hint}`);
   }
 
   process.stdout.write(`${JSON.stringify({

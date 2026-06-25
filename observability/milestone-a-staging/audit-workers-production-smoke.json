@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "kind": "audit-workers-production-smoke",
-  "generatedAt": "2026-06-25T20:55:37.848Z",
+  "generatedAt": "2026-06-25T22:45:36.700Z",
   "baseUrl": "http://127.0.0.1:13000",
   "tenantId": "engineering-team",
   "summary": {
@@ -26,45 +26,45 @@
       {
         "name": "projection_events_processed_increased",
         "ok": true,
-        "delta": 1
+        "delta": 5
       },
       {
         "name": "outbox_events_published_increased",
         "ok": true,
-        "delta": 0
+        "delta": 3
       },
       {
         "name": "intake_next_required_action_projected",
         "ok": true,
-        "taskId": "TSK-013"
+        "taskId": "TSK-005"
       }
     ]
   },
   "metrics": {
     "before": {
       "projectionLagSeconds": 0,
-      "projectionEventsProcessedTotal": 80,
-      "outboxEventsPublishedTotal": 40
+      "projectionEventsProcessedTotal": 12,
+      "outboxEventsPublishedTotal": 0
     },
-    "projectionLagSecondsBefore": 0.021876,
+    "projectionLagSecondsBefore": 0.017443,
     "projectionLagSecondsAfter": 0,
     "after": {
       "projectionLagSeconds": 0,
-      "projectionEventsProcessedTotal": 81,
-      "outboxEventsPublishedTotal": 40
+      "projectionEventsProcessedTotal": 17,
+      "outboxEventsPublishedTotal": 3
     },
-    "projectionEventsProcessedDelta": 1,
-    "outboxEventsPublishedDelta": 0
+    "projectionEventsProcessedDelta": 5,
+    "outboxEventsPublishedDelta": 3
   },
   "task": {
     "createStatus": 202,
     "stateStatus": 200,
     "state": {
       "tenant_id": "engineering-team",
-      "task_id": "TSK-628C3447",
-      "last_event_id": "2831f192-1b45-4bd9-899c-509edcd6d0c0",
+      "task_id": "TSK-21C3768E",
+      "last_event_id": "a44faf05-4680-4c9e-b76e-665a8a428452",
       "last_event_type": "task.created",
-      "last_occurred_at": "2026-06-25T20:55:37.890Z",
+      "last_occurred_at": "2026-06-25T22:45:36.745Z",
       "last_actor_id": "audit-workers-smoke",
       "current_stage": "BACKLOG",
       "assignee": null,
@@ -73,7 +73,7 @@
       "closed": false,
       "waiting_state": null,
       "next_required_action": null,
-      "queue_entered_at": "2026-06-25T20:55:37.890Z",
+      "queue_entered_at": "2026-06-25T22:45:36.745Z",
       "wip_owner": null,
       "wip_started_at": null,
       "engineer_tier": null,
@@ -100,7 +100,7 @@
   "workflow": {
     "schemaVersion": "1.0",
     "kind": "audit-workers-workflow-smoke",
-    "generatedAt": "2026-06-25T20:55:45.002Z",
+    "generatedAt": "2026-06-25T22:45:43.841Z",
     "baseUrl": "http://127.0.0.1:13000",
     "summary": {
       "passed": true,
@@ -109,7 +109,7 @@
           "name": "intake_draft_created",
           "ok": true,
           "status": 201,
-          "taskId": "TSK-013"
+          "taskId": "TSK-005"
         },
         {
           "name": "intake_next_required_action_projected",
@@ -122,13 +122,13 @@
     },
     "intake": {
       "createStatus": 201,
-      "taskId": "TSK-013",
+      "taskId": "TSK-005",
       "projected": {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-013",
-        "last_event_id": "e2d9f36a-0903-49cb-b501-a00f524cfa15",
-        "last_event_type": "task.refinement_requested",
-        "last_occurred_at": "2026-06-25T20:55:45.047Z",
+        "task_id": "TSK-005",
+        "last_event_id": "8ca664ca-c443-4f92-b79b-82bdea3a7283",
+        "last_event_type": "task.created",
+        "last_occurred_at": "2026-06-25T22:45:43.865Z",
         "last_actor_id": "audit-workers-smoke",
         "current_stage": "DRAFT",
         "assignee": "pm",
@@ -137,7 +137,7 @@
         "closed": false,
         "waiting_state": "task_refinement",
         "next_required_action": "PM refinement required",
-        "queue_entered_at": "2026-06-25T20:55:45.047Z",
+        "queue_entered_at": "2026-06-25T22:45:43.865Z",
         "wip_owner": null,
         "wip_started_at": null,
         "engineer_tier": null,
