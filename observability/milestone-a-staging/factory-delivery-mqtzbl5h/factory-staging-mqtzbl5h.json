@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase1_complete",
+  "factoryQueueId": "factory-staging-mqtzbl5h",
+  "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271",
+  "engineeringTeam": {
+    "projectId": "PRJ-EDAE10C1",
+    "taskId": "TSK-006",
+    "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-25T20:53:17.141Z [factory-staging-mqtzbl5h]",
+    "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+    "templateTier": "Simple",
+    "contractVersion": 1,
+    "contractValidationStatus": "valid",
+    "approvalMode": "policy",
+    "forgeDispatch": {
+      "targetRepo": "wiinc1/engineering-team",
+      "projectId": "engineering-team",
+      "domain": "workflow",
+      "affectsUi": false
+    },
+    "forgeExecutionReadiness": null
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDENTZBL5H",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "stepsCompleted": [
+    "GP-001",
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008",
+    "GP-012"
+  ],
+  "startedAt": "2026-06-25T20:53:17.141Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "observability/milestone-a-staging/factory-delivery-mqtzbl5h/stack/factory-staging-mqtzbl5h"
+  },
+  "phase1": {
+    "completedAt": "2026-06-25T20:53:27.880Z",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": null,
+    "bootstrappedPhase0": false,
+    "projectionRuns": [
+      {
+        "label": "pre-contract-record",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      },
+      {
+        "label": "execution-contract-recorded",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      },
+      {
+        "label": "execution-contract-approved",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 1.718901,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      }
+    ],
+    "api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": null,
+      "pmRefinementDelegated": false,
+      "pmRefinementSessionId": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectDelegated": false,
+      "architectSessionId": null,
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    },
+    "contract": {
+      "version": 1,
+      "templateTier": "Simple",
+      "factoryTemplateTier": "Simple",
+      "validationStatus": "valid",
+      "autoApprovalPolicy": {
+        "policy_version": "execution-contract-low-risk-simple-auto-approval.v1",
+        "status": "ready",
+        "canAutoApprove": true,
+        "operatorApprovalRequired": false,
+        "rationale": "Low-risk Simple Execution Contract meets all policy criteria: complete acceptance criteria, no risk flags, no unresolved dependencies, no production auth/security/data-model paths, and a clear rollback path.",
+        "criteria": {
+          "templateTier": "Simple",
+          "riskFlags": [],
+          "acceptanceCriteriaComplete": true,
+          "acceptanceCriteriaCount": 6,
+          "unresolvedDependencies": [],
+          "productionSensitivePaths": [],
+          "rollbackPathClear": true,
+          "rollbackPath": "Rollback by reverting the pilot PR and removing the README golden-path marker.",
+          "reviewerApprovalReady": true
+        },
+        "blockingReasons": [],
+        "metricsPolicy": {
+          "measuredBy": [
+            "feature_operator_trusted_autonomous_delivery_rate",
+            "feature_execution_contract_auto_approvals_total",
+            "feature_operator_trusted_autonomous_deliveries_total"
+          ],
+          "reason": "Autonomous delivery is trusted only when low-risk policy approval later closes successfully."
+        }
+      },
+      "autoApprovalApproved": true
+    },
+    "architectSpec": {
+      "mode": "embedded_in_execution_contract",
+      "engineerTier": "Jr",
+      "monitoringRunbook": "docs/runbooks/golden-path-autonomous-delivery.md"
+    },
+    "forgeReadinessNote": "Forge execution readiness remains GP-009; intake-draft DRAFT stage blocks readiness until workflow advances post-approval."
+  }
+}
