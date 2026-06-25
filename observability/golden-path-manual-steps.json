@@ -52,8 +52,8 @@
       "system": "engineering-team",
       "manual": false,
       "automateAs": "project_auto_create_from_issue_label",
-      "automatedBy": "lib/task-platform/factory-intake.js createFactoryIntake",
-      "evidence": "projectId, task.project_links"
+      "automatedBy": "lib/audit/github-intake-project-bootstrap.js (FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP=true) + factory-intake.js",
+      "evidence": "observability/gp-005-staging/gp-005-complete.json, npm run gp-005:verify"
     },
     {
       "id": "GP-006",

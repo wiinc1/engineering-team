@@ -139,6 +139,7 @@ npm run golden-path:replay:postgres -- --bootstrap
 
 ```bash
 npm run gp-002:verify               # GP-002 intake normalizer (webhook + projection + evidence)
+npm run gp-005:verify               # GP-005 project bootstrap on GitHub intake
 npm run golden-path:smoke:gp-002    # lightweight GP-002 webhook smoke only
 npm run golden-path:smoke:gp-015    # initial QA fail recorded before QA_TESTING stage advance
 npm run golden-path:smoke:gp-013 -- --openclaw-url http://127.0.0.1:<gateway>   # live delegation

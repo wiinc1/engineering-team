@@ -33,9 +33,9 @@ As a Software Factory operator, I want a new GitHub issue to become an Intake Dr
 - Webhook signature verification reusing `verifyGitHubWebhookSignature` from `lib/audit/github.js`
 - Unit + integration + security tests; OpenAPI/runbook update
 
-**Stretch (same issue if small, else follow-up)**
+**Stretch (delivered as GP-005)**
 
-- GP-005: auto-create/link Project when issue has `golden-path` or `factory-intake` label (mirror `golden-path-phase0.js` project bootstrap)
+- GP-005: auto-create/link Project when issue has `golden-path` or `factory-intake` label — see `docs/issues/gp-005-github-intake-project-bootstrap.md` and `npm run gp-005:verify`
 
 **Out of scope**
 
