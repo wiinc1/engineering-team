@@ -21,7 +21,7 @@ runGp002GithubIntakeVerify({
     process.stdout.write(`${JSON.stringify({
       ok: evidence.summary.passed,
       milestone: 'GP-002',
-      title: 'GitHub issue intake normalizer',
+      title: 'Forge issue intake normalizer (GitLab default)',
       outputDir: evidence.outputDir,
       summary: evidence.summary,
       complete: complete.summary,

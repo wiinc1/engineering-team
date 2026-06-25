@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * Register (or update) the GitHub issues webhook for GP-002/GP-005 intake.
+ * Optional GitHub issues webhook for GP-002/GP-005 intake.
+ * Primary forge intake is GitLab — use scripts/setup-gitlab-intake-webhook.js by default.
+ *
  * Requires GITHUB_TOKEN with admin:repo_hook (or repo) scope on wiinc1/engineering-team.
  *
  * Usage:
  *   GITHUB_TOKEN=... WEBHOOK_TARGET_URL=https://<et-api>/github/webhooks \
  *     GITHUB_WEBHOOK_SECRET=... node scripts/setup-github-intake-webhook.js
  *
- * Local coordinated stack (no public URL): use smoke scripts instead:
- *   npm run gp-002:verify && npm run gp-005:verify
+ * Enable GitHub provider in ET:
+ *   FF_GITHUB_INTAKE_NORMALIZER=true FORGE_INTAKE_PROVIDER=github
  */
 
 const crypto = require('node:crypto');

@@ -1,11 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "kind": "gp-005-github-intake-project-verify",
-  "generatedAt": "2026-06-25T20:55:25.565Z",
+  "kind": "gp-005-gitlab-intake-project-verify",
+  "intakeProvider": "gitlab",
+  "generatedAt": "2026-06-25T21:12:48.943Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "outputDir": "observability/gp-005-staging",
-  "issueNumber": 927977,
+  "issueNumber": 988160,
   "summary": {
     "passed": true,
     "checks": [
@@ -17,30 +18,30 @@
       {
         "name": "audit_api_process_alive",
         "ok": true,
-        "pid": 56411
+        "pid": 64449
       },
       {
         "name": "intake_draft_created",
         "ok": true,
         "status": 201,
-        "taskId": "TSK-010"
+        "taskId": "TSK-002"
       },
       {
         "name": "project_bootstrapped_on_intake",
         "ok": true,
-        "projectId": "PRJ-726DC90D",
-        "projectName": "Factory delivery — GP-002 verify intake draft [#927977]"
+        "projectId": "PRJ-EF92207A",
+        "projectName": "Factory delivery — GP-002 verify intake draft [#988160]"
       },
       {
         "name": "duplicate_webhook_preserves_project_link",
         "ok": true,
         "status": 202,
-        "projectId": "PRJ-726DC90D"
+        "projectId": "PRJ-EF92207A"
       },
       {
         "name": "task_detail_shows_project_link",
         "ok": true,
-        "projectId": "PRJ-726DC90D"
+        "projectId": "PRJ-EF92207A"
       }
     ]
   },
@@ -50,29 +51,33 @@
     "body": {
       "received": true,
       "created": true,
-      "deliveryId": "gp-005-verify-create-927977",
-      "taskId": "TSK-010",
+      "deliveryId": "gp-005-verify-create-988160",
+      "taskId": "TSK-002",
       "tenantId": "engineering-team",
-      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/927977",
-      "githubIssueNumber": 927977,
       "intakeDraft": true,
+      "intakeProvider": "gitlab",
       "nextRequiredAction": "PM refinement required",
       "pmRefinement": {
         "status": "failed"
       },
       "duplicate": false,
-      "projectId": "PRJ-726DC90D",
-      "projectName": "Factory delivery — GP-002 verify intake draft [#927977]",
+      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/988160",
+      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/988160",
+      "gitlabIssueIid": 988160,
+      "githubIssueUrl": null,
+      "githubIssueNumber": null,
+      "projectId": "PRJ-EF92207A",
+      "projectName": "Factory delivery — GP-002 verify intake draft [#988160]",
       "projectBootstrap": {
         "skipped": false,
         "created": true,
         "existing": false,
         "attached": true,
-        "projectId": "PRJ-726DC90D"
+        "projectId": "PRJ-EF92207A"
       }
     },
-    "taskId": "TSK-010",
-    "projectId": "PRJ-726DC90D"
+    "taskId": "TSK-002",
+    "projectId": "PRJ-EF92207A"
   },
   "duplicate": {
     "status": 202,
@@ -80,24 +85,28 @@
       "received": true,
       "ignored": true,
       "reason": "existing_intake_task",
-      "taskId": "TSK-010",
+      "taskId": "TSK-002",
       "tenantId": "engineering-team",
-      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/927977",
       "duplicate": false,
-      "projectId": "PRJ-726DC90D",
+      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/988160",
+      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/988160",
+      "gitlabIssueIid": 988160,
+      "githubIssueUrl": null,
+      "githubIssueNumber": null,
+      "projectId": "PRJ-EF92207A",
       "projectName": null,
       "projectBootstrap": {
         "skipped": false,
         "created": false,
         "existing": true,
         "attached": false,
-        "projectId": "PRJ-726DC90D"
+        "projectId": "PRJ-EF92207A"
       }
     }
   },
   "task": {
     "status": 200,
-    "projectId": "PRJ-726DC90D",
-    "projectName": "Factory delivery — GP-002 verify intake draft [#927977]"
+    "projectId": "PRJ-EF92207A",
+    "projectName": "Factory delivery — GP-002 verify intake draft [#988160]"
   }
 }
