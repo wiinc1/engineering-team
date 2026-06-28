@@ -157,6 +157,21 @@ test('evaluateRunnableSurfaceVerification accepts HEAD commit on main', () => {
   assert.equal(verification.verified, true);
 });
 
+test('evaluateRunnableSurfaceVerification accepts declared runnable surface head from env', () => {
+  const contract = createUiContract();
+  const declaredHead = 'cb1f2811519d61ac49b85e8b11fe4c2fba2ccafa';
+  const verification = evaluateRunnableSurfaceVerification({
+    contract,
+    commitSha: declaredHead,
+    options: {
+      repoRoot: process.cwd(),
+      env: { RUNNABLE_SURFACE_HEAD_SHA: declaredHead },
+    },
+  });
+  assert.equal(verification.verified, true);
+  assert.equal(verification.mode, 'declared_runnable_surface_head');
+});
+
 test('assertEngineerSubmissionProductDelivery rejects commits not on runnable branch', () => {
   const contract = createUiContract();
   assert.throws(() => assertEngineerSubmissionProductDelivery({
