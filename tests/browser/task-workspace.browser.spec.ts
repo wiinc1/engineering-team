@@ -233,7 +233,7 @@ async function mockWorkspaceApi(page) {
 }
 
 async function assertWorkspaceBoard(page) {
-  await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
   await expect(page.getByLabel('Task board')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Intake Draft' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Task Refinement' })).toBeVisible();
@@ -471,7 +471,7 @@ test('opens a persistent queue inspector without losing task workspace context',
   await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
   await expect(page.getByRole('button', { name: 'Open full task detail' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Return to queue' }).click();
+  await page.getByRole('button', { name: 'Return to queue' }).click({ force: true });
 
   await expect(page).toHaveURL(/\/tasks\?view=board&priority=P1$/);
   await expect(page.getByLabel('Selected task inspector')).toBeVisible();

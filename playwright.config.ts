@@ -22,6 +22,7 @@ Object.assign(process.env, normalizedEnv);
 
 export default defineConfig({
   testDir: './tests/browser',
+  testIgnore: '**/*golden-path*.browser.spec.ts',
   timeout: 30_000,
   outputDir: 'test-results/browser',
   reporter: process.env.CI

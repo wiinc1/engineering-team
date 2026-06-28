@@ -2,7 +2,7 @@
 
 ## Scope
 
-Polling-based freshness keeps task detail, Projects, workspace list/board, and role inbox routes current during pilot workflows. The browser polls `GET /api/v1/tasks/updates?cursor=...`, reconciles newer Task and Project snapshots, and falls back to the existing manual refresh actions.
+Polling-based freshness keeps task detail, Projects, Command Center queue/list/board, and role inbox routes current during pilot workflows. The browser polls `GET /api/v1/tasks/updates?cursor=...`, reconciles newer Task and Project snapshots, and falls back to the existing manual refresh actions.
 
 ## Feature Flags
 

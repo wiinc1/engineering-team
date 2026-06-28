@@ -173,7 +173,8 @@ Priority" }), e("th", { scope: "col", children: "Owner" })] }) }), e("tbody", { 
 task-list-meta", children: e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }) }) : null] }), e("td", { children: t.current_stage ||
   "\u2014" }), e("td", { children: t.priority || "\u2014" }), a("td", { children: [e("span", { className: `owner-badge owner-badge--${t.ownerPresentation.tone}`,
   children: t.ownerPresentation.label }), e("div", { className: "task-list-meta", children: "Governance-only owner metadata" })] })] }, t.task_id)) })] }) }) : null,
-  isCommandCenter ? a("aside", {
+  isCommandCenter ? a("div", {
+    role: "region",
     className: `command-center-inspector${selectedTask ? "" : " command-center-inspector--empty"}`,
     "aria-label": "Selected task inspector",
     children: selectedTask ? [
