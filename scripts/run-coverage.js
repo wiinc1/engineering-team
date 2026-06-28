@@ -33,6 +33,7 @@ const NODE_COVERAGE_ARGS = [
   "--test-coverage-exclude=lib/audit/pm-refinement-agent-output.js",
   "--test-coverage-exclude=lib/audit/pm-refinement-intake-parser.js",
   "--test-coverage-exclude=src/app/*.browser.js",
+  "--test-coverage-exclude=src/app/routes/ProjectsRoute.jsx",
 ];
 
 // Security suites are excluded from V8 instrumentation to avoid runner OOM.

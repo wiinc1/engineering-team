@@ -69,6 +69,7 @@ jobs:
       - name: Verify standards governance artifacts
         env:
           NODE_OPTIONS: --max-old-space-size=8192
+          RUNNABLE_SURFACE_HEAD_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
         run: |
           npm run coverage
           npm run standards:check

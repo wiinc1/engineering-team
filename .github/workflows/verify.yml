@@ -141,6 +141,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          RUNNABLE_SURFACE_HEAD_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
           PLAYWRIGHT_INCLUDE_WEBKIT: "1"
         run: >
           make verify
