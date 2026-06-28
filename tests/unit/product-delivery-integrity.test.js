@@ -1,16 +1,25 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
 const { execFileSync } = require('node:child_process');
 
 function resolveRunnableSurfaceHeadSha() {
-  for (const ref of ['main', 'origin/main']) {
+  const envSha = String(process.env.RUNNABLE_SURFACE_HEAD_SHA || '').trim();
+  if (envSha) return envSha;
+
+  for (const ref of ['origin/main', 'main']) {
     try {
       return execFileSync('git', ['rev-parse', ref], { encoding: 'utf8' }).trim();
     } catch {
       // Fall through to the next ref for shallow CI checkouts.
     }
   }
-  return execFileSync('git', ['merge-base', 'HEAD', 'origin/main'], { encoding: 'utf8' }).trim();
+
+  return fs.readFileSync(
+    path.join(__dirname, '../fixtures/product-delivery/runnable-surface-main-sha.txt'),
+    'utf8',
+  ).trim();
 }
 
 const RUNNABLE_SURFACE_HEAD_SHA = resolveRunnableSurfaceHeadSha();
