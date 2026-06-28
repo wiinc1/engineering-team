@@ -152,7 +152,7 @@
         "^db/migrations/007_.*\\.sql$",
         "^db/migrations/008_.*\\.sql$",
         "^db/migrations/013_autonomous_delivery_metrics(\\.down)?\\.sql$",
-        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke|verify-et-forge-bridge-smoke|verify-factory-staging-smoke|verify-milestone-a-staging|replay-golden-path-staging|verify-gp-002-github-intake-smoke|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers|verify-gp-013-delegation-smoke|verify-gp-015-qa-fail-smoke|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-milestone-hosted-phase6|advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-tsk-001-local|reseed-issue-279-local|capture-factory-persona-smoke|setup-github-intake-webhook|setup-gitlab-intake-webhook|golden-path-smoke-lib)\\..+$",
+        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke|verify-et-forge-bridge-smoke|verify-factory-staging-smoke|verify-milestone-a-staging|replay-golden-path-staging|verify-gp-002-github-intake-smoke|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers|verify-gp-013-delegation-smoke|verify-gp-015-qa-fail-smoke|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-milestone-hosted-phase6|advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-tsk-001-local|capture-factory-persona-smoke|setup-github-intake-webhook|setup-gitlab-intake-webhook|golden-path-smoke-lib)\\..+$",
         "^scripts/deploy/audit-workers\\.systemd\\.service$",
         "^Dockerfile\\.workers$",
         "^docker-compose\\.production-workers\\.yml$",
@@ -241,7 +241,9 @@
         "^lib/auth/config-check\\.js$",
         "^scripts/check-auth-config\\.js$",
         "^scripts/seed-auth-admin\\.js$",
-        "^scripts/serve-browser-dist\\.js$"
+        "^scripts/serve-browser-dist\\.js$",
+        "^scripts/reseed-issue-279-local\\.js$",
+        "^scripts/reseed-tsk-001-local\\.js$"
       ],
       "test_requirements": [
         {
