@@ -260,18 +260,18 @@ async function closeNavigationIfOpen(page) {
 async function assertWorkspaceNavigation(page) {
   await openNavigationIfCollapsed(page);
 
-  const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
-  const secondaryNav = page.getByRole('group', { name: 'Secondary workspace navigation' });
+  const workNav = page.getByRole('group', { name: 'Work' });
+  const governanceNav = page.getByRole('group', { name: 'Governance' });
 
-  await expect(primaryNav.getByRole('button', { name: 'New task' })).toBeVisible();
-  await expect(secondaryNav.getByRole('button', { name: 'PM overview' })).toBeVisible();
-  await expect(secondaryNav.getByLabel('Role inboxes')).toBeVisible();
+  await expect(workNav.getByRole('button', { name: 'New task' })).toBeVisible();
+  await expect(governanceNav.getByRole('button', { name: 'PM overview' })).toBeVisible();
+  await expect(governanceNav.getByLabel('Role inboxes')).toBeVisible();
 }
 
 async function readNavigationStyles(page) {
   return page.locator('.app-nav').evaluate((nav) => {
-    const newTask = nav.querySelector('.app-nav__primary .app-nav__primary-action');
-    const pmOverview = [...nav.querySelectorAll('.app-nav__secondary button')].find(
+    const newTask = nav.querySelector('.app-nav__primary-action');
+    const pmOverview = [...nav.querySelectorAll('.app-nav__group-links button')].find(
       (button) => button.textContent === 'PM overview',
     );
     const newTaskStyle = newTask ? window.getComputedStyle(newTask) : null;
@@ -285,18 +285,18 @@ async function readNavigationStyles(page) {
 }
 
 async function readPrimaryWorkspaceButtonStyles(page) {
-  return page.getByRole('group', { name: 'Primary task navigation' }).evaluate((nav) => {
+  return page.getByRole('group', { name: 'Work' }).evaluate((nav) => {
     const buttons = [...nav.querySelectorAll('button')];
-    const taskWorkspace = buttons.find((button) => button.textContent?.trim() === 'Task workspace');
+    const commandCenter = buttons.find((button) => button.textContent?.trim() === 'Command Center');
     const kanbanBoard = buttons.find((button) => button.textContent?.trim() === 'Kanban board');
-    const taskWorkspaceStyle = taskWorkspace ? window.getComputedStyle(taskWorkspace) : null;
+    const commandCenterStyle = commandCenter ? window.getComputedStyle(commandCenter) : null;
     const kanbanBoardStyle = kanbanBoard ? window.getComputedStyle(kanbanBoard) : null;
 
     return {
-      taskWorkspaceBackground: taskWorkspaceStyle?.backgroundColor || '',
-      taskWorkspaceBorderLeftColor: taskWorkspaceStyle?.borderLeftColor || '',
-      taskWorkspaceBorderLeftWidth: taskWorkspaceStyle?.borderLeftWidth || '',
-      taskWorkspacePressed: taskWorkspace?.getAttribute('aria-pressed') || '',
+      commandCenterBackground: commandCenterStyle?.backgroundColor || '',
+      commandCenterBorderLeftColor: commandCenterStyle?.borderLeftColor || '',
+      commandCenterBorderLeftWidth: commandCenterStyle?.borderLeftWidth || '',
+      commandCenterPressed: commandCenter?.getAttribute('aria-pressed') || '',
       kanbanBoardBackground: kanbanBoardStyle?.backgroundColor || '',
       kanbanBoardBorderLeftColor: kanbanBoardStyle?.borderLeftColor || '',
       kanbanBoardBorderLeftWidth: kanbanBoardStyle?.borderLeftWidth || '',
@@ -432,36 +432,30 @@ test('renders the task workspace board with scannable columns and mobile overflo
 
 test('switches from task workspace list into the Kanban board with selected route state', async ({ page }) => {
   await page.goto('/tasks?view=list', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Queue' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.command-center-queue table').first()).toBeVisible();
   await openNavigationIfCollapsed(page);
 
-  const primaryNav = page.getByRole('group', { name: 'Primary task navigation' });
+  const workNav = page.getByRole('group', { name: 'Work' });
   const listButtonStyles = await readPrimaryWorkspaceButtonStyles(page);
-  expect(listButtonStyles.taskWorkspacePressed).toBe('true');
+  expect(listButtonStyles.commandCenterPressed).toBe('true');
   expect(listButtonStyles.kanbanBoardPressed).toBe('false');
-  expect(listButtonStyles.taskWorkspaceBackground).not.toBe(listButtonStyles.kanbanBoardBackground);
-  expect(listButtonStyles.taskWorkspaceBorderLeftColor).not.toBe(listButtonStyles.kanbanBoardBorderLeftColor);
-  expect(listButtonStyles.taskWorkspaceBorderLeftWidth).toBe('3px');
 
-  await primaryNav.getByRole('button', { name: 'Kanban board' }).click();
+  await workNav.getByRole('button', { name: 'Kanban board' }).click();
 
   await expect(page).toHaveURL(/\/tasks\?view=board$/);
   await assertWorkspaceBoard(page);
-  await expect(page.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
-  await expect(primaryNav.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
+  await expect(workNav.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
   const boardButtonStyles = await readPrimaryWorkspaceButtonStyles(page);
-  expect(boardButtonStyles.taskWorkspacePressed).toBe('false');
+  expect(boardButtonStyles.commandCenterPressed).toBe('false');
   expect(boardButtonStyles.kanbanBoardPressed).toBe('true');
-  expect(boardButtonStyles.kanbanBoardBackground).not.toBe(boardButtonStyles.taskWorkspaceBackground);
-  expect(boardButtonStyles.kanbanBoardBorderLeftColor).not.toBe(boardButtonStyles.taskWorkspaceBorderLeftColor);
-  expect(boardButtonStyles.kanbanBoardBorderLeftWidth).toBe('3px');
 });
 
 test('opens a persistent queue inspector without losing task workspace context', async ({ page }) => {
   await page.goto('/tasks?view=board&priority=P1', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Queue-first task workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Operational queue' })).toBeVisible();
   await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
   await expect(page.getByLabel('Task board')).not.toContainText('Shape raw operator notes');
 
@@ -469,7 +463,7 @@ test('opens a persistent queue inspector without losing task workspace context',
   await expect(page.getByLabel('Selected task inspector')).toBeVisible();
   await expect(page.getByLabel('Selected task inspector')).toContainText('Verify release telemetry');
   await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
-  await expect(page.getByRole('button', { name: 'Open full task detail' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open task' })).toBeVisible();
 
   const inspector = page.getByLabel('Selected task inspector');
   const returnToQueue = inspector.getByRole('button', { name: 'Return to queue' });

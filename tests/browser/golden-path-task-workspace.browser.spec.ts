@@ -15,7 +15,7 @@ test.describe('golden-path operator UI', () => {
   test('loads task workspace on runnable surface with real auth', async ({ page }) => {
     await signIn(page);
     await page.goto('/tasks?view=list');
-    await expect(page.getByRole('heading', { name: 'Queue-first task workspace' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Operational queue' })).toBeVisible();
     await expect(page.locator('.task-list-panel--command-center')).toBeVisible({ timeout: 15_000 });
   });
 

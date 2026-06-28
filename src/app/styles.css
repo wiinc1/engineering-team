@@ -2272,7 +2272,7 @@ button {
   color: var(--color-on-muted-strong);
   font-size: var(--design-typography-label-sm-font-size);
   font-weight: var(--design-typography-label-md-font-weight);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--design-typography-label-tracked-letter-spacing);
   text-transform: uppercase;
 }
 
