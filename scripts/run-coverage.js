@@ -113,15 +113,25 @@ function run(command, args, label, extraEnv = {}) {
   const outputFd = fs.openSync(outputPath, 'w');
   const result = spawnSync(command, args, {
     shell: true,
-    stdio: ['inherit', outputFd, 'inherit'],
+    stdio: ['inherit', outputFd, outputFd],
     maxBuffer: 64 * 1024 * 1024,
     env: { ...buildSanitizedEnv(), ...extraEnv },
   });
   fs.closeSync(outputFd);
   const output = fs.readFileSync(outputPath, 'utf8');
   fs.unlinkSync(outputPath);
-  process.stdout.write(output);
+  const summary = output.split('\n').filter((line) => (
+    line.startsWith('# tests')
+    || line.startsWith('# pass')
+    || line.startsWith('# fail')
+    || line.startsWith('# all files')
+    || line.startsWith('# start of coverage report')
+    || line.startsWith('# end of coverage report')
+    || line.includes('not ok ')
+  ));
+  process.stdout.write(`${summary.join('\n')}\n`);
   if (result.status !== 0) {
+    process.stderr.write(`${output.slice(-12000)}\n`);
     process.exit(result.status || 1);
   }
   return output;
