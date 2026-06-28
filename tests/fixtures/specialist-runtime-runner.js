@@ -24,6 +24,8 @@ process.stdin.on('end', () => {
     return;
   }
   const runtimeAgentId = process.env.FIXTURE_RUNTIME_AGENT_ID || resolveRuntimeAgent(payload.specialist);
+  const ownershipSpecialistId = process.env.FIXTURE_RUNTIME_OWNERSHIP_SPECIALIST_ID
+    || (process.env.FIXTURE_RUNTIME_AGENT_ID ? runtimeAgentId : payload.specialist);
   const sessionId = process.env.FIXTURE_RUNTIME_SESSION_ID || `runtime-session-${payload.delegationId}`;
   const specialist = String(payload.specialist || '').trim().toLowerCase();
   let output = `runtime handled by ${runtimeAgentId}`;
@@ -40,7 +42,7 @@ process.stdin.on('end', () => {
     sessionId,
     output,
     ownership: {
-      specialistId: payload.specialist,
+      specialistId: ownershipSpecialistId,
       runtimeAgentId,
       sessionId,
       runtime: 'fixture-openclaw',
