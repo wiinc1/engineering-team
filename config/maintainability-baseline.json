@@ -12,7 +12,7 @@
       "line": 5,
       "ordinal": 1,
       "name": "TaskDetailRoute",
-      "actual": 692,
+      "actual": 731,
       "cap": 50
     },
     {
@@ -21,7 +21,7 @@
       "line": 40,
       "ordinal": 1,
       "name": "App",
-      "actual": 668,
+      "actual": 667,
       "cap": 50
     },
     {
@@ -52,6 +52,15 @@
       "cap": 50
     },
     {
+      "path": "src/app/routes/TaskWorkspaceRoute.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 7,
+      "ordinal": 1,
+      "name": "TaskWorkspaceRoute",
+      "actual": 258,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 391,
@@ -75,23 +84,23 @@
       "line": 1678,
       "ordinal": 79,
       "name": "runGoldenPathPhase5",
-      "actual": 219,
+      "actual": 227,
       "cap": 50
     },
     {
-      "path": "src/app/routes/TaskWorkspaceRoute.jsx",
+      "path": "lib/audit/gp-002-github-intake-verify.js",
       "rule": "maintainability:function-lines",
-      "line": 4,
-      "ordinal": 1,
-      "name": "TaskWorkspaceRoute",
-      "actual": 213,
+      "line": 56,
+      "ordinal": 7,
+      "name": "runGp002GithubIntakeVerify",
+      "actual": 219,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1898,
-      "ordinal": 80,
+      "line": 1906,
+      "ordinal": 81,
       "name": "runGoldenPathPhases",
       "actual": 196,
       "cap": 50
@@ -106,6 +115,15 @@
       "cap": 50
     },
     {
+      "path": "scripts/reseed-tsk-001-local.js",
+      "rule": "maintainability:function-lines",
+      "line": 277,
+      "ordinal": 16,
+      "name": "main",
+      "actual": 178,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 137,
@@ -115,12 +133,30 @@
       "cap": 50
     },
     {
+      "path": "scripts/advance-tsk-001-closeout.js",
+      "rule": "maintainability:function-lines",
+      "line": 108,
+      "ordinal": 17,
+      "name": "main",
+      "actual": 163,
+      "cap": 50
+    },
+    {
       "path": "lib/audit/gp-007-projection-workers-verify.js",
       "rule": "maintainability:function-lines",
       "line": 39,
       "ordinal": 5,
       "name": "runGp007ProjectionWorkersVerify",
       "actual": 158,
+      "cap": 50
+    },
+    {
+      "path": "tests/integration/board-owner-filtering.integration.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 113,
+      "ordinal": 9,
+      "name": "<arrow>",
+      "actual": 151,
       "cap": 50
     },
     {
@@ -148,6 +184,15 @@
       "ordinal": 63,
       "name": "runGoldenPathPhase3",
       "actual": 147,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/gp-005-github-intake-project-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 27,
+      "ordinal": 3,
+      "name": "runGp005GithubIntakeProjectVerify",
+      "actual": 145,
       "cap": 50
     },
     {
@@ -205,6 +250,15 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/milestone-a-staging-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 5,
+      "ordinal": 1,
+      "name": "<arrow>",
+      "actual": 125,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-detail/adapter.js",
       "rule": "maintainability:function-lines",
       "line": 76,
@@ -223,12 +277,21 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/execution-contract-reviewer-routing.js",
+      "rule": "maintainability:function-lines",
+      "line": 289,
+      "ordinal": 17,
+      "name": "delegateReviewerSectionReviews",
+      "actual": 119,
+      "cap": 50
+    },
+    {
       "path": "scripts/replay-golden-path-postgres.js",
       "rule": "maintainability:function-lines",
       "line": 92,
       "ordinal": 7,
       "name": "main",
-      "actual": 115,
+      "actual": 116,
       "cap": 50
     },
     {
@@ -259,12 +322,48 @@
       "cap": 50
     },
     {
-      "path": "tests/unit/milestone-a-staging-verify.test.js",
+      "path": "lib/audit/execution-contract-architect-dispatch.js",
       "rule": "maintainability:function-lines",
-      "line": 5,
-      "ordinal": 1,
-      "name": "<arrow>",
-      "actual": 100,
+      "line": 363,
+      "ordinal": 23,
+      "name": "recordArchitectEngineerAssignment",
+      "actual": 106,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/gitlab-intake-project-bootstrap.js",
+      "rule": "maintainability:function-lines",
+      "line": 122,
+      "ordinal": 12,
+      "name": "bootstrapProjectForIssueIntake",
+      "actual": 105,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/github-intake-project-bootstrap.js",
+      "rule": "maintainability:function-lines",
+      "line": 114,
+      "ordinal": 14,
+      "name": "bootstrapProjectForIssueIntake",
+      "actual": 103,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/staging-runtime.js",
+      "rule": "maintainability:function-lines",
+      "line": 11,
+      "ordinal": 3,
+      "name": "resolveStagingRuntime",
+      "actual": 101,
+      "cap": 50
+    },
+    {
+      "path": "scripts/dev-golden-path/mocks.js",
+      "rule": "maintainability:function-lines",
+      "line": 48,
+      "ordinal": 7,
+      "name": "spawnSpecialistDelegation",
+      "actual": 96,
       "cap": 50
     },
     {
@@ -274,6 +373,42 @@
       "ordinal": 7,
       "name": "toTaskDetailScreenModel",
       "actual": 95,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-post-approval-artifacts.js",
+      "rule": "maintainability:function-lines",
+      "line": 194,
+      "ordinal": 7,
+      "name": "maybeGeneratePostApprovalRepoArtifacts",
+      "actual": 94,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/gp-002-github-intake-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 17,
+      "ordinal": 2,
+      "name": "<arrow>",
+      "actual": 94,
+      "cap": 50
+    },
+    {
+      "path": "scripts/advance-tsk-001-qa-loop.js",
+      "rule": "maintainability:function-lines",
+      "line": 324,
+      "ordinal": 22,
+      "name": "main",
+      "actual": 93,
+      "cap": 50
+    },
+    {
+      "path": "scripts/setup-gitlab-intake-webhook.js",
+      "rule": "maintainability:function-lines",
+      "line": 53,
+      "ordinal": 5,
+      "name": "main",
+      "actual": 92,
       "cap": 50
     },
     {
@@ -288,10 +423,55 @@
     {
       "path": "lib/audit/milestone-a-staging-verify.js",
       "rule": "maintainability:function-lines",
-      "line": 56,
-      "ordinal": 3,
+      "line": 40,
+      "ordinal": 2,
       "name": "runFactoryStagingSmoke",
       "actual": 89,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/milestone-a-staging-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 14,
+      "ordinal": 2,
+      "name": "<arrow>",
+      "actual": 87,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:function-lines",
+      "line": 542,
+      "ordinal": 37,
+      "name": "dispatchForgeDelegate",
+      "actual": 85,
+      "cap": 50
+    },
+    {
+      "path": "scripts/setup-github-intake-webhook.js",
+      "rule": "maintainability:function-lines",
+      "line": 52,
+      "ordinal": 4,
+      "name": "main",
+      "actual": 85,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 622,
+      "ordinal": 66,
+      "name": "<arrow>",
+      "actual": 84,
+      "cap": 50
+    },
+    {
+      "path": "scripts/reconcile-product-delivery.js",
+      "rule": "maintainability:function-lines",
+      "line": 58,
+      "ordinal": 3,
+      "name": "main",
+      "actual": 82,
       "cap": 50
     },
     {
@@ -313,12 +493,12 @@
       "cap": 50
     },
     {
-      "path": "lib/task-platform/staging-runtime.js",
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
       "rule": "maintainability:function-lines",
-      "line": 11,
-      "ordinal": 3,
-      "name": "resolveStagingRuntime",
-      "actual": 79,
+      "line": 256,
+      "ordinal": 30,
+      "name": "<arrow>",
+      "actual": 80,
       "cap": 50
     },
     {
@@ -358,6 +538,33 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 221,
+      "ordinal": 17,
+      "name": "recordPmRefinementContract",
+      "actual": 76,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/pm-refinement-agent-output.js",
+      "rule": "maintainability:function-lines",
+      "line": 116,
+      "ordinal": 7,
+      "name": "buildIntakeSectionFallback",
+      "actual": 76,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 143,
+      "ordinal": 16,
+      "name": "<arrow>",
+      "actual": 76,
+      "cap": 50
+    },
+    {
       "path": "lib/audit/milestone-d-closeout-verify.js",
       "rule": "maintainability:function-lines",
       "line": 70,
@@ -376,12 +583,111 @@
       "cap": 50
     },
     {
+      "path": "scripts/reseed-tsk-001-local.js",
+      "rule": "maintainability:function-lines",
+      "line": 124,
+      "ordinal": 8,
+      "name": "seedBaseContract",
+      "actual": 73,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-reviewer-routing.js",
+      "rule": "maintainability:function-lines",
+      "line": 216,
+      "ordinal": 16,
+      "name": "persistDelegatedSectionReview",
+      "actual": 72,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-architect-dispatch.js",
+      "rule": "maintainability:function-lines",
+      "line": 137,
+      "ordinal": 13,
+      "name": "augmentDispatchReadinessWithArchitectGate",
+      "actual": 71,
+      "cap": 50
+    },
+    {
       "path": "lib/audit/projection-catch-up.js",
       "rule": "maintainability:function-lines",
       "line": 118,
       "ordinal": 8,
       "name": "runProjectionCatchUp",
       "actual": 71,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/gp-005-github-intake-project-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 8,
+      "ordinal": 1,
+      "name": "<arrow>",
+      "actual": 71,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/forge-issue-intake-shared.js",
+      "rule": "maintainability:function-lines",
+      "line": 88,
+      "ordinal": 13,
+      "name": "syncExistingIntakeTaskFromForgeIssue",
+      "actual": 70,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 468,
+      "ordinal": 48,
+      "name": "<arrow>",
+      "actual": 70,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/pm-refinement-agent-output.js",
+      "rule": "maintainability:function-lines",
+      "line": 275,
+      "ordinal": 13,
+      "name": "buildPmRefinementContractDraft",
+      "actual": 69,
+      "cap": 50
+    },
+    {
+      "path": "tests/integration/board-owner-filtering.integration.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 44,
+      "ordinal": 5,
+      "name": "installBoardFetchMock",
+      "actual": 68,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-ux-dispatch.js",
+      "rule": "maintainability:function-lines",
+      "line": 286,
+      "ordinal": 21,
+      "name": "recordUxImplementationReview",
+      "actual": 66,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 367,
+      "ordinal": 23,
+      "name": "submitUxImplementationReview",
+      "actual": 66,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:function-lines",
+      "line": 746,
+      "ordinal": 43,
+      "name": "handleEtForgeDispatchEvent",
+      "actual": 66,
       "cap": 50
     },
     {
@@ -394,6 +700,42 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/gitlab-intake-normalizer.js",
+      "rule": "maintainability:function-lines",
+      "line": 195,
+      "ordinal": 10,
+      "name": "processGitLabIssueIntakeWebhook",
+      "actual": 65,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 297,
+      "ordinal": 18,
+      "name": "startPmRefinementWorkflow",
+      "actual": 65,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/audit-api-github-intake.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 95,
+      "ordinal": 9,
+      "name": "<arrow>",
+      "actual": 65,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/audit-api.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 172,
+      "ordinal": 232,
+      "name": "persistForgeReadyTaskEvents",
+      "actual": 65,
+      "cap": 50
+    },
+    {
       "path": "lib/audit/et-forge-bridge-smoke.js",
       "rule": "maintainability:function-lines",
       "line": 83,
@@ -403,10 +745,28 @@
       "cap": 50
     },
     {
-      "path": "tests/unit/milestone-a-staging-verify.test.js",
+      "path": "lib/audit/execution-contract-post-approval-artifacts.js",
       "rule": "maintainability:function-lines",
-      "line": 14,
-      "ordinal": 2,
+      "line": 66,
+      "ordinal": 5,
+      "name": "generateExecutionContractVerificationReportSkeletonEvent",
+      "actual": 64,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:function-lines",
+      "line": 677,
+      "ordinal": 41,
+      "name": "dispatchForgeCloseout",
+      "actual": 64,
+      "cap": 50
+    },
+    {
+      "path": "tests/integration/board-owner-filtering.integration.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 46,
+      "ordinal": 7,
       "name": "<arrow>",
       "actual": 64,
       "cap": 50
@@ -421,11 +781,56 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/product-delivery-integrity.js",
+      "rule": "maintainability:function-lines",
+      "line": 446,
+      "ordinal": 29,
+      "name": "evaluateRunnableSurfaceVerification",
+      "actual": 63,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/audit-api-github-intake.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 96,
+      "ordinal": 10,
+      "name": "<arrow>",
+      "actual": 63,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-post-approval-artifacts.js",
+      "rule": "maintainability:function-lines",
+      "line": 131,
+      "ordinal": 6,
+      "name": "generateExecutionContractArtifactBundleEvent",
+      "actual": 62,
+      "cap": 50
+    },
+    {
       "path": "scripts/generate-design-tokens.mjs",
       "rule": "maintainability:function-lines",
       "line": 287,
       "ordinal": 15,
       "name": "buildTaskCreationFormCss",
+      "actual": 62,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/audit-api-gitlab-intake.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 165,
+      "ordinal": 14,
+      "name": "<arrow>",
+      "actual": 62,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/gp-002-github-intake-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 29,
+      "ordinal": 3,
+      "name": "<arrow>",
       "actual": 62,
       "cap": 50
     },
@@ -439,6 +844,33 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/product-delivery-integrity-api.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 127,
+      "ordinal": 10,
+      "name": "seedUiTask",
+      "actual": 61,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-ux-dispatch.js",
+      "rule": "maintainability:function-lines",
+      "line": 111,
+      "ordinal": 13,
+      "name": "augmentDispatchReadinessWithUxGate",
+      "actual": 60,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/product-delivery-integrity.js",
+      "rule": "maintainability:function-lines",
+      "line": 291,
+      "ordinal": 21,
+      "name": "augmentExecutionContractApprovalReadiness",
+      "actual": 60,
+      "cap": 50
+    },
+    {
       "path": "src/app/routes/AuthRoute.jsx",
       "rule": "maintainability:function-lines",
       "line": 3,
@@ -448,12 +880,30 @@
       "cap": 50
     },
     {
-      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "path": "tests/unit/audit-api-gitlab-intake.test.js",
       "rule": "maintainability:function-lines",
-      "line": 182,
-      "ordinal": 21,
+      "line": 166,
+      "ordinal": 15,
       "name": "<arrow>",
       "actual": 60,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/execution-contract-reviewer-routing.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 124,
+      "ordinal": 12,
+      "name": "<arrow>",
+      "actual": 60,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/product-delivery-integrity.js",
+      "rule": "maintainability:function-lines",
+      "line": 724,
+      "ordinal": 40,
+      "name": "assertQaResultProductDelivery",
+      "actual": 59,
       "cap": 50
     },
     {
@@ -462,15 +912,6 @@
       "line": 636,
       "ordinal": 85,
       "name": "createEmailTransport",
-      "actual": 59,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 88,
-      "ordinal": 10,
-      "name": "<arrow>",
       "actual": 59,
       "cap": 50
     },
@@ -484,12 +925,30 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/execution-contract-architect-dispatch.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 62,
+      "ordinal": 5,
+      "name": "seedReadyForArchitectAssignment",
+      "actual": 58,
+      "cap": 50
+    },
+    {
       "path": "tests/unit/gp-007-projection-workers-verify.test.js",
       "rule": "maintainability:function-lines",
       "line": 17,
       "ordinal": 2,
       "name": "<arrow>",
       "actual": 58,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-reviewer-routing.js",
+      "rule": "maintainability:function-lines",
+      "line": 409,
+      "ordinal": 19,
+      "name": "startExecutionContractReviewerRouting",
+      "actual": 57,
       "cap": 50
     },
     {
@@ -504,10 +963,55 @@
     {
       "path": "lib/audit/milestone-a-staging-verify.js",
       "rule": "maintainability:function-lines",
-      "line": 146,
-      "ordinal": 4,
+      "line": 130,
+      "ordinal": 3,
       "name": "runMilestoneAStagingVerify",
       "actual": 55,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:function-lines",
+      "line": 486,
+      "ordinal": 36,
+      "name": "ensureForgeStarted",
+      "actual": 55,
+      "cap": 50
+    },
+    {
+      "path": "scripts/reseed-tsk-001-local.js",
+      "rule": "maintainability:function-lines",
+      "line": 46,
+      "ordinal": 5,
+      "name": "buildApprovedContract",
+      "actual": 55,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/execution-contract-architect-dispatch.js",
+      "rule": "maintainability:function-lines",
+      "line": 252,
+      "ordinal": 17,
+      "name": "normalizeArchitectAssignmentBody",
+      "actual": 54,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/product-delivery-integrity.js",
+      "rule": "maintainability:function-lines",
+      "line": 842,
+      "ordinal": 49,
+      "name": "deriveProductDeliveryProjection",
+      "actual": 54,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/forge-canonical-task.js",
+      "rule": "maintainability:function-lines",
+      "line": 152,
+      "ordinal": 21,
+      "name": "evaluateForgeExecutionReadiness",
+      "actual": 54,
       "cap": 50
     },
     {
@@ -520,21 +1024,30 @@
       "cap": 50
     },
     {
-      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
-      "rule": "maintainability:function-lines",
-      "line": 282,
-      "ordinal": 22,
-      "name": "dispatchForgeCloseout",
-      "actual": 53,
-      "cap": 50
-    },
-    {
       "path": "scripts/generate-design-tokens.mjs",
       "rule": "maintainability:function-lines",
       "line": 233,
       "ordinal": 14,
       "name": "buildButtonCss",
       "actual": 53,
+      "cap": 50
+    },
+    {
+      "path": "tests/integration/board-owner-filtering.integration.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 211,
+      "ordinal": 17,
+      "name": "<arrow>",
+      "actual": 52,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 624,
+      "ordinal": 67,
+      "name": "<arrow>",
+      "actual": 52,
       "cap": 50
     },
     {
@@ -570,7 +1083,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 2125,
+      "actual": 2133,
       "cap": 400
     },
     {
@@ -583,12 +1096,21 @@
       "cap": 400
     },
     {
-      "path": "src/app/App.jsx",
+      "path": "lib/audit/product-delivery-integrity.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 708,
+      "actual": 979,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 871,
       "cap": 400
     },
     {
@@ -597,7 +1119,16 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 698,
+      "actual": 737,
+      "cap": 400
+    },
+    {
+      "path": "src/app/App.jsx",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 707,
       "cap": 400
     },
     {
@@ -607,6 +1138,15 @@
       "ordinal": null,
       "name": null,
       "actual": 686,
+      "cap": 400
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 619,
       "cap": 400
     },
     {
@@ -628,6 +1168,15 @@
       "cap": 400
     },
     {
+      "path": "lib/audit/execution-contract-architect-dispatch.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 573,
+      "cap": 400
+    },
+    {
       "path": "src/app/session.browser.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
@@ -646,13 +1195,58 @@
       "cap": 400
     },
     {
-      "path": "lib/task-platform/et-forge-dispatch-bridge.js",
+      "path": "lib/audit/execution-contract-reviewer-routing.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 434,
+      "actual": 475,
       "cap": 400
+    },
+    {
+      "path": "scripts/reseed-tsk-001-local.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 459,
+      "cap": 400
+    },
+    {
+      "path": "lib/audit/execution-contract-ux-dispatch.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 437,
+      "cap": 400
+    },
+    {
+      "path": "scripts/advance-tsk-001-qa-loop.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 421,
+      "cap": 400
+    },
+    {
+      "path": "tests/unit/et-forge-dispatch-bridge.test.js",
+      "rule": "maintainability:test-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 714,
+      "cap": 500
+    },
+    {
+      "path": "tests/browser/task-workspace.browser.spec.ts",
+      "rule": "maintainability:test-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 514,
+      "cap": 500
     }
   ]
 }
