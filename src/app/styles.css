@@ -2281,6 +2281,32 @@ button {
   gap: 6px;
 }
 
+.app-nav__group-links button:not(.button-secondary, .app-nav__primary-action) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-on-muted-strong);
+  box-shadow: none;
+}
+
+.app-nav__group-links button[aria-pressed='true']:not(.button-secondary, .app-nav__primary-action) {
+  border-color: color-mix(in srgb, var(--primary) 32%, transparent);
+  border-left-color: var(--primary);
+  border-left-width: 3px;
+  padding-left: 6px;
+  background: var(--surface-muted);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.app-nav__group-links .app-nav__primary-action {
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent) !important;
+  background: var(--primary-soft) !important;
+  color: var(--primary-strong) !important;
+  -webkit-text-fill-color: var(--primary-strong) !important;
+  justify-content: center;
+  margin-top: 4px;
+}
+
 .command-bar {
   display: grid;
   grid-template-columns: minmax(220px, 1.4fr) minmax(180px, 1fr) auto;
@@ -2337,6 +2363,18 @@ button {
   border-color: color-mix(in srgb, var(--warning) 36%, var(--border-soft));
   background: var(--warning-soft);
   color: var(--warning-text);
+}
+
+.command-bar__actions button:not(.button-secondary) {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: var(--design-radius-control-sm);
+  padding: 7px 11px;
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
+  font-weight: var(--design-typography-label-md-font-weight);
 }
 
 .command-center-toolbar__badges {
