@@ -18,10 +18,10 @@
     {
       "path": "src/app/App.jsx",
       "rule": "maintainability:function-lines",
-      "line": 40,
+      "line": 42,
       "ordinal": 1,
       "name": "App",
-      "actual": 667,
+      "actual": 633,
       "cap": 50
     },
     {
@@ -54,10 +54,10 @@
     {
       "path": "src/app/routes/TaskWorkspaceRoute.jsx",
       "rule": "maintainability:function-lines",
-      "line": 7,
+      "line": 12,
       "ordinal": 1,
       "name": "TaskWorkspaceRoute",
-      "actual": 258,
+      "actual": 256,
       "cap": 50
     },
     {
@@ -117,7 +117,7 @@
     {
       "path": "scripts/reseed-tsk-001-local.js",
       "rule": "maintainability:function-lines",
-      "line": 277,
+      "line": 281,
       "ordinal": 16,
       "name": "main",
       "actual": 178,
@@ -282,6 +282,15 @@
       "line": 289,
       "ordinal": 17,
       "name": "delegateReviewerSectionReviews",
+      "actual": 119,
+      "cap": 50
+    },
+    {
+      "path": "src/app/shell/GroupedAppNav.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 25,
+      "ordinal": 3,
+      "name": "GroupedAppNav",
       "actual": 119,
       "cap": 50
     },
@@ -556,6 +565,15 @@
       "cap": 50
     },
     {
+      "path": "src/app/routes/CommandCenterQueue.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 7,
+      "ordinal": 1,
+      "name": "QueueTaskRow",
+      "actual": 76,
+      "cap": 50
+    },
+    {
       "path": "tests/unit/et-forge-dispatch-bridge.test.js",
       "rule": "maintainability:function-lines",
       "line": 143,
@@ -574,6 +592,24 @@
       "cap": 50
     },
     {
+      "path": "src/app/shell/GroupedAppNav.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 145,
+      "ordinal": 16,
+      "name": "buildCollapsedNavRail",
+      "actual": 75,
+      "cap": 50
+    },
+    {
+      "path": "src/app/shell/CommandBar.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 4,
+      "ordinal": 1,
+      "name": "CommandBar",
+      "actual": 74,
+      "cap": 50
+    },
+    {
       "path": "tests/unit/factory-delivery.test.js",
       "rule": "maintainability:function-lines",
       "line": 112,
@@ -585,7 +621,7 @@
     {
       "path": "scripts/reseed-tsk-001-local.js",
       "rule": "maintainability:function-lines",
-      "line": 124,
+      "line": 128,
       "ordinal": 8,
       "name": "seedBaseContract",
       "actual": 73,
@@ -835,6 +871,15 @@
       "cap": 50
     },
     {
+      "path": "src/app/routes/CommandCenterQueue.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 84,
+      "ordinal": 4,
+      "name": "CommandCenterGroupedQueue",
+      "actual": 61,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-creation/TaskCreationForm.tsx",
       "rule": "maintainability:function-lines",
       "line": 139,
@@ -981,7 +1026,7 @@
     {
       "path": "scripts/reseed-tsk-001-local.js",
       "rule": "maintainability:function-lines",
-      "line": 46,
+      "line": 50,
       "ordinal": 5,
       "name": "buildApprovedContract",
       "actual": 55,
@@ -1011,6 +1056,15 @@
       "line": 152,
       "ordinal": 21,
       "name": "evaluateForgeExecutionReadiness",
+      "actual": 54,
+      "cap": 50
+    },
+    {
+      "path": "src/app/routes/CommandCenterQueue.jsx",
+      "rule": "maintainability:function-lines",
+      "line": 89,
+      "ordinal": 5,
+      "name": "<arrow>",
       "actual": 54,
       "cap": 50
     },
@@ -1123,21 +1177,21 @@
       "cap": 400
     },
     {
-      "path": "src/app/App.jsx",
-      "rule": "maintainability:source-file-lines",
-      "line": 1,
-      "ordinal": null,
-      "name": null,
-      "actual": 707,
-      "cap": 400
-    },
-    {
       "path": "src/app/app-model.jsx",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
       "actual": 686,
+      "cap": 400
+    },
+    {
+      "path": "src/app/App.jsx",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 675,
       "cap": 400
     },
     {
@@ -1209,7 +1263,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 459,
+      "actual": 463,
       "cap": 400
     },
     {
