@@ -173,7 +173,30 @@ Priority" }), e("th", { scope: "col", children: "Owner" })] }) }), e("tbody", { 
 task-list-meta", children: e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }) }) : null] }), e("td", { children: t.current_stage ||
   "\u2014" }), e("td", { children: t.priority || "\u2014" }), a("td", { children: [e("span", { className: `owner-badge owner-badge--${t.ownerPresentation.tone}`,
   children: t.ownerPresentation.label }), e("div", { className: "task-list-meta", children: "Governance-only owner metadata" })] })] }, t.task_id)) })] }) }) : null,
-  isCommandCenter ? a("aside", { className: `command-center-inspector${selectedTask ? "" : " command-center-inspector--empty"}`, "aria-label": "Selected task inspector", children: selectedTask ? [a("div", { className: "command-center-inspector__header", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Inspector" }), e("h2", { children: selectedTask.title || selectedTask.task_id })] }), e("button", { type: "button", className: "button-secondary", onClick: () => updateQueueSelection(""), children: "Close" })] }), a("dl", { className: "command-center-inspector__facts", children: [a("div", { children: [e("dt", { children: "Task" }), e("dd", { children: selectedTask.task_id })] }), a("div", { children: [e("dt", { children: "Stage" }), e("dd", { children: selectedTask.current_stage || "\u2014" })] }), a("div", { children: [e("dt", { children: "Priority" }), e("dd", { children: selectedTask.priority || "\u2014" })] }), a("div", { children: [e("dt", { children: "Owner" }), e("dd", { children: e("span", { className: `owner-badge owner-badge--${Li(selectedTask, j).tone}`, children: Li(selectedTask, j).label }) })] })] }), selectedTask.next_required_action ? a("div", { className: "command-center-inspector__note", children: [e("span", { children: "Next action" }), e("p", { children: selectedTask.next_required_action })] }) : null, a("div", { className: "command-center-inspector__actions", children: [e("button", { type: "button", onClick: () => l(`/tasks/${encodeURIComponent(selectedTask.task_id)}`), children: "Open full task detail" }), e("button", { type: "button", className: "button-secondary", onClick: () => updateQueueSelection(""), children: "Return to queue" })] })] : [a("div", { className: "command-center-inspector__header", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Inspector" }), e("h2", { children: "Select a task" })] })] }), e("p", { className: "command-center-inspector__empty-copy", children: "Choose a task from the queue to preview stage, owner, and next action here while keeping queue context visible." })] }) : null,
+  isCommandCenter ? a("aside", {
+    className: `command-center-inspector${selectedTask ? "" : " command-center-inspector--empty"}`,
+    "aria-label": "Selected task inspector",
+    children: selectedTask ? [
+      a("div", { className: "command-center-inspector__header", children: [
+        a("div", { children: [e("p", { className: "eyebrow", children: "Inspector" }), e("h2", { children: selectedTask.title || selectedTask.task_id })] }),
+        e("button", { type: "button", className: "button-secondary", onClick: () => updateQueueSelection(""), children: "Close" }),
+      ] }),
+      a("dl", { className: "command-center-inspector__facts", children: [
+        a("div", { children: [e("dt", { children: "Task" }), e("dd", { children: selectedTask.task_id })] }),
+        a("div", { children: [e("dt", { children: "Stage" }), e("dd", { children: selectedTask.current_stage || "\u2014" })] }),
+        a("div", { children: [e("dt", { children: "Priority" }), e("dd", { children: selectedTask.priority || "\u2014" })] }),
+        a("div", { children: [e("dt", { children: "Owner" }), e("dd", { children: e("span", { className: `owner-badge owner-badge--${Li(selectedTask, j).tone}`, children: Li(selectedTask, j).label }) })] }),
+      ] }),
+      selectedTask.next_required_action ? a("div", { className: "command-center-inspector__note", children: [e("span", { children: "Next action" }), e("p", { children: selectedTask.next_required_action })] }) : null,
+      a("div", { className: "command-center-inspector__actions", children: [
+        e("button", { type: "button", onClick: () => l(`/tasks/${encodeURIComponent(selectedTask.task_id)}`), children: "Open full task detail" }),
+        e("button", { type: "button", className: "button-secondary", onClick: () => updateQueueSelection(""), children: "Return to queue" }),
+      ] }),
+    ] : [
+      a("div", { className: "command-center-inspector__header", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Inspector" }), e("h2", { children: "Select a task" })] })] }),
+      e("p", { className: "command-center-inspector__empty-copy", children: "Choose a task from the queue to preview stage, owner, and next action here while keeping queue context visible." }),
+    ],
+  }) : null,
   x.kind === "ready" && !f && !_ && !P && !A && Ae.length && N.view === "list" ? e("div", { className: "task-list-table-wrap command-center-queue", children: a("table", { className: "\
 task-list-table", children: [e("thead", { children: a("tr", { children: [e("th", { scope: "col", children: "Task" }), e("th", { scope: "col", children: "Stage" }),
   e("th", { scope: "col", children: "Priority" }), e("th", { scope: "col", children: "Owner" })] }) }), e("tbody", { children: Ae.map((t) => {

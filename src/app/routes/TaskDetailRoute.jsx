@@ -145,7 +145,45 @@ f-form", onSubmit: Fs, children: [e("h3", { children: "Capture Deferred Consider
   "Open questions", e("textarea", { value: T.openQuestions, onChange: (t) => z((n) => ({ ...n, openQuestions: t.target.value })) })] }), e("div", { className: "\
 assignment-form__actions", children: e("button", { type: "submit", disabled: K.kind === "loading" && K.action === "capture", children: K.kind === "loading" && K.
   action === "capture" ? "Capturing\u2026" : "Capture Deferred Consideration" }) }), K.kind !== "idle" && K.action === "capture" ? e("p", { className: `assignme\
-nt-status assignment-status--${K.kind}`, role: K.kind === "error" ? "alert" : "status", children: K.message }) : null] }) : null] }), s.detail?.context?.product_delivery && s.detail.context.product_delivery.status !== "not_required" ? a("section", { id: "task-detail-product-delivery-section", className: "detail-card detail-card--full", "aria-label": "Product delivery status", children: [e("h2", { children: "Product delivery" }), a("div", { className: "delivery-layers", children: [a("article", { className: "delivery-layer delivery-layer--platform", children: [e("h3", { children: "Platform delivery" }), a("dl", { className: "summary-grid", children: [a("div", { children: [e("dt", { children: "Stage" }), e("dd", { children: s.detail.context.platform_delivery?.stage || "\u2014" })] }), a("div", { children: [e("dt", { children: "QA gate" }), e("dd", { children: s.detail.context.platform_delivery?.gates?.qa || "pending" })] }), a("div", { children: [e("dt", { children: "UX gate" }), e("dd", { children: s.detail.context.platform_delivery?.gates?.ux || "pending" })] })] })] }), a("article", { className: `delivery-layer delivery-layer--product delivery-layer--${s.detail.context.product_delivery.status || "not_started"}`, children: [e("h3", { children: "Product delivery" }), a("dl", { className: "summary-grid", children: [a("div", { children: [e("dt", { children: "Status" }), e("dd", { children: s.detail.context.product_delivery.status || "not_started" })] }), a("div", { children: [e("dt", { children: "Runnable surface" }), e("dd", { children: s.detail.context.product_delivery.runnable_surface_verified ? "verified" : "not verified" })] }), a("div", { children: [e("dt", { children: "Visual proof" }), e("dd", { children: s.detail.context.product_delivery.visual_verified ? "verified" : "not verified" })] }), a("div", { children: [e("dt", { children: "Design scope" }), e("dd", { children: s.detail.context.product_delivery.design_scope_mode || "\u2014" })] })] }), s.detail.context.platform_delivery?.gates?.qa === "approved" && s.detail.context.product_delivery.status !== "verified" ? e("p", { className: "delivery-layer__divergence", role: "status", children: "Platform QA passed, but product delivery is not verified. The operator UI at the runnable surface may still diverge from spec." }) : null] })] })] }) : null, s.detail?.context?.closeGovernance?.
+nt-status assignment-status--${K.kind}`, role: K.kind === "error" ? "alert" : "status", children: K.message }) : null] }) : null] }),
+  s.detail?.context?.product_delivery && s.detail.context.product_delivery.status !== "not_required" ? a("section", {
+    id: "task-detail-product-delivery-section",
+    className: "detail-card detail-card--full",
+    "aria-label": "Product delivery status",
+    children: [
+      e("h2", { children: "Product delivery" }),
+      a("div", { className: "delivery-layers", children: [
+        a("article", { className: "delivery-layer delivery-layer--platform", children: [
+          e("h3", { children: "Platform delivery" }),
+          a("dl", { className: "summary-grid", children: [
+            a("div", { children: [e("dt", { children: "Stage" }), e("dd", { children: s.detail.context.platform_delivery?.stage || "\u2014" })] }),
+            a("div", { children: [e("dt", { children: "QA gate" }), e("dd", { children: s.detail.context.platform_delivery?.gates?.qa || "pending" })] }),
+            a("div", { children: [e("dt", { children: "UX gate" }), e("dd", { children: s.detail.context.platform_delivery?.gates?.ux || "pending" })] }),
+          ] }),
+        ] }),
+        a("article", {
+          className: `delivery-layer delivery-layer--product delivery-layer--${s.detail.context.product_delivery.status || "not_started"}`,
+          children: [
+            e("h3", { children: "Product delivery" }),
+            a("dl", { className: "summary-grid", children: [
+              a("div", { children: [e("dt", { children: "Status" }), e("dd", { children: s.detail.context.product_delivery.status || "not_started" })] }),
+              a("div", { children: [e("dt", { children: "Runnable surface" }), e("dd", { children: s.detail.context.product_delivery.runnable_surface_verified ? "verified" : "not verified" })] }),
+              a("div", { children: [e("dt", { children: "Visual proof" }), e("dd", { children: s.detail.context.product_delivery.visual_verified ? "verified" : "not verified" })] }),
+              a("div", { children: [e("dt", { children: "Design scope" }), e("dd", { children: s.detail.context.product_delivery.design_scope_mode || "\u2014" })] }),
+            ] }),
+            s.detail.context.platform_delivery?.gates?.qa === "approved" && s.detail.context.product_delivery.status !== "verified"
+              ? e("p", {
+                className: "delivery-layer__divergence",
+                role: "status",
+                children: "Platform QA passed, but product delivery is not verified. The operator UI at the runnable surface may still diverge from spec.",
+              })
+              : null,
+          ],
+        }),
+      ] }),
+    ],
+  }) : null,
+  s.detail?.context?.closeGovernance?.
   active ? a("section", { id: "task-detail-close-review-section", className: "detail-card detail-card--full", "aria-label": "Close review governance", children: [e("h2", { children: "Close review gove\
 rnance" }), a("div", { className: "review-question-note", children: [e("span", { children: uo(s.detail.context.closeGovernance.readiness?.state) }), e("p", { children: s.
   detail.context.closeGovernance.humanDecision?.summary || s.detail.context.closeGovernance.escalation?.summary || s.detail.summary?.nextAction?.label || "Gover\

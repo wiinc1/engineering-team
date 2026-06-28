@@ -27,7 +27,6 @@
         "tests/e2e/audit-foundation.e2e.test.js",
         "tests/e2e/task-assignment.test.js",
         "tests/integration/audit-postgres-e2e.test.js",
-        "tests/integration/board-owner-filtering.integration.test.js",
         "tests/integration/role-inbox-filtering.integration.test.js",
         "tests/integration/task-assignment-integration.test.js",
         "tests/performance/audit-foundation.performance.test.js",
