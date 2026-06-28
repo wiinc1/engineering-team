@@ -1371,7 +1371,7 @@ button {
 
 .delivery-layer h3 {
   margin: 0 0 8px;
-  font-size: 0.95rem;
+  font-size: var(--design-typography-label-md-font-size);
 }
 
 .delivery-layer--product.delivery-layer--verified {
@@ -1388,7 +1388,7 @@ button {
 .delivery-layer__divergence {
   margin: 10px 0 0;
   color: var(--warning-text);
-  font-size: 0.92rem;
+  font-size: var(--design-typography-body-sm-font-size);
 }
 
 .operator-verification-path {
@@ -1398,9 +1398,9 @@ button {
 }
 
 .operator-verification-path dt {
-  font-size: 0.78rem;
+  font-size: var(--design-typography-label-sm-font-size);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--design-typography-label-sm-letter-spacing);
   color: var(--muted);
 }
 
