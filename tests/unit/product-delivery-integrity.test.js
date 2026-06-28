@@ -2,7 +2,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 
-const RUNNABLE_SURFACE_HEAD_SHA = execFileSync('git', ['rev-parse', 'main'], { encoding: 'utf8' }).trim();
+function resolveRunnableSurfaceHeadSha() {
+  for (const ref of ['main', 'origin/main']) {
+    try {
+      return execFileSync('git', ['rev-parse', ref], { encoding: 'utf8' }).trim();
+    } catch {
+      // Fall through to the next ref for shallow CI checkouts.
+    }
+  }
+  return execFileSync('git', ['merge-base', 'HEAD', 'origin/main'], { encoding: 'utf8' }).trim();
+}
+
+const RUNNABLE_SURFACE_HEAD_SHA = resolveRunnableSurfaceHeadSha();
 const {
   PRODUCT_DELIVERY_INTEGRITY_POLICY_VERSION,
   normalizeDesignScope,
