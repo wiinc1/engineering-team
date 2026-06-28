@@ -49,3 +49,16 @@ The target specialist identified these missing UX-critical details for a future 
 ## Recommended Next Action
 
 Proceed with implementation or full UX review only after a layout brief, screenshots or design references, and expected queue-first behavior are attached to the task.
+
+## Required Evidence
+
+- Commands run: OpenClaw delegation to `ux-designer` with receipt-only scope; no repository file inspection required for this validation slice.
+- Tests added or updated: none for this receipt-only delegation report; runnable-surface and browser verification evidence lives in TSK-001 product delivery closeout artifacts.
+- Docs updated: this report records delegation receipt, acceptance criteria, and UX context gaps for follow-on layout review.
+- Rollout or rollback notes: receipt validation does not change runtime flags; full UX sign-off remains gated by product delivery integrity checks.
+
+## Standards Alignment
+
+- Applicable standards areas: product workflow, testing and quality assurance, and team process for specialist delegation receipts.
+- Evidence in this report: OpenClaw delegation receipt, acceptance-criteria pass/fail status, and documented UX context gaps for a future full Command Center review.
+- Gap observed: this report is receipt-only validation and does not include runnable-surface screenshots or full layout sign-off. Documented rationale: full UX layout evidence is owned by TSK-001 product delivery integrity closeout rather than delegation receipt validation (source https://github.com/wiinc1/engineering-team/issues/290).
