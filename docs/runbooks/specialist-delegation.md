@@ -22,6 +22,7 @@
 - `qa -> qa-engineer`
 - `sre -> sre`
 5. Override aliases if your host uses different agent ids with `OPENCLAW_SPECIALIST_MAP='{"engineer":"jr-engineer","qa":"qa-engineer"}'`.
+   Runtime ownership may report `ownership.specialistId=engineer` while `agentId=sr-engineer`; the bridge treats those aliases as equivalent when attribution is validated.
 6. Move an assigned task into `IN_PROGRESS` and confirm the reply only claims runtime ownership when a real `session_id` is returned.
 7. Confirm `observability/specialist-delegation.jsonl` contains `target_specialist`, `actual_agent`, `session_id`, `ownership`, and `delegation_id`.
 8. Confirm `observability/specialist-delegation-metrics.json` is updated with both the raw snapshot and flattened Prometheus-safe metrics.
