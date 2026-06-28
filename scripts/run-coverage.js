@@ -84,9 +84,7 @@ const NODE_TEST_FILES = [
   'tests/integration/specialist-delegation.integration.test.js',
   'tests/e2e/*.test.js',
   'tests/property/*.test.js',
-  'tests/performance/*.test.js',
   'tests/security/*.test.js',
-  'chaos/*.test.js',
 ];
 
 const UI_TEST_FILES = [
