@@ -2,6 +2,8 @@ import { Fragment as q, jsx as e, jsxs as a } from "react/jsx-runtime";
 import c from "react";
 import { LiveTaskFreshnessIndicator, useLiveTaskFreshnessPolling } from "../live-task-freshness";
 
+let commandCenterQueueSelectionCleared = false;
+
 function TaskWorkspaceRoute({ ctx }) {
   const {
     _, A, ae, Ae, At, bi, bs, da, En,
@@ -18,11 +20,17 @@ function TaskWorkspaceRoute({ ctx }) {
     return `/tasks?${n.toString()}`;
   }, updateQueueSelection = (t) => {
     const n = new URLSearchParams(o);
-    t ? n.set("selectedTask", t) : n.delete("selectedTask");
+    if (t) {
+      n.set("selectedTask", t);
+      commandCenterQueueSelectionCleared = false;
+    } else {
+      n.delete("selectedTask");
+      commandCenterQueueSelectionCleared = true;
+    }
     l("/tasks", n.toString() ? `?${n.toString()}` : "");
   }, autoSelectedRef = c.useRef(false);
   c.useEffect(() => {
-    if (!isCommandCenter || selectedTaskId || x.kind !== "ready" || !Ae.length || autoSelectedRef.current) return;
+    if (!isCommandCenter || selectedTaskId || x.kind !== "ready" || !Ae.length || autoSelectedRef.current || commandCenterQueueSelectionCleared) return;
     autoSelectedRef.current = true;
     updateQueueSelection(Ae[0].task_id);
   }, [isCommandCenter, selectedTaskId, x.kind, Ae[0]?.task_id]);

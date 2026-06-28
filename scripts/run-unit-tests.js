@@ -145,4 +145,11 @@ function main() {
   process.exit(vitestResult.status || 0);
 }
 
-main();
+module.exports = {
+  UNIT_TEST_FILES,
+  buildSanitizedEnv,
+};
+
+if (require.main === module) {
+  main();
+}

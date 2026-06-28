@@ -2241,6 +2241,18 @@ button {
   flex-wrap: wrap;
 }
 
+.command-center-inspector__actions button:not(.button-secondary) {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  border-radius: var(--design-radius-control-sm);
+  padding: 7px 11px;
+  background-color: var(--design-color-palette-primary-strong);
+  color: var(--design-color-palette-surface);
+  -webkit-text-fill-color: var(--design-color-palette-surface);
+  font-weight: var(--design-typography-label-md-font-weight);
+}
+
 .task-list-toolbar {
   position: sticky;
   top: 0;

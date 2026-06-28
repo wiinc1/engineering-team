@@ -471,11 +471,15 @@ test('opens a persistent queue inspector without losing task workspace context',
   await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
   await expect(page.getByRole('button', { name: 'Open full task detail' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Return to queue' }).click({ force: true });
-
+  const inspector = page.getByLabel('Selected task inspector');
+  const returnToQueue = inspector.getByRole('button', { name: 'Return to queue' });
+  await returnToQueue.scrollIntoViewIfNeeded();
+  await returnToQueue.evaluate((button) => {
+    button.click();
+  });
   await expect(page).toHaveURL(/\/tasks\?view=board&priority=P1$/);
-  await expect(page.getByLabel('Selected task inspector')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Select a task' })).toBeVisible();
+  await expect(inspector).toBeVisible();
+  await expect(inspector.getByRole('heading', { name: 'Select a task' })).toBeVisible();
   await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
   await expect(page.getByLabel('Priority filter')).toHaveValue('P1');
 });

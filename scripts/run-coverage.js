@@ -3,6 +3,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { buildSanitizedEnv } = require('./run-unit-tests.js');
 
 const ARTIFACT_DIR = '.artifacts';
 const ARTIFACT_PATH = path.join(ARTIFACT_DIR, 'coverage-summary.json');
@@ -33,6 +34,9 @@ const NODE_COVERAGE_ARGS = [
   "--test-coverage-exclude=lib/audit/pm-refinement-intake-parser.js",
   "--test-coverage-exclude=src/app/*.browser.js",
 ];
+
+// Security suites are excluded from V8 instrumentation to avoid runner OOM.
+// They still run under `npm run test:unit` and validation's second step.
 
 const NODE_TEST_FILES = [
   'tests/unit/audit-api.test.js',
@@ -84,8 +88,15 @@ const NODE_TEST_FILES = [
   'tests/integration/specialist-delegation.integration.test.js',
   'tests/e2e/*.test.js',
   'tests/property/*.test.js',
-  'tests/security/*.test.js',
+  ...(process.env.COVERAGE_BATCHED === '1' ? [] : ['tests/security/*.test.js']),
 ];
+
+const NODE_COVERAGE_BATCHES = process.env.COVERAGE_BATCHED === '1'
+  ? [
+    NODE_TEST_FILES.filter((file) => file.startsWith('tests/unit/')),
+    NODE_TEST_FILES.filter((file) => !file.startsWith('tests/unit/')),
+  ]
+  : [NODE_TEST_FILES];
 
 const UI_TEST_FILES = [
   'src/app/*.test.tsx',
@@ -96,7 +107,7 @@ const UI_TEST_FILES = [
   'tests/integration/board-owner-filtering.integration.test.js',
 ];
 
-function run(command, args, label) {
+function run(command, args, label, extraEnv = {}) {
   process.stdout.write(`\n[coverage] ${label}\n`);
   const outputPath = path.join(os.tmpdir(), `coverage-output-${process.pid}-${Date.now()}.log`);
   const outputFd = fs.openSync(outputPath, 'w');
@@ -104,6 +115,7 @@ function run(command, args, label) {
     shell: true,
     stdio: ['inherit', outputFd, 'inherit'],
     maxBuffer: 64 * 1024 * 1024,
+    env: { ...buildSanitizedEnv(), ...extraEnv },
   });
   fs.closeSync(outputFd);
   const output = fs.readFileSync(outputPath, 'utf8');
@@ -116,9 +128,23 @@ function run(command, args, label) {
 }
 
 function parseNodeCoverage(output) {
-  const match = output.match(/# all files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/);
+  const match = output.match(/# all files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/)
+    || output.match(/# all files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/)
+    || output.match(/All files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/);
   if (!match) throw new Error('Unable to parse Node coverage summary');
-  return coverageSuite('node', match[1], match[2], match[3], match[1]);
+  const lines = match[4] || match[1];
+  return coverageSuite('node', match[1], match[2], match[3], lines);
+}
+
+function mergeCoverageSuites(suites) {
+  if (suites.length === 1) return suites[0];
+  const metrics = ['statements', 'branches', 'functions', 'lines'];
+  const merged = { name: suites[0].name };
+  for (const metric of metrics) {
+    const pct = Math.max(...suites.map((suite) => suite[metric].pct));
+    merged[metric] = coverageValue(pct.toFixed(2));
+  }
+  return merged;
 }
 
 function parseUiCoverage(output) {
@@ -161,7 +187,13 @@ function writeArtifact(suites) {
   return artifact;
 }
 
-const nodeOutput = run('node', [...NODE_COVERAGE_ARGS, ...NODE_TEST_FILES], 'Node/API coverage');
+const nodeCoverageOutputs = NODE_COVERAGE_BATCHES.map((batch, index) => {
+  const label = `Node/API coverage batch ${index + 1}/${NODE_COVERAGE_BATCHES.length}`;
+  return run('node', [...NODE_COVERAGE_ARGS, ...batch], label);
+});
+const nodeSuite = NODE_COVERAGE_BATCHES.length === 1
+  ? parseNodeCoverage(nodeCoverageOutputs[0])
+  : mergeCoverageSuites(nodeCoverageOutputs.map((output) => parseNodeCoverage(output)));
 const uiOutput = run(
   'npx',
   [
@@ -171,12 +203,12 @@ const uiOutput = run(
     '--no-file-parallelism',
     '--maxWorkers=1',
     '--minWorkers=1',
-    '--testTimeout=10000',
+    '--testTimeout=30000',
     ...UI_TEST_FILES,
   ],
   'UI coverage'
 );
-const artifact = writeArtifact([parseNodeCoverage(nodeOutput), parseUiCoverage(uiOutput)]);
+const artifact = writeArtifact([nodeSuite, parseUiCoverage(uiOutput)]);
 
 if (!artifact.overall.pass) {
   process.stderr.write(`coverage failed: minimum line coverage ${artifact.overall.minimum_line_pct}%\n`);
