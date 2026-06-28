@@ -10,6 +10,7 @@ const REQUIRED_LINE_FLOOR = 80;
 
 const NODE_COVERAGE_ARGS = [
   '--test',
+  '--test-concurrency=1',
   '--experimental-test-coverage',
   "--test-coverage-include=lib/**/*.js",
   "--test-coverage-include=api/**/*.js",
@@ -101,31 +102,19 @@ function run(command, args, label) {
   process.stdout.write(`\n[coverage] ${label}\n`);
   const outputPath = path.join(os.tmpdir(), `coverage-output-${process.pid}-${Date.now()}.log`);
   const outputFd = fs.openSync(outputPath, 'w');
-  try {
-    const result = spawnSync(command, args, {
-      shell: true,
-      stdio: ['inherit', outputFd, 'inherit'],
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    fs.closeSync(outputFd);
-    const output = fs.readFileSync(outputPath, 'utf8');
-    process.stdout.write(output);
-    if (result.status !== 0) {
-      process.exit(result.status || 1);
-    }
-    return output;
-  } finally {
-    try {
-      fs.closeSync(outputFd);
-    } catch {
-      // already closed
-    }
-    try {
-      fs.unlinkSync(outputPath);
-    } catch {
-      // best-effort cleanup
-    }
+  const result = spawnSync(command, args, {
+    shell: true,
+    stdio: ['inherit', outputFd, 'inherit'],
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  fs.closeSync(outputFd);
+  const output = fs.readFileSync(outputPath, 'utf8');
+  fs.unlinkSync(outputPath);
+  process.stdout.write(output);
+  if (result.status !== 0) {
+    process.exit(result.status || 1);
   }
+  return output;
 }
 
 function parseNodeCoverage(output) {
