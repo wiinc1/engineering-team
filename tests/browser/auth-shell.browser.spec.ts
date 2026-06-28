@@ -252,14 +252,14 @@ test.beforeEach(async ({ page }) => {
     const collapsedRail = page.getByRole('navigation', { name: 'Collapsed navigation' });
     await expect(collapsedRail).toBeVisible();
     await expect(collapsedRail.getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(collapsedRail.getByRole('button', { name: 'Task workspace' })).toHaveAttribute('title', 'Task workspace');
-    await expect(collapsedRail.getByRole('button', { name: 'Search tasks' }).locator('.app-nav-rail__icon svg')).toBeVisible();
+    await expect(collapsedRail.getByRole('button', { name: 'Command Center' })).toHaveAttribute('title', 'Command Center');
+    await expect(collapsedRail.getByRole('button', { name: 'Search tasks' }).locator('.app-nav-rail__icon')).toBeVisible();
 
-    await collapsedRail.getByRole('button', { name: 'Task workspace' }).click();
+    await collapsedRail.getByRole('button', { name: 'Command Center' }).click();
 
     await expect(page).toHaveURL(/\/tasks\?view=list$/);
     await expect(shell).toHaveClass(/app-shell--nav-collapsed/);
-    await expect(collapsedRail.getByRole('button', { name: 'Task workspace' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(collapsedRail.getByRole('button', { name: 'Command Center' })).toHaveAttribute('aria-pressed', 'true');
 
     await collapsedRail.getByRole('button', { name: 'Search tasks' }).click();
 
@@ -471,5 +471,5 @@ test.beforeEach(async ({ page }) => {
     await page.goto('/auth/callback?code=oidc-code&state=callback-state', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
     await expect(page).toHaveURL(/\/tasks\?view=board/);
-    await expect(page.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
   });

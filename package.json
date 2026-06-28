@@ -98,6 +98,7 @@
     "dev:audit:up": "docker compose up -d postgres pushgateway audit-api audit-workers",
     "dev:audit:down": "docker compose down --remove-orphans",
     "dev:audit:reset": "docker compose down -v --remove-orphans",
+    "golden-path:reseed:issue-279": "node scripts/reseed-issue-279-local.js",
     "dev:golden-path:up": "node scripts/dev-golden-path-stack.js up",
     "dev:golden-path:down": "node scripts/dev-golden-path-stack.js down",
     "dev:golden-path:status": "node scripts/dev-golden-path-stack.js status",

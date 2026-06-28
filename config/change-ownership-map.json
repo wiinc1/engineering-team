@@ -152,7 +152,7 @@
         "^db/migrations/007_.*\\.sql$",
         "^db/migrations/008_.*\\.sql$",
         "^db/migrations/013_autonomous_delivery_metrics(\\.down)?\\.sql$",
-        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke|verify-et-forge-bridge-smoke|verify-factory-staging-smoke|verify-milestone-a-staging|replay-golden-path-staging|verify-gp-002-github-intake-smoke|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers|verify-gp-013-delegation-smoke|verify-gp-015-qa-fail-smoke|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-milestone-hosted-phase6|advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-tsk-001-local|capture-factory-persona-smoke|setup-github-intake-webhook|setup-gitlab-intake-webhook|golden-path-smoke-lib)\\..+$",
+        "^scripts/(run-audit-api|run-audit-workers|migrate-audit-postgres|process-audit-projection-queue|process-audit-outbox|rebuild-audit-projections|run-postgres-integration-docker|verify-audit-workers-production-smoke|verify-et-forge-bridge-smoke|verify-factory-staging-smoke|verify-milestone-a-staging|replay-golden-path-staging|verify-gp-002-github-intake-smoke|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers|verify-gp-013-delegation-smoke|verify-gp-015-qa-fail-smoke|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-milestone-hosted-phase6|advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|capture-factory-persona-smoke|setup-github-intake-webhook|setup-gitlab-intake-webhook|golden-path-smoke-lib)\\..+$",
         "^scripts/deploy/audit-workers\\.systemd\\.service$",
         "^Dockerfile\\.workers$",
         "^docker-compose\\.production-workers\\.yml$",
@@ -232,6 +232,8 @@
         "^src/app/app-model\\.jsx$",
         "^src/app/main\\.jsx$",
         "^src/app/routes/.+\\.jsx$",
+        "^src/app/shell/.+\\.(jsx|mjs)$",
+        "^src/app/command-center-queue\\.mjs$",
         "^src/app/live-task-(freshness|reconciler)\\.js$",
         "^src/app/design-tokens\\.css$",
         "^src/app/styles\\.css$",
@@ -239,13 +241,16 @@
         "^lib/auth/config-check\\.js$",
         "^scripts/check-auth-config\\.js$",
         "^scripts/seed-auth-admin\\.js$",
-        "^scripts/serve-browser-dist\\.js$"
+        "^scripts/serve-browser-dist\\.js$",
+        "^scripts/reseed-issue-279-local\\.js$",
+        "^scripts/reseed-tsk-001-local\\.js$"
       ],
       "test_requirements": [
         {
           "name": "unit-ui",
           "patterns": [
             "^src/app/App\\.test\\.tsx$",
+            "^src/app/AppNavigation\\.test\\.tsx$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
             "^src/app/AutonomyMetricsRoute\\.test\\.tsx$",
             "^src/app/AuthAppShell\\.test\\.tsx$",
@@ -259,6 +264,7 @@
             "^tests/visual/live-task-freshness\\.visual\\.spec\\.tsx$",
             "^tests/visual/task-assignment\\.visual\\.spec\\.ts$",
             "^tests/performance/lighthouse-task-detail\\.spec\\.ts$",
+            "^tests/unit/command-center-queue\\.test\\.js$",
             "^tests/unit/task-detail-next-action\\.test\\.js$",
             "^tests/unit/auth-admin-seed\\.test\\.js$",
             "^tests/unit/task-browser-session\\.test\\.js$",
@@ -302,7 +308,9 @@
             "^docs/design/ISSUE-153-design\\.md$",
             "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
-            "^docs/design/ISSUE-137-design\\.md$"
+            "^docs/reports/ISSUE-279_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
+            "^docs/design/ISSUE-137-design\\.md$",
+            "^docs/design/assets/command-console-redesign-target\\.png$"
           ]
         },
         {

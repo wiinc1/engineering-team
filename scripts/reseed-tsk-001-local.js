@@ -17,11 +17,15 @@ const TASK_ID = process.env.TSK_RESEED_TASK_ID || 'TSK-001';
 const TENANT_ID = process.env.DEFAULT_TENANT_ID || process.env.TENANT_ID || 'engineering-team';
 
 const DESIGN_SCOPE = {
-  mode: 'behavior_only',
-  issueUrl: 'https://github.com/wiinc1/engineering-team/issues/279',
+  mode: process.env.TSK_DESIGN_SCOPE_MODE || 'behavior_only',
+  issueUrl: process.env.TSK_ISSUE_URL || 'https://github.com/wiinc1/engineering-team/issues/279',
   screenshotPath: 'docs/design/assets/command-console-redesign-target.png',
-  parityBar: 'Queue selection and persistent inspector behavior only; not full issue #279 redesign.',
+  parityBar: process.env.TSK_PARITY_BAR
+    || 'Queue selection and persistent inspector behavior only; not full issue #279 redesign.',
 };
+const TASK_TITLE = process.env.TSK_TASK_TITLE || 'UI Update';
+const TASK_REQUIREMENTS = process.env.TSK_RAW_REQUIREMENTS
+  || 'Update desktop Command Center to queue-first layout with persistent inspector.';
 
 const ACCEPTANCE_CRITERIA = buildUiAcceptanceCriteriaSection({
   designScope: DESIGN_SCOPE,
@@ -48,15 +52,15 @@ function buildApprovedContract() {
     event_type: 'task.created',
     payload: {
       intake_draft: true,
-      title: 'UI Update',
-      raw_requirements: 'Update desktop Command Center to queue-first layout with persistent inspector.',
+      title: TASK_TITLE,
+      raw_requirements: TASK_REQUIREMENTS,
     },
   }];
   const summary = {
     task_id: TASK_ID,
-    title: 'UI Update',
+    title: TASK_TITLE,
     intake_draft: true,
-    operator_intake_requirements: 'Update desktop Command Center to queue-first layout with persistent inspector.',
+    operator_intake_requirements: TASK_REQUIREMENTS,
   };
   const { contract } = createExecutionContractDraft({
     taskId: TASK_ID,
@@ -130,14 +134,14 @@ async function seedBaseContract(store, contract, { skipCreated = false, skipRefi
     actorType: 'agent',
     idempotencyKey: `create:${TASK_ID}`,
     payload: {
-      title: 'UI Update',
+      title: TASK_TITLE,
       intake_draft: true,
       initial_stage: STAGES.DRAFT,
       assignee: 'pm',
       priority: 'medium',
       task_type: 'feature',
       acceptance_criteria: ACCEPTANCE_CRITERIA,
-      raw_requirements: 'Update desktop Command Center to queue-first layout with persistent inspector.',
+      raw_requirements: TASK_REQUIREMENTS,
     },
   });
   if (!skipRefinement) await store.appendEvent({

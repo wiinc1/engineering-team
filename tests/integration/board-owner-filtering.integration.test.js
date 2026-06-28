@@ -146,7 +146,7 @@ describe('board owner filtering integration', () => {
 
     fireEvent.click(screen.getByText('Board reassigned task'));
     await screen.findByRole('heading', { name: 'Board reassigned task' });
-    fireEvent.click(screen.getByRole('button', { name: 'Open full task detail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open task' }));
     await screen.findByRole('heading', { name: 'Board reassigned task' });
 
     fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'qa' } });
@@ -155,8 +155,8 @@ describe('board owner filtering integration', () => {
       expect(screen.getAllByRole('status').some((node) => node.textContent?.includes('Assigned to qa.'))).toBe(true);
     }, { timeout: 10000 });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Task workspace' })[0]);
-    fireEvent.click(screen.getByRole('tab', { name: 'Kanban board' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Command Center' })[0]);
+    fireEvent.click(screen.getByRole('tab', { name: 'Board' }));
     await screen.findByText('5 cards shown.');
     expect(screen.getAllByText('QA Engineer · QA').length).toBeGreaterThan(0);
   });
