@@ -68,6 +68,13 @@ const UNIT_TEST_FILES = [
   'tests/unit/golden-path-stack-probe.test.js',
   'tests/unit/factory-closeout.test.js',
   'tests/unit/github-intake-normalizer.test.js',
+  'tests/unit/product-delivery-integrity.test.js',
+  'tests/unit/product-delivery-integrity-api.test.js',
+  'tests/unit/execution-contract-architect-dispatch.test.js',
+  'tests/unit/execution-contract-ux-dispatch.test.js',
+  'tests/unit/execution-contract-post-approval-artifacts.test.js',
+  'tests/unit/execution-contract-reviewer-routing.test.js',
+  'tests/unit/forge-canonical-task.test.js',
   'tests/unit/governance/*.test.js',
 ];
 

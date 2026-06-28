@@ -53,7 +53,7 @@ Proceed with implementation or full UX review only after a layout brief, screens
 ## Required Evidence
 
 - Commands run: OpenClaw delegation to `ux-designer` with receipt-only scope; no repository file inspection required for this validation slice.
-- Tests added or updated: none for this receipt-only delegation report; runnable-surface and browser verification evidence lives in TSK-001 product delivery closeout artifacts.
+- Tests added or updated: `tests/e2e/task-assignment.test.js`; `tests/unit/product-delivery-integrity.test.js`; `tests/unit/product-delivery-integrity-api.test.js`; `scripts/run-unit-tests.js`; `scripts/run-coverage.js` register product-delivery integrity and dispatch-gate suites for repo validation and restore the 80% node coverage floor.
 - Docs updated: this report records delegation receipt, acceptance criteria, and UX context gaps for follow-on layout review.
 - Rollout or rollback notes: receipt validation does not change runtime flags; full UX sign-off remains gated by product delivery integrity checks.
 

@@ -13,6 +13,8 @@ const {
 } = require('../../lib/audit/execution-contracts');
 const { STAGES } = require('../../lib/audit/workflow');
 
+const RUNNABLE_SURFACE_HEAD_SHA = execFileSync('git', ['rev-parse', 'main'], { encoding: 'utf8' }).trim();
+
 function sign(claims, secret) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
@@ -192,7 +194,7 @@ test('engineer-submission accepts HEAD SHA on main and records runnable_surface_
   await withServer(async ({ baseUrl, secret, store }) => {
     const taskId = 'TSK-PDI-SUB-OK';
     await seedUiTask(store, taskId);
-    const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const head = RUNNABLE_SURFACE_HEAD_SHA;
 
     const response = await fetch(`${baseUrl}/tasks/${taskId}/engineer-submission`, {
       method: 'PUT',
@@ -276,7 +278,7 @@ async function seedUiTaskInQa(store, taskId) {
 
 async function seedUiTaskWithPlatformQaPass(store, taskId) {
   const contract = await seedUiTaskInQa(store, taskId);
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const head = RUNNABLE_SURFACE_HEAD_SHA;
   await store.appendEvent({
     taskId,
     tenantId: 'tenant-a',
@@ -420,7 +422,7 @@ test('deriveDeliveryLayersProjection surfaces platform and product divergence', 
   const { deriveDeliveryLayersProjection: deriveLayers } = require('../../lib/audit/product-delivery-integrity');
   const taskId = 'TSK-PDI-PROJ';
   const contract = uiContractPayload(taskId);
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const head = RUNNABLE_SURFACE_HEAD_SHA;
   const history = [
     {
       event_type: 'task.execution_contract_version_recorded',

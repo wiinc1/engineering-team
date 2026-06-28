@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
+
+const RUNNABLE_SURFACE_HEAD_SHA = execFileSync('git', ['rev-parse', 'main'], { encoding: 'utf8' }).trim();
 const {
   PRODUCT_DELIVERY_INTEGRITY_POLICY_VERSION,
   normalizeDesignScope,
@@ -125,7 +127,7 @@ test('buildUiAcceptanceCriteriaSection emits observable product outcomes', () =>
 });
 
 test('evaluateRunnableSurfaceVerification accepts HEAD commit on main', () => {
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const head = RUNNABLE_SURFACE_HEAD_SHA;
   const contract = createUiContract();
   const verification = evaluateRunnableSurfaceVerification({
     contract,
@@ -177,7 +179,7 @@ test('assertQaResultProductDelivery accepts pass with complete visual evidence p
 
 test('deriveProductDeliveryProjection reports divergence when platform advanced without visual proof', () => {
   const contract = createUiContract();
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const head = RUNNABLE_SURFACE_HEAD_SHA;
   const history = [
     {
       event_type: 'task.engineer_submission_recorded',
@@ -238,7 +240,7 @@ test('assertProductReconciliationAllowsQaPass allows fail outcome even after fai
 
 test('assertProductCloseoutDelivery blocks closeout when product delivery is not verified', () => {
   const contract = createUiContract();
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const head = RUNNABLE_SURFACE_HEAD_SHA;
   const history = [
     {
       event_type: 'task.engineer_submission_recorded',
@@ -258,7 +260,7 @@ test('assertProductCloseoutDelivery blocks closeout when product delivery is not
 
 test('assertProductCloseoutDelivery allows closeout when runnable surface and visual evidence are complete', () => {
   const contract = createUiContract();
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const head = RUNNABLE_SURFACE_HEAD_SHA;
   const history = [
     {
       event_type: 'task.engineer_submission_recorded',
