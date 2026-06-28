@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, STATE_DIR, STATE_FILE, DEFAULTS } = require('./constants');
 const { startOpenClawMock, startHermesMock } = require('./mocks');
+const { buildOpenClawPmRefinementEnv } = require('../../lib/audit/pm-refinement-delegate-config');
 const {
   pollReady,
   waitForPostgres,
@@ -14,6 +15,10 @@ const {
   seedAuthAdmin,
   killPid,
 } = require('./runtime');
+const {
+  factoryOrchestratorEnabled,
+  startFactoryOrchestrator,
+} = require('./factory-orchestrator');
 
 function parseArgs(argv) {
   const args = new Set(argv.slice(2));
@@ -28,6 +33,8 @@ function parseArgs(argv) {
     skipMocks: args.has('--skip-mocks'),
     skipUi: args.has('--skip-ui'),
     externalOpenclaw: readValue('--openclaw-url', process.env.OPENCLAW_BASE_URL || ''),
+    realDelegation: args.has('--real-delegation')
+      || ['1', 'true', 'yes', 'on'].includes(String(process.env.GOLDEN_PATH_REAL_DELEGATION || '').trim().toLowerCase()),
     externalHermes: readValue('--hermes-url', process.env.HERMES_BASE_URL || ''),
     forgeadapterDir: readValue('--forgeadapter-dir', process.env.FORGEADAPTER_DIR || ''),
     etApiPort: Number(readValue('--et-port', process.env.GOLDEN_PATH_ET_API_PORT || DEFAULTS.etApiPort)),
@@ -145,10 +152,15 @@ async function startEtCore(options, sharedEnv, logsDir) {
       PROJECTION_INTERVAL_MS: '3000',
       OUTBOX_INTERVAL_MS: '3000',
       ET_FORGE_DISPATCH_ENABLED: 'true',
+      FORGE_AUTO_COMPLETE_UX_REVIEW_GATE: 'true',
       ENGINEERING_TEAM_BASE_URL: etApiUrl,
       FORGEADAPTER_BASE_URL: `http://127.0.0.1:${options.forgeadapterPort || DEFAULTS.forgeadapterPort}`,
       FORGEADAPTER_SERVICE_TOKEN: DEFAULTS.forgeadapterToken,
-      ET_FORGE_LIFECYCLE_TASK_ID: 'TSK-GOLDEN001',
+      // Set ET_FORGE_LIFECYCLE_TASK_ID only when ET and forge task ids differ (golden-path replay).
+      // When unset, the bridge binds forge actions to the ET event task id.
+      ...(process.env.ET_FORGE_LIFECYCLE_TASK_ID
+        ? { ET_FORGE_LIFECYCLE_TASK_ID: process.env.ET_FORGE_LIFECYCLE_TASK_ID }
+        : {}),
       AUTH_JWT_SECRET: sharedEnv.AUTH_JWT_SECRET,
       FORGE_SERVICE_TOKEN: DEFAULTS.forgeServiceToken,
     },
@@ -162,10 +174,23 @@ async function resolveUpstreamUrls(options) {
   let hermesUrl = options.externalHermes;
   const mockServers = [];
   if (!options.skipMocks && !openclawUrl) {
-    const mock = await startOpenClawMock(DEFAULTS.openclawPort);
+    const mockEnv = options.realDelegation
+      ? {
+        ...buildOpenClawPmRefinementEnv(process.env, ROOT),
+        SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS: process.env.SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS || '600000',
+        OPENCLAW_DELEGATION_TIMEOUT_SEC: process.env.OPENCLAW_DELEGATION_TIMEOUT_SEC || '540',
+        ET_FORGE_DISPATCH_ENABLED: 'true',
+        FORGE_AUTO_COMPLETE_UX_REVIEW_GATE: 'true',
+        ENGINEERING_TEAM_BASE_URL: `http://127.0.0.1:${options.etApiPort || DEFAULTS.etApiPort}`,
+        FORGEADAPTER_BASE_URL: `http://127.0.0.1:${options.forgeadapterPort || DEFAULTS.forgeadapterPort}`,
+        FORGEADAPTER_SERVICE_TOKEN: DEFAULTS.forgeadapterToken,
+        FORGE_SERVICE_TOKEN: DEFAULTS.forgeServiceToken,
+      }
+      : {};
+    const mock = await startOpenClawMock(DEFAULTS.openclawPort, { env: mockEnv });
     mockServers.push(mock);
     openclawUrl = mock.baseUrl;
-    process.stdout.write(`OpenClaw mock listening on ${openclawUrl}\n`);
+    process.stdout.write(`OpenClaw mock listening on ${openclawUrl}${options.realDelegation ? ' (real specialist delegation enabled)' : ''}\n`);
   }
   if (!options.skipMocks && !hermesUrl) {
     const mock = await startHermesMock(DEFAULTS.hermesPort);
@@ -186,6 +211,7 @@ function printStackSummary(etApiUrl, ui, forgeadapter) {
     process.stdout.write('  Tip: use http://127.0.0.1 (not localhost) and clear site data if sign-in still fails.\n');
   }
   if (forgeadapter) process.stdout.write(`  forgeadapter:  ${forgeadapter.url}\n`);
+  process.stdout.write('  PM refinement: OpenClaw delegate (set GOLDEN_PATH_LOCAL_PM_REFINEMENT=true to use local stub)\n');
   process.stdout.write(`  State file:    ${STATE_FILE}\n`);
   process.stdout.write('\nCtrl+C to stop. Or: npm run dev:golden-path:down\n');
 }
@@ -202,6 +228,27 @@ function bindShutdown(options, processes, mockServers) {
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+}
+
+function attachFactoryOrchestrator(processes, ctx) {
+  if (!factoryOrchestratorEnabled()) return;
+  processes.push(startFactoryOrchestrator(ctx));
+  process.stdout.write('Factory orchestrator enabled (FF_FACTORY_ORCHESTRATOR_ENABLED=true)\n');
+}
+
+function persistStackState({ etApiUrl, ui, forgeadapter, openclawUrl, hermesUrl, processes, logsDir }) {
+  writeState({
+    startedAt: new Date().toISOString(),
+    services: {
+      auditApi: { url: etApiUrl },
+      ui: ui ? { url: ui.url } : null,
+      forgeadapter: forgeadapter ? { url: forgeadapter.url, token: DEFAULTS.forgeadapterToken } : null,
+      openclaw: { url: openclawUrl },
+      hermes: { url: hermesUrl },
+    },
+    processes: processes.map(({ name, pid, logPath }) => ({ name, pid, logPath })),
+    logsDir,
+  });
 }
 
 async function commandUp(options) {
@@ -231,18 +278,15 @@ async function commandUp(options) {
     processes.push(ui.process);
   }
 
-  writeState({
-    startedAt: new Date().toISOString(),
-    services: {
-      auditApi: { url: etApiUrl },
-      ui: ui ? { url: ui.url } : null,
-      forgeadapter: forgeadapter ? { url: forgeadapter.url, token: DEFAULTS.forgeadapterToken } : null,
-      openclaw: { url: openclawUrl },
-      hermes: { url: hermesUrl },
-    },
-    processes: processes.map(({ name, pid, logPath }) => ({ name, pid, logPath })),
+  attachFactoryOrchestrator(processes, {
+    sharedEnv,
     logsDir,
+    etApiUrl,
+    forgeadapterUrl: forgeadapter?.url || `http://127.0.0.1:${options.forgeadapterPort}`,
+    uiUrl: ui?.url || `http://127.0.0.1:${options.uiPort}`,
+    openclawUrl,
   });
+  persistStackState({ etApiUrl, ui, forgeadapter, openclawUrl, hermesUrl, processes, logsDir });
 
   printStackSummary(etApiUrl, ui, forgeadapter);
   bindShutdown(options, processes, mockServers);

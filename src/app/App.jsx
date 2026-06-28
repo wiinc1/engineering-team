@@ -697,12 +697,11 @@ Role inboxes" }), a("select", { "aria-label": "Role inboxes", value: f || "", on
   { type: "button", className: "button-secondary", onClick: Ma, children: "Sign out" })] })] }), V ? e("p", { className: "auth-status auth-status--error", role: "\
 alert", children: V }) : null, a("header", { className: "page-header", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Authenticated \
 browser shell for US-002" }), e("h1", { children: autonomyMetricsRouteActive ? "Autonomous Delivery Metrics" : projectRouteActive ? "Projects" : s.kind === "list" ? _ ? "PM Overview" : P ? "Governance Reviews" : A ? "Deferred Considerations" : f ? `${H(f)}\
- Inbox` : "Task workspace" : s.detail?.task?.title || s.summary.title || "Task detail" }), e("p", { className: "lede", children: autonomyMetricsRouteActive ? "Pilot report for clean autonomous delivery, operator intervention, rework, rollback, and escaped-defect signals." : projectRouteActive ? "Plan and inspect task planning containers without changing task lifecycle ownership." : s.kind === "list" ? _ ? "Read-o\
+ Inbox` : "Command Center" : s.detail?.task?.title || s.summary.title || "Task detail" }), e("p", { className: "lede", children: autonomyMetricsRouteActive ? "Pilot report for clean autonomous delivery, operator intervention, rework, rollback, and escaped-defect signals." : projectRouteActive ? "Plan and inspect task planning containers without changing task lifecycle ownership." : s.kind === "list" ? _ ? "Read-o\
 nly grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping." : P ? "Dedicated operational surface for inac\
 tivity and governance review tasks that should stay out of delivery queues." : A ? "PM review queue for non-committed ideas that are explicitly outside the curr\
 ent approved scope." : f ? f === "sre" ? "Read-only monitoring inbox showing tasks routed here because they are in the SRE monitoring stage or explicitly assign\
-ed to SRE-owned work." : `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${H(f)} role.` : "Task workspace show\
-ing Kanban board and list projections over the same lifecycle, with owner, priority, status, and search filters." : "Review blockers, ownership, readiness, and \
+ed to SRE-owned work." : `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${H(f)} role.` : "Queue-first Command Center with a persistent task inspector, prioritized work queue, and secondary list or Kanban modes." : "Review blockers, ownership, readiness, and \
 audit activity for the selected task." })] })] }), autonomyMetricsRouteActive ? e(AutonomyMetricsRoute, { ctx: routeContext }) : projectRouteActive ? e(ProjectsRoute, { ctx: routeContext }) : s.kind === "list" ? e(TaskWorkspaceRoute, { ctx: routeContext }) : e(TaskDetailRoute, { ctx: routeContext })] });
 }
 export { App };

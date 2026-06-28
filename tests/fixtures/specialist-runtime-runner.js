@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
+
 let input = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk) => {
@@ -21,14 +23,25 @@ process.stdin.on('end', () => {
     }));
     return;
   }
-  const agentId = process.env.FIXTURE_RUNTIME_AGENT_ID || payload.specialist;
+  const runtimeAgentId = process.env.FIXTURE_RUNTIME_AGENT_ID || resolveRuntimeAgent(payload.specialist);
   const sessionId = process.env.FIXTURE_RUNTIME_SESSION_ID || `runtime-session-${payload.delegationId}`;
+  const specialist = String(payload.specialist || '').trim().toLowerCase();
+  let output = `runtime handled by ${runtimeAgentId}`;
+  if (['jr-engineer', 'sr-engineer', 'engineer-jr', 'engineer-sr', 'principal', 'engineer-principal'].includes(specialist)) {
+    output = JSON.stringify({
+      commitSha: 'a'.repeat(40),
+      prUrl: 'https://github.com/wiinc1/engineering-team/pull/271',
+    });
+  } else if (specialist === 'qa') {
+    output = JSON.stringify({ outcome: 'pass', findings: [] });
+  }
   process.stdout.write(JSON.stringify({
-    agentId,
+    agentId: runtimeAgentId,
     sessionId,
-    output: `runtime handled by ${agentId}`,
+    output,
     ownership: {
-      agentId,
+      specialistId: payload.specialist,
+      runtimeAgentId,
       sessionId,
       runtime: 'fixture-openclaw',
     },

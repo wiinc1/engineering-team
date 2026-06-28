@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "et-forge-bridge-smoke",
+  "generatedAt": "2026-06-25T22:45:46.890Z",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "bridge_enabled",
+        "ok": true,
+        "enabled": true
+      },
+      {
+        "name": "forge_adapter_url_configured",
+        "ok": true,
+        "forgeAdapterBaseUrl": "http://127.0.0.1:14010"
+      },
+      {
+        "name": "engineering_team_url_configured",
+        "ok": true,
+        "engineeringTeamBaseUrl": "http://127.0.0.1:13000"
+      },
+      {
+        "name": "contract_approval_dry_run",
+        "ok": true,
+        "action": "start"
+      },
+      {
+        "name": "forge_adapter_health",
+        "ok": true,
+        "status": 200,
+        "skipped": false
+      }
+    ]
+  },
+  "config": {
+    "enabled": true,
+    "forgeAdapterBaseUrl": "http://127.0.0.1:14010",
+    "engineeringTeamBaseUrl": "http://127.0.0.1:13000",
+    "lifecycleTaskId": "TSK-BRIDGESMOKE"
+  },
+  "dryRun": {
+    "configEnabled": true,
+    "dispatchHandled": true,
+    "dispatchAction": "start",
+    "calls": [
+      {
+        "url": "http://127.0.0.1:13000/tasks/TSK-BRIDGESMOKE/forge-execution-readiness",
+        "method": "GET"
+      },
+      {
+        "url": "http://127.0.0.1:14010/tasks/TSK-BRIDGESMOKE/start",
+        "method": "POST"
+      }
+    ]
+  },
+  "forgeHealth": {
+    "skipped": false,
+    "ok": true,
+    "status": 200,
+    "url": "http://127.0.0.1:14010/health"
+  }
+}

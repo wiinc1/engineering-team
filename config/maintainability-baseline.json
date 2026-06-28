@@ -34,6 +34,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1399,
+      "ordinal": 78,
+      "name": "runGoldenPathPhase6",
+      "actual": 278,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-detail/adapter.browser.js",
       "rule": "maintainability:function-lines",
       "line": 203,
@@ -52,6 +61,24 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phase1.js",
+      "rule": "maintainability:function-lines",
+      "line": 339,
+      "ordinal": 20,
+      "name": "runGoldenPathPhase1",
+      "actual": 229,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1678,
+      "ordinal": 79,
+      "name": "runGoldenPathPhase5",
+      "actual": 219,
+      "cap": 50
+    },
+    {
       "path": "src/app/routes/TaskWorkspaceRoute.jsx",
       "rule": "maintainability:function-lines",
       "line": 4,
@@ -63,19 +90,19 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1197,
-      "ordinal": 71,
-      "name": "runGoldenPathPhase6",
-      "actual": 207,
+      "line": 1898,
+      "ordinal": 80,
+      "name": "runGoldenPathPhases",
+      "actual": 196,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1405,
-      "ordinal": 72,
-      "name": "runGoldenPathPhase5",
-      "actual": 206,
+      "line": 788,
+      "ordinal": 62,
+      "name": "runGoldenPathPhase2",
+      "actual": 195,
       "cap": 50
     },
     {
@@ -88,21 +115,12 @@
       "cap": 50
     },
     {
-      "path": "lib/task-platform/golden-path-phases.js",
+      "path": "lib/audit/gp-007-projection-workers-verify.js",
       "rule": "maintainability:function-lines",
-      "line": 1612,
-      "ordinal": 73,
-      "name": "runGoldenPathPhases",
-      "actual": 172,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/golden-path-phase1.js",
-      "rule": "maintainability:function-lines",
-      "line": 290,
-      "ordinal": 17,
-      "name": "runGoldenPathPhase1",
-      "actual": 159,
+      "line": 39,
+      "ordinal": 5,
+      "name": "runGp007ProjectionWorkersVerify",
+      "actual": 158,
       "cap": 50
     },
     {
@@ -126,10 +144,19 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 719,
-      "ordinal": 56,
-      "name": "runGoldenPathPhase2",
-      "actual": 146,
+      "line": 984,
+      "ordinal": 63,
+      "name": "runGoldenPathPhase3",
+      "actual": 147,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1132,
+      "ordinal": 67,
+      "name": "runGoldenPathPhase4",
+      "actual": 140,
       "cap": 50
     },
     {
@@ -151,21 +178,30 @@
       "cap": 50
     },
     {
-      "path": "lib/task-platform/golden-path-phases.js",
+      "path": "lib/audit/milestone-b-orchestration-verify.js",
       "rule": "maintainability:function-lines",
-      "line": 866,
-      "ordinal": 57,
-      "name": "runGoldenPathPhase3",
+      "line": 10,
+      "ordinal": 1,
+      "name": "runMilestoneBOrchestrationVerify",
+      "actual": 132,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/github-auto-merge.js",
+      "rule": "maintainability:function-lines",
+      "line": 55,
+      "ordinal": 7,
+      "name": "mergePullRequestWhenReady",
       "actual": 128,
       "cap": 50
     },
     {
-      "path": "lib/task-platform/golden-path-phases.js",
+      "path": "lib/audit/milestone-c-agent-verify.js",
       "rule": "maintainability:function-lines",
-      "line": 995,
-      "ordinal": 61,
-      "name": "runGoldenPathPhase4",
-      "actual": 122,
+      "line": 9,
+      "ordinal": 1,
+      "name": "runMilestoneCAgentVerify",
+      "actual": 126,
       "cap": 50
     },
     {
@@ -174,15 +210,6 @@
       "line": 76,
       "ordinal": 10,
       "name": "createTaskDetailApiClient",
-      "actual": 122,
-      "cap": 50
-    },
-    {
-      "path": "scripts/replay-golden-path-postgres.js",
-      "rule": "maintainability:function-lines",
-      "line": 93,
-      "ordinal": 7,
-      "name": "main",
       "actual": 122,
       "cap": 50
     },
@@ -196,10 +223,19 @@
       "cap": 50
     },
     {
+      "path": "scripts/replay-golden-path-postgres.js",
+      "rule": "maintainability:function-lines",
+      "line": 92,
+      "ordinal": 7,
+      "name": "main",
+      "actual": 115,
+      "cap": 50
+    },
+    {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 532,
-      "ordinal": 51,
+      "line": 601,
+      "ordinal": 57,
       "name": "completeContractCoverageAuditGate",
       "actual": 113,
       "cap": 50
@@ -211,6 +247,24 @@
       "ordinal": 3,
       "name": "<arrow>",
       "actual": 108,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/audit-workers-production-smoke.js",
+      "rule": "maintainability:function-lines",
+      "line": 127,
+      "ordinal": 13,
+      "name": "runAuditWorkersProductionSmoke",
+      "actual": 106,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/milestone-a-staging-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 5,
+      "ordinal": 1,
+      "name": "<arrow>",
+      "actual": 100,
       "cap": 50
     },
     {
@@ -232,12 +286,48 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/milestone-a-staging-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 56,
+      "ordinal": 3,
+      "name": "runFactoryStagingSmoke",
+      "actual": 89,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/milestone-hosted-phase6-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 7,
+      "ordinal": 1,
+      "name": "runMilestoneHostedPhase6Verify",
+      "actual": 81,
+      "cap": 50
+    },
+    {
       "path": "src/app/session-browser-registration.test.tsx",
       "rule": "maintainability:function-lines",
       "line": 31,
       "ordinal": 5,
       "name": "<arrow>",
       "actual": 81,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/staging-runtime.js",
+      "rule": "maintainability:function-lines",
+      "line": 11,
+      "ordinal": 3,
+      "name": "resolveStagingRuntime",
+      "actual": 79,
+      "cap": 50
+    },
+    {
+      "path": "scripts/capture-factory-persona-smoke.js",
+      "rule": "maintainability:function-lines",
+      "line": 41,
+      "ordinal": 5,
+      "name": "main",
+      "actual": 79,
       "cap": 50
     },
     {
@@ -265,6 +355,69 @@
       "ordinal": 100,
       "name": "login",
       "actual": 77,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/milestone-d-closeout-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 70,
+      "ordinal": 4,
+      "name": "runMilestoneDCloseoutVerify",
+      "actual": 75,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/factory-delivery.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 112,
+      "ordinal": 16,
+      "name": "<arrow>",
+      "actual": 74,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/projection-catch-up.js",
+      "rule": "maintainability:function-lines",
+      "line": 118,
+      "ordinal": 8,
+      "name": "runProjectionCatchUp",
+      "actual": 71,
+      "cap": 50
+    },
+    {
+      "path": "scripts/replay-golden-path-staging.js",
+      "rule": "maintainability:function-lines",
+      "line": 16,
+      "ordinal": 2,
+      "name": "main",
+      "actual": 66,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/et-forge-bridge-smoke.js",
+      "rule": "maintainability:function-lines",
+      "line": 83,
+      "ordinal": 7,
+      "name": "runEtForgeBridgeSmoke",
+      "actual": 64,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/milestone-a-staging-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 14,
+      "ordinal": 2,
+      "name": "<arrow>",
+      "actual": 64,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/milestone-d-closeout-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 6,
+      "ordinal": 1,
+      "name": "buildMilestoneDCompleteEvidence",
+      "actual": 63,
       "cap": 50
     },
     {
@@ -331,12 +484,30 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/gp-007-projection-workers-verify.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 17,
+      "ordinal": 2,
+      "name": "<arrow>",
+      "actual": 58,
+      "cap": 50
+    },
+    {
       "path": "tests/unit/registration-production-smoke.test.js",
       "rule": "maintainability:function-lines",
       "line": 23,
       "ordinal": 5,
       "name": "<arrow>",
       "actual": 57,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/milestone-a-staging-verify.js",
+      "rule": "maintainability:function-lines",
+      "line": 146,
+      "ordinal": 4,
+      "name": "runMilestoneAStagingVerify",
+      "actual": 55,
       "cap": 50
     },
     {
@@ -351,8 +522,8 @@
     {
       "path": "lib/task-platform/et-forge-dispatch-bridge.js",
       "rule": "maintainability:function-lines",
-      "line": 258,
-      "ordinal": 21,
+      "line": 282,
+      "ordinal": 22,
       "name": "dispatchForgeCloseout",
       "actual": 53,
       "cap": 50
@@ -376,6 +547,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/factory-delivery.js",
+      "rule": "maintainability:function-lines",
+      "line": 122,
+      "ordinal": 5,
+      "name": "runFactoryPhase1",
+      "actual": 51,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-creation/schema.js",
       "rule": "maintainability:function-lines",
       "line": 7,
@@ -390,7 +570,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 1813,
+      "actual": 2125,
       "cap": 400
     },
     {
@@ -439,6 +619,15 @@
       "cap": 400
     },
     {
+      "path": "lib/task-platform/golden-path-phase1.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 577,
+      "cap": 400
+    },
+    {
       "path": "src/app/session.browser.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
@@ -457,21 +646,12 @@
       "cap": 400
     },
     {
-      "path": "lib/task-platform/golden-path-phase1.js",
-      "rule": "maintainability:source-file-lines",
-      "line": 1,
-      "ordinal": null,
-      "name": null,
-      "actual": 458,
-      "cap": 400
-    },
-    {
       "path": "lib/task-platform/et-forge-dispatch-bridge.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 409,
+      "actual": 434,
       "cap": 400
     }
   ]

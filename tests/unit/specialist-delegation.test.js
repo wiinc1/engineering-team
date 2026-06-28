@@ -15,8 +15,13 @@ const {
   classifySpecialistRequest,
   createDelegationMetrics,
   createSpecialistCoordinator,
+  normalizeSpecialistForDelegation,
   resolveDelegationArtifactBaseDir,
 } = require('../../lib/software-factory/delegation');
+const { resolveTaskSpecialist } = require('../../lib/software-factory/task-dispatch');
+const { engineerAssigneeForTier, evaluateExecutionContractDispatchPolicy } = require('../../lib/audit/execution-contracts');
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
+const { createRuntimeDelegateWork } = require('../../lib/software-factory/runtime-delegation');
 const { isSpecialistDelegationEnabled } = require('../../lib/audit/feature-flags');
 const { DEFAULT_SMOKE_REQUEST } = require('../../scripts/validate-specialist-runtime');
 
@@ -27,6 +32,7 @@ test('routes clear specialist-owned requests to the expected specialist', () => 
   assert.deepEqual(classifySpecialistRequest('Need architecture review for this service boundary').specialist, 'architect');
   assert.deepEqual(classifySpecialistRequest('Can QA verify the regression coverage?').specialist, 'qa');
   assert.deepEqual(classifySpecialistRequest('SRE should inspect the latency spike and alerts').specialist, 'sre');
+  assert.deepEqual(classifySpecialistRequest('UX should review accessibility and task-detail hierarchy').specialist, 'ux');
 });
 
 test('routes the default live smoke request to engineering only', () => {
@@ -53,15 +59,16 @@ test('delegates through runtime evidence and returns truthful attribution with a
   const result = await coordinator.handleRequest('Please implement this fix', { coordinatorAgent: 'main' });
 
   assert.equal(result.mode, 'delegated');
-  assert.equal(result.agentId, 'engineer');
-  assert.deepEqual(result.attribution, { handledBy: 'engineer', delegated: true, coordinator: 'main' });
+  assert.equal(result.specialist, 'engineer');
+  assert.equal(result.agentId, resolveRuntimeAgent('engineer'));
+  assert.deepEqual(result.attribution, { handledBy: resolveRuntimeAgent('engineer'), delegated: true, coordinator: 'main' });
   assert.match(result.metadata.sessionId, /^runtime-session-/);
   assert.deepEqual(result.metadata.ownership.runtime, 'fixture-openclaw');
 
   const artifactPath = path.join(baseDir, 'observability', 'specialist-delegation.jsonl');
   const artifactLines = fs.readFileSync(artifactPath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
   assert.equal(artifactLines[0].target_specialist, 'engineer');
-  assert.equal(artifactLines[0].actual_agent, 'engineer');
+  assert.equal(artifactLines[0].actual_agent, resolveRuntimeAgent('engineer'));
   assert.match(artifactLines[0].session_id, /^runtime-session-/);
   assert.equal(artifactLines[0].ownership.runtime, 'fixture-openclaw');
   assert.equal(result.metadata.metricsPath, delegationMetricsPath(baseDir));
@@ -164,6 +171,133 @@ test('accepts runtime agent aliases when ownership carries the original speciali
   assert.equal(result.specialist, 'engineer');
   assert.equal(result.metadata.sessionId, 'runtime-session-alias');
   assert.equal(result.metadata.ownership.runtimeAgentId, 'sr-engineer');
+});
+
+test('normalizeSpecialistForDelegation maps owner ids and engineer tiers to granular specialists', () => {
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'engineer-jr' }), 'jr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'engineer-sr' }), 'sr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'engineer-principal' }), 'principal');
+  assert.equal(normalizeSpecialistForDelegation({ engineerTier: 'Jr' }), 'jr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ engineerTier: 'Sr' }), 'sr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ engineerTier: 'Principal' }), 'principal');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'engineer-jr' }), 'jr-engineer');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'pm' }), 'pm');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'engineer' }), 'engineer');
+  assert.equal(normalizeSpecialistForDelegation({ ownerAgentId: 'ux' }), 'ux');
+  assert.equal(normalizeSpecialistForDelegation({ targetSpecialist: 'ux-designer' }), 'ux');
+});
+
+test('resolveRuntimeAgent maps granular persona keys to spawnable agent ids', () => {
+  const personas = {
+    pm: 'pm',
+    architect: 'architect',
+    engineer: 'sr-engineer',
+    principal: 'principal',
+    'jr-engineer': 'jr-engineer',
+    'sr-engineer': 'sr-engineer',
+    qa: 'qa-engineer',
+    sre: 'sre',
+    'engineer-jr': 'jr-engineer',
+    'engineer-sr': 'sr-engineer',
+    'engineer-principal': 'principal',
+    ux: 'ux-designer',
+    'ux-designer': 'ux-designer',
+  };
+  for (const [specialist, expected] of Object.entries(personas)) {
+    assert.equal(resolveRuntimeAgent(specialist), expected, specialist);
+  }
+});
+
+test('engineerAssigneeForTier returns granular engineer owner ids', () => {
+  assert.equal(engineerAssigneeForTier('Jr'), 'engineer-jr');
+  assert.equal(engineerAssigneeForTier('Sr'), 'engineer-sr');
+  assert.equal(engineerAssigneeForTier('Principal'), 'engineer-principal');
+});
+
+test('dispatch policy selects granular assignees from proposed engineer tiers', () => {
+  const jrPolicy = evaluateExecutionContractDispatchPolicy({
+    contract: {
+      template_tier: 'Simple',
+      sections: {},
+      dispatch_signals: {
+        work_category: 'docs',
+        clear_test_plan: true,
+        proposed_engineer_tier: 'Jr',
+      },
+    },
+  });
+  assert.equal(jrPolicy.selectedAssignee, 'engineer-jr');
+  assert.equal(jrPolicy.selectedEngineerTier, 'Jr');
+
+  const principalPolicy = evaluateExecutionContractDispatchPolicy({
+    contract: { template_tier: 'Complex', sections: {}, risk_flags: ['security'] },
+    proposedEngineerTier: 'Principal',
+  });
+  assert.equal(principalPolicy.selectedAssignee, 'engineer-principal');
+  assert.equal(principalPolicy.selectedEngineerTier, 'Principal');
+});
+
+test('resolveTaskSpecialist keeps coarse task types while delegation normalizes granular owners', () => {
+  assert.equal(resolveTaskSpecialist('dev'), 'engineer');
+  assert.equal(resolveTaskSpecialist('qa'), 'qa');
+  assert.equal(normalizeSpecialistForDelegation({
+    targetSpecialist: resolveTaskSpecialist('dev'),
+    ownerAgentId: 'engineer-jr',
+  }), 'jr-engineer');
+});
+
+test('createRuntimeDelegateWork resolves personas through map-aware fixture runner', async () => {
+  const delegateWork = createRuntimeDelegateWork({
+    baseDir: fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-map-delegate-')),
+    delegationRunnerCommand: `node ${runtimeRunnerPath}`,
+  });
+  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre', 'ux']) {
+    const result = await delegateWork({
+      specialist: persona,
+      request: `delegate ${persona}`,
+      delegationId: `map-${persona}`,
+    });
+    assert.equal(result.ownership.specialistId, persona, persona);
+    assert.equal(result.agentId, resolveRuntimeAgent(persona), persona);
+    assert.equal(result.ownership.runtimeAgentId, resolveRuntimeAgent(persona), persona);
+  }
+});
+
+test('delegates explicit persona targets through map-aware runtime runner evidence', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-personas-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegationRunnerCommand: `node ${runtimeRunnerPath}`,
+  });
+  for (const persona of ['pm', 'architect', 'jr-engineer', 'sr-engineer', 'principal', 'qa', 'sre', 'ux']) {
+    const result = await coordinator.handleRequest(`Work owned by ${persona}`, {
+      coordinatorAgent: 'main',
+      targetSpecialist: persona,
+    });
+    assert.equal(result.mode, 'delegated', persona);
+    assert.equal(result.specialist, persona, persona);
+    assert.equal(result.agentId, resolveRuntimeAgent(persona), persona);
+    assert.equal(result.metadata.ownership.specialistId, persona, persona);
+    assert.equal(result.metadata.ownership.runtimeAgentId, resolveRuntimeAgent(persona), persona);
+  }
+});
+
+test('delegates tier-selected engineer implementation without coordinator fallback', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-tier-engineer-'));
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    delegationRunnerCommand: `node ${runtimeRunnerPath}`,
+  });
+
+  const result = await coordinator.handleRequest('Please implement this docs-only change', {
+    coordinatorAgent: 'main',
+    engineerTier: 'Jr',
+  });
+
+  assert.equal(result.mode, 'delegated');
+  assert.equal(result.specialist, 'jr-engineer');
+  assert.equal(result.agentId, resolveRuntimeAgent('jr-engineer'));
+  assert.equal(result.metadata.ownership.runtimeAgentId, resolveRuntimeAgent('jr-engineer'));
 });
 
 test('delegates explicit PM refinement ownership through runtime evidence', async () => {

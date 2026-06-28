@@ -2,6 +2,7 @@ const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, DEFAULTS } = require('./constants');
+const { buildOpenClawPmRefinementEnv } = require('../../lib/audit/pm-refinement-delegate-config');
 
 function composeArgs() {
   return [
@@ -102,7 +103,22 @@ function buildSharedEnv(options = {}) {
     FF_AUDIT_FOUNDATION: 'true',
     FF_WORKFLOW_ENGINE: 'true',
     FF_INTAKE_DRAFT_CREATION: 'true',
-    FF_GITHUB_INTAKE_NORMALIZER: 'true',
+    FF_EXECUTION_CONTRACTS: 'true',
+    GOLDEN_PATH_LOCAL_PM_REFINEMENT: 'false',
+    GOLDEN_PATH_OPENCLAW_PM_REFINEMENT: 'true',
+    PM_REFINEMENT_DELEGATE_WORK: 'openclaw',
+    ...buildOpenClawPmRefinementEnv(process.env, ROOT),
+    FF_GITLAB_INTAKE_NORMALIZER: 'true',
+    FF_GITLAB_INTAKE_PROJECT_BOOTSTRAP: 'true',
+    FF_GITHUB_INTAKE_NORMALIZER: 'false',
+    FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP: 'false',
+    FF_PROJECTS: 'true',
+    FORGE_INTAKE_PROVIDER: DEFAULTS.forgeIntakeProvider,
+    GITLAB_WEBHOOK_SECRET: DEFAULTS.gitlabWebhookSecret,
+    GITLAB_INTAKE_OPT_IN_LABEL: 'factory-intake',
+    GITLAB_INTAKE_DEFAULT_TENANT: DEFAULTS.tenantId,
+    GITLAB_BASE_URL: DEFAULTS.gitlabBaseUrl,
+    GITLAB_INTAKE_PROJECT: DEFAULTS.gitlabProjectPath,
     GITHUB_WEBHOOK_SECRET: DEFAULTS.githubWebhookSecret,
     GITHUB_INTAKE_OPT_IN_LABEL: 'factory-intake',
     GITHUB_INTAKE_DEFAULT_TENANT: DEFAULTS.tenantId,
@@ -128,7 +144,21 @@ async function seedAuthAdmin(sharedEnv) {
     throw new Error(`Auth admin seed validation failed: ${plan.errors.join('; ')}`);
   }
   process.stdout.write('Seeding golden-path registration admin...\n');
-  await applyAdminSeed(plan.input);
+  const savedEnv = {};
+  for (const key of ['DATABASE_URL', 'PGSSLMODE', 'PGSSLMODE_REQUIRE']) {
+    if (key in seedEnv) {
+      savedEnv[key] = process.env[key];
+      process.env[key] = seedEnv[key];
+    }
+  }
+  try {
+    await applyAdminSeed(plan.input);
+  } finally {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 }
 
 function killPid(pid) {

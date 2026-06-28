@@ -1,0 +1,19 @@
+[Unit]
+Description=Engineering Team audit projection + outbox workers (GP-007)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/engineering-team
+Environment=NODE_ENV=production
+Environment=AUDIT_STORE_BACKEND=postgres
+Environment=FF_AUDIT_FOUNDATION=true
+EnvironmentFile=-/etc/engineering-team/audit-workers.env
+ExecStartPre=/usr/bin/node scripts/migrate-audit-postgres.js
+ExecStart=/usr/bin/node scripts/run-audit-workers.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

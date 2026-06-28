@@ -4,14 +4,21 @@ const { createPgPoolFromEnv } = require('../../lib/audit/postgres');
 
 const CONNECTION_STRING = 'postgres://user:pass@localhost:5432/db?sslmode=require';
 
+const POOL_ENV_DEFAULTS = {
+  PGSSLMODE: null,
+  PGSSL_ACCEPT_SELF_SIGNED: null,
+  PGSSLMODE_REQUIRE: null,
+};
+
 function withEnv(overrides, callback) {
+  const merged = { ...POOL_ENV_DEFAULTS, ...overrides };
   const original = {};
-  for (const key of Object.keys(overrides)) {
+  for (const key of Object.keys(merged)) {
     original[key] = process.env[key];
-    if (overrides[key] == null) {
+    if (merged[key] == null) {
       delete process.env[key];
     } else {
-      process.env[key] = overrides[key];
+      process.env[key] = merged[key];
     }
   }
 

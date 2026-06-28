@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-005-gitlab-intake-project-verify",
+  "intakeProvider": "gitlab",
+  "generatedAt": "2026-06-25T22:45:36.646Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "observability/gp-005-staging",
+  "issueNumber": 998164,
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "stack_state_present",
+        "ok": true,
+        "stackStatePath": "observability/golden-path-local-dev/stack.json"
+      },
+      {
+        "name": "audit_api_process_alive",
+        "ok": true,
+        "pid": 64449
+      },
+      {
+        "name": "intake_draft_created",
+        "ok": true,
+        "status": 201,
+        "taskId": "TSK-004"
+      },
+      {
+        "name": "project_bootstrapped_on_intake",
+        "ok": true,
+        "projectId": "PRJ-FF9A5A8C",
+        "projectName": "Factory delivery — GP-002 verify intake draft [#998164]"
+      },
+      {
+        "name": "duplicate_webhook_preserves_project_link",
+        "ok": true,
+        "status": 202,
+        "projectId": "PRJ-FF9A5A8C"
+      },
+      {
+        "name": "task_detail_shows_project_link",
+        "ok": true,
+        "projectId": "PRJ-FF9A5A8C"
+      }
+    ]
+  },
+  "artifacts": {},
+  "intake": {
+    "createStatus": 201,
+    "body": {
+      "received": true,
+      "created": true,
+      "deliveryId": "gp-005-verify-create-998164",
+      "taskId": "TSK-004",
+      "tenantId": "engineering-team",
+      "intakeDraft": true,
+      "intakeProvider": "gitlab",
+      "nextRequiredAction": "PM refinement required",
+      "pmRefinement": {
+        "status": "failed"
+      },
+      "duplicate": false,
+      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/998164",
+      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/998164",
+      "gitlabIssueIid": 998164,
+      "githubIssueUrl": null,
+      "githubIssueNumber": null,
+      "projectId": "PRJ-FF9A5A8C",
+      "projectName": "Factory delivery — GP-002 verify intake draft [#998164]",
+      "projectBootstrap": {
+        "skipped": false,
+        "created": true,
+        "existing": false,
+        "attached": true,
+        "projectId": "PRJ-FF9A5A8C"
+      }
+    },
+    "taskId": "TSK-004",
+    "projectId": "PRJ-FF9A5A8C"
+  },
+  "duplicate": {
+    "status": 202,
+    "body": {
+      "received": true,
+      "ignored": true,
+      "reason": "existing_intake_task",
+      "taskId": "TSK-004",
+      "tenantId": "engineering-team",
+      "duplicate": false,
+      "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/998164",
+      "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/998164",
+      "gitlabIssueIid": 998164,
+      "githubIssueUrl": null,
+      "githubIssueNumber": null,
+      "projectId": "PRJ-FF9A5A8C",
+      "projectName": null,
+      "projectBootstrap": {
+        "skipped": false,
+        "created": false,
+        "existing": true,
+        "attached": false,
+        "projectId": "PRJ-FF9A5A8C"
+      }
+    }
+  },
+  "task": {
+    "status": 200,
+    "projectId": "PRJ-FF9A5A8C",
+    "projectName": "Factory delivery — GP-002 verify intake draft [#998164]"
+  }
+}

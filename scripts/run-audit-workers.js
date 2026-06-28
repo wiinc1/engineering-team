@@ -43,21 +43,42 @@ const publisher = createCombinedOutboxPublisher([
 
 (async () => {
   if (store.runMigrations) await store.runMigrations({ baseDir: process.cwd() });
+  const metricsProvider = () => (typeof store.readMetrics === 'function' ? store.readMetrics() : {});
   const projectionWorker = createSupervisedWorker('projection_worker', () => createProjectionWorker(store, { batchSize: Number(process.env.PROJECTION_BATCH_SIZE || 100) }).runOnce(), {
     intervalMs: Number(process.env.PROJECTION_INTERVAL_MS || 5000),
     pushgateway: process.env.PUSHGATEWAY_URL ? { endpoint: process.env.PUSHGATEWAY_URL, job: 'projection-worker', instance: process.pid } : undefined,
+    metricsProvider,
     onError: error => process.stderr.write(`[projection_worker] ${error.stack}\n`),
   });
   const outboxWorker = createSupervisedWorker('outbox_worker', () => createOutboxWorker(store, publisher, { batchSize: Number(process.env.OUTBOX_BATCH_SIZE || 100) }).runOnce(), {
     intervalMs: Number(process.env.OUTBOX_INTERVAL_MS || 5000),
     pushgateway: process.env.PUSHGATEWAY_URL ? { endpoint: process.env.PUSHGATEWAY_URL, job: 'outbox-worker', instance: process.pid } : undefined,
+    metricsProvider,
     onError: error => process.stderr.write(`[outbox_worker] ${error.stack}\n`),
   });
 
   process.on('SIGTERM', () => { projectionWorker.stop(); outboxWorker.stop(); });
   process.on('SIGINT', () => { projectionWorker.stop(); outboxWorker.stop(); });
 
+  process.stdout.write(`${JSON.stringify({
+    feature: 'gp_007_audit_workers',
+    action: 'worker_startup',
+    outcome: 'starting',
+    backend: backendConfig.backend,
+    projectionIntervalMs: Number(process.env.PROJECTION_INTERVAL_MS || 5000),
+    outboxIntervalMs: Number(process.env.OUTBOX_INTERVAL_MS || 5000),
+    etForgeDispatchEnabled: resolveEtForgeDispatchConfig().enabled,
+    pushgateway: Boolean(process.env.PUSHGATEWAY_URL),
+  })}\n`);
+
   await Promise.all([projectionWorker.start(), outboxWorker.start()]);
+
+  process.stdout.write(`${JSON.stringify({
+    feature: 'gp_007_audit_workers',
+    action: 'worker_startup',
+    outcome: 'ready',
+    pid: process.pid,
+  })}\n`);
 })().catch(error => {
   process.stderr.write(`${error.stack}\n`);
   process.exit(1);

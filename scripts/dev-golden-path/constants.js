@@ -24,6 +24,10 @@ const DEFAULTS = {
   adminPassword: 'GoldenPathAdmin1',
   adminRoles: 'admin,pm,reader',
   githubWebhookSecret: 'golden-path-local-webhook-secret',
+  gitlabWebhookSecret: 'golden-path-local-webhook-secret',
+  gitlabBaseUrl: 'http://192.168.1.116',
+  gitlabProjectPath: 'wiinc1/engineering-team',
+  forgeIntakeProvider: 'gitlab',
 };
 
 module.exports = {

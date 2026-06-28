@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-e-complete",
+  "milestone": "E",
+  "title": "Deploy closeout replay (coordinated stack)",
+  "generatedAt": "2026-06-24T21:46:08.853Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "operatorUrl": "http://127.0.0.1:15173",
+  "summary": {
+    "passed": true,
+    "phase6Complete": true,
+    "gp026SreAgent": true,
+    "gp022AutoMerge": true,
+    "validationOk": true
+  },
+  "exitCriteria": {
+    "phase6Replay": true,
+    "gp026SreAgent": true,
+    "validationOk": true,
+    "gp022AutoMergeEvidence": true,
+    "branchPushed": true
+  },
+  "artifacts": {
+    "verify": "observability/milestone-hosted-staging/milestone-hosted-phase6-verify.json",
+    "factoryEvidence": "observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqslnf5q.json",
+    "closeoutReport": "observability/factory-closeout/TSK-013.json",
+    "pilotRollup": "observability/golden-path-pilot.json"
+  },
+  "notes": [
+    "Factory delivery runs on the coordinated stack (dev:golden-path:up): local Postgres :15432, API :13000, UI :15173, forgeadapter :14010.",
+    "Vercel and Supabase are not part of the engineering-team factory platform.",
+    "GP-024/GP-025 (Supabase/Redis) apply to target apps under delivery, not this repo's runtime.",
+    "Milestone E replay: npm run milestone-e:hosted-phase6:verify -- --base-url http://127.0.0.1:13000 --operator-url http://127.0.0.1:15173 --evidence-path <factory-evidence.json> --allow-local-hosted --run-validation"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mqu3cbog",
+      "title": "Milestone A staging factory smoke 2026-06-25T22:45:49.984Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271",
+      "stage": "phase1_complete",
+      "taskId": "TSK-007",
+      "projectId": "PRJ-883EF387",
+      "evidencePath": "observability/milestone-a-staging/factory-delivery-mqu3cbog/factory-staging-mqu3cbog.json",
+      "persistDir": "observability/milestone-a-staging/factory-delivery-mqu3cbog/stack/factory-staging-mqu3cbog",
+      "forgeTaskId": "TSK-GOLDENU3CBOG",
+      "createdAt": "2026-06-25T22:45:49.984Z",
+      "updatedAt": "2026-06-25T22:46:00.754Z",
+      "lastAction": "phase1",
+      "lastError": null,
+      "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-25T22:45:49.984Z [factory-staging-mqu3cbog]",
+      "evidenceStatus": "phase1_complete"
+    }
+  ]
+}

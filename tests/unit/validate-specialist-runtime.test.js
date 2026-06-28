@@ -84,7 +84,8 @@ test('validate-specialist-runtime passes only when delegated runtime evidence is
 
   const report = readSmokeReport(baseDir);
   assert.equal(report.mode, 'delegated');
-  assert.equal(report.agentId, 'engineer');
+  assert.equal(report.agentId, 'sr-engineer');
+  assert.equal(report.specialist, 'engineer');
   assert.match(report.sessionId, /^runtime-session-/);
   assert.equal(report.attribution.delegated, true);
 });

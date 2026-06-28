@@ -1356,6 +1356,58 @@ button {
   grid-column: 1 / -1;
 }
 
+.delivery-layers {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.delivery-layer {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
+  padding: 12px;
+  background: var(--surface-subtle);
+}
+
+.delivery-layer h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.delivery-layer--product.delivery-layer--verified {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.delivery-layer--product.delivery-layer--in_progress,
+.delivery-layer--product.delivery-layer--failed {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.delivery-layer__divergence {
+  margin: 10px 0 0;
+  color: var(--warning-text);
+  font-size: 0.92rem;
+}
+
+.operator-verification-path {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.operator-verification-path dt {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.operator-verification-path dd {
+  margin: 0 0 4px;
+}
+
 .detail-card h2,
 .detail-card h3 {
   margin-top: 0;
@@ -2040,6 +2092,155 @@ button {
   box-shadow: none;
 }
 
+.task-list-panel--inspector-open,
+.task-list-panel--command-center {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  align-items: start;
+}
+
+.task-list-panel--inspector-open > .task-list-toolbar,
+.task-list-panel--inspector-open > .live-freshness,
+.task-list-panel--inspector-open > .task-list-results,
+.task-list-panel--inspector-open > .assignment-status,
+.task-list-panel--inspector-open > .empty-state,
+.task-list-panel--command-center > .task-list-toolbar,
+.task-list-panel--command-center > .live-freshness,
+.task-list-panel--command-center > .task-list-results,
+.task-list-panel--command-center > .assignment-status,
+.task-list-panel--command-center > .empty-state {
+  grid-column: 1 / -1;
+}
+
+.task-list-panel--inspector-open > .command-center-inspector,
+.task-list-panel--command-center > .command-center-inspector {
+  grid-column: 2;
+  grid-row: 4 / span 8;
+}
+
+.task-list-panel--inspector-open > .command-center-queue,
+.task-list-panel--inspector-open > .task-list-table-wrap:not(.command-center-inspector),
+.task-list-panel--command-center > .command-center-queue,
+.task-list-panel--command-center > .task-list-table-wrap:not(.command-center-inspector) {
+  grid-column: 1;
+}
+
+.command-center-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border-soft));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary-soft) 42%, var(--surface) 58%);
+}
+
+.command-center-toolbar h2,
+.command-center-toolbar p {
+  margin: 0;
+}
+
+.command-center-toolbar h2 {
+  font-size: var(--design-typography-headline-sm-font-size);
+  line-height: var(--design-typography-headline-sm-line-height);
+}
+
+.command-center-toolbar__cue {
+  margin-top: 4px;
+  color: var(--color-on-muted-strong);
+  max-width: 52ch;
+}
+
+.command-center-toolbar__badge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: var(--design-radius-control-sm);
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border-soft));
+  background: var(--surface);
+  color: var(--primary);
+  font-size: var(--design-typography-label-sm-font-size);
+  font-weight: var(--design-typography-label-sm-font-weight);
+}
+
+.command-center-inspector--empty {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-muted) 72%, var(--surface) 28%);
+}
+
+.command-center-inspector__empty-copy {
+  margin: 0;
+  color: var(--color-on-muted-strong);
+}
+
+.command-center-inspector {
+  position: sticky;
+  top: 68px;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface-muted) 86%, var(--surface) 14%);
+}
+
+.command-center-inspector__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.command-center-inspector__header h2,
+.command-center-inspector__header p,
+.command-center-inspector__facts,
+.command-center-inspector__facts dd,
+.command-center-inspector__note p {
+  margin: 0;
+}
+
+.command-center-inspector__header h2 {
+  font-size: var(--design-typography-headline-sm-font-size);
+  line-height: var(--design-typography-headline-sm-line-height);
+}
+
+.command-center-inspector__facts {
+  display: grid;
+  gap: 10px;
+}
+
+.command-center-inspector__facts div {
+  display: grid;
+  gap: 3px;
+}
+
+.command-center-inspector__facts dt,
+.command-center-inspector__note span {
+  color: var(--color-on-muted-strong);
+  font-size: var(--design-typography-label-sm-font-size);
+  font-weight: var(--design-typography-label-sm-font-weight);
+}
+
+.command-center-inspector__facts dd,
+.command-center-inspector__note p {
+  color: var(--text);
+}
+
+.command-center-inspector__note {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--design-radius-control-sm);
+  background: var(--surface);
+}
+
+.command-center-inspector__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .task-list-toolbar {
   position: sticky;
   top: 0;
@@ -2349,6 +2550,12 @@ button {
 .task-board__card--match,
 .task-list-row--match td {
   background: var(--primary-soft);
+}
+
+.task-board__card--selected,
+.task-list-row--selected td {
+  border-color: color-mix(in srgb, var(--primary) 56%, var(--border));
+  background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface) 28%);
 }
 
 .task-board__card--dragging {
@@ -2801,6 +3008,28 @@ button {
 }
 
 @media (max-width: 980px) {
+  .task-list-panel--inspector-open,
+  .task-list-panel--command-center {
+    grid-template-columns: 1fr;
+  }
+
+  .task-list-panel--inspector-open > .command-center-inspector,
+  .task-list-panel--inspector-open > .command-center-queue,
+  .task-list-panel--command-center > .command-center-inspector,
+  .task-list-panel--command-center > .command-center-queue {
+    grid-column: 1;
+  }
+
+  .task-list-panel--inspector-open > .command-center-inspector,
+  .task-list-panel--command-center > .command-center-inspector {
+    position: static;
+    grid-row: auto;
+  }
+
+  .command-center-toolbar {
+    flex-direction: column;
+  }
+
   .autonomy-metrics__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
