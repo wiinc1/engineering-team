@@ -195,7 +195,7 @@ test.beforeEach(async ({ page }) => {
     await page.getByLabel('API base URL').fill('/api');
     await page.getByRole('button', { name: 'Use internal bootstrap fallback' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
     await expect(page).toHaveURL(/\/tasks\?view=board/);
     await openNavigationIfCollapsed(page);
     await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
@@ -206,7 +206,7 @@ test.beforeEach(async ({ page }) => {
     await addAdminSession(page);
 
     await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
     await expect(page.getByText('Current session')).toHaveCount(0);
     await openNavigationIfCollapsed(page);
 
@@ -217,8 +217,8 @@ test.beforeEach(async ({ page }) => {
     await search.getByLabel('Search tasks').fill('Wire');
     await search.getByRole('button', { name: 'Search' }).click();
 
-    await expect(page).toHaveURL(/\/tasks\?search=Wire/);
-    await expect(page.getByText('Wire task detail')).toBeVisible();
+    await expect(page).toHaveURL(/\/tasks\?.*search=Wire/);
+    await expect(page.getByRole('link', { name: 'Wire task detail' })).toBeVisible();
   });
 
   test('collapses and reopens the authenticated left rail', async ({ page }) => {
@@ -228,7 +228,7 @@ test.beforeEach(async ({ page }) => {
     });
 
     await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
     await openNavigationIfCollapsed(page);
 
     const shell = page.locator('main.app-shell');
@@ -469,7 +469,7 @@ test.beforeEach(async ({ page }) => {
     });
 
     await page.goto('/auth/callback?code=oidc-code&state=callback-state', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
     await expect(page).toHaveURL(/\/tasks\?view=board/);
     await expect(page.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
   });

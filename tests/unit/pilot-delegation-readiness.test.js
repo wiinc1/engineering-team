@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const { buildOrchestrationView, evaluateOrchestrationStart } = require('../../lib/audit/orchestration');
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
 const { createTaskPlatformService } = require('../../lib/task-platform');
 const { ensurePilotAgents } = require('../../lib/task-platform/pilot-agents');
 const {
@@ -67,11 +68,39 @@ test('ensurePilotAgents creates active assignable supported-role pilot agents', 
   const result = await ensurePilotAgents({ taskPlatform, tenantId: 'tenant-pilot', actorId: 'pm-pilot' });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), ['architect', 'engineer', 'pm', 'qa', 'sre']);
+  assert.deepEqual(result.created.sort(), [
+    'architect',
+    'engineer',
+    'engineer-jr',
+    'engineer-principal',
+    'engineer-sr',
+    'pm',
+    'qa',
+    'sre',
+    'ux',
+  ]);
   assert.deepEqual(result.missingRoles, []);
 
   const agents = taskPlatform.listAiAgents({ tenantId: 'tenant-pilot' });
-  assert.deepEqual(agents.map(agent => agent.role).sort(), ['architect', 'engineer', 'pm', 'qa', 'sre']);
+  assert.deepEqual(agents.map(agent => agent.agentId).sort(), [
+    'architect',
+    'engineer',
+    'engineer-jr',
+    'engineer-principal',
+    'engineer-sr',
+    'pm',
+    'qa',
+    'sre',
+    'ux',
+  ]);
+  assert.deepEqual([...new Set(agents.map(agent => agent.role))].sort(), [
+    'architect',
+    'engineer',
+    'pm',
+    'qa',
+    'sre',
+    'ux',
+  ]);
   assert.ok(agents.every(agent => agent.active && agent.assignable));
   assert.ok(agents.every(agent => agent.metadata.requiredBy === 'issue-247'));
 });
@@ -155,7 +184,8 @@ test('runPilotDelegationReadiness writes app-dispatched evidence with fixture ru
 
   assert.equal(evidence.pilotAgents.ok, true);
   assert.equal(evidence.appWorkflowDispatch.delegated, true);
-  assert.equal(evidence.appWorkflowDispatch.agentId, 'engineer');
+  assert.equal(evidence.appWorkflowDispatch.agentId, resolveRuntimeAgent('engineer'));
+  assert.equal(evidence.appWorkflowDispatch.specialist, 'engineer');
   assert.match(evidence.appWorkflowDispatch.sessionId, /^runtime-session-/);
   assert.ok(evidence.appWorkflowDispatch.delegationArtifactPath.endsWith('specialist-delegation.jsonl'));
   assert.equal(evidence.appWorkflowDispatch.runtimeAttribution.delegated, true);

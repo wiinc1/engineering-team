@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-milestone-c-mqslnf5q",
+      "title": "Milestone C agent autonomy verify",
+      "requirements": "Prove GP-003/004/014/017/019/020-021/023 agent-driven factory delivery on coordinated stack.",
+      "templateTier": "Simple",
+      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271",
+      "stage": "phase6_complete",
+      "taskId": "TSK-013",
+      "projectId": "PRJ-D4F207CA",
+      "evidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqslnf5q.json",
+      "persistDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/stack/factory-milestone-c-mqslnf5q",
+      "forgeTaskId": "TSK-GOLDENSLNF5Q",
+      "createdAt": "2026-06-24T21:42:48.446Z",
+      "updatedAt": "2026-06-24T21:46:08.845Z",
+      "lastAction": "phases_2_6",
+      "lastError": null,
+      "projectName": "Factory delivery — Milestone C agent autonomy verify [factory-milestone-c-mqslnf5q]",
+      "evidenceStatus": "phase6_complete",
+      "completedAt": "2026-06-24T21:46:08.845Z"
+    }
+  ]
+}

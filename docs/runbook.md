@@ -37,6 +37,18 @@ make verify
 Use this before protected-path, runtime, broad product, deployment, or release
 work. The pre-push hook also runs `make verify`.
 
+### Coverage and standards gate
+
+`npm run coverage` instruments unit and contract suites plus UI Vitest coverage.
+Set `COVERAGE_BATCHED=1` to split Node instrumentation into unit and
+contract/integration/e2e batches for memory-constrained runners. The default single
+batch includes security suites and is the merge gate used in CI.
+
+```bash
+npm run coverage
+npm run standards:check
+```
+
 ### Fast local checks
 
 Run these before small documentation or governance changes:

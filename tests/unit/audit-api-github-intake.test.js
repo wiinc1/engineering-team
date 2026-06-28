@@ -37,6 +37,8 @@ async function withServer(handler, options = {}) {
     jwtSecret: 'jwt-secret',
     githubWebhookSecret: secret,
     ffGitHubIntakeNormalizer: 'true',
+    ffGitHubIntakeProjectBootstrap: 'true',
+    ffProjects: 'true',
     ffGitHubSync: 'true',
     ...options,
   });
@@ -109,6 +111,8 @@ test('issues.opened with factory-intake label creates an intake draft task', asy
     assert.equal(payload.created, true);
     assert.ok(payload.taskId);
     assert.equal(payload.githubIssueUrl, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
+    assert.ok(payload.projectId);
+    assert.equal(payload.projectBootstrap?.projectId, payload.projectId);
 
     const duplicate = await fetch(`${baseUrl}/github/webhooks`, {
       method: 'POST',
@@ -124,6 +128,14 @@ test('issues.opened with factory-intake label creates an intake draft task', asy
     const duplicatePayload = await duplicate.json();
     assert.equal(duplicatePayload.reason, 'existing_intake_task');
     assert.equal(duplicatePayload.taskId, payload.taskId);
+    assert.equal(duplicatePayload.projectId, payload.projectId);
+
+    const taskDetail = await fetch(`${baseUrl}/api/v1/tasks/${encodeURIComponent(payload.taskId)}`, {
+      headers: { authorization: `Bearer ${signJwt('jwt-secret', { roles: ['admin', 'pm', 'reader'] })}` },
+    });
+    assert.equal(taskDetail.status, 200);
+    const taskBody = await taskDetail.json();
+    assert.equal(taskBody.data?.projectId, payload.projectId);
 
     const state = await fetch(`${baseUrl}/tasks/${encodeURIComponent(payload.taskId)}/state`, {
       headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
@@ -132,6 +144,17 @@ test('issues.opened with factory-intake label creates an intake draft task', asy
     const stateBody = await state.json();
     const currentStage = stateBody.current_stage || stateBody.data?.current_stage;
     assert.ok(currentStage === 'DRAFT' || currentStage === 'INTAKE_DRAFT');
+    assert.equal(stateBody.waiting_state, 'task_refinement');
+    assert.equal(stateBody.assignee, 'pm');
+
+    const history = await fetch(`${baseUrl}/tasks/${encodeURIComponent(payload.taskId)}/history`, {
+      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
+    });
+    assert.equal(history.status, 200);
+    const historyBody = await history.json();
+    const created = historyBody.items.find((item) => item.event_type === 'task.created');
+    assert.equal(created.payload.github_issue_url, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
+    assert.ok(historyBody.items.some((item) => item.event_type === 'task.refinement_requested'));
   });
 });
 

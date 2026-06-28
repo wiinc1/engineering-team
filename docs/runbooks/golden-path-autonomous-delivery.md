@@ -96,6 +96,8 @@ Logs: `observability/golden-path-local-dev/logs/`. State: `observability/golden-
 | Audit event | Forge action | Golden-path step |
 | --- | --- | --- |
 | `task.execution_contract_approved` | `POST /tasks/:id/start` (when execution-ready) | GP-011 |
+| `task.architect_engineer_assignment_recorded` | `POST /tasks/:id/delegate` → UX specialist (when `affectsUi`) | GP-012 |
+| UX specialist delegation completes (exit 0) | approve UX review gate + `POST /tasks/:id/resume` | GP-013 (UI tasks) |
 | `task.qa_result_recorded` (initial fail) | `POST /tasks/:id/review-requests/qa` + rejected review packet | GP-016 |
 | `task.engineer_submission_recorded` (version ≥ 2) | `POST /tasks/:id/resume` | GP-018 |
 | `task.qa_result_recorded` (retest pass) | approve qa/architect/pm gates + `POST /tasks/:id/complete` + ET close recommendations | GP-020, GP-021 |
@@ -104,7 +106,14 @@ Environment (set automatically by the dev stack):
 
 - `FORGEADAPTER_BASE_URL=http://127.0.0.1:14010`
 - `ENGINEERING_TEAM_BASE_URL=http://127.0.0.1:13000`
-- `ET_FORGE_LIFECYCLE_TASK_ID=TSK-GOLDEN001` (maps ET pilot task events to forge lifecycle task)
+
+**Forge task binding:** when ET and forge share the same task id (e.g. `TSK-001`), the bridge binds to that task automatically. Set `ET_FORGE_LIFECYCLE_TASK_ID` only for **split-id** golden-path replay where the ET intake task id differs from the seeded forge task (typically `TSK-GOLDEN001`):
+
+```bash
+ET_FORGE_LIFECYCLE_TASK_ID=TSK-GOLDEN001 npm run dev:golden-path:up
+```
+
+Engineer submission **v≥2** triggers forge resume only after forge records a QA rejection (fix-loop guard).
 
 Phase scripts still perform explicit forge actions for supervised replay evidence; the bridge covers unattended operator gaps between ET and forgeadapter.
 
@@ -138,7 +147,9 @@ npm run golden-path:replay:postgres -- --bootstrap
 **Standalone step smoke verifiers** (stack must already be up; read task id from `observability/golden-path-postgres-pilot.json` when omitted):
 
 ```bash
-npm run golden-path:smoke:gp-002    # GitHub intake normalizer webhook path
+npm run gp-002:verify               # GP-002 intake normalizer (webhook + projection + evidence)
+npm run gp-005:verify               # GP-005 project bootstrap on GitHub intake
+npm run golden-path:smoke:gp-002    # lightweight GP-002 webhook smoke only
 npm run golden-path:smoke:gp-015    # initial QA fail recorded before QA_TESTING stage advance
 npm run golden-path:smoke:gp-013 -- --openclaw-url http://127.0.0.1:<gateway>   # live delegation
 ```
@@ -439,6 +450,67 @@ Record via task workflow API or task detail UI per `docs/runbooks/workflow-deliv
 
 ---
 
+## Product delivery reconciliation (UI mismatch recovery)
+
+When platform workflow advances but the operator UI at `:15173` does not match spec — orphan forge SHA, worktree-only commit, or missing on-load screenshot — ET blocks **QA pass**, **DONE transition**, and **close-review approve** until product delivery is reconciled.
+
+**Symptoms:**
+
+- Task detail shows `platform_delivery` QA passed while `product_delivery.status` is `in_progress` or `failed`
+- Engineer submission returns `409 runnable_surface_not_merged`
+- QA retest returns `409 missing_visual_qa_evidence` or `409 product_delivery_reconciliation_required`
+- Closeout returns `409 product_delivery_not_verified`
+
+**Operator verification path** (recorded on UI contracts at intake / PM refinement):
+
+1. Sign in at `http://127.0.0.1:15173/sign-in` (`admin@golden-path.local`)
+2. Open **Task workspace** at `/tasks?view=list` (not task detail, not inbox)
+3. Confirm queue-first chrome on first paint and inspector on row select
+
+**Reconcile workflow:**
+
+```bash
+# 1) Generate observability report (read-only; prefer API when Postgres stack is up)
+npm run product-delivery:reconcile -- --task-id TSK-001 --base-url http://127.0.0.1:13000
+
+# 2) Record reconciliation event after operator confirms mismatch
+npm run product-delivery:reconcile -- --task-id TSK-001 --base-url http://127.0.0.1:13000 --record true --reason operator_reported_ui_mismatch
+
+# Or via API (golden-path stack up):
+curl -s -X POST \
+  -H "Authorization: Bearer $AUTH_JWT_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"mismatchReason":"operator_reported_ui_mismatch"}' \
+  http://127.0.0.1:13000/tasks/TSK-001/product-delivery-reconcile | jq .
+```
+
+**Recovery steps after a failed reconciliation:**
+
+1. Merge or cherry-pick the engineer submission SHA onto `runnableSurface.branch` (default `main`)
+2. Restart or refresh the golden-path UI stack so `:15173` serves the merged commit
+3. Run golden-path browser verification and attach on-load screenshot evidence:
+
+```bash
+npm run test:browser:golden-path
+```
+
+4. Record engineer submission (HEAD on `main`) with `visualEvidence`, then QA retest **pass** with matching `visualEvidence.goldenPathBrowserProfile`
+5. Re-run reconciliation; `product_delivery.status` should reach `verified` before closeout
+
+**Artifacts:**
+
+| Artifact | Path |
+| --- | --- |
+| Reconciliation report | `observability/product-reconciliation-<taskId>.json` |
+| Visual evidence | `observability/product-visual/*.png` |
+| Advance script (TSK-001 loop) | `scripts/advance-tsk-001-qa-loop.js` — honors runnable-surface + visual gates |
+
+**Gate override (local dev only):** `VISUAL_GATE_OVERRIDE=1` bypasses visual and reconciliation gates in test/local environments. Do not use for production closeout evidence.
+
+See `docs/product/et-product-delivery-integrity-requirements.md` for full REQ-A/B/C policy.
+
+---
+
 ## Phase 4 — Fix + retest
 
 | Step | Action | System | Manual? |
@@ -498,6 +570,8 @@ curl -s -X POST -H "Authorization: Bearer local-forgeadapter-token" \
 
 `vitest.config.ts` excludes `observability/**` so forgeadapter worktrees under `observability/golden-path-local-dev/` do not pollute GP-023 `test:unit` during phase 6 closeout.
 
+`scripts/run-unit-tests.js` clears shell `DATABASE_URL`, `VERCEL`, and related golden-path env vars before `npm run test:unit` so local stack sessions do not route unit tests to shared Postgres.
+
 ```bash
 # With dev stack up — validation only; UI already at http://127.0.0.1:15173
 npm run lint && npm run test:unit && npm run standards:check
@@ -531,6 +605,41 @@ Same as #209:
 
 ---
 
+## Factory orchestrator (single-server autonomous loop)
+
+With the golden-path stack running on this server (`npm run dev:golden-path:up`), submit requirements and let the orchestrator advance each queued item through intake → phase 1 → phases 2–6.
+
+```bash
+# 1) Start stack (optionally enable continuous orchestrator ticks)
+FF_FACTORY_ORCHESTRATOR_ENABLED=true \
+OPENCLAW_BASE_URL=http://127.0.0.1:18789 \
+npm run dev:golden-path:up
+
+# 2) Submit requirements (JSON file or inline)
+cat > /tmp/factory-requirements.json <<'EOF'
+[
+  {
+    "title": "Add README factory marker",
+    "requirements": "Docs-only Simple tier change proving autonomous SDLC on local stack.",
+    "templateTier": "Simple"
+  }
+]
+EOF
+npm run factory:submit -- --file /tmp/factory-requirements.json
+
+# 3) Advance queue (one-shot or loop)
+npm run factory:orchestrator -- --once
+# or continuous:
+npm run factory:orchestrator -- --interval-ms 15000
+```
+
+Queue state: `observability/factory-delivery-queue.json`  
+Per-item evidence: `observability/factory-delivery/<queue-id>.json`
+
+The orchestrator reuses golden-path phase runners (`run-golden-path-phase1.js`, `run-golden-path-phases.js`) and existing `ET_FORGE_DISPATCH_ENABLED` bridge behavior from `audit-workers`.
+
+---
+
 ## Automation priority (from manual-step inventory)
 
 | Priority | Step IDs | Why |
@@ -551,6 +660,18 @@ Same as #209:
 Docs-only pilot: revert the PR. Preserve task history, evidence JSON, and this runbook until metrics epic (#156) absorbs the learnings.
 
 ---
+
+## Milestone A — coordinated stack factory reliability
+
+Before agent-driven autonomy (Milestone B), prove the **local golden-path stack** (not Vercel/Supabase) runs workers, bridge, intake, and factory orchestrator reliably:
+
+```bash
+npm run dev:golden-path:up
+export AUTH_JWT_SECRET=golden-path-local-dev-secret
+npm run milestone-a:verify
+```
+
+Operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
 
 ## Related docs
 

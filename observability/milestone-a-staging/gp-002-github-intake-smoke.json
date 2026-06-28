@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-002-staging-smoke",
+  "generatedAt": "2026-06-25T22:45:49.984Z",
+  "baseUrl": "http://127.0.0.1:13000",
+  "intakeProvider": "gitlab",
+  "issueNumber": 962271,
+  "status": 201,
+  "ok": true,
+  "body": {
+    "received": true,
+    "created": true,
+    "deliveryId": "milestone-a-gp-002-962271",
+    "taskId": "TSK-006",
+    "tenantId": "engineering-team",
+    "intakeDraft": true,
+    "intakeProvider": "gitlab",
+    "nextRequiredAction": "PM refinement required",
+    "pmRefinement": {
+      "status": "failed"
+    },
+    "duplicate": false,
+    "forgeIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/962271",
+    "gitlabIssueUrl": "http://192.168.1.116/wiinc1/engineering-team/-/issues/962271",
+    "gitlabIssueIid": 962271,
+    "githubIssueUrl": null,
+    "githubIssueNumber": null,
+    "projectId": "PRJ-ABEA14EF",
+    "projectName": "Factory delivery — GP-002 verify intake draft [#962271]",
+    "projectBootstrap": {
+      "skipped": false,
+      "created": true,
+      "existing": false,
+      "attached": true,
+      "projectId": "PRJ-ABEA14EF"
+    }
+  },
+  "summary": {
+    "passed": true,
+    "taskId": "TSK-006"
+  }
+}

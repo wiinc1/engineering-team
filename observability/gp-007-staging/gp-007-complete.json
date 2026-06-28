@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-007-complete",
+  "milestone": "GP-007",
+  "title": "Always-on projection + outbox workers",
+  "generatedAt": "2026-06-24T22:56:27.003Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "summary": {
+    "passed": true,
+    "workersSmokePassed": true,
+    "projectionLagSeconds": 0
+  },
+  "exitCriteria": {
+    "workersRunning": true,
+    "appendWithoutManualProjection": true,
+    "lagUnderThreshold": true,
+    "projectedStateVisible": true
+  },
+  "artifacts": {
+    "verify": "observability/gp-007-staging/gp-007-projection-workers-verify.json",
+    "workersSmoke": "observability/gp-007-staging/audit-workers-production-smoke.json",
+    "canonicalSmoke": "observability/audit-workers-production-smoke.json"
+  },
+  "notes": [
+    "Coordinated stack proof: npm run dev:golden-path:up starts audit-workers via scripts/run-audit-workers.js.",
+    "Hosted proof: deploy docker-compose.production-workers.yml or fly.toml, then npm run audit:workers:production-smoke against the hosted API.",
+    "Golden-path phase runners treat manual projection scripts as fallback only (lib/audit/projection-catch-up.js)."
+  ]
+}

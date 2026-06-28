@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-06-23T22:10:56.263Z",
+  "generatedAt": "2026-06-25T22:47:29.620Z",
   "step": "GP-013",
-  "openclawUrl": null,
+  "openclawUrl": "http://127.0.0.1:14001",
   "summary": {
     "passed": true,
     "skipped": false,

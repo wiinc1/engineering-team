@@ -21,6 +21,7 @@ info:
     Canonical task-platform routes under `/api/v1` now include `/api/v1/tasks/{taskId}/merge-readiness-reviews`; the detailed create/read/update contract lives in `docs/api/task-platform-openapi.yml`.
     Autonomous delivery metrics MVP routes are mounted by the audit API wrapper and documented in `docs/api/autonomous-delivery-metrics-openapi.yml`: `/api/v1/metrics/autonomous-delivery`, `/api/v1/tasks/{taskId}/retrospective-signal`, and `/api/v1/metrics/autonomous-delivery/rebuild`.
     Forgeadapter Phase 2 canonical task reads use `GET /tasks/{taskId}/forge-execution-readiness`, which returns camelCase execution-ready task JSON when the task has an approved execution contract, dispatch readiness, and `forge_dispatch` metadata. Service-to-service callers authenticate with `FORGE_SERVICE_TOKEN` bearer; JWT callers require `forge:read`.
+    Product delivery integrity (`product-delivery-integrity.v1`) is additive for UI-affecting execution contracts: `PUT /tasks/{id}/engineer-submission` records `task.engineer_submission_recorded` with `runnable_surface_verified` only when the submitted commit SHA is present on the configured runnable surface branch; orphan SHAs return `409 runnable_surface_not_merged`. `POST /tasks/{id}/product-delivery-reconcile` records `task.product_delivery_reconciled` when operators report platform/product divergence and returns a reconciliation report. Task state and detail projections expose dual `platform_delivery` and `product_delivery` layers; closeout for `affects_ui` tasks requires `product_delivery.status=verified` or returns `409 product_delivery_not_verified`, and QA pass after failed reconciliation returns `409 product_delivery_reconciliation_required`.
 components:
   securitySchemes:
     BearerAuth:
@@ -2006,9 +2007,76 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '503':
           $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/engineer-submission:
+    put:
+      summary: Record engineer implementation submission with runnable surface verification
+      description: |
+        Requires engineer or admin privileges while the task is in implementation.
+        UI-affecting execution contracts verify the submitted commit SHA against the configured runnable surface branch before recording `task.engineer_submission_recorded`.
+        Orphan SHAs return `409 runnable_surface_not_merged`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commitSha]
+              properties:
+                commitSha: { type: string }
+                commit_sha: { type: string }
+      responses:
+        '200':
+          description: Submission recorded with runnable_surface_verified metadata
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Runnable surface verification failed (`runnable_surface_not_merged`)
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
+  /tasks/{id}/product-delivery-reconcile:
+    post:
+      summary: Record operator product delivery reconciliation for UI-affecting tasks
+      description: |
+        Requires admin privileges for UI-affecting execution contracts governed by `product-delivery-integrity.v1`.
+        Records `task.product_delivery_reconciled` and returns a derived `product_delivery` reconciliation report.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mismatchReason: { type: string }
+                mismatch_reason: { type: string }
+                record: { type: boolean }
+      responses:
+        '201':
+          description: Reconciliation event recorded
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Product delivery gate blocked (`product_delivery_not_verified`, `product_delivery_reconciliation_required`)
+        '503':
+          $ref: '#/components/responses/FeatureDisabled'
   /tasks/{id}/state:
     get:
       summary: Query projected current state for a task
+      description: |
+        Exposes workflow stage plus additive `platform_delivery` and `product_delivery` projections for UI-affecting tasks.
       parameters:
         - name: id
           in: path

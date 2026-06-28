@@ -233,7 +233,7 @@ async function mockWorkspaceApi(page) {
 }
 
 async function assertWorkspaceBoard(page) {
-  await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
   await expect(page.getByLabel('Task board')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Intake Draft' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Task Refinement' })).toBeVisible();
@@ -456,6 +456,32 @@ test('switches from task workspace list into the Kanban board with selected rout
   expect(boardButtonStyles.kanbanBoardBackground).not.toBe(boardButtonStyles.taskWorkspaceBackground);
   expect(boardButtonStyles.kanbanBoardBorderLeftColor).not.toBe(boardButtonStyles.taskWorkspaceBorderLeftColor);
   expect(boardButtonStyles.kanbanBoardBorderLeftWidth).toBe('3px');
+});
+
+test('opens a persistent queue inspector without losing task workspace context', async ({ page }) => {
+  await page.goto('/tasks?view=board&priority=P1', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Queue-first task workspace' })).toBeVisible();
+  await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
+  await expect(page.getByLabel('Task board')).not.toContainText('Shape raw operator notes');
+
+  await expect(page).toHaveURL(/\/tasks\?view=board&priority=P1&selectedTask=TSK-VERIFY$/);
+  await expect(page.getByLabel('Selected task inspector')).toBeVisible();
+  await expect(page.getByLabel('Selected task inspector')).toContainText('Verify release telemetry');
+  await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
+  await expect(page.getByRole('button', { name: 'Open full task detail' })).toBeVisible();
+
+  const inspector = page.getByLabel('Selected task inspector');
+  const returnToQueue = inspector.getByRole('button', { name: 'Return to queue' });
+  await returnToQueue.scrollIntoViewIfNeeded();
+  await returnToQueue.evaluate((button) => {
+    button.click();
+  });
+  await expect(page).toHaveURL(/\/tasks\?view=board&priority=P1$/);
+  await expect(inspector).toBeVisible();
+  await expect(inspector.getByRole('heading', { name: 'Select a task' })).toBeVisible();
+  await expect(page.getByLabel('Task board')).toContainText('Verify release telemetry');
+  await expect(page.getByLabel('Priority filter')).toHaveValue('P1');
 });
 
 test('creates an intake draft from the workspace and opens the created task with recovery actions', async ({ page }) => {

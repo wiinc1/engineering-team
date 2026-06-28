@@ -174,6 +174,7 @@ async function main() {
     phaseArgs.push('--forgeadapter-url', forgeadapterUrl, '--forge-task-id', forgeTaskId);
     const phases = await runScript('scripts/run-golden-path-phases.js', phaseArgs, {
       ...env,
+      ET_FORGE_LIFECYCLE_TASK_ID: forgeTaskId,
       FORGEADAPTER_BASE_URL: forgeadapterUrl,
       ...(openclawUrl ? { OPENCLAW_BASE_URL: openclawUrl } : {}),
       ...(hermesUrl ? { HERMES_BASE_URL: hermesUrl } : {}),

@@ -229,7 +229,7 @@ Writes `observability/audit-workers-production-smoke.json`. On deployed operator
 2. Drain queues with admin fallback: `POST /projections/process?limit=100` and `npm run audit:project -- . 100`.
 3. Re-enable workers once `DATABASE_URL` and publisher targets are healthy.
 
-Golden-path phase runners treat manual projection scripts as **fallback only** when lag remains above the threshold (see `lib/audit/projection-catch-up.js`).
+Golden-path phase runners treat manual projection scripts as **fallback only** when lag remains above the threshold after `PROJECTION_CATCHUP_MAX_RETRIES` (default 5) worker polls (see `lib/audit/projection-catch-up.js`). Manual fallback emits a structured stderr warning. Milestone A operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
 
 ## GitHub issue intake webhook (GP-002)
 
@@ -241,6 +241,8 @@ Golden-path phase runners treat manual projection scripts as **fallback only** w
 4. Issues map to tenant `engineering-team` by default (`GITHUB_INTAKE_DEFAULT_TENANT` / `GITHUB_INTAKE_REPO_TENANT_MAP`).
 
 Successful intake creates `POST /tasks`-equivalent Intake Draft state: `task.created`, `task.refinement_requested`, PM refinement auto-start, and `github_issue_url` on the audit payload.
+
+When `FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP=true`, issues with `factory-intake` or `golden-path` also auto-create an ACTIVE Project (mirroring `golden-path-phase0.js`) and attach the intake task via `PATCH /api/v1/tasks/{id}/project`. Verify with `npm run gp-005:verify`.
 
 ## Local Docker workflow
 ### Start disposable local Postgres

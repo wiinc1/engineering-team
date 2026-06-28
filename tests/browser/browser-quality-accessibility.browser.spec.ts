@@ -32,18 +32,18 @@ test('protected sign-in recovery has keyboard order, focus visibility, and activ
   await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
   await page.keyboard.press('Enter');
 
-  await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
   await expect(page).toHaveURL(/\/tasks\?view=board/);
 });
 
 test('critical browser routes pass axe, landmark, live-region, and contrast gates', async ({ page }) => {
   await installBrowserQualityApp(page);
 
-  await assertAccessibleRoute(page, '/tasks?view=board', 'Task workspace', async () => {
+  await assertAccessibleRoute(page, '/tasks?view=board', 'Command Center', async () => {
     await openNavigationIfCollapsed(page);
     await expect(page.getByRole('main')).toBeVisible();
     await expect(page.getByLabel('Task board')).toBeVisible();
-    await expect(page.getByRole('status')).toContainText(/tasks shown|cards shown/i);
+    await expect(page.locator('.task-list-results')).toContainText(/tasks shown|cards shown/i);
   });
 
   await assertAccessibleRoute(page, '/inbox/qa', 'QA Inbox', async () => {

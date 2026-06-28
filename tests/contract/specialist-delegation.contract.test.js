@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const { createRuntimeDelegateWork, normalizeRuntimeEvidence } = require('../../lib/software-factory/runtime-delegation');
 const { createSpecialistCoordinator } = require('../../lib/software-factory/delegation');
-const { buildBridgeResponse } = require('../../scripts/openclaw-specialist-runner');
+const { buildBridgeResponse, resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
 
 const runtimeRunnerPath = path.join(__dirname, '..', 'fixtures', 'specialist-runtime-runner.js');
 
@@ -22,7 +22,9 @@ test('runtime delegation fixture satisfies the evidence contract', async () => {
     delegationId: 'contract-check',
   });
 
-  assert.equal(result.agentId, 'engineer');
+  assert.equal(result.agentId, resolveRuntimeAgent('engineer'));
+  assert.equal(result.ownership.specialistId, 'engineer');
+  assert.equal(result.ownership.runtimeAgentId, resolveRuntimeAgent('engineer'));
   assert.equal(result.sessionId, 'runtime-session-contract-check');
   assert.equal(result.ownership.runtime, 'fixture-openclaw');
 });

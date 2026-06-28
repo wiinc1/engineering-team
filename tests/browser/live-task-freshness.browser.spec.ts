@@ -206,7 +206,7 @@ test('task workspace list refreshes from live task updates without page reload',
 
   await page.goto('/tasks?view=list', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByText('Live update applied')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('heading', { name: 'Live update applied' })).toBeVisible({ timeout: 5000 });
   await expect(page).toHaveURL(/\/tasks\?view=list/);
   await expect(page.getByRole('status').filter({ hasText: /Fresh updates applied|No new updates/ })).toBeVisible();
 });
@@ -218,7 +218,7 @@ test('role inbox refreshes routed task cards from live updates', async ({ page }
   await page.goto('/inbox/qa', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { level: 1, name: 'QA Inbox' })).toBeVisible();
-  await expect(page.getByText('Live update applied')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('link', { name: 'Live update applied' })).toBeVisible({ timeout: 5000 });
   await expect(page).toHaveURL(/\/inbox\/qa/);
 });
 

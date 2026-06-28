@@ -72,6 +72,17 @@ function buildApprovedForgeContract(taskId, history) {
 
 function prependApprovedContractEvents(history, approvedContract) {
   history.unshift({
+    event_type: 'task.architect_engineer_assignment_recorded',
+    sequence_number: 4,
+    payload: {
+      contract_version: approvedContract.version,
+      engineer_tier: 'Sr',
+      assignee: 'engineer-sr',
+      tier_rationale: 'Forge readiness unit test assignment.',
+      ready_for_engineering: true,
+    },
+  });
+  history.unshift({
     event_type: 'task.execution_contract_version_recorded',
     sequence_number: 2,
     payload: { contract: approvedContract },
