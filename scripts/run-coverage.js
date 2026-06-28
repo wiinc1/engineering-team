@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { spawnSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const ARTIFACT_DIR = '.artifacts';
@@ -98,13 +99,33 @@ const UI_TEST_FILES = [
 
 function run(command, args, label) {
   process.stdout.write(`\n[coverage] ${label}\n`);
-  const result = spawnSync(command, args, { encoding: 'utf8', shell: true });
-  process.stdout.write(result.stdout || '');
-  process.stderr.write(result.stderr || '');
-  if (result.status !== 0) {
-    process.exit(result.status || 1);
+  const outputPath = path.join(os.tmpdir(), `coverage-output-${process.pid}-${Date.now()}.log`);
+  const outputFd = fs.openSync(outputPath, 'w');
+  try {
+    const result = spawnSync(command, args, {
+      shell: true,
+      stdio: ['inherit', outputFd, 'inherit'],
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    fs.closeSync(outputFd);
+    const output = fs.readFileSync(outputPath, 'utf8');
+    process.stdout.write(output);
+    if (result.status !== 0) {
+      process.exit(result.status || 1);
+    }
+    return output;
+  } finally {
+    try {
+      fs.closeSync(outputFd);
+    } catch {
+      // already closed
+    }
+    try {
+      fs.unlinkSync(outputPath);
+    } catch {
+      // best-effort cleanup
+    }
   }
-  return result.stdout || '';
 }
 
 function parseNodeCoverage(output) {
