@@ -22,6 +22,7 @@ info:
     Autonomous delivery metrics MVP routes are mounted by the audit API wrapper and documented in `docs/api/autonomous-delivery-metrics-openapi.yml`: `/api/v1/metrics/autonomous-delivery`, `/api/v1/tasks/{taskId}/retrospective-signal`, and `/api/v1/metrics/autonomous-delivery/rebuild`.
     Forgeadapter Phase 2 canonical task reads use `GET /tasks/{taskId}/forge-execution-readiness`, which returns camelCase execution-ready task JSON when the task has an approved execution contract, dispatch readiness, and `forge_dispatch` metadata. Service-to-service callers authenticate with `FORGE_SERVICE_TOKEN` bearer; JWT callers require `forge:read`.
     Product delivery integrity (`product-delivery-integrity.v1`) is additive for UI-affecting execution contracts: `PUT /tasks/{id}/engineer-submission` records `task.engineer_submission_recorded` with `runnable_surface_verified` only when the submitted commit SHA is present on the configured runnable surface branch; orphan SHAs return `409 runnable_surface_not_merged`. `POST /tasks/{id}/product-delivery-reconcile` records `task.product_delivery_reconciled` when operators report platform/product divergence and returns a reconciliation report. Task state and detail projections expose dual `platform_delivery` and `product_delivery` layers; closeout for `affects_ui` tasks requires `product_delivery.status=verified` or returns `409 product_delivery_not_verified`, and QA pass after failed reconciliation returns `409 product_delivery_reconciliation_required`.
+    Release health reads are mounted by the coordinated audit API at `/version`, `/api/version`, `/backend/version`, and `/health`. These unauthenticated read-only endpoints return the deployed audit API commit SHA for strict release-health proof and set `cache-control: no-store`.
 components:
   securitySchemes:
     BearerAuth:
@@ -1110,6 +1111,44 @@ components:
 security:
   - BearerAuth: []
 paths:
+  /version:
+    get:
+      summary: Return audit API release health and deployed commit metadata
+      security: []
+      responses:
+        '200':
+          description: Release health payload
+          headers:
+            cache-control:
+              schema: { type: string }
+              description: Always `no-store`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [schemaVersion, status, service, commitSha, commit_sha, source]
+                properties:
+                  schemaVersion: { type: string, enum: [engineering-team-release-health.v1] }
+                  status: { type: string, enum: [ok, degraded] }
+                  service: { type: string, enum: [engineering-team-audit-api] }
+                  commitSha: { type: [string, 'null'] }
+                  commit_sha: { type: [string, 'null'] }
+                  source: { type: [string, 'null'] }
+        '405':
+          description: Method not allowed for release health reads
+    head:
+      summary: Return audit API release health headers without a body
+      security: []
+      responses:
+        '200':
+          description: Release health headers
+  /health:
+    get:
+      summary: Alias for audit API release health and deployed commit metadata
+      security: []
+      responses:
+        '200':
+          description: Release health payload; schema matches `/version`.
   /deferred-considerations:
     get:
       summary: List the PM Deferred Considerations review queue

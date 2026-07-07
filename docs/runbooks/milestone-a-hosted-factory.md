@@ -33,11 +33,12 @@ Confirm:
 
 ```bash
 npm run dev:golden-path:status
+curl -s http://127.0.0.1:13000/version
 curl -s http://127.0.0.1:13000/metrics | grep workflow_projection_lag_seconds
 curl -s http://127.0.0.1:14010/health
 ```
 
-Workers log to `observability/golden-path-local-dev/logs/audit-workers.log`. State: `observability/golden-path-local-dev/stack.json`.
+`/version` exposes the audit API commit SHA used by strict release-health proof when the coordinated stack is promoted through a non-local operator/API endpoint. Workers log to `observability/golden-path-local-dev/logs/audit-workers.log`. State: `observability/golden-path-local-dev/stack.json`.
 
 Optional: enable continuous factory ticks when bringing the stack up:
 
