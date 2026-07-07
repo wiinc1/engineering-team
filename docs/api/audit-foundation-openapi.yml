@@ -1136,12 +1136,20 @@ paths:
                   source: { type: [string, 'null'] }
         '405':
           description: Method not allowed for release health reads
+          headers:
+            cache-control:
+              schema: { type: string }
+              description: Always `no-store`.
     head:
       summary: Return audit API release health headers without a body
       security: []
       responses:
         '200':
           description: Release health headers
+          headers:
+            cache-control:
+              schema: { type: string }
+              description: Always `no-store`.
   /health:
     get:
       summary: Alias for audit API release health and deployed commit metadata
