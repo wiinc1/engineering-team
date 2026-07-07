@@ -35,7 +35,7 @@ function requestPath(pathname, options = {}) {
     ...options,
   });
   const response = createResponseRecorder();
-  server.emit('request', { method: 'GET', url: pathname, headers: {} }, response);
+  server.emit('request', { method: options.method || 'GET', url: pathname, headers: {} }, response);
   return response;
 }
 
@@ -50,6 +50,22 @@ test('release health exposes commit-bearing /version without auth', async () => 
   assert.equal(body.service, 'engineering-team-audit-api');
   assert.equal(body.commitSha, COMMIT_SHA);
   assert.equal(body.commit_sha, COMMIT_SHA);
+});
+
+test('release health supports HEAD /version without a body', async () => {
+  const response = requestPath('/version', { method: 'HEAD' });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.equal(response.body, '');
+});
+
+test('release health rejects unsupported methods with method_not_allowed', async () => {
+  const response = requestPath('/version', { method: 'POST' });
+  assert.equal(response.statusCode, 405);
+  assert.equal(response.headers['cache-control'], 'no-store');
+
+  const body = JSON.parse(response.body);
+  assert.equal(body.error.code, 'method_not_allowed');
 });
 
 test('release health route works through API and backend proxy prefixes', async () => {
