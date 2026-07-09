@@ -4,6 +4,12 @@
 **Status:** Accepted by operator (strategy-review session)  
 **Source analysis:** factory gap analysis / roadmap against progressive autonomy PRD  
 
+## Standards Alignment
+
+- Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process; authentication and secret handling.
+- Evidence in this document: progressive autonomy product decisions, coordinated-stack runtime topology, operator-trusted delivery metric bar, and human PM/Architect review requirements on agent disagreement.
+- Gaps or exceptions: live OpenClaw-as-default factory proof remains follow-up work tracked in `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
+
 These answers lock sequencing for the autonomous software factory work. They supersede open clarifying questions in the gap analysis for planning purposes.
 
 ---
