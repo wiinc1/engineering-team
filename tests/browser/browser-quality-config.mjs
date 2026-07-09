@@ -39,9 +39,9 @@ export const CRITICAL_ROUTE_STATES = [
   },
   {
     slug: 'task-workspace',
-    label: 'Task workspace',
+    label: 'Command Center',
     path: '/tasks?view=board',
-    heading: 'Task workspace',
+    heading: 'Command Center',
     requiresSession: true,
   },
   {

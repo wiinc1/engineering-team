@@ -58,6 +58,14 @@ Unready tasks return `422 task_not_execution_ready` with structured details. Mis
 
 Local forgeadapter Phase 2 smoke: see `docs/runbooks/forge-local-smoke.md` for seeding `TSK-LOCAL001`, file-backend audit-api bootstrap, and `FORGE_SERVICE_TOKEN` pairing with forgeadapter `ENGINEERING_TEAM_SERVICE_TOKEN`.
 
+## Release Health
+
+The coordinated audit API exposes unauthenticated, read-only release health at `/version`, `/api/version`, `/backend/version`, and `/health`. These routes return `engineering-team-release-health.v1`, `service=engineering-team-audit-api`, `status`, and both `commitSha` and `commit_sha` for the deployed audit API revision.
+
+Release-health reads support `GET` and bodyless `HEAD`; unsupported methods return `405 method_not_allowed`. Responses set `cache-control: no-store` so strict delivery checks always read the current coordinated-stack revision.
+
+Commit source order is explicit `releaseCommitSha`/`commitSha` options, coordinated-stack env vars (`ENGINEERING_TEAM_RELEASE_COMMIT_SHA`, `ENGINEERING_TEAM_COMMIT_SHA`, `RELEASE_COMMIT_SHA`, `COMMIT_SHA`, `GITHUB_SHA`), then `git rev-parse HEAD`. Strict hosted proof should require the health response to include the expected deployed commit and should use the coordinated stack endpoint, not Vercel or hosted Supabase.
+
 Autonomous delivery metrics are exposed behind `ff_autonomous_delivery_metrics_mvp`.
 PM, product-owner, SRE, and admin roles with `metrics:read` can read tenant metrics and task retrospective signals.
 Only admin role holders with `projections:rebuild` can rebuild the projection.

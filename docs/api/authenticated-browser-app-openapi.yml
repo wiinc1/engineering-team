@@ -17,6 +17,7 @@ info:
     Public self-service signup is available when registration auth is selected; new accounts remain pending until an admin approves them.
     Its public app URL must be HTTPS, session TTL must be 8 hours, email verification TTL must be 24 hours, and password reset TTL must be 30 minutes.
     Authenticated shell routes present compact primary navigation plus a task-id route utility while preserving first-screen status context on task detail.
+    The default `/tasks` surface renders the queue-first Command Center: page title `Command Center`, queue toolbar `Queue-first task workspace`, and a nested `role="region"` inspector (`aria-label=Selected task inspector`) that avoids complementary landmark nesting inside the task workspace section.
     Initial production admin access is seeded out-of-band by the operator-only `npm run auth:admin:seed -- --apply`
     workflow; the browser contract never exposes the seed inputs, database URL, raw email address, or generated session secrets.
     Operator-hosted API entrypoints await deploy auth bootstrap before route handling and return the handler promise so bootstrap failures fail closed.

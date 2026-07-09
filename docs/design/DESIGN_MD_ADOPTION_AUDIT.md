@@ -1,11 +1,11 @@
 # DESIGN.md Adoption Audit
 
 Generated from: `docs/design/design-md-adoption.config.json`
-Date: 2026-05-09
+Date: 2026-06-28
 
 ## Summary
 
-`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, dark TaskCreationForm and task-create page tokens, TaskDetail tokens, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual, typography, and motion value enforcement for all authored UI CSS, semantic token contrast regression coverage, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards that ignore trailing-whitespace-only UI diffs, and screenshot smoke coverage.
+`DESIGN.md` is declared as the authoritative visual design source of truth for this repo. Runtime CSS and generated token files are derived consumers. Current operationalization covers generated global tokens, Button tokens, dark TaskCreationForm and task-create page tokens, TaskDetail tokens, Command Center queue-first workspace and persistent inspector surfaces, product delivery and operator verification path panels, app-specific route/state/data-semantics UX rules, drift checking, hard-coded visual, typography, and motion value enforcement for all authored UI CSS, semantic token contrast regression coverage, PR guidance, agent guidance, machine-readable audit config, local git hooks, local design change guards that ignore trailing-whitespace-only UI diffs, and screenshot smoke coverage.
 
 Machine-readable audit config: `docs/design/design-md-adoption.config.json`
 Generated audit document: `docs/design/DESIGN_MD_ADOPTION_AUDIT.md`

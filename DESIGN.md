@@ -570,7 +570,7 @@ Component rules reflect the current React/Vite app and the Button component ADR.
 - Task creation forms: use generated `task-creation-*` tokens for form panels, labels, inputs, helper text, and error states.
 - Task detail shells, filters, timelines, telemetry cards, and stage transitions: use generated `task-detail-*`, `stage-transition-*`, `history-*`, and `telemetry-*` tokens. Keep activity history and telemetry adjacent but visually distinct.
 - Task detail next-action panels may expose one primary retry button for recoverable workflow dispatch states, using the standard primary button treatment and nearby status text for loading, success, or failure.
-- App nav: collapsible left rail with a task search form, compact stacked route groups, visible selected state for the active Task workspace, Kanban board, or Projects route, a primary create action, role inbox control, and muted session controls. On mobile it behaves as a left drawer so navigation remains recoverable without consuming the work surface.
+- App nav: collapsible left rail with a task search form, grouped route sections (`Work`, `Governance`, `Insights`, `Automation`), visible selected state for the active Command Center, Kanban board, or Projects route, a primary create action, role inbox control, and muted session controls. On mobile it behaves as a left drawer so navigation remains recoverable without consuming the work surface.
 - Board columns and task cards: keep visible lane headings for the standard workflow columns even when a lane is empty, include count and empty-copy context for empty lanes, keep text readable, allow wrapping, preserve stable widths, and expose owner/status metadata without hover-only access.
 - Live freshness indicators: use compact inline status containers near route content, pair semantic status color with visible text, keep manual refresh reachable as a secondary action, and reuse existing surface, border, typography, radius, success, warning, danger, and primary tokens instead of introducing a new token family.
 - Badges: use semantic status text plus color. Do not rely on color alone.
@@ -583,12 +583,13 @@ Persistent component exceptions must be promoted into this file through the prot
 
 The app information architecture is workflow-first. Navigation must keep operational routes compact, role-aware, and recoverable after authentication.
 
-- Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
+- Authenticated navigation follows a modern issue-tracker chrome pattern: global routes stay in the grouped left rail, while each view keeps its own filters and display controls in the content header or toolbar. Avoid duplicating the same route controls in both places.
+- Issue #279 Command Center redesign adds a desktop command bar above the work surface with global task search, environment chips, refresh, and new-task entry. The bar uses existing surface, border, typography, and radius tokens and must not introduce raw palette values.
 - The left rail must expose a persistent icon toggle with `aria-controls` and `aria-expanded`, preserve the open/collapsed preference for returning operators, keep a collapsed icon rail available for common actions, and keep the content work surface usable when the full rail is collapsed.
 - The left rail may include global task search when it routes into `/tasks` and uses the same search query and filter semantics as the workspace toolbar. It should not introduce a separate result model.
 - Exact task lookup belongs in task links, task detail routes, or the left-rail search. Page headers must not reintroduce a duplicate Task ID jump box.
 - Session identity belongs in muted nav or session controls, not a page-header diagnostic card, so workspace headers remain focused on route utilities and current view context.
-- `/tasks` is the primary task workspace for delivery board and list scanning. It must keep owner, priority, status, waiting state, and next action visible without hover-only access.
+- `/tasks` is the Command Center for delivery board and queue scanning. Page title `Command Center`; queue toolbar heading `Operational queue`; view tabs `Queue`, `Board`, and `Projects`. Queue list mode groups work into urgency lanes (needs attention, blocked, ready to move, monitoring) and keeps owner, priority, status, waiting state, and next action visible without hover-only access. A nested `role="region"` inspector (`aria-label=Selected task inspector`) stays beside the queue/board surface without becoming a top-level complementary landmark.
 - `/projects` is the planning-container workspace. It lists Project scope, exposes PM/Admin create and edit controls, and keeps reader sessions read-only while task lifecycle and ownership remain on Tasks.
 - `/tasks/create` is the intake route. It creates an Intake Draft and keeps the operator in a local success state with links to task detail and the workspace.
 - Task detail routes must keep the task summary, owner, stage, blockers, linked PRs, child task signal, activity, telemetry, governance, and assignment context in one scannable operational surface.
@@ -751,6 +752,17 @@ Motion is limited to functional state feedback.
 - Do not use motion as the only indicator for loading, success, failure, or route changes.
 - Transitions should be short, local to the control being changed, and must not move task rows, form fields, or summary cards in a way that harms scanning.
 - Add duration/easing tokens here before introducing reusable animation patterns.
+
+## Issue #279 Command Center Redesign
+
+Issue #279 updates the desktop Command Center chrome without changing task lifecycle ownership.
+
+- Design anchor: `docs/design/assets/command-console-redesign-target.png`.
+- Grouped sidebar labels: `Work` (Command Center, Kanban board, Projects, New task), `Governance` (PM overview, Governance reviews, Deferred considerations, Role inboxes), `Insights` (Autonomy metrics), `Automation` (User admin, AI agents).
+- Desktop command bar: global search, environment chips, refresh, and new-task entry above the work surface.
+- Queue list mode groups tasks into urgency lanes with section headers and counts; board mode keeps the existing Kanban column contract.
+- Collapsed rail labels rename the list route to `Command Center` while preserving board and search affordances.
+- Group labels use tracked label typography tokens; no raw `letter-spacing` values in authored shell CSS.
 
 ## Source-Only UI Refactors
 
