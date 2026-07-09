@@ -1,7 +1,7 @@
 # Requirements: Live Factory Proof as Default (Not Fixtures)
 
 **Story / REQ ID:** REQ-LIVE-FACTORY-PROOF-DEFAULT  
-**Status:** Ready for implementation  
+**Status:** Implemented (code path + unit coverage; operator live C/D re-run still required with gateway up)  
 **Template tier:** Standard  
 **Decisions:** `docs/reports/FACTORY_AUTONOMY_DECISIONS.md`, PRD progressive autonomy / coordinated stack  
 **Primary metric contribution:** Honest operator-trusted autonomous delivery evidence (real runtime session ownership)

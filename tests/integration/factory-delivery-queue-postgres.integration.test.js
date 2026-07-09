@@ -261,3 +261,18 @@ pgTest('factory delivery queue runs durable lifecycle on live postgres', async (
     await pool.end();
   }
 });
+
+test('factory proof profile surface is loadable for claim-path orchestration', () => {
+  const {
+    FACTORY_PROOF_ERROR_CODES,
+    isFixtureDelegationRunner,
+  } = require('../../lib/task-platform/factory-proof-profile');
+  assert.equal(
+    FACTORY_PROOF_ERROR_CODES.GATEWAY_UNAVAILABLE,
+    'FACTORY_PROOF_GATEWAY_UNAVAILABLE',
+  );
+  assert.equal(
+    isFixtureDelegationRunner('node tests/fixtures/specialist-runtime-runner.js'),
+    true,
+  );
+});

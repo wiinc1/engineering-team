@@ -17,10 +17,11 @@ export FORGE_SERVICE_TOKEN=local-golden-path-forge-token
 
 ## Verify Milestone D
 
-Runs Milestone C factory delivery, then asserts closeout artifacts:
+Runs Milestone C factory delivery, then asserts closeout artifacts. Primary path is **live OpenClaw** (probe + fail closed); use fixture smoke only for local non-claim runs:
 
 ```bash
 npm run milestone-d:verify
+npm run milestone-d:verify:fixture
 ```
 
 ### Checks (Milestone C + closeout)
