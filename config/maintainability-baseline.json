@@ -1031,6 +1031,42 @@
       "name": null,
       "actual": 508,
       "cap": 500
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 221,
+      "ordinal": 17,
+      "name": "recordPmRefinementContract",
+      "actual": 76,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 367,
+      "ordinal": 23,
+      "name": "submitUxImplementationReview",
+      "actual": 66,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 297,
+      "ordinal": 18,
+      "name": "startPmRefinementWorkflow",
+      "actual": 65,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 619,
+      "cap": 400
     }
   ]
 }
