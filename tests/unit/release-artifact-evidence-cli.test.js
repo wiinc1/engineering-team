@@ -13,8 +13,28 @@ const SCRIPT = path.join(__dirname, '../..', 'scripts/build-release-artifacts.js
 const COMMIT_SHA = '3f4a7c9e12b84d6f90a1c2e3b4d5f6789012abcd';
 const DEPLOYMENT_URL = 'https://factory-staging.openclaw.app';
 
-function runBuilder(args, cwd = path.join(__dirname, '../..')) {
-  return spawnSync(process.execPath, [SCRIPT, ...args], { cwd, encoding: 'utf8' });
+function runBuilder(args, cwd = path.join(__dirname, '../..'), env = process.env) {
+  // Isolate CI-provided identity so hosted-proof rejection tests stay deterministic.
+  const isolatedEnv = { ...env };
+  delete isolatedEnv.GITHUB_REPOSITORY;
+  delete isolatedEnv.CI_REPOSITORY;
+  delete isolatedEnv.GITHUB_SHA;
+  delete isolatedEnv.MERGE_COMMIT_SHA;
+  delete isolatedEnv.COMMIT_SHA;
+  delete isolatedEnv.DEPLOYMENT_URL;
+  delete isolatedEnv.PRODUCTION_URL;
+  delete isolatedEnv.RELEASE_BUILD_COMMAND;
+  delete isolatedEnv.RELEASE_COMPATIBILITY_COMMAND;
+  delete isolatedEnv.RELEASE_VULNERABILITY_COMMAND;
+  delete isolatedEnv.RELEASE_SECRET_COMMAND;
+  delete isolatedEnv.RELEASE_HEALTH_CHECK_PATH;
+  delete isolatedEnv.REAL_DELIVERY_HEALTH_CHECK_PATH;
+  delete isolatedEnv.REQUIRE_HEALTH_COMMIT;
+  return spawnSync(process.execPath, [SCRIPT, ...args], {
+    cwd,
+    encoding: 'utf8',
+    env: isolatedEnv,
+  });
 }
 
 function git(cwd, args) {
