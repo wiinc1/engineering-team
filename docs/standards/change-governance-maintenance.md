@@ -77,6 +77,9 @@ If a runtime file does not match any domain, `npm run change:check` fails with a
 - Do not silence failures by widening `doc_requirements` to unrelated docs.
 - Keep domain names stable so failure messages remain predictable.
 
+## Dual remotes (GitLab primary)
+Canonical ship path is GitLab (`origin`). GitHub (`github`) is the backup / public CI mirror. Prefer basing work on `origin/main`, push `origin` first, then `github`. Operator status: `npm run remotes:sync-status`. Full procedure: `docs/runbooks/dual-remote-gitlab-primary.md`.
+
 ## Branch Protection
 Protect the default branch by requiring these checks:
 - pull request metadata

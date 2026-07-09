@@ -21,6 +21,7 @@
     "preview": "vite preview --host 127.0.0.1 --port 4174 --strictPort",
     "preview:registration": "VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false VITE_TASK_API_BASE_URL= vite build && vite preview --host 127.0.0.1 --port 4175 --strictPort",
     "source:integrity": "node scripts/check-source-integrity.js",
+    "remotes:sync-status": "node scripts/dual-remote-sync-status.js",
     "standards:check": "npm run source:integrity && npm run secrets:scan && node scripts/verify-standards.js && node scripts/check-maintainability.js && node scripts/check-coverage-policy.js",
     "maintainability:check": "node scripts/check-maintainability.js",
     "coverage": "node scripts/run-coverage.js",

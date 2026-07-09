@@ -9,6 +9,15 @@ The README summarizes the main developer entry points. Runtime boundaries,
 state ownership, release evidence, rollback posture, and monitoring operations
 belong in the canonical architecture and runbook docs.
 
+
+
+## Dual remotes
+
+- **Primary:** GitLab `origin` (`192.168.1.116`)
+- **Backup:** GitHub `github` (`wiinc1/engineering-team`)
+- Operations: `docs/runbooks/dual-remote-gitlab-primary.md`
+- Status: `npm run remotes:sync-status`
+
 ## Standards Governance
 
 This repo now includes a standards enforcement baseline for task planning and change review:

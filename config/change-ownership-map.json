@@ -767,7 +767,8 @@
         "^scripts/(check-coverage-policy|check-maintainability|run-coverage)\\.js$",
         "^scripts/check-browser-source-readability\\.js$",
         "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
-        "^scripts/verify-(standards|pr-body|change-completeness)\\.js$"
+        "^scripts/verify-(standards|pr-body|change-completeness)\\.js$",
+        "^scripts/dual-remote-sync-status\\.js$"
       ],
       "test_requirements": [
         {
@@ -787,7 +788,8 @@
             "^docs/design/design-md-adoption\\.config\\.json$",
             "^docs/standards/software-development-standards\\.md$",
             "^docs/standards/change-governance-maintenance\\.md$",
-            "^docs/standards/ai-implementation-playbook\\.md$"
+            "^docs/standards/ai-implementation-playbook\\.md$",
+            "^docs/runbooks/dual-remote-gitlab-primary\\.md$"
           ]
         }
       ]
