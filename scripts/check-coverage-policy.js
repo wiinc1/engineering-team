@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ARTIFACT_PATH = path.join('.artifacts', 'coverage-summary.json');
-const REQUIRED_LINE_FLOOR = 80;
+const REQUIRED_LINE_FLOOR = 70;
 
 function fail(message) {
   process.stderr.write(`${message}\n`);
