@@ -238,7 +238,9 @@
         "^lib/auth/config-check\\.js$",
         "^scripts/check-auth-config\\.js$",
         "^scripts/seed-auth-admin\\.js$",
-        "^scripts/serve-browser-dist\\.js$"
+        "^scripts/serve-browser-dist\\.js$",
+        "^src/app/command-center-queue\\.mjs$",
+        "^src/app/shell/.+\\.jsx$"
       ],
       "test_requirements": [
         {
@@ -261,7 +263,8 @@
             "^tests/unit/task-detail-next-action\\.test\\.js$",
             "^tests/unit/auth-admin-seed\\.test\\.js$",
             "^tests/unit/task-browser-session\\.test\\.js$",
-            "^tests/unit/auth-config-check\\.test\\.js$"
+            "^tests/unit/auth-config-check\\.test\\.js$",
+            "^tests/unit/browser-auth-runtime-config\\.test\\.js$"
           ]
         },
         {
@@ -299,7 +302,9 @@
             "^docs/design/ISSUE-153-design\\.md$",
             "^docs/diagrams/architecture-frontend-source-modularization\\.mmd$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
-            "^docs/design/ISSUE-137-design\\.md$"
+            "^docs/design/ISSUE-137-design\\.md$",
+            "^docs/architecture\\.md$",
+            "^docs/reports/FACTORY_AUTONOMY_DECISIONS\\.md$"
           ]
         },
         {
@@ -502,7 +507,15 @@
         "^lib/forge-local-smoke/seed-task\\.js$",
         "^scripts/(backfill-task-platform|rollout-task-platform|verify-task-platform-rollout|verify-merge-readiness-branch-protection|emit-merge-readiness-check|verify-projects-production-smoke|seed-forge-local-smoke-task|dev-golden-path-stack|replay-golden-path-postgres|run-golden-path-phase1|run-golden-path-phases|seed-golden-path-phase0|submit-factory-requirements|run-factory-orchestrator|run-unit-tests)\\.js$",
         "^scripts/dev-golden-path/.+\\.js$",
-        "^docker-compose\\.golden-path\\.yml$"
+        "^docker-compose\\.golden-path\\.yml$",
+        "^db/migrations/015_factory_delivery_queue(\\.down)?\\.sql$",
+        "^scripts/(build-production-safety-evidence|build-real-autonomous-delivery-evidence|build-release-artifacts|build-rollback-evidence|capture-factory-persona-smoke|check-secrets|check-source-integrity|discover-real-delivery-pr|execute-real-autonomous-delivery-plan|migrate-factory-queue-postgres|plan-real-autonomous-delivery|preflight-real-autonomous-delivery|setup-github-intake-webhook|setup-gitlab-intake-webhook|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-milestone-hosted-phase6|verify-real-autonomous-delivery-plan-execution|verify-real-autonomous-delivery|verify-real-delivery-candidate)\\.js$",
+        "^api/v1/factory/",
+        "^lib/audit/(factory-queue-http|factory-real-evidence-runtime-options|pm-architect-human-review-gate|release-health-http)\\.js$",
+        "^scripts/(advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-issue-279-local|reseed-tsk-001-local|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers)\\.js$",
+        "^scripts/deploy/audit-workers\\.systemd\\.service$",
+        "^src/app/command-center-queue\\.mjs$",
+        "^src/app/shell/.+\\.jsx$"
       ],
       "test_requirements": [
         {
@@ -512,19 +525,30 @@
             "^tests/unit/task-platform-projects\\.test\\.js$",
             "^tests/unit/task-platform-backfill\\.test\\.js$",
             "^tests/unit/task-platform-source-policy\\.test\\.js$",
-        "^tests/unit/task-platform-github-check\\.test\\.js$",
-        "^tests/unit/task-platform-branch-protection\\.test\\.js$",
-        "^tests/unit/task-platform-pr-summary\\.test\\.js$",
-        "^tests/unit/task-platform-merge-readiness-gate\\.test\\.js$",
-        "^tests/unit/projects-production-smoke\\.test\\.js$",
-        "^tests/unit/forge-canonical-task\\.test\\.js$",
-        "^tests/unit/seed-forge-local-smoke-task\\.test\\.js$",
-        "^tests/unit/et-forge-dispatch-bridge\\.test\\.js$",
-        "^tests/unit/projection-catch-up\\.test\\.js$",
-        "^tests/unit/factory-delivery\\.test\\.js$",
-            "^tests/unit/audit-postgres-pool\\.test\\.js$"
-      ]
-    },
+            "^tests/unit/task-platform-github-check\\.test\\.js$",
+            "^tests/unit/task-platform-branch-protection\\.test\\.js$",
+            "^tests/unit/task-platform-pr-summary\\.test\\.js$",
+            "^tests/unit/task-platform-merge-readiness-gate\\.test\\.js$",
+            "^tests/unit/projects-production-smoke\\.test\\.js$",
+            "^tests/unit/forge-canonical-task\\.test\\.js$",
+            "^tests/unit/seed-forge-local-smoke-task\\.test\\.js$",
+            "^tests/unit/et-forge-dispatch-bridge\\.test\\.js$",
+            "^tests/unit/projection-catch-up\\.test\\.js$",
+            "^tests/unit/factory-delivery\\.test\\.js$",
+            "^tests/unit/audit-postgres-pool\\.test\\.js$",
+            "^tests/unit/factory-.+\\.test\\.js$",
+            "^tests/unit/real-.+\\.test\\.js$",
+            "^tests/unit/golden-path-.+\\.test\\.js$",
+            "^tests/unit/hosted-url-evidence\\.test\\.js$",
+            "^tests/unit/production-safety-evidence-cli\\.test\\.js$",
+            "^tests/unit/release-artifact-evidence-cli\\.test\\.js$",
+            "^tests/unit/rollback-evidence-cli\\.test\\.js$",
+            "^tests/unit/github-evidence-source-policy\\.test\\.js$",
+            "^tests/unit/pm-architect-human-review-gate\\.test\\.js$",
+            "^tests/unit/audit-release-health-http\\.test\\.js$",
+            "^tests/unit/governance/(check-secrets|source-integrity)\\.test\\.js$"
+          ]
+        },
         {
           "name": "integration",
           "patterns": [
@@ -536,7 +560,8 @@
             "^tests/integration/task-platform-github-check\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-branch-protection\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-pr-summary\\.integration\\.test\\.js$",
-            "^tests/contract/projects-openapi\\.contract\\.test\\.js$"
+            "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
+            "^tests/integration/factory-delivery-queue-postgres\\.integration\\.test\\.js$"
           ]
         }
       ],
@@ -544,7 +569,11 @@
         {
           "name": "api",
           "patterns": [
-            "^docs/api/task-platform-openapi\\.yml$"
+            "^docs/api/task-platform-openapi\\.yml$",
+            "^docs/reports/FACTORY_AUTONOMY_DECISIONS\\.md$",
+            "^docs/refinement/REQ-live-factory-proof-default-openclaw\\.md$",
+            "^docs/product/software-factory-control-plane-prd\\.md$",
+            "^docs/architecture\\.md$"
           ]
         },
         {
@@ -553,7 +582,11 @@
             "^docs/runbooks/task-platform-rollout\\.md$",
             "^docs/runbooks/forge-local-smoke\\.md$",
             "^docs/runbooks/golden-path-autonomous-delivery\\.md$",
-            "^docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership\\.md$"
+            "^docs/adr/ADD-2026-04-12-task-persistence-and-agent-ownership\\.md$",
+            "^docs/reports/FACTORY_AUTONOMY_DECISIONS\\.md$",
+            "^docs/refinement/REQ-live-factory-proof-default-openclaw\\.md$",
+            "^docs/product/software-factory-control-plane-prd\\.md$",
+            "^docs/architecture\\.md$"
           ]
         }
       ]
@@ -570,7 +603,9 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/pilot-delegation-readiness\\.test\\.js$",
-            "^tests/unit/orchestration\\.test\\.js$"
+            "^tests/unit/orchestration\\.test\\.js$",
+            "^tests/unit/specialist-delegation\\.test\\.js$",
+            "^tests/security/specialist-delegation\\.security\\.test\\.js$"
           ]
         }
       ],
@@ -638,7 +673,9 @@
           "patterns": [
             "^tests/unit/registration-production-smoke\\.test\\.js$",
             "^tests/unit/oidc-production-smoke\\.test\\.js$",
-            "^tests/unit/production-auth-status\\.test\\.js$"
+            "^tests/unit/production-auth-status\\.test\\.js$",
+            "^tests/unit/auth-config-check\\.test\\.js$",
+            "^tests/unit/deploy-auth-bootstrap\\.test\\.js$"
           ]
         }
       ],
@@ -671,7 +708,8 @@
             "^tests/unit/task-creation-adapter\\.test\\.js$",
             "^tests/unit/task-id-generator\\.test\\.js$",
             "^tests/unit/task-schema\\.test\\.js$",
-            "^tests/unit/features/task-creation/.+\\.test\\.js$"
+            "^tests/unit/features/task-creation/.+\\.test\\.js$",
+            "^tests/unit/pm-architect-human-review-gate\\.test\\.js$"
           ]
         }
       ],
@@ -684,7 +722,9 @@
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/user-stories/US-001-kanban-board-ui\\.md$",
             "^docs/user-stories/US-003-create-intake-drafts-from-raw-operator-requirements\\.md$",
-            "^docs/design/US-003-design\\.md$"
+            "^docs/design/US-003-design\\.md$",
+            "^docs/product/software-factory-control-plane-prd\\.md$",
+            "^docs/reports/FACTORY_AUTONOMY_DECISIONS\\.md$"
           ]
         }
       ]
