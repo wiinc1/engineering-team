@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "generated_by": "manual-seed",
+  "generated_at": "2026-05-08T00:00:00Z",
+  "commit_sha": "ac00379e80c31ba228238cebfa9a59c97eec8e87",
+  "lint": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "command": "make verify",
+    "status": "passed-through-release-evidence-gate"
+  },
+  "typecheck": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "command": "make typecheck",
+    "status": "passed"
+  },
+  "test": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "command": "make test",
+    "status": "passed",
+    "summary": "69 Python standards tests passed."
+  },
+  "build": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "command": "make build",
+    "status": "passed"
+  },
+  "compatibility-report": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "status": "local-operator-compatible",
+    "scope": [
+      "python3 standards validators",
+      "npm design.md lint",
+      "local Makefile verification"
+    ]
+  },
+  "vulnerability-scan": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "command": "npm audit --json",
+    "status": "passed",
+    "summary": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "remediation": "package-lock-only audit fix updated transitive fast-uri from 3.1.0 to 3.1.2"
+  },
+  "secret-scan": {
+    "generated_at": "2026-05-08T00:00:00Z",
+    "command": "rg -n --hidden --glob '!node_modules/**' --glob '!coverage/**' --glob '!dist/**' --glob '!.git/**' --glob '!.artifacts/**' --glob '!test-results/**' \"(AKIA[0-9A-Z]{16}|-----BEGIN (RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]+|gh[pousr]_[A-Za-z0-9_]{36,}|sk-[A-Za-z0-9]{20,})\"",
+    "status": "passed",
+    "matches": 0
+  }
+}
