@@ -65,15 +65,30 @@ test('resolveAgentDelegationRunner rejects fixture runner in strict real-evidenc
     () => resolveAgentDelegationRunner({ requireRealEvidence: true }, {
       FACTORY_USE_FIXTURE_DELEGATION: 'true',
     }),
-    /Real-evidence delegation cannot use the fixture specialist runner/,
+    /FACTORY_PROOF_FIXTURE_FORBIDDEN|Real-evidence|live factory proof cannot use the fixture specialist runner/,
   );
   assert.throws(
     () => resolveAgentDelegationRunner({
       collectRealEvidence: true,
       delegationRunner: FIXTURE_DELEGATION_RUNNER,
     }, {}),
-    /Real-evidence delegation cannot use the fixture specialist runner/,
+    /FACTORY_PROOF_FIXTURE_FORBIDDEN|Real-evidence|live factory proof cannot use the fixture specialist runner/,
   );
+});
+
+test('resolveAgentDelegationRunner rejects fixture under FACTORY_PROOF_PROFILE=live', () => {
+  assert.throws(
+    () => resolveAgentDelegationRunner({}, {
+      FACTORY_PROOF_PROFILE: 'live',
+      FACTORY_USE_FIXTURE_DELEGATION: 'true',
+    }),
+    /FACTORY_PROOF_FIXTURE_FORBIDDEN/,
+  );
+  const runner = resolveAgentDelegationRunner({}, {
+    FACTORY_PROOF_PROFILE: 'live',
+    FF_REAL_SPECIALIST_DELEGATION: 'true',
+  });
+  assert.match(runner, /openclaw-specialist-runner\.js/);
 });
 
 test('pmRefinementDelegated detects completed delegated refinement responses', () => {

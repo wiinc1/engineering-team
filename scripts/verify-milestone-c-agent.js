@@ -8,21 +8,25 @@ const {
 const {
   readGoldenPathRealEvidenceCliOptions,
 } = require('../lib/task-platform/golden-path-real-evidence-preflight');
+const {
+  applyPrimaryFactoryProofProfile,
+  finalizeLiveProofEvidence,
+  writeMilestoneVerifyReport,
+  FACTORY_PROOF_ERROR_CODES,
+  readArg: readProofArg,
+} = require('../lib/task-platform/factory-proof-profile');
 const { runMilestoneCAgentVerify } = require('../lib/audit/milestone-c-agent-verify');
 
 function readArg(name, fallback = '') {
-  const index = process.argv.indexOf(name);
-  return index === -1 || index === process.argv.length - 1 ? fallback : process.argv[index + 1];
+  return readProofArg(process.argv, name, fallback);
 }
 
-async function main() {
-  const outputDir = readArg('--output-dir', process.env.STAGING_EVIDENCE_DIR || 'observability/milestone-c-staging');
-  const realEvidenceOptions = readGoldenPathRealEvidenceCliOptions();
-  const runtime = applyLocalGoldenPathEnvIfNeeded(assertStagingRuntimeReady(resolveStagingRuntime({
+function resolveMilestoneRuntime(proof, outputDir, realEvidenceOptions) {
+  return applyLocalGoldenPathEnvIfNeeded(assertStagingRuntimeReady(resolveStagingRuntime({
     baseUrl: readArg('--base-url'),
     jwtSecret: readArg('--jwt-secret'),
     forgeAdapterUrl: readArg('--forgeadapter-url'),
-    openclawUrl: readArg('--openclaw-url'),
+    openclawUrl: proof.openclawBaseUrl || readArg('--openclaw-url'),
     ...realEvidenceOptions,
     agentDrivenPhases: true,
     outputDir,
@@ -30,30 +34,38 @@ async function main() {
     skipValidation: process.argv.includes('--skip-validation'),
     skipForgePhases: false,
   })));
+}
 
-  process.env.FACTORY_USE_FIXTURE_DELEGATION = process.argv.includes('--live-openclaw') ? 'false' : 'true';
+async function main() {
+  const outputDir = readArg('--output-dir', process.env.STAGING_EVIDENCE_DIR || 'observability/milestone-c-staging');
+  const proof = await applyPrimaryFactoryProofProfile({
+    argv: process.argv,
+    env: process.env,
+    openclawUrl: readArg('--openclaw-url'),
+  });
+  const realEvidenceOptions = readGoldenPathRealEvidenceCliOptions();
+  const runtime = resolveMilestoneRuntime(proof, outputDir, realEvidenceOptions);
   process.env.FF_FACTORY_AGENT_DRIVEN_PHASE1 = 'true';
   process.env.FF_FACTORY_AGENT_DRIVEN_PHASES = 'true';
-
   const evidence = await runMilestoneCAgentVerify({
     ...runtime,
     ...realEvidenceOptions,
+    proofProfile: proof.profile,
+    openclawUrl: proof.openclawBaseUrl || runtime.openclawUrl,
     outputPath: path.join(outputDir, 'milestone-c-agent-verify.json'),
   });
-
-  process.stdout.write(`${JSON.stringify({
-    ok: evidence.summary.passed,
+  finalizeLiveProofEvidence(evidence, proof);
+  writeMilestoneVerifyReport({
+    evidence,
+    proof,
     milestone: 'C',
     title: 'Agent implements and verifies',
     outputDir,
-    summary: evidence.summary,
-    artifacts: evidence.artifacts,
-  }, null, 2)}\n`);
-
-  if (!evidence.summary.passed) process.exitCode = 1;
+  });
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
+  const code = error?.code || FACTORY_PROOF_ERROR_CODES.GATEWAY_UNAVAILABLE;
+  process.stderr.write(`${code}: ${error?.stack || error?.message || String(error)}\n`);
   process.exitCode = 1;
 });

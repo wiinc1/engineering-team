@@ -19,10 +19,12 @@ export FORGE_SERVICE_TOKEN=local-golden-path-forge-token
 
 ## Verify Milestone B
 
-Default uses **fixture delegation** (no live OpenClaw required):
+Primary path probes OpenClaw and **fails closed** if the gateway is down (no silent fixture fallback):
 
 ```bash
 npm run milestone-b:verify
+# fixture smoke only (not operator-trusted):
+npm run milestone-b:verify:fixture
 ```
 
 Artifacts: `observability/milestone-b-staging/milestone-b-orchestration-verify.json`
@@ -44,7 +46,7 @@ Artifacts: `observability/milestone-b-staging/milestone-b-orchestration-verify.j
 | Flag | Default in verify | Purpose |
 | --- | --- | --- |
 | `FF_FACTORY_AGENT_DRIVEN_PHASE1` | `true` | Requirements-based contract + architect handoff hooks |
-| `FACTORY_USE_FIXTURE_DELEGATION` | `true` | Fixture specialist runner for local proof |
+| `FACTORY_USE_FIXTURE_DELEGATION` | `false` on live claim path | Fixture only with `--allow-fixture-delegation` / `:fixture` script |
 
 Live OpenClaw (optional):
 

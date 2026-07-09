@@ -35,6 +35,22 @@ This brings up (pinned ports by default):
 | ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
 | forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
 | OpenClaw | `http://127.0.0.1:14001` | **Mock** unless `--openclaw-url` points at a real runtime |
+
+### Live factory proof (default for milestone claim verifies)
+
+Primary `npm run milestone-{b,c,d}:verify` probes **live OpenClaw** (`OPENCLAW_BASE_URL`, default `http://127.0.0.1:18789`) and **fails closed** if the gateway is unavailable. Fixtures are opt-in only (`milestone-*:verify:fixture` or `--allow-fixture-delegation`) and are **not** valid for operator-trusted factory claims.
+
+Configure the **audit API process** (not only the verify client):
+
+```bash
+export OPENCLAW_BASE_URL=http://127.0.0.1:18789
+export FF_REAL_SPECIALIST_DELEGATION=true
+export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
+export FACTORY_USE_FIXTURE_DELEGATION=false
+```
+
+See `docs/refinement/REQ-live-factory-proof-default-openclaw.md` and milestone B/C/D runbooks.
+
 | Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
 **Browser sign-in** (seeded on stack startup):
