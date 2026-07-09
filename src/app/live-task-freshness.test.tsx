@@ -9,13 +9,14 @@ import {
   useLiveTaskFreshnessPolling,
 } from './live-task-freshness';
 
-function update(entityId: string, version: number, projectId?: string) {
+function update(entityId: string, version: number, projectId?: string, tenantId = 'tenant-a') {
   return {
     entityType: 'task',
     entityId,
+    tenantId,
     version,
     updatedAt: new Date(Date.UTC(2026, 4, 17, 12, 0, version)).toISOString(),
-    payload: { task: { task_id: entityId, version, project_id: projectId || null } },
+    payload: { task: { task_id: entityId, tenant_id: tenantId, version, project_id: projectId || null } },
   };
 }
 
@@ -48,7 +49,18 @@ describe('live task freshness reconciliation', () => {
 
     expect(second.accepted.map(item => item.version)).toEqual([3]);
     expect(second.ignored.map(item => item.version)).toEqual([1, 2]);
-    expect(second.versions['task:TSK-1'].version).toBe(3);
+    expect(second.versions['task:tenant-a:TSK-1'].version).toBe(3);
+  });
+
+  it('keeps same task ids separate across tenant namespaces', () => {
+    const result = reconcileLiveUpdates({}, [
+      update('TSK-1', 1, undefined, 'tenant-a'),
+      update('TSK-1', 1, undefined, 'tenant-b'),
+    ]);
+
+    expect(result.accepted).toHaveLength(2);
+    expect(result.versions['task:tenant-a:TSK-1'].tenantId).toBe('tenant-a');
+    expect(result.versions['task:tenant-b:TSK-1'].tenantId).toBe('tenant-b');
   });
 
   it('drops restricted detail fields during permission-safe merges', () => {

@@ -1,0 +1,54 @@
+{
+  "task_id": "TSK-001",
+  "generated_at": "2026-06-28T02:38:20.546Z",
+  "policy_version": "product-delivery-integrity.v1",
+  "commit_sha": null,
+  "runnable_surface": {
+    "policy_version": "product-delivery-integrity.v1",
+    "branch": "main",
+    "serve_url": "http://127.0.0.1:15173",
+    "merge_policy": "required_before_submission_final",
+    "forge_worktree_path": null,
+    "validation": {
+      "status": "valid",
+      "missing": []
+    }
+  },
+  "verification": {
+    "verified": false,
+    "reason": "missing_engineer_submission"
+  },
+  "product_delivery": {
+    "status": "not_started",
+    "runnable_surface_verified": false,
+    "visual_verified": false,
+    "design_scope_mode": "behavior_only",
+    "last_verified_commit": null,
+    "operator_verification_path": {
+      "policy_version": "product-delivery-integrity.v1",
+      "url": "http://127.0.0.1:15173/sign-in",
+      "login": "admin@golden-path.local / <seeded>",
+      "nav": "Task workspace (not task detail, not inbox)",
+      "route": "/tasks?view=list",
+      "on_load": "Queue-first Command Center chrome is visible on first paint.",
+      "on_select": "Persistent inspector opens with selected task context.",
+      "out_of_scope_routes": [
+        "/tasks/:id",
+        "/inbox/*",
+        "/overview/*"
+      ],
+      "validation": {
+        "status": "valid",
+        "missing": []
+      }
+    },
+    "reconciliation": null
+  },
+  "guidance": "Merge or cherry-pick submission commit onto runnable surface branch, then rerun golden-path browser verification.",
+  "mismatch_reason": "operator_reported_ui_mismatch",
+  "recommendations": [
+    "Merge submission commit (missing) onto main.",
+    "Cherry-pick or reconcile forge worktree output to the runnable surface branch.",
+    "Reset product_delivery layer and rerun QA with golden-path browser profile."
+  ]
+}

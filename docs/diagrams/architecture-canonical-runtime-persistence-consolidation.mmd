@@ -1,14 +1,14 @@
 flowchart LR
   Browser[Browser app] --> Backend[/backend or /api/v1]
-  Backend --> Vercel[Vercel API adapters]
-  Vercel --> Guard[Backend selection guard]
+  Backend --> API[Operator-hosted API adapters]
+  API --> Guard[Backend selection guard]
   Guard --> TaskApi[Canonical task-platform handler]
   Guard --> AuditApi[Audit/event handler]
   TaskApi --> TaskService[lib/task-platform]
   AuditApi --> AuditStore[lib/audit]
   TaskService --> Pg[(Supabase or Dockerized Postgres)]
   AuditStore --> Pg
-  Compat[Legacy compatibility routes] --> Vercel
+  Compat[Legacy compatibility routes] --> API
   Verify[task-platform verify and drift checker] --> Pg
   Verify --> Monitoring[Dashboards and alerts]
   Guard --> Logs[Structured backend-mode and fallback logs]

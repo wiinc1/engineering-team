@@ -2,9 +2,9 @@ flowchart LR
   subgraph Browser["Browser app"]
     React["src/app + src/features"]
   end
-  subgraph Vercel["Vercel deployment"]
+  subgraph Host["Operator-hosted coordinated stack"]
     SPA["dist SPA"]
-    API["api/* serverless adapters"]
+    API["api/* HTTP adapters"]
   end
   subgraph Services["Node services"]
     Auth["lib/auth"]

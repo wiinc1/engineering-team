@@ -2,9 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const {
   buildAuthDiagnostics,
-  extractVercelEnvNames,
   validateAuthConfig,
-  validateVercelEnvNames,
 } = require('../../lib/auth/config-check');
 
 function completeRegistrationEnv(overrides = {}) {
@@ -147,23 +145,3 @@ test('diagnostics artifact model contains booleans and missing names only', () =
   assert.equal(serialized.includes('resend-secret'), false);
 });
 
-test('Vercel env-name validation parses name-only CLI JSON and accepts registration names', () => {
-  const names = extractVercelEnvNames(
-    JSON.stringify(Object.keys(completeRegistrationEnv()).map((key) => ({ key })))
-  );
-
-  const result = validateVercelEnvNames(names);
-
-  assert.equal(result.ok, true);
-  assert.deepEqual(result.registrationMissing, []);
-  assert.equal(result.registrationPresent.AUTH_SESSION_SECRET, true);
-});
-
-test('Vercel env-name validation reports missing names without values', () => {
-  const result = validateVercelEnvNames(new Set(['DATABASE_URL']));
-
-  assert.equal(result.ok, false);
-  assert.ok(result.registrationMissing.includes('AUTH_SESSION_SECRET'));
-  assert.ok(result.oidcMissing.includes('VITE_OIDC_CLIENT_ID'));
-  assert.ok(result.internalBootstrapMissing.includes('AUTH_JWT_SECRET'));
-});

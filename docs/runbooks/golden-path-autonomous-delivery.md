@@ -35,6 +35,22 @@ This brings up (pinned ports by default):
 | ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
 | forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
 | OpenClaw | `http://127.0.0.1:14001` | **Mock** unless `--openclaw-url` points at a real runtime |
+
+### Live factory proof (default for milestone claim verifies)
+
+Primary `npm run milestone-{b,c,d}:verify` probes **live OpenClaw** (`OPENCLAW_BASE_URL`, default `http://127.0.0.1:18789`) and **fails closed** if the gateway is unavailable. Fixtures are opt-in only (`milestone-*:verify:fixture` or `--allow-fixture-delegation`) and are **not** valid for operator-trusted factory claims.
+
+Configure the **audit API process** (not only the verify client):
+
+```bash
+export OPENCLAW_BASE_URL=http://127.0.0.1:18789
+export FF_REAL_SPECIALIST_DELEGATION=true
+export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
+export FACTORY_USE_FIXTURE_DELEGATION=false
+```
+
+See `docs/refinement/REQ-live-factory-proof-default-openclaw.md` and milestone B/C/D runbooks.
+
 | Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
 **Browser sign-in** (seeded on stack startup):
@@ -116,8 +132,8 @@ export FORGE_SERVICE_TOKEN=local-golden-path-forge-token
 
 node scripts/run-golden-path-phase1.js --bootstrap \
   --base-url http://127.0.0.1:13000 \
-  --child-issue 271 \
-  --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
+  --child-issue <issue-number> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<issue-number>
 
 node scripts/run-golden-path-phases.js \
   --base-url http://127.0.0.1:13000 \
@@ -200,6 +216,306 @@ Add a single visible marker proving the loop completed, e.g.:
 
 Do **not** block local golden-path progress on hosted deployment. When you promote beyond the local stack, replay Phase 6 with a real **SRE monitoring window** (GP-026) against your hosted operator URL.
 
+### Strict real-evidence replay
+
+Use this only after a real low-risk code change has an actual branch, commit,
+pull request, GitHub branch-protection required checks, and a passing
+`Merge readiness` check. The strict mode rejects the default pilot PR, generated
+commit SHAs, skipped deploy validation, SRE waivers, docs-only scope, and
+dev-only release evidence.
+
+```bash
+export RELEASE_ENV=staging
+export CHANGE_KIND=bugfix
+export CHANGE_REVERSIBILITY=reversible
+export FACTORY_TEMPLATE_TIER=Standard
+export GITHUB_TOKEN=<github-token>
+export ET_API_URL=<hosted-et-api-url>
+export BRANCH_NAME=<branch-name>
+export IMPLEMENTATION_COMMIT_SHA=<implementation-commit-sha>
+export PR_URL=https://github.com/wiinc1/engineering-team/pull/<pr-number>
+export PR_NUMBER=<pr-number>
+export DEPLOYMENT_URL=<hosted-staging-url>
+export RELEASE_HEALTH_CHECK_PATH=/version
+export REQUIRE_HEALTH_COMMIT=true
+export RELEASE_ARTIFACT_DIR=observability/release/artifacts
+export RELEASE_BUILD_COMMAND="<build-command>"
+export RELEASE_COMPATIBILITY_COMMAND="<compatibility-test-command>"
+export RELEASE_VULNERABILITY_COMMAND="<dependency-vulnerability-scan-command>"
+export RELEASE_SECRET_COMMAND="<secret-scan-command>"
+export PRODUCTION_SAFETY_EVIDENCE=observability/release/production-safety.json
+export ROLLBACK_TARGET=<last-known-good-release-or-url>
+export ROLLBACK_EVIDENCE=observability/release/rollback-verification.json
+```
+
+Generate the ordered delivery plan first. A blocked plan exits non-zero and marks
+every command as `ready: false` with `blockedBy` reasons; do not run commands
+labeled `[BLOCKED]`. Saved-plan execution reports include `planDigest` so the
+pre-merge and post-merge evidence can be matched to the exact plan artifact.
+The saved-plan execution audit also requires a passing
+`real-autonomous-delivery-verification-report.v1` artifact from final delivery
+verification.
+
+```bash
+npm run autonomy:plan-real-delivery -- \
+  --release-env "$RELEASE_ENV" \
+  --base-url "$ET_API_URL" \
+  --operator-url "$DEPLOYMENT_URL" \
+  --repository wiinc1/engineering-team \
+  --branch "$BRANCH_NAME" \
+  --implementation-commit-sha "$IMPLEMENTATION_COMMIT_SHA" \
+  --pr-url "$PR_URL" \
+  --pr-number "$PR_NUMBER" \
+  --deployment-url "$DEPLOYMENT_URL" \
+  --rollback-target "$ROLLBACK_TARGET" \
+  --health-check-path "$RELEASE_HEALTH_CHECK_PATH" \
+  --require-health-commit \
+  --candidate-test-command "$RELEASE_COMPATIBILITY_COMMAND" \
+  --release-build-command "$RELEASE_BUILD_COMMAND" \
+  --release-compatibility-command "$RELEASE_COMPATIBILITY_COMMAND" \
+  --release-vulnerability-command "$RELEASE_VULNERABILITY_COMMAND" \
+  --release-secret-command "$RELEASE_SECRET_COMMAND" \
+  --final-verification-report observability/real-autonomous-delivery-verification-report.json \
+  --json \
+  --report observability/real-delivery-plan.json
+
+npm run autonomy:execute-real-delivery-plan -- \
+  --plan observability/real-delivery-plan.json \
+  --stage pre-merge \
+  --report observability/real-delivery-plan-execution-pre-merge.json \
+  --json
+```
+
+Create the low-risk candidate proof before replaying deploy closeout:
+
+```bash
+npm run autonomy:build-rollback-evidence -- \
+  --release-env "$RELEASE_ENV" \
+  --rollback-target "$ROLLBACK_TARGET" \
+  --verification-status verified \
+  --out "$ROLLBACK_EVIDENCE"
+
+npm run autonomy:build-production-safety -- \
+  --release-env "$RELEASE_ENV" \
+  --deployment-url "$DEPLOYMENT_URL" \
+  --commit-sha "$IMPLEMENTATION_COMMIT_SHA" \
+  --validation-status passed \
+  --risk-level low \
+  --production-safe \
+  --out "$PRODUCTION_SAFETY_EVIDENCE"
+
+npm run autonomy:build-release-artifacts -- \
+  --release-env "$RELEASE_ENV" \
+  --commit-sha "$IMPLEMENTATION_COMMIT_SHA" \
+  --deployment-url "$DEPLOYMENT_URL" \
+  --health-check-path "$RELEASE_HEALTH_CHECK_PATH" \
+  --require-health-commit \
+  --rollback-target "$ROLLBACK_TARGET" \
+  --repository wiinc1/engineering-team \
+  --out-dir "$RELEASE_ARTIFACT_DIR" \
+  --build-command "$RELEASE_BUILD_COMMAND" \
+  --compatibility-command "$RELEASE_COMPATIBILITY_COMMAND" \
+  --vulnerability-command "$RELEASE_VULNERABILITY_COMMAND" \
+  --secret-command "$RELEASE_SECRET_COMMAND"
+
+npm run autonomy:verify-real-delivery-candidate -- \
+  --collect-github-evidence \
+  --manifest /tmp/real-delivery-candidate.json \
+  --out observability/real-delivery-candidate-proof.json \
+  --run-test-commands \
+  --branch "$BRANCH_NAME" \
+  --implementation-commit-sha "$IMPLEMENTATION_COMMIT_SHA" \
+  --pr-url "$PR_URL" \
+  --pr-number "$PR_NUMBER" \
+  --release-env "$RELEASE_ENV" \
+  --deployment-url "$DEPLOYMENT_URL" \
+  --health-check-path "$RELEASE_HEALTH_CHECK_PATH" \
+  --require-health-commit \
+  --production-safety-evidence "$PRODUCTION_SAFETY_EVIDENCE" \
+  --rollback-target "$ROLLBACK_TARGET" \
+  --rollback-evidence "$ROLLBACK_EVIDENCE" \
+  --require-final-release-proof \
+  --verify-deployment-health \
+  --rollback-verified
+```
+
+Then replay phase 6 with live GitHub merge enabled:
+
+```bash
+node scripts/run-golden-path-phases.js \
+  --from 6 --to 6 \
+  --collect-real-evidence \
+  --require-real-evidence \
+  --agent-driven-phases \
+  --auto-merge \
+  --base-url "$ET_API_URL" \
+  --operator-url "$DEPLOYMENT_URL" \
+  --out observability/golden-path-postgres-pilot.json \
+  --repository wiinc1/engineering-team \
+  --branch "$BRANCH_NAME" \
+  --implementation-commit-sha "$IMPLEMENTATION_COMMIT_SHA" \
+  --pr-url "$PR_URL" \
+  --pr-number "$PR_NUMBER" \
+  --health-check-path "$RELEASE_HEALTH_CHECK_PATH" \
+  --require-health-commit \
+  --release-artifact-dir "$RELEASE_ARTIFACT_DIR" \
+  --release-build-command "$RELEASE_BUILD_COMMAND" \
+  --release-compatibility-command "$RELEASE_COMPATIBILITY_COMMAND" \
+  --release-vulnerability-command "$RELEASE_VULNERABILITY_COMMAND" \
+  --release-secret-command "$RELEASE_SECRET_COMMAND"
+```
+
+`--collect-real-evidence` reads the PR, changed files, executed checks, and
+branch-protection required-check inventory from GitHub. Final candidate proof
+generation must use `--collect-github-evidence`; manual `--checks-json`,
+`--required-checks-json`, `--branch-protection-json`, and
+`--merge-readiness-json` inputs are diagnostic-only and are rejected when
+`--require-final-release-proof` is set.
+
+Factory real-delivery runs follow the same rule in-process: before phase 6, the
+factory candidate proof collector reads GitHub directly and fails closed if that
+collection fails. It does not fall back to queued or manually supplied check
+JSON for final proof.
+
+When using `--use-existing-release-artifacts`, `--release-artifact-dir` must
+already contain readable JSON for `build.json`, `compatibility-report.json`,
+`vulnerability-scan.json`, and `secret-scan.json`, each with `status: "passed"`.
+The plan and preflight reject the flag if those artifacts are missing, failed,
+from a different release environment, or keyed to a different commit.
+
+For production promotion, set `RELEASE_ENV=prod` and include
+`--rollback-verified` only with a rollback-verification artifact from the target
+deployment. The artifact must include `environment`, `rollback_target`,
+`verification_status: "verified"`, and a valid `verified_at` timestamp. Without
+both `--rollback-verified` and `--rollback-evidence`, the candidate and release
+gates fail closed.
+
+After the run, audit the generated factory evidence against the pre-run
+candidate proof before calling it a real autonomous delivery. Set
+`MERGE_COMMIT_SHA` from the GitHub merge result before executing the saved
+post-merge plan. The post-merge executor regenerates release artifacts for the
+merge commit, runs final candidate-continuity verification, and writes
+`observability/real-autonomous-delivery-verification-report.json`:
+
+```bash
+export MERGE_COMMIT_SHA=<github-merge-commit-sha-after-merge>
+
+npm run autonomy:execute-real-delivery-plan -- \
+  --plan observability/real-delivery-plan.json \
+  --stage post-merge \
+  --execute \
+  --report observability/real-delivery-plan-execution-post-merge.json \
+  --json
+
+npm run autonomy:verify-real-delivery-plan-execution -- \
+  --plan observability/real-delivery-plan.json \
+  --pre-merge-report observability/real-delivery-plan-execution-pre-merge.json \
+  --post-merge-report observability/real-delivery-plan-execution-post-merge.json \
+  --final-verification-report observability/real-autonomous-delivery-verification-report.json \
+  --report observability/real-delivery-plan-execution-audit.json \
+  --json
+```
+
+The candidate verifier runs before push/deploy from the current git worktree and
+rejects default branches, docs-only changes, missing commit/PR identity, missing
+low-risk scope, missing production-safety evidence, missing executable test
+commands, broad change sets, missing hosted deployment targets, missing rollback
+plans, and source-integrity failures. With `--run-test-commands`, it executes the
+candidate's listed test commands and fails on any non-zero exit. With
+`--require-final-release-proof`, it also requires `--production-safe`, a
+matching production-safety artifact passed through
+`--production-safety-evidence`, `--rollback-verified`, a matching
+rollback-verification artifact passed through `--rollback-evidence`, and a live
+hosted deployment health check through `--verify-deployment-health`. The
+`--out` artifact is written even when the gate fails, so rejected candidates keep
+their scoped test, rollback, and deployment-health evidence for review. The
+post-run verifier rejects `phase6_complete` artifacts that still point at
+localhost/private URLs, the default pilot PR, docs-only scope, missing test or
+Merge readiness checks, missing deploy health, or missing verified rollback
+evidence. It also requires candidate proof continuity and rejects final evidence
+that no longer matches the pre-run low-risk candidate proof, including branch,
+commit, PR, changed files, deployment URL, and rollback target.
+
+Use a manifest when the local workspace contains unrelated work but the PR will
+carry one scoped low-risk change:
+
+```json
+{
+  "schemaVersion": "real-delivery-candidate.v1",
+  "source": {
+    "branchName": "<branch-name>",
+    "commitSha": "<implementation-commit-sha>",
+    "prUrl": "https://github.com/wiinc1/engineering-team/pull/<pr-number>",
+    "prNumber": "<pr-number>"
+  },
+  "release": {
+    "environment": "staging",
+    "deploymentUrl": "https://<hosted-staging-url>",
+    "healthCheckPath": "/",
+    "productionSafetyEvidence": "observability/release/production-safety.json",
+    "productionSafe": true
+  },
+  "rollback": {
+    "target": "<last-known-good-release>",
+    "plan": "Revert the scoped PR and redeploy the previous release.",
+    "evidence": "observability/release/rollback-verification.json",
+    "verified": false
+  },
+  "risk": {
+    "level": "low",
+    "productionSafe": true
+  },
+  "scope": {
+    "maxChangedFiles": 10,
+    "changedFiles": [
+      "lib/task-platform/factory-delivery-queue-status.js",
+      "lib/audit/factory-queue-http.js",
+      "tests/unit/factory-queue-status.test.js"
+    ]
+  },
+  "tests": {
+    "commands": [
+      "node --test tests/unit/factory-queue-status.test.js"
+    ]
+  }
+}
+```
+
+Factory workers can use the same collector when processing queued work:
+
+```bash
+npm run factory:orchestrator -- \
+  --once \
+  --collect-real-evidence \
+  --require-real-evidence \
+  --release-env staging \
+  --repository wiinc1/engineering-team \
+  --branch "$BRANCH_NAME" \
+  --implementation-commit-sha "$IMPLEMENTATION_COMMIT_SHA" \
+  --pr-url "$PR_URL" \
+  --pr-number "$PR_NUMBER" \
+  --auto-merge \
+  --fix-commit-sha "$FIX_COMMIT_SHA" \
+  --deployment-url "$DEPLOYMENT_URL" \
+  --production-safety-evidence "$PRODUCTION_SAFETY_EVIDENCE" \
+  --rollback-target "$ROLLBACK_TARGET" \
+  --rollback-evidence "$ROLLBACK_EVIDENCE" \
+  --rollback-verified \
+  --risk-level low \
+  --production-safe \
+  --health-check-path / \
+  --test-command "node --test tests/unit/factory-queue-status.test.js" \
+  --candidate-proof observability/factory-delivery/real-delivery-candidate-proof.json \
+  --final-evidence observability/factory-delivery/real-autonomous-delivery-evidence.json
+```
+
+Before phases 2-6 run in real-evidence mode, the factory worker writes and
+enforces a `real-delivery-candidate-proof.v1` artifact. Missing low-risk scope,
+test commands, hosted deploy health, production-safety evidence, or verified
+rollback evidence fails the item before phase execution. The factory queue
+backend must remain `postgres` for staging and production. `--allow-file-queue`
+is reserved for isolated local smoke fixtures.
+
 ---
 
 ## Phase 0 — GitHub issue intake
@@ -260,7 +576,7 @@ node scripts/seed-golden-path-phase0.js --local \
 
 ```bash
 # Preflight: workers + projection on Supabase (uses /api/v1 routes)
-export AUTH_PROD_BASE_URL=https://engineering-team-zeta.vercel.app
+export AUTH_PROD_BASE_URL=https://factory.engineering-team.local
 export AUDIT_WORKERS_SMOKE_BASE_URL="$AUTH_PROD_BASE_URL"
 npm run audit:workers:production-smoke
 
@@ -317,8 +633,8 @@ export AUTH_JWT_SECRET=golden-path-local-dev-secret
 
 node scripts/run-golden-path-phase1.js --bootstrap \
   --base-url http://127.0.0.1:13000 \
-  --child-issue 271 \
-  --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
+  --child-issue <issue-number> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<issue-number>
 ```
 
 Workers in the dev stack handle projection catch-up; golden-path phase runners only fall back to `npm run audit:project` when `workflow_projection_lag_seconds` stays above the threshold.
@@ -327,8 +643,8 @@ Workers in the dev stack handle projection catch-up; golden-path phase runners o
 
 ```bash
 node scripts/run-golden-path-phase1.js --local --bootstrap \
-  --child-issue 271 \
-  --child-issue-url https://github.com/wiinc1/engineering-team/issues/271
+  --child-issue <issue-number> \
+  --child-issue-url https://github.com/wiinc1/engineering-team/issues/<issue-number>
 
 node scripts/run-golden-path-phase1.js --local \
   --persist-dir observability/golden-path-local-stack/audit-data
@@ -340,7 +656,7 @@ node scripts/run-golden-path-phase1.js --local \
 node scripts/run-golden-path-phase1.js \
   --base-url https://<your-hosted-et-api> \
   --task-id <TASK_ID> \
-  --child-issue 271
+  --child-issue <issue-number>
 ```
 
 After each write on production Postgres, run bounded projection catch-up before the next gate.
@@ -549,13 +865,65 @@ npm run dev:golden-path:up
 cat > /tmp/factory-requirements.json <<'EOF'
 [
   {
-    "title": "Add README factory marker",
-    "requirements": "Docs-only Simple tier change proving autonomous SDLC on local stack.",
-    "templateTier": "Simple"
+    "title": "Add factory submit scope validation",
+    "requirements": "Implement a low-risk bugfix that preserves code-change scope metadata when factory requirements are submitted inline. Include focused unit coverage for the parser and keep the rollback path to reverting the PR.",
+    "templateTier": "Standard",
+    "changeKind": "bugfix",
+    "changedFiles": [
+      "scripts/submit-factory-requirements.js",
+      "tests/unit/factory-delivery.test.js"
+    ]
   }
 ]
 EOF
 npm run factory:submit -- --file /tmp/factory-requirements.json
+# Equivalent inline form:
+npm run factory:submit -- \
+  --title "Add factory submit scope validation" \
+  --requirements "Preserve code-change scope metadata for inline factory submissions and add focused unit coverage." \
+  --change-kind bugfix \
+  --changed-file scripts/submit-factory-requirements.js \
+  --changed-file tests/unit/factory-delivery.test.js
+```
+
+For hosted real-delivery queue items, include the PR, deployment, rollback,
+health, and release-artifact inputs at submit time. Postgres submission runs the
+same real-evidence preflight as the worker before inserting the row. On success,
+the JSON response includes `items[].realDelivery.preflight.ok: true`; on failure,
+no durable queue row is created.
+
+```bash
+npm run factory:submit -- \
+  --title "Refresh release evidence after merge" \
+  --requirements "Keep phase 6 release artifacts keyed to the GitHub merge commit." \
+  --change-kind bugfix \
+  --changed-file lib/task-platform/golden-path-release-evidence-refresh.js \
+  --changed-file tests/unit/golden-path-phase6-real-merge.test.js \
+  --base-url "$HOSTED_API_URL" \
+  --operator-url "$HOSTED_OPERATOR_URL" \
+  --repository wiinc1/engineering-team \
+  --branch "$BRANCH_NAME" \
+  --implementation-commit-sha "$COMMIT_SHA" \
+  --pr-url "$PR_URL" \
+  --auto-merge \
+  --github-token "$GITHUB_TOKEN" \
+  --checks-file observability/github-checks.json \
+  --required-checks-file observability/required-checks.json \
+  --branch-protection-file observability/branch-protection.json \
+  --merge-readiness-file observability/merge-readiness.json \
+  --test-command "node --test tests/unit/golden-path-phase6-real-merge.test.js" \
+  --risk-level low \
+  --production-safe \
+  --production-safety-evidence observability/release/production-safety.json \
+  --rollback-target "$ROLLBACK_TARGET" \
+  --rollback-evidence observability/release/rollback-verification.json \
+  --rollback-verified \
+  --deployment-url "$DEPLOYMENT_URL" \
+  --release-env staging \
+  --health-check-path /version \
+  --require-health-commit \
+  --release-artifact-dir observability/release \
+  --use-existing-release-artifacts
 
 # 3) Advance queue (one-shot or loop)
 npm run factory:orchestrator -- --once
@@ -563,8 +931,24 @@ npm run factory:orchestrator -- --once
 npm run factory:orchestrator -- --interval-ms 15000
 ```
 
-Queue state: `observability/factory-delivery-queue.json`  
-Per-item evidence: `observability/factory-delivery/<queue-id>.json`
+Queue state is durable by default in Postgres table `factory_delivery_queue` with idempotent submit, row leases, retry backoff, expired-lease recovery, and `dead_letter` terminal state. Per-item evidence remains in `observability/factory-delivery/<queue-id>.json`. The Autonomy metrics dashboard and `GET /api/v1/factory/queue` expose the current pending, leased, retrying, completed, dead-letter, and per-item `realDelivery.preflight` state for operator review. After an SRE/admin reviews the failure and records a reason, `POST /api/v1/factory/queue/<queue-id>/requeue` with `factory-queue:write` requeues only tenant-scoped rows already in `dead_letter`, clears stale lease/error fields, and resumes from the recorded failed stage. Real-delivery requeue also runs the same preflight before mutating the row; if required proof is still missing, the row stays in `dead_letter`.
+
+```bash
+npm run audit:migrate
+npm run factory:queue:migrate -- --dry-run
+npm run factory:queue:migrate -- --database-url "$FACTORY_QUEUE_DATABASE_URL"
+npm run factory:submit -- --file /tmp/factory-requirements.json
+npm run factory:orchestrator -- --once
+
+curl -sS -X POST "$OPERATOR_URL/api/v1/factory/queue/$QUEUE_ID/requeue" \
+  -H "authorization: Bearer $SRE_TOKEN" \
+  -H "content-type: application/json" \
+  --data '{"reason":"transient dependency recovered and reviewed by SRE"}'
+```
+
+`factory:queue:migrate` imports the legacy `observability/factory-delivery-queue.json` rows into `factory_delivery_queue`. Existing file-queue `failed` items are imported as `dead_letter`. Legacy `phase6_complete` rows stay at `phase6_complete` with `completed_at = null`; the durable queue only records `completed` after final real-delivery evidence verification passes.
+
+Use `FACTORY_QUEUE_BACKEND=file FACTORY_ALLOW_FILE_QUEUE=true` only for isolated local smoke fixtures with a non-default `FACTORY_QUEUE_PATH` or `--queue`. The migrated default `observability/factory-delivery-queue.json` path is reserved for the Postgres migration marker; writing live queue items there should fail.
 
 The orchestrator reuses golden-path phase runners (`run-golden-path-phase1.js`, `run-golden-path-phases.js`) and existing `ET_FORGE_DISPATCH_ENABLED` bridge behavior from `audit-workers`.
 

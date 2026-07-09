@@ -58,7 +58,7 @@ test('rejects file backend outside local-like environments', () => {
         runtimeEnv: 'production',
         allowFileBackend: true,
       }),
-      /Production must use Supabase Postgres/,
+      /Production must use operator-hosted Postgres/,
     );
   });
 });

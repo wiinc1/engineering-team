@@ -22,9 +22,9 @@ Use this runbook for the Issue 209 style pilot: one supervised, low-risk task th
 7. Run `npm run pilot:agents:seed` in the target app environment and confirm active assignable `pm`, `architect`, `engineer`, `qa`, and `sre` records exist in canonical AI-agent storage.
 8. Run `npm run test:delegation:live-smoke:openclaw` and capture the runtime-owned agent and session ID. If the command falls back or times out, stop the pilot and link a remediation issue.
 9. Run `npm run pilot:delegation:readiness` and attach `observability/pilot-delegation-readiness.json` to the parent readiness issue. This is the app-workflow proof; the standalone smoke alone is not enough for pilot readiness.
-10. Decide whether Clawpatch is used for the implementation loop. If used, treat it as optional patch assistance and keep Codex/OpenClaw, PR checks, Vercel, QA, SRE, and operator closeout authoritative.
+10. Decide whether Clawpatch is used for the implementation loop. If used, treat it as optional patch assistance and keep Codex/OpenClaw, PR checks, QA, SRE, and operator closeout authoritative.
 11. Implement through a normal branch and PR. Keep the change scoped to the pilot contract.
-12. Validate the PR with the affected test matrix, standards gate, GitHub PR checks, browser validation if UI changed, and Vercel preview/production status.
+12. Validate the PR with the affected test matrix, standards gate, GitHub PR checks, browser validation if UI changed, and operator-hosted deployment status.
 13. Merge only after required checks pass.
 14. Record QA pass, SRE monitoring approval, PR sync evidence, and closeout in task history.
 15. Publish the pilot report and classify every manual action as `routine observation`, `required approval`, or `operator intervention`.
@@ -46,7 +46,7 @@ Routine observation and required approval are not counted as autonomy failures. 
 - Pilot AI-agent roster seed output showing active assignable supported-role agents.
 - App workflow dispatch proof from `observability/pilot-delegation-readiness.json`, including `agentId`, OpenClaw `sessionId`, delegation artifact path, and truthful runtime attribution.
 - Clawpatch decision: `required`, `optional`, `not used`, or `out of scope`; include setup smoke and patch evidence only if used.
-- Branch, commit SHA, PR URL, PR checks, and Vercel deployment status.
+- Branch, commit SHA, PR URL, PR checks, and deployment deployment status.
 - Test commands and local/CI/browser results.
 - QA pass, SRE approval, PR sync, and closeout events.
 - Manual-action log with classification and timestamps.

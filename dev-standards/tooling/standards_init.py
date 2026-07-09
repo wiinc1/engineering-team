@@ -33,6 +33,7 @@ TEST_SOURCES = [
     REPO_ROOT / "tests" / "test_live_approval_validator.py",
     REPO_ROOT / "tests" / "test_maintainability_checker.py",
     REPO_ROOT / "tests" / "test_policy_schema_validator.py",
+    REPO_ROOT / "tests" / "test_release_evidence_builder.py",
     REPO_ROOT / "tests" / "test_release_evidence_validator.py",
     REPO_ROOT / "tests" / "test_shell_boundaries_validator.py",
     REPO_ROOT / "tests" / "test_standards_init.py",

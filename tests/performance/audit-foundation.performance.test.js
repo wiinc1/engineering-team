@@ -34,3 +34,18 @@ test('pollForgeExecutionReadiness stays within bounded retry budget', async () =
     global.fetch = originalFetch;
   }
 });
+
+const { buildReleaseHealthPayload } = require('../../lib/audit/release-health-http');
+
+test('release health payload construction stays within bounded read budget', () => {
+  const started = performance.now();
+  for (let index = 0; index < 500; index += 1) {
+    const payload = buildReleaseHealthPayload({
+      releaseCommitSha: 'abcdef1234567890abcdef1234567890abcdef12',
+    }, {});
+    assert.equal(payload.status, 'ok');
+    assert.equal(payload.service, 'engineering-team-audit-api');
+  }
+  const elapsed = performance.now() - started;
+  assert.ok(elapsed < 100, `release health payload budget exceeded: ${elapsed}ms`);
+});

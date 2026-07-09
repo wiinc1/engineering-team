@@ -44,10 +44,11 @@ function resolveDeployAuthBootstrap(env = process.env) {
   const explicitConfigured = explicit.length > 0;
   const envPresence = getDeployAuthBootstrapEnvPresence(env);
   const databaseConfigured = hasValue(env, 'DATABASE_URL');
-  const vercelBuild = parseBoolean(env.VERCEL, false) || hasValue(env, 'VERCEL_ENV');
+  // Coordinated stack default: bootstrap when DATABASE_URL is present unless explicitly disabled.
+  // Explicit AUTH_DEPLOY_BOOTSTRAP_ENABLED remains the operator override.
   const enabled = explicitConfigured
     ? parseBoolean(explicit, false)
-    : databaseConfigured && !vercelBuild;
+    : databaseConfigured;
 
   return {
     enabled,

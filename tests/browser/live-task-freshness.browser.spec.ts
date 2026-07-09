@@ -133,20 +133,30 @@ async function installTaskRoutes(page, state: { updated: boolean }) {
   });
 }
 
-async function installProjectRoutes(page, state: { updated: boolean }) {
+function projectPayload(updated: boolean) {
+  return {
+    data: [{
+      projectId: 'PRJ-LIVE000',
+      name: updated ? 'Live Project Updated' : 'Live Project Pending',
+      summary: 'Polling project',
+      status: 'ACTIVE',
+      ownerActorId: 'pm-1',
+      taskCount: 1,
+      version: updated ? 2 : 1,
+    }],
+  };
+}
+
+async function installProjectRoutes(page, state: { updated: boolean; delayFirstProjectListMs?: number }) {
+  let requestCount = 0;
   await page.route('**/api/v1/projects**', async (route) => {
+    requestCount += 1;
+    const updatedAtRequest = state.updated;
+    if (requestCount === 1 && state.delayFirstProjectListMs) {
+      await new Promise(resolve => setTimeout(resolve, state.delayFirstProjectListMs));
+    }
     await route.fulfill({
-      json: {
-        data: [{
-          projectId: 'PRJ-LIVE000',
-          name: state.updated ? 'Live Project Updated' : 'Live Project Pending',
-          summary: 'Polling project',
-          status: 'ACTIVE',
-          ownerActorId: 'pm-1',
-          taskCount: 1,
-          version: state.updated ? 2 : 1,
-        }],
-      },
+      json: projectPayload(updatedAtRequest),
     });
   });
 }
@@ -206,7 +216,7 @@ test('task workspace list refreshes from live task updates without page reload',
 
   await page.goto('/tasks?view=list', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByText('Live update applied')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('heading', { name: 'Live update applied' })).toBeVisible({ timeout: 5000 });
   await expect(page).toHaveURL(/\/tasks\?view=list/);
   await expect(page.getByRole('status').filter({ hasText: /Fresh updates applied|No new updates/ })).toBeVisible();
 });
@@ -218,7 +228,7 @@ test('role inbox refreshes routed task cards from live updates', async ({ page }
   await page.goto('/inbox/qa', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { level: 1, name: 'QA Inbox' })).toBeVisible();
-  await expect(page.getByText('Live update applied')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByRole('link', { name: 'Live update applied' })).toBeVisible({ timeout: 5000 });
   await expect(page).toHaveURL(/\/inbox\/qa/);
 });
 
@@ -234,7 +244,7 @@ test('task detail refreshes the active task summary from live updates', async ({
 });
 
 test('Projects refreshes planning containers from live project updates', async ({ page }) => {
-  const state = { updated: false, pollCount: 0 };
+  const state = { updated: false, pollCount: 0, delayFirstProjectListMs: 250 };
   await installSharedRoutes(page, state);
 
   await page.goto('/projects', { waitUntil: 'domcontentloaded' });

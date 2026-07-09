@@ -1,5 +1,6 @@
 # Reference deployment for always-on audit projection + outbox workers (GP-007).
-# Point DATABASE_URL at staging or production Supabase Postgres before starting.
+# Point DATABASE_URL at operator-hosted staging or production Postgres before starting.
+# Cloud Supabase is not part of the factory stack.
 services:
   audit-workers:
     build:

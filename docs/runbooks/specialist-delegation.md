@@ -22,6 +22,7 @@
 - `qa -> qa-engineer`
 - `sre -> sre`
 5. Override aliases if your host uses different agent ids with `OPENCLAW_SPECIALIST_MAP='{"engineer":"jr-engineer","qa":"qa-engineer"}'`.
+   Runtime ownership may report `ownership.specialistId=engineer` while `agentId=sr-engineer`; the bridge treats those aliases as equivalent when attribution is validated.
 6. Move an assigned task into `IN_PROGRESS` and confirm the reply only claims runtime ownership when a real `session_id` is returned.
 7. Confirm `observability/specialist-delegation.jsonl` contains `target_specialist`, `actual_agent`, `session_id`, `ownership`, and `delegation_id`.
 8. Confirm `observability/specialist-delegation-metrics.json` is updated with both the raw snapshot and flattened Prometheus-safe metrics.
@@ -34,11 +35,13 @@
 15. Enable in staging with log review for fallback volume and attribution mismatches.
 16. Promote to production only after no unexpected fallback or mismatch spikes are observed.
 
-For serverless deployments such as Vercel, delegation artifacts must be written
+For constrained/serverless-style runtimes, delegation artifacts must be written
 to a writable runtime directory. Set `SPECIALIST_DELEGATION_BASE_DIR` or
 `SPECIALIST_DELEGATION_ARTIFACT_DIR` to a writable path when available; otherwise
-the runtime uses `/tmp/engineering-team` under `VERCEL=1` while keeping the
-specialist runner working directory unchanged.
+the runtime uses `/tmp/engineering-team` when `FACTORY_SERVERLESS=1` or
+`SPECIALIST_DELEGATION_USE_TMP=1` while keeping the specialist runner working
+directory unchanged. The coordinated factory stack is the default and does not
+require this.
 
 ## Docker smoke runner
 - `docker compose run --rm delegation-smoke` runs the same live-smoke validator in a container built from this repo.

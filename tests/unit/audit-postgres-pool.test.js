@@ -37,7 +37,7 @@ function withEnv(overrides, callback) {
 
 test('createPgPoolFromEnv constrains serverless pools by default', async () => {
   const pool = withEnv({
-    VERCEL: '1',
+    FACTORY_SERVERLESS: '1',
     PGPOOL_MAX: null,
     PG_POOL_MAX: null,
     PG_ALLOW_EXIT_ON_IDLE: null,
@@ -70,7 +70,7 @@ test('createPgPoolFromEnv honors connection-string sslmode over PGSSLMODE=disabl
 
 test('createPgPoolFromEnv honors explicit pool sizing overrides', async () => {
   const pool = withEnv({
-    VERCEL: '1',
+    FACTORY_SERVERLESS: '1',
     PG_POOL_MAX: '3',
     PG_IDLE_TIMEOUT_MS: '2500',
     PG_CONNECTION_TIMEOUT_MS: '1500',

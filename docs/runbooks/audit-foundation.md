@@ -58,6 +58,14 @@ Unready tasks return `422 task_not_execution_ready` with structured details. Mis
 
 Local forgeadapter Phase 2 smoke: see `docs/runbooks/forge-local-smoke.md` for seeding `TSK-LOCAL001`, file-backend audit-api bootstrap, and `FORGE_SERVICE_TOKEN` pairing with forgeadapter `ENGINEERING_TEAM_SERVICE_TOKEN`.
 
+## Release Health
+
+The coordinated audit API exposes unauthenticated, read-only release health at `/version`, `/api/version`, `/backend/version`, and `/health`. These routes return `engineering-team-release-health.v1`, `service=engineering-team-audit-api`, `status`, and both `commitSha` and `commit_sha` for the deployed audit API revision.
+
+Release-health reads support `GET` and bodyless `HEAD`; unsupported methods return `405 method_not_allowed`. Responses set `cache-control: no-store` so strict delivery checks always read the current coordinated-stack revision.
+
+Commit source order is explicit `releaseCommitSha`/`commitSha` options, coordinated-stack env vars (`ENGINEERING_TEAM_RELEASE_COMMIT_SHA`, `ENGINEERING_TEAM_COMMIT_SHA`, `RELEASE_COMMIT_SHA`, `COMMIT_SHA`, `GITHUB_SHA`), then `git rev-parse HEAD`. Strict hosted proof should require the health response to include the expected deployed commit and should use the coordinated stack endpoint, not Vercel or hosted Supabase.
+
 Autonomous delivery metrics are exposed behind `ff_autonomous_delivery_metrics_mvp`.
 PM, product-owner, SRE, and admin roles with `metrics:read` can read tenant metrics and task retrospective signals.
 Only admin role holders with `projections:rebuild` can rebuild the projection.
@@ -98,8 +106,8 @@ Audit HTTP maintenance note:
 - Versioned section reviews are accepted on `POST /api/v1/tasks/{taskId}/execution-contract/{version}/sections/{sectionId}/review`. The route records reviewer contribution and approval as a new `task.execution_contract_version_recorded` event, rejects stale versions with `stale_execution_contract_review`, and keeps dispatch blocked when material changes create a new latest version after approval.
 - Low-risk Simple Execution Contracts may request `autoApproval=true` on the approval route. The `execution-contract-low-risk-simple-auto-approval.v1` policy records Operator Approval only when acceptance criteria are complete, dependencies are clear, no risk flags or production auth/security/data-model paths are present, rollback is clear, and reviewer gates are ready; Task detail and generated artifacts show the policy, rationale, and timestamp.
 - Contract Coverage Audit is a required post-implementation gate for approved Execution Contracts. Engineers submit `task.contract_coverage_audit_submitted` through `POST /tasks/{id}/contract-coverage-audit`, QA validates through `POST /tasks/{id}/contract-coverage-audit/validate`, `implementation_incomplete` blocks QA Verification and Operator Closeout, and Task detail exposes `executionContract.contractCoverageAudit`.
-- Vercel production routes the nested versioned task workflow actions through `api/v1/task-workflow-proxy.js`: `/api/v1/tasks/{taskId}/refinement/start`, `/api/v1/tasks/{taskId}/execution-contract/{action}`, `/api/v1/tasks/{taskId}/contract-coverage-audit/{action}`, and `/api/v1/tasks/{taskId}/sre-monitoring/{action}`. `__workflow_path` is an internal rewrite parameter only; use `/api/v1/...` or `/backend/v1/...` for validation while preserving shared-handler JWT/RBAC enforcement.
-- Vercel production also routes unversioned task detail read aliases through the same proxy: `/api/tasks/{taskId}`, `/api/tasks/{taskId}/detail`, `/api/tasks/{taskId}/history`, `/api/tasks/{taskId}/observability-summary`, and `/api/tasks/{taskId}/state`. `__audit_path` is an internal rewrite parameter only and is allowlisted for read-model routes so task detail refreshes can hydrate owner, history, state, and telemetry without adding more serverless functions.
+- The operator-hosted API routes the nested versioned task workflow actions through `api/v1/task-workflow-proxy.js`: `/api/v1/tasks/{taskId}/refinement/start`, `/api/v1/tasks/{taskId}/execution-contract/{action}`, `/api/v1/tasks/{taskId}/contract-coverage-audit/{action}`, and `/api/v1/tasks/{taskId}/sre-monitoring/{action}`. `__workflow_path` is an internal rewrite parameter only; use `/api/v1/...` or `/backend/v1/...` for validation while preserving shared-handler JWT/RBAC enforcement.
+- The operator-hosted API also routes unversioned task detail read aliases through the same proxy: `/api/tasks/{taskId}`, `/api/tasks/{taskId}/detail`, `/api/tasks/{taskId}/history`, `/api/tasks/{taskId}/observability-summary`, and `/api/tasks/{taskId}/state`. `__audit_path` is an internal rewrite parameter only and is allowlisted for read-model routes so task detail refreshes can hydrate owner, history, state, and telemetry without adding more serverless functions.
 - SRE monitoring expiry is now worker-driven: reads reflect the current state but no longer append escalation events when the window has expired.
 - SRE monitoring also exposes `POST /tasks/{id}/sre-monitoring/anomaly-child-task`, which creates a linked child task with machine-generated telemetry context, records the auto-`P0` rationale, and blocks the parent while leaving it readable/commentable.
 - The anomaly-child parent block is cleared automatically when the linked child reaches a resolved terminal state; generic `task.unblocked` event injection is not the supported path for this workflow.
@@ -193,7 +201,7 @@ Every guarded entrypoint emits a structured `backend_selection` log entry. Postg
 
 ## Production workers (GP-007)
 
-Vercel hosts the audit API only. **Projection + outbox workers must run as a separate long-lived process** against the same Supabase `DATABASE_URL`.
+The operator-hosted audit API accepts writes. **Projection + outbox workers must run as a separate long-lived process** against the same operator-hosted Postgres `DATABASE_URL`.
 
 ### Start workers (Docker reference)
 

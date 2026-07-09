@@ -50,3 +50,18 @@ promotion_gates:
       - lint
       - typecheck
       - test
+    require_immutable_artifact: false
+  - environment: staging
+    required_evidence:
+      - build
+      - compatibility-report
+      - vulnerability-scan
+      - secret-scan
+    require_immutable_artifact: true
+  - environment: prod
+    required_evidence:
+      - immutable-artifact
+      - deploy-record
+      - post-deploy-health
+      - rollback-verification
+    require_immutable_artifact: true

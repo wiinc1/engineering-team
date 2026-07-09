@@ -136,3 +136,67 @@ Supporting measures:
 - Dispatching implementation before Execution Contract approval.
 - Using Principal Engineer as the default implementation lane.
 - Treating manual testing as sufficient completion evidence.
+- Hosting the factory control plane on Vercel or other serverless SPA-only platforms.
+- Using cloud Supabase (or any managed cloud Postgres product brand) as a required factory platform component.
+- Treating specialist agents as final Product Manager or Architect authority without human review when those roles disagree or when human review is required.
+
+## Runtime And Topology Requirements (Accepted 2026-07-08)
+
+The factory runtime of record is the **operator-hosted coordinated stack**:
+
+- Dockerized or operator-managed PostgreSQL
+- Audit API and audit workers (projection + outbox)
+- Browser UI (Vite in development; static/UI host under operator control in production)
+- forgeadapter and real OpenClaw specialist runtime when proving live delegation
+
+Factory green claims, milestone verification, and operator-trusted delivery evidence must use this topology. The control plane must not depend on Vercel or cloud Supabase for factory operation, proof, or production identity.
+
+PostgreSQL remains the data backend. Local Docker Postgres is the standard development path. Any production Postgres is operator-chosen infrastructure, not a branded cloud platform requirement in product docs or runtime errors.
+
+## Progressive Autonomy Decisions (Accepted 2026-07-08)
+
+Source decision record: `docs/reports/FACTORY_AUTONOMY_DECISIONS.md`.
+
+### Success metric bar
+
+The primary metric remains **operator-trusted autonomous delivery rate**.
+
+Near-term acceptance (~15 days from decision): at least **80%** operator-trusted autonomous delivery on at least **10** closed Simple/low-risk tasks in the factory runtime of record, with zero post-approval operator interventions per the definitions in this PRD and `CONTEXT.md`.
+
+Medium-term (~45 days): the same metric for Simple plus selected Standard task classes, with first-pass QA rate and intervention rate tracked through the autonomous delivery metrics surface.
+
+Milestone A–E local proofs remain necessary loop evidence. They are not sufficient alone to claim an autonomous factory.
+
+### Autonomy posture
+
+The product operates under **supervised progressive autonomy**:
+
+- Required human approvals remain where policy demands.
+- The control plane automates dispatch, implementation, QA fail/retest, evidence packaging, merge when checks pass for eligible Simple work, and SRE monitoring recording when signals are green.
+- Full unattended end-to-end delivery for all task classes is out of near-term scope.
+- A coding factory without the control-plane product is out of scope.
+
+### Out-of-repo scope
+
+Near-term delivery targets the **engineering-team** control-plane monorepo. Multi-repo and target-app infrastructure automation (for example GP-024/GP-025) stay deferred until Simple operator-trusted rate is green on-platform.
+
+### Human authority for Product Manager and Architect
+
+Specialist agents may **propose** Product Manager refinement and Architect technical contributions. They are not final authority for those roles.
+
+**Human Product Manager review** is required for acceptance of PM-owned contract quality (scope, acceptance criteria, refinement completeness) before the contract may proceed to Operator Approval or policy auto-approval when PM contribution was agent-authored or when a PM/Architect disagreement is open.
+
+**Human Architect review** is required for acceptance of Architect-owned technical sections when Architect contribution was agent-authored or when a PM/Architect disagreement is open.
+
+When PM and Architect **agents disagree** (conflicting required-reviewer outcomes, open cross-role blocking feedback, or an explicit agent-disagreement record), the control plane must:
+
+1. Detect and persist the disagreement as inspectable policy-backed workflow state.
+2. Block Operator Approval and policy auto-approval.
+3. Require **human Product Manager review** and **human Architect review** (actor type human/user, not agent) before approval readiness can pass.
+4. Keep the Task in refinement (or approval-blocked waiting state) until both human reviews are recorded.
+
+Routine status viewing is not an operator intervention. Human PM/Architect review required by this gate is **required approval**, not an autonomy failure, when it is the policy-expected step for disagreement resolution.
+
+### Planning horizon
+
+Hard execution slice for the near-term metric and stack cleanup: approximately **15 days**. Broader Standard refinement productization and class expansion: approximately **45 days**.

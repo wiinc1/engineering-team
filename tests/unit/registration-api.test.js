@@ -121,7 +121,7 @@ test('registration API fails closed when registration is disabled', async () => 
   );
 });
 
-test('production auth API routes include grouped Vercel wrappers', () => {
+test('production auth API routes include grouped operator-hosted wrappers', () => {
   const wrappers = [
     ['../../api/auth/[...route].js', /\.\.\/_server/],
     ['../../api/auth/magic-link/[...route].js', /\.\.\/\.\.\/_server/],

@@ -34,7 +34,7 @@ function createResponseRecorder() {
   };
 }
 
-test('Vercel API handler fails closed when deploy auth bootstrap fails', async () => {
+test('API handler fails closed when deploy auth bootstrap fails', async () => {
   clearServerModules();
   stubDeployBootstrap({ ok: false, errors: ['migration failed'] });
 

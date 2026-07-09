@@ -12,13 +12,17 @@ function hasFlag(name) {
 }
 
 async function main() {
+  const childIssueNumber = readArg('--child-issue');
   const options = {
     baseUrl: readArg('--base-url'),
     tenantId: readArg('--tenant-id'),
     actorId: readArg('--actor-id'),
     epicIssueNumber: readArg('--epic-issue', '269'),
-    childIssueNumber: readArg('--child-issue', '271'),
-    childIssueUrl: readArg('--child-issue-url', 'https://github.com/wiinc1/engineering-team/issues/271'),
+    childIssueNumber,
+    childIssueUrl: readArg(
+      '--child-issue-url',
+      childIssueNumber ? `https://github.com/wiinc1/engineering-team/issues/${childIssueNumber}` : '',
+    ),
     outputPath: readArg('--out', 'observability/golden-path-pilot.json'),
     taskId: readArg('--task-id'),
     projectId: readArg('--project-id'),

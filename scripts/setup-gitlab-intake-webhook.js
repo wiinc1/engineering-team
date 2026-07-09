@@ -50,7 +50,7 @@ async function gitlabRequest(baseUrl, token, path, { method = 'GET', body = null
   return { status: response.status, ok: response.ok, body: payload };
 }
 
-async function main() {
+function resolveGitlabWebhookRuntime() {
   const token = readArg('--token', process.env.GITLAB_TOKEN || process.env.GITLAB_PRIVATE_TOKEN || '');
   const gitlabBaseUrl = parseGitLabBaseUrl(
     readArg('--gitlab-url', process.env.GITLAB_BASE_URL || process.env.GITLAB_INTAKE_BASE_URL || 'http://192.168.1.116'),
@@ -59,30 +59,42 @@ async function main() {
   const targetUrl = readArg('--url', process.env.WEBHOOK_TARGET_URL || process.env.ENGINEERING_TEAM_WEBHOOK_URL || '');
   const secret = readArg('--secret', process.env.GITLAB_WEBHOOK_SECRET || 'golden-path-local-webhook-secret');
   const dryRun = process.argv.includes('--dry-run');
+  return { token, gitlabBaseUrl, projectPath, targetUrl, secret, dryRun };
+}
 
-  if (!token) {
-    throw new Error('GITLAB_TOKEN (or --token) is required');
+function assertGitlabWebhookRuntime(runtime) {
+  if (!runtime.token) throw new Error('GITLAB_TOKEN (or --token) is required');
+  if (!runtime.targetUrl) {
+    throw new Error('WEBHOOK_TARGET_URL (or --url) is required - e.g. https://<hosted-et-api>/gitlab/webhooks');
   }
-  if (!targetUrl) {
-    throw new Error('WEBHOOK_TARGET_URL (or --url) is required — e.g. https://<hosted-et-api>/gitlab/webhooks');
-  }
+}
 
-  const hookUrl = targetUrl.replace(/\/+$/, '').endsWith('/gitlab/webhooks')
-    ? targetUrl.replace(/\/+$/, '')
+function normalizeGitlabHookUrl(targetUrl) {
+  const trimmed = targetUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/gitlab/webhooks')
+    ? trimmed
     : `${targetUrl.replace(/\/+$/, '')}/gitlab/webhooks`;
+}
 
-  const list = await gitlabRequest(gitlabBaseUrl, token, `/projects/${encodeProjectPath(projectPath)}/hooks`);
+async function listGitlabHooks(runtime) {
+  const project = encodeProjectPath(runtime.projectPath);
+  const list = await gitlabRequest(runtime.gitlabBaseUrl, runtime.token, `/projects/${project}/hooks`);
   if (!list.ok) {
     throw new Error(`List hooks failed (${list.status}): ${JSON.stringify(list.body)}`);
   }
+  return Array.isArray(list.body) ? list.body : [];
+}
 
-  const existing = (Array.isArray(list.body) ? list.body : []).find((hook) => (
+function findExistingGitlabHook(hooks, hookUrl) {
+  return hooks.find((hook) => (
     hook.url === hookUrl
     || String(hook.url || '').includes('/gitlab/webhooks')
   ));
+}
 
+function buildGitlabHookPayload(hookUrl, secret) {
   const enableSslVerification = hookUrl.startsWith('https://');
-  const payload = {
+  return {
     url: hookUrl,
     token: secret,
     issue_events: true,
@@ -94,53 +106,82 @@ async function main() {
     tag_push_events: false,
     enable_ssl_verification: enableSslVerification,
   };
+}
 
-  if (dryRun) {
-    process.stdout.write(`${JSON.stringify({
-      ok: true,
-      dryRun: true,
-      project: projectPath,
-      gitlabBaseUrl,
-      action: existing ? 'update' : 'create',
-      hookId: existing?.id || null,
-      hookUrl,
-      note: 'Remove --dry-run to apply',
-    }, null, 2)}\n`);
-    return;
-  }
+function gitlabProjectHooksPath(projectPath, existing = null) {
+  const basePath = `/projects/${encodeProjectPath(projectPath)}/hooks`;
+  return existing ? `${basePath}/${existing.id}` : basePath;
+}
 
-  let result;
+async function upsertGitlabHook(runtime, existing, payload) {
   if (existing) {
-    result = await gitlabRequest(gitlabBaseUrl, token, `/projects/${encodeProjectPath(projectPath)}/hooks/${existing.id}`, {
+    return gitlabRequest(runtime.gitlabBaseUrl, runtime.token, gitlabProjectHooksPath(runtime.projectPath, existing), {
       method: 'PUT',
       body: payload,
     });
-  } else {
-    result = await gitlabRequest(gitlabBaseUrl, token, `/projects/${encodeProjectPath(projectPath)}/hooks`, {
-      method: 'POST',
-      body: payload,
-    });
   }
+  return gitlabRequest(runtime.gitlabBaseUrl, runtime.token, gitlabProjectHooksPath(runtime.projectPath), {
+    method: 'POST',
+    body: payload,
+  });
+}
 
+function localWebhookHint(result) {
+  return result.status === 422 && String(result.body?.error || '').includes('Invalid url')
+    ? ' GitLab may block local/private webhook URLs until an admin enables allow_local_requests_from_web_hooks_and_services, or use a public HTTPS ET API URL.'
+    : '';
+}
+
+function assertGitlabHookResult(result, existing) {
   if (!result.ok) {
-    const hint = result.status === 422 && String(result.body?.error || '').includes('Invalid url')
-      ? ' GitLab may block local/private webhook URLs until an admin enables allow_local_requests_from_web_hooks_and_services, or use a public HTTPS ET API URL.'
-      : '';
+    const hint = localWebhookHint(result);
     throw new Error(`Webhook ${existing ? 'update' : 'create'} failed (${result.status}): ${JSON.stringify(result.body)}.${hint}`);
   }
+}
 
+function deliveryIdHint() {
+  return crypto.createHash('sha256').update(`${Date.now()}`).digest('hex').slice(0, 12);
+}
+
+function writeGitlabDryRun(runtime, existing, hookUrl) {
   process.stdout.write(`${JSON.stringify({
     ok: true,
-    project: projectPath,
-    gitlabBaseUrl,
+    dryRun: true,
+    project: runtime.projectPath,
+    gitlabBaseUrl: runtime.gitlabBaseUrl,
+    action: existing ? 'update' : 'create',
+    hookId: existing?.id || null,
+    hookUrl,
+    note: 'Remove --dry-run to apply',
+  }, null, 2)}\n`);
+}
+
+function writeGitlabHookResult(runtime, existing, result, hookUrl) {
+  process.stdout.write(`${JSON.stringify({
+    ok: true,
+    project: runtime.projectPath,
+    gitlabBaseUrl: runtime.gitlabBaseUrl,
     action: existing ? 'updated' : 'created',
     hookId: result.body.id,
     url: result.body.url || hookUrl,
     issueEvents: result.body.issue_events,
-    deliveryIdHint: crypto.createHash('sha256').update(`${Date.now()}`).digest('hex').slice(0, 12),
+    deliveryIdHint: deliveryIdHint(),
     verifyLocal: 'npm run gp-002:verify && npm run gp-005:verify',
     githubOptional: 'FORGE_INTAKE_PROVIDER=github npm run github:intake:webhook:setup',
   }, null, 2)}\n`);
+}
+
+async function main() {
+  const runtime = resolveGitlabWebhookRuntime();
+  assertGitlabWebhookRuntime(runtime);
+  const hookUrl = normalizeGitlabHookUrl(runtime.targetUrl);
+  const hooks = await listGitlabHooks(runtime);
+  const existing = findExistingGitlabHook(hooks, hookUrl);
+  const payload = buildGitlabHookPayload(hookUrl, runtime.secret);
+  if (runtime.dryRun) return writeGitlabDryRun(runtime, existing, hookUrl);
+  const result = await upsertGitlabHook(runtime, existing, payload);
+  assertGitlabHookResult(result, existing);
+  return writeGitlabHookResult(runtime, existing, result, hookUrl);
 }
 
 main().catch((error) => {

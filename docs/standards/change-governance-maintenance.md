@@ -19,6 +19,9 @@ Canonical checks:
 ## Coverage Artifacts
 `npm run standards:check` reads `.artifacts/coverage-summary.json`. That file may be produced by `npm run coverage` with per-suite JavaScript/UI coverage, or by `make verify` with Python coverage totals. The coverage policy checker accepts both schemas so developers can run the verification commands in either order without regenerating coverage only to satisfy a parser shape.
 
+### Line coverage floor
+`scripts/check-coverage-policy.js` enforces a global line coverage floor of **70%** (temporarily reduced from 80% while factory module coverage expands). Both overall minimum suite coverage and any individual suite reported in the artifact must meet this floor. Raise the floor back to 80% once the expanded factory unit surface consistently clears it under `npm run coverage`.
+
 ## Tracked-file lint gate
 `npm run lint` is a tracked-file quality gate, not a static target list. It discovers tracked and untracked, non-ignored authored source through `git ls-files --cached --others --exclude-standard`, then applies explicit include and exclude classification before checking whitespace, tabs, and readability signals.
 
@@ -73,6 +76,9 @@ If a runtime file does not match any domain, `npm run change:check` fails with a
 - Do not use a catch-all domain when a more specific boundary exists.
 - Do not silence failures by widening `doc_requirements` to unrelated docs.
 - Keep domain names stable so failure messages remain predictable.
+
+## Dual remotes (GitLab primary)
+Canonical ship path is GitLab (`origin`). GitHub (`github`) is the backup / public CI mirror. Prefer basing work on `origin/main`, push `origin` first, then `github`. Operator status: `npm run remotes:sync-status`. Full procedure: `docs/runbooks/dual-remote-gitlab-primary.md`.
 
 ## Branch Protection
 Protect the default branch by requiring these checks:

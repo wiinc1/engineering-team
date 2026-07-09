@@ -44,7 +44,7 @@ test('live task reconciler converges on newest versions for out-of-order streams
       state = reconcileLiveUpdates(state, [item]);
     }
     for (const entityId of ['TSK-PROP-A', 'TSK-PROP-B', 'TSK-PROP-C']) {
-      assert.equal(state.versions[`task:${entityId}`].version, 8, `seed ${seed} should keep newest ${entityId}`);
+      assert.equal(state.versions[`task:default:${entityId}`].version, 8, `seed ${seed} should keep newest ${entityId}`);
     }
   }
 });

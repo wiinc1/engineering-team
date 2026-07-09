@@ -5,7 +5,7 @@ flowchart TD
   B -->|internal-bootstrap selected and missing secret or flags| C
   B -->|valid| D[Write non-secret auth diagnostics artifact]
   D --> E[npm run build]
-  E --> F[npm run auth:config:check:vercel]
+  E --> F[npm run auth:config:check]
   F -->|missing env names for both strategies| G[Block release and notify production config owner]
   F -->|OIDC or internal-bootstrap names present| H[Trigger new production deployment]
   H --> I[Inspect Ready deployment, commit, timestamp]

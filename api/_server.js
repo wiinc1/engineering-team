@@ -5,7 +5,7 @@ const { runDeployAuthBootstrap } = require('../scripts/bootstrap-deploy-auth');
 let cachedServer = null;
 let bootstrapPromise = null;
 
-function createVercelLogger() {
+function createApiLogger() {
   function write(level, payload) {
     const entry = {
       timestamp: new Date().toISOString(),
@@ -34,7 +34,7 @@ function getServer() {
   const backendConfig = assertAuditBackendConfiguration({
     runtimeEnv: 'production',
   });
-  const logger = createVercelLogger();
+  const logger = createApiLogger();
   logAuditBackendSelection(backendConfig, logger, { runtimeEnv: 'production' });
 
   const { server } = createAuditApiServer({

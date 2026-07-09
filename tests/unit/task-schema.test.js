@@ -214,7 +214,7 @@ test('VALID_TASK_TYPES contains expected values', () => {
 });
 
 test('VALID_STAGES contains expected values', () => {
-  assert.deepEqual(VALID_STAGES, ['DRAFT', 'BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']);
+  assert.deepEqual(VALID_STAGES, ['INTAKE_DRAFT', 'TASK_REFINEMENT', 'OPERATOR_APPROVAL', 'IMPLEMENTATION', 'QA_VERIFICATION', 'SRE_VERIFICATION', 'CLOSEOUT']);
 });
 
 test('validateTaskCreatePayload accepts all valid priorities', () => {

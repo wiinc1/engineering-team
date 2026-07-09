@@ -8,7 +8,7 @@ const originalEnv = {
   prod: import.meta.env.PROD,
   productionAuthStrategy: import.meta.env.VITE_AUTH_PRODUCTION_AUTH_STRATEGY,
   internalBootstrapEnabled: import.meta.env.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED,
-  vercelEnv: import.meta.env.VITE_VERCEL_ENV,
+  deployEnv: import.meta.env.VITE_FACTORY_DEPLOY_ENV,
 };
 
 function setViteEnv(name: string, value: string | undefined) {
@@ -25,7 +25,7 @@ function restoreViteEnv() {
   (import.meta.env as Record<string, string | boolean | undefined>).PROD = originalEnv.prod;
   setViteEnv('VITE_AUTH_PRODUCTION_AUTH_STRATEGY', originalEnv.productionAuthStrategy);
   setViteEnv('VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED', originalEnv.internalBootstrapEnabled);
-  setViteEnv('VITE_VERCEL_ENV', originalEnv.vercelEnv);
+  setViteEnv('VITE_FACTORY_DEPLOY_ENV', originalEnv.deployEnv);
 }
 
 afterEach(() => {
@@ -73,13 +73,13 @@ it('renders the production registration form from Vite env without runtime injec
   expect(screen.queryByLabelText('API base URL')).not.toBeInTheDocument();
 });
 
-it('defaults Vercel preview bundles to registration even when the internal fallback flag is present', async () => {
+it('defaults factory preview deploy profile to registration even when the internal fallback flag is present', async () => {
   clearBrowserSessionConfig();
   delete globalThis.__ENGINEERING_TEAM_RUNTIME_CONFIG__;
   window.history.replaceState({}, '', '/sign-in');
   setViteEnv('MODE', 'production');
   (import.meta.env as Record<string, string | boolean | undefined>).PROD = true;
-  setViteEnv('VITE_VERCEL_ENV', 'preview');
+  setViteEnv('VITE_FACTORY_DEPLOY_ENV', 'preview');
   setViteEnv('VITE_AUTH_PRODUCTION_AUTH_STRATEGY', undefined);
   setViteEnv('VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED', 'true');
   vi.stubGlobal(

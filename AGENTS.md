@@ -216,3 +216,9 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 ## Related
 
 - [Default AGENTS.md](/reference/AGENTS.default)
+
+
+## Dual remotes
+
+GitLab (`origin`) is the **primary** forge; GitHub (`github`) is the **backup** / public CI mirror. See `docs/runbooks/dual-remote-gitlab-primary.md` and `TOOLS.md`. Push feature branches to `origin` first.
+

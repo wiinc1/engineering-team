@@ -96,9 +96,9 @@ test('uses writable serverless artifact storage while keeping runtime cwd stable
   assert.equal(fs.existsSync(result.metadata.artifactPath), true);
 });
 
-test('defaults Vercel artifact storage to /tmp when no explicit artifact directory is set', () => {
-  assert.equal(resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { VERCEL: '1' }), path.join('/tmp', 'engineering-team'));
-  assert.equal(resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { VERCEL: '1', SPECIALIST_DELEGATION_BASE_DIR: '/tmp/custom' }), '/tmp/custom');
+test('defaults serverless artifact storage to /tmp when no explicit artifact directory is set', () => {
+  assert.equal(resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { FACTORY_SERVERLESS: '1' }), path.join('/tmp', 'engineering-team'));
+  assert.equal(resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { FACTORY_SERVERLESS: '1', SPECIALIST_DELEGATION_BASE_DIR: '/tmp/custom' }), '/tmp/custom');
 });
 
 test('falls back explicitly when delegation fails and records failure metrics', async () => {

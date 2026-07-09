@@ -19,7 +19,7 @@ flowchart TD
   Diff --> Safe{Patch safe and in scope?}
   Safe -- No --> Reject[Reject patch, preserve redacted evidence, recover safely]
   Reject --> Fallback
-  Safe -- Yes --> Validate[Run standards, lint, tests, build, and Vercel as applicable]
+  Safe -- Yes --> Validate[Run standards, lint, tests, build, and deployment health as applicable]
   Validate --> Checks{All required checks green?}
   Checks -- No --> Repair[Repair normally or reject Clawpatch patch]
   Repair --> Fallback

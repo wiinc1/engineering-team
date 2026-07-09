@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "kind": "audit-workers-production-smoke",
-  "generatedAt": "2026-06-24T22:56:53.486Z",
+  "generatedAt": "2026-07-07T21:03:15.856Z",
   "baseUrl": "https://engineering-team-zeta.vercel.app",
   "tenantId": "engineering-team",
   "summary": {
@@ -68,7 +68,7 @@
   "workflow": {
     "schemaVersion": "1.0",
     "kind": "audit-workers-workflow-smoke",
-    "generatedAt": "2026-06-24T22:56:53.488Z",
+    "generatedAt": "2026-07-07T21:03:15.862Z",
     "baseUrl": "https://engineering-team-zeta.vercel.app",
     "summary": {
       "passed": true,

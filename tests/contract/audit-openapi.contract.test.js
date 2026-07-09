@@ -39,3 +39,14 @@ test("task-platform contract documents AI-agent activation preview gates", () =>
     assert.match(platform, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 });
+
+test("audit OpenAPI contract documents product delivery integrity routes", () => {
+  const audit = fs.readFileSync(path.join(__dirname, "../../docs/api/audit-foundation-openapi.yml"), "utf8");
+  for (const expected of [
+    "product_delivery",
+    "product-delivery-integrity",
+    "runnable_surface",
+  ]) {
+    assert.match(audit, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});

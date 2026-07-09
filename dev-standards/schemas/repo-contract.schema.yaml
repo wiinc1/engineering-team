@@ -480,6 +480,12 @@ properties:
             required_artifact_fields:
               type: array
               items: { type: string }
+            required_post_deploy_health_fields:
+              type: array
+              items: { type: string }
+            required_rollback_fields:
+              type: array
+              items: { type: string }
   artifact_provenance:
     type: object
     additionalProperties: false

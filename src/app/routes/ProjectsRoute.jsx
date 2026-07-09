@@ -49,12 +49,17 @@ function useProjectRoute(ctx) {
   const api = React.useMemo(() => createProjectsApi(ctx), [ctx.At, ctx.u]);
   const projectId = projectIdFromPath(ctx.i);
   const [state, setState] = React.useState({ kind: "loading", projects: [], project: null, message: "" });
+  const loadSequenceRef = React.useRef(0);
   const load = React.useCallback(async () => {
+    const sequence = loadSequenceRef.current + 1;
+    loadSequenceRef.current = sequence;
     setState((current) => ({ ...current, kind: "loading", message: "" }));
     try {
       const data = projectId ? await api.get(projectId) : await api.list();
+      if (sequence !== loadSequenceRef.current) return;
       setState(projectId ? { kind: "ready", projects: [], project: data, message: "" } : { kind: "ready", projects: data || [], project: null, message: "" });
     } catch (error) {
+      if (sequence !== loadSequenceRef.current) return;
       setState({ kind: "error", projects: [], project: null, message: error?.message || "Project load failed." });
     }
   }, [api, projectId]);

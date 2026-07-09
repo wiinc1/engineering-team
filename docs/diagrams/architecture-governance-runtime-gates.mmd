@@ -1,5 +1,5 @@
 flowchart LR
-  Browser[Browser app<br/>src/app src/features src/components] --> API[Vercel API adapters<br/>api]
+  Browser[Browser app<br/>src/app src/features src/components] --> API[Operator-hosted API adapters<br/>api]
   API --> Services[Node services<br/>lib/auth lib/audit lib/task-platform]
   Services --> Postgres[PostgreSQL migrations<br/>db/migrations]
   Services --> Monitoring[Monitoring assets<br/>monitoring observability]

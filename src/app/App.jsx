@@ -36,6 +36,8 @@ import { TaskWorkspaceRoute } from "./routes/TaskWorkspaceRoute.jsx";
 import { TaskDetailRoute } from "./routes/TaskDetailRoute.jsx";
 import { ProjectsRoute, isProjectsPath } from "./routes/ProjectsRoute.jsx";
 import { AutonomyMetricsRoute } from "./routes/AutonomyMetricsRoute.jsx";
+import { CommandBar } from "./shell/CommandBar.jsx";
+import { GroupedAppNav, buildCollapsedNavRail } from "./shell/GroupedAppNav.jsx";
 
 function App() {
   const [{ pathname: i, search: o }, l] = Uo(), [u, b] = c.useState(() => ma()), [, S] = c.useState(() => !!(ma().bearerToken || ma().actorId)), [C, y] = c.useState(
@@ -594,7 +596,7 @@ nt-type": "application/json" }, body: JSON.stringify({ tenantId: d.tenantId, act
   c.useEffect(() => {
     X && ga(i) && I(h, ["admin"]) && Te();
   }, [X, Te, i, h]);
-  const projectRouteActive = isProjectsPath(i), autonomyMetricsRouteActive = ((i || "").replace(/\/+$/, "") || "/") === "/metrics/autonomous-delivery", N = s.kind === "list" ? s.list.filters : { owner: "", view: "list", bucket: "", priority: "", status: "", searchTerm: "", project: "" }, Ae = s.kind === "list" ? Oi(
+  const projectRouteActive = isProjectsPath(i), autonomyMetricsRouteActive = ((i || "").replace(/\/+$/, "") || "/") === "/metrics/autonomous-delivery", commandConsoleActive = s.kind === "list" && !_ && !P && !A && !f && !autonomyMetricsRouteActive && !projectRouteActive, N = s.kind === "list" ? s.list.filters : { owner: "", view: "list", bucket: "", priority: "", status: "", searchTerm: "", project: "" }, Ae = s.kind === "list" ? Oi(
   s.list.items, { owner: N.owner, priority: N.priority, status: N.status, searchTerm: N.searchTerm, project: N.project }) : [], gi = c.useMemo(() => s.kind === "list" ? Array.from(
   new Set(s.list.items.map((t) => String(t.priority || "").trim()).filter(Boolean))).sort() : [], [s]), projectOptions = c.useMemo(() => s.kind === "list" ? Array.from(new Map(s.list.items.map((t) => t.project).filter(Boolean).map((t) => [t.projectId, t])).values()).sort((t, n) => t.name.localeCompare(n.name)) : [], [s]), vi = c.useMemo(() => s.kind === "list" ? zi(s.list.items) :
   [], [s]), La = !!(N.owner || N.priority || N.status || N.searchTerm || N.project), ye = s.kind === "list" && f ? Mi(s.list.items, f, j) : [], Tn = s.kind === "list" && _ ?
@@ -611,38 +613,18 @@ erred Consideration${Rt.length === 1 ? "" : "s"} awaiting PM review.` : f ? ne.k
     l("/tasks", we({ searchTerm: n }, r));
   }, children: [a("label", { children: [e("span", { children: "Search tasks" }), e("input", { name: "q", "aria-label": "Search tasks", defaultValue: N.searchTerm,
   placeholder: "Task ID or title", autoComplete: "off" })] }), e("button", { type: "submit", children: "Search" })] }, `task-search-${N.searchTerm}`), appShellClass = `\
-app-shell${navOpen ? "" : " app-shell--nav-collapsed"}`, appNavClass = `app-nav${navOpen ? "" : " app-nav--collapsed"}`, appNavToggle = e("button", { type: "but\
+app-shell${commandConsoleActive ? " app-shell--command-console" : ""}${navOpen ? "" : " app-shell--nav-collapsed"}`, appNavClass = `app-nav${navOpen ? "" : " app-nav--collapsed"}`, appNavToggle = e("button", { type: "but\
 ton", className: "app-nav-toggle", "aria-label": navOpen ? "Collapse navigation" : "Open navigation", "aria-controls": "primary-navigation", "aria-expanded": navOpen,
   title: navOpen ? "Collapse navigation" : "Open navigation", onClick: () => setNavOpen((t) => !t), children: e("span", { className: "app-nav-toggle__icon", "ar\
 ia-hidden": "true" }) }), collapsedTaskWorkspaceSelected = s.kind === "list" && !_ && !P && !A && !f && N.view !== "board", collapsedKanbanSelected = s.kind ===
-  "list" && !_ && !P && !A && !f && N.view === "board", collapsedNavRail = navOpen ? null : a("nav", { className: "app-nav-rail", "aria-label": "Collapsed navig\
-ation", children: [a("button", { type: "button", className: `app-nav-rail__item${collapsedTaskWorkspaceSelected ? " app-nav-rail__item--active" : ""}`, "aria-la\
-bel": "Task workspace", "aria-pressed": collapsedTaskWorkspaceSelected, title: "Task workspace", onClick: () => l("/tasks", we({ view: "list" }, "")), children: [
-  e("span", { className: "app-nav-rail__icon", "aria-hidden": "true", children: "W" }), e("span", { className: "app-nav-rail__label", children: "Task workspace" })] }),
-  a("button", { type: "button", className: `app-nav-rail__item${collapsedKanbanSelected ? " app-nav-rail__item--active" : ""}`, "aria-label": "Kanban board", "a\
-ria-pressed": collapsedKanbanSelected, title: "Kanban board", onClick: () => l("/tasks", we({ view: "board" }, "")), children: [e("span", { className: "app-nav-\
-rail__icon", "aria-hidden": "true", children: "K" }), e("span", { className: "app-nav-rail__label", children: "Kanban board" })] }), a("button", { type: "button",
-  className: `app-nav-rail__item${Hn(i) ? " app-nav-rail__item--active" : ""}`, "aria-label": "New task", "aria-pressed": Hn(i), title: "New task", onClick: () => l(
-  "/tasks/create"), children: [e("span", { className: "app-nav-rail__icon", "aria-hidden": "true", children: "+" }), e("span", { className: "app-nav-rail__label",
-  children: "New task" })] }), a("button", { type: "button", className: `app-nav-rail__item${isProjectsPath(i) ? " app-nav-rail__item--active" : ""}`, "aria-label": "Projects", "aria-pressed": isProjectsPath(i), title: "Projects", onClick: () => l("/projects"), children: [e("span", { className: "app-nav-rail__icon", "aria-hidden": "true", children: "P" }), e("span", { className: "app-nav-rail__label", children: "Projects" })] }), a("button", { type: "button", className: `app-nav-rail__item${_ ? " app-nav-rail__item--active" : ""}`, "aria-label": "PM overvie\
-w", "aria-pressed": _, title: "PM overview", onClick: () => l("/overview/pm"), children: [e("span", { className: "app-nav-rail__icon", "aria-hidden": "true", children: "\
-P" }), e("span", { className: "app-nav-rail__label", children: "PM overview" })] }), a("button", { type: "button", className: `app-nav-rail__item${P ? " app-nav\
--rail__item--active" : ""}`, "aria-label": "Governance reviews", "aria-pressed": P, title: "Governance reviews", onClick: () => l("/overview/governance"), children: [
-  e("span", { className: "app-nav-rail__icon", "aria-hidden": "true", children: "G" }), e("span", { className: "app-nav-rail__label", children: "Governance revi\
-ews" })] }), a("button", { type: "button", className: `app-nav-rail__item${f === "pm" ? " app-nav-rail__item--active" : ""}`, "aria-label": "PM inbox", "aria-pr\
-essed": f === "pm", title: "PM inbox", onClick: () => l("/inbox/pm"), children: [e("span", { className: "app-nav-rail__icon", "aria-hidden": "true", children: "\
-I" }), e("span", { className: "app-nav-rail__label", children: "PM inbox" })] }), a("button", { type: "button", className: "app-nav-rail__item", "aria-label": "\
-Search tasks", "aria-controls": "primary-navigation", "aria-expanded": navOpen, title: "Search tasks", onClick: () => setNavOpen(true), children: [e("span", { className: "\
-app-nav-rail__icon", "aria-hidden": "true", children: a("svg", { viewBox: "0 0 20 20", focusable: "false", children: [e("circle", { cx: "8.5", cy: "8.5", r: "5.\
-25", fill: "none", stroke: "currentColor", strokeWidth: "1.8" }), e("path", { d: "m12.25 12.25 4 4", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "\
-round" })] }) }), e("span", { className: "app-nav-rail__label", children: "Search tasks" })] })] });
+  "list" && !_ && !P && !A && !f && N.view === "board";
   const routeContext = {
     _, _a, _n, _s, _t, $, $a, $e,
     $s, A, aa, Aa, ae, Ae, ai, an,
     appNavClass, appNavToggle, appShellClass, As, at, At, AUTH_USER_STATUS_OPTIONS, authMode, autonomyMetricsRouteActive,
     AuthPasswordField, authPasswordVisible, authSearchWithMode, B, ba, Ba, be, Be,
     bi, bn, Bn, bs, Bs, bt, Bt, C,
-    ca, Ca, ce, ci, Ci, Cn, co, collapsedNavRail,
+    ca, Ca, ce, ci, Ci, Cn, co, collapsedKanbanSelected, collapsedTaskWorkspaceSelected, commandConsoleActive,
     cs, Cs, ct, D, da, de, di, ds, dt,
     E, ee, Ee, ei, en, En, Eo, Es,
     et, Et, f, F, fa, fe, Fe, Fi,
@@ -655,7 +637,7 @@ round" })] }) }), e("span", { className: "app-nav-rail__label", children: "Searc
     l, L, la, La, le, Le, li, Li,
     ln, lo, ls, Ls, lt, M, Ma, me,
     Me, mi, Mn, mo, Ms, mt, Mt, N,
-    na, Na, navOpen, ne, Ne, ni, Ni, nn,
+    na, Na, navOpen, ne, Ne, ni, Ni, nn, setNavOpen,
     Nn, Ns, Nt, o, oa, Oa, oe, Oe,
     oi, On, oo, os, Os, ot, p, P,
     pa, Pa, pe, pi, pn, po, projectOptions, projectRouteActive, Ps, pt,
@@ -677,32 +659,17 @@ round" })] }) }), e("span", { className: "app-nav-rail__label", children: "Searc
   ;
   if (Hn(i)) return e(CreateTaskRoute, { ctx: routeContext });
   if (ga(i)) return e(AdminUsersRoute, { ctx: routeContext }); if (i === "/admin/ai-agents") return e(AiAgentsAdminRoute, { ctx: routeContext });
+  const collapsedNavRail = buildCollapsedNavRail(routeContext);
   return a("main", { className: appShellClass, children: [appNavToggle, collapsedNavRail, a("nav", { id: "primary-navigation", className: appNavClass, "aria-lab\
-el": "Primary navigation", "aria-hidden": !navOpen, inert: navOpen ? void 0 : true, children: [a("div", { className: "app-nav__links", children: [sidebarTaskSearch,
-  a("div", { className: "app-nav__primary", role: "group", "aria-label": "Primary task navigation", children: [e("button", { type: "button", className: s.kind ===
-  "list" && !_ && !P && !A && !f && !autonomyMetricsRouteActive && N.view !== "board" ? "" : "button-secondary", "aria-pressed": s.kind === "list" && !_ && !P && !A && !f && !autonomyMetricsRouteActive && N.view !== "board",
-  onClick: () => l("/tasks", we({ view: "list" }, "")), children: "Task workspace" }), e("button", { type: "button", className: s.kind === "list" && !_ && !P &&
-  !A && !f && !autonomyMetricsRouteActive && N.view === "board" ? "" : "button-secondary", "aria-pressed": s.kind === "list" && !_ && !P && !A && !f && !autonomyMetricsRouteActive && N.view === "board", onClick: () => l("/\
-tasks", we({ view: "board" }, "")), children: "Kanban board" }), e("button", { type: "button", className: projectRouteActive ? "" : "button-secondary", "aria-pressed": projectRouteActive, onClick: () => l("/projects"), children: "Projects" }), e("button", { type: "button", className: "app-nav__primary-action", onClick: () => l("/tasks/cr\
-eate"), children: "New task" })] }), a("div", { className: "app-nav__secondary", role: "group", "aria-label": "Secondary workspace navigation", children: [e("bu\
-tton", { type: "button", className: _ ? "" : "button-secondary", onClick: () => l("/overview/pm"), children: "PM overview" }), e("button", { type: "button", className: P ?
-  "" : "button-secondary", onClick: () => l("/overview/governance"), children: "Governance reviews" }), e("button", { type: "button", className: A ? "" : "butto\
-n-secondary", onClick: () => l("/deferred-considerations"), children: "Deferred considerations" }), e("button", { type: "button", className: autonomyMetricsRouteActive ? "" : "button-secondary", onClick: () => l("/metrics/autonomous-delivery"), children: "Autonomy metrics" }), I(h, ["admin"]) ? e("button", { type: "button", className: "\
-button-secondary", onClick: () => l("/admin/users"), children: "User admin" }) : null, I(h, ["admin", "pm"]) ? e("button", { type: "button", className: "button-secondary", onClick: () => l("/admin/ai-agents"), children: "AI agents" }) : null, a("label", { className: "app-nav__role-select", children: [e("span", { children: "\
-Role inboxes" }), a("select", { "aria-label": "Role inboxes", value: f || "", onChange: (t) => {
-    const n = t.target.value;
-    n && l("/inbox/" + n);
-  }, children: [e("option", { value: "", children: "Select inbox" }), $n.map((t) => a("option", { value: t, children: [H(t), " inbox"] }, t))] })] })] })] }), a(
+el": "Primary navigation", "aria-hidden": !navOpen, inert: navOpen ? void 0 : true, children: [e(GroupedAppNav, { ctx: routeContext }), a(
   "div", { className: "app-nav__session", children: [a("span", { children: [h?.sub || "unknown actor", " \xB7 ", h?.tenant_id || "unknown tenant"] }), e("button",
   { type: "button", className: "button-secondary", onClick: Ma, children: "Sign out" })] })] }), V ? e("p", { className: "auth-status auth-status--error", role: "\
-alert", children: V }) : null, a("header", { className: "page-header", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Authenticated \
-browser shell for US-002" }), e("h1", { children: autonomyMetricsRouteActive ? "Autonomous Delivery Metrics" : projectRouteActive ? "Projects" : s.kind === "list" ? _ ? "PM Overview" : P ? "Governance Reviews" : A ? "Deferred Considerations" : f ? `${H(f)}\
- Inbox` : "Task workspace" : s.detail?.task?.title || s.summary.title || "Task detail" }), e("p", { className: "lede", children: autonomyMetricsRouteActive ? "Pilot report for clean autonomous delivery, operator intervention, rework, rollback, and escaped-defect signals." : projectRouteActive ? "Plan and inspect task planning containers without changing task lifecycle ownership." : s.kind === "list" ? _ ? "Read-o\
+alert", children: V }) : null, commandConsoleActive ? e(CommandBar, { ctx: routeContext }) : null, a("header", { className: "page-header", children: [a("div", { children: [e("p", { className: "eyebrow", children: commandConsoleActive ? "Issue #279 Command Center redesign" : "Authenticated browser shell for US-002" }), e("h1", { children: autonomyMetricsRouteActive ? "Autonomous Delivery Metrics" : projectRouteActive ? "Projects" : s.kind === "list" ? _ ? "PM Overview" : P ? "Governance Reviews" : A ? "Deferred Considerations" : f ? `${H(f)}\
+ Inbox` : "Command Center" : s.detail?.task?.title || s.summary.title || "Task detail" }), e("p", { className: "lede", children: autonomyMetricsRouteActive ? "Pilot report for clean autonomous delivery, operator intervention, rework, rollback, and escaped-defect signals." : projectRouteActive ? "Plan and inspect task planning containers without changing task lifecycle ownership." : s.kind === "list" ? _ ? "Read-o\
 nly grouped overview showing routed, unassigned, and attention-needed work from the canonical owner-role mapping." : P ? "Dedicated operational surface for inac\
 tivity and governance review tasks that should stay out of delivery queues." : A ? "PM review queue for non-committed ideas that are explicitly outside the curr\
 ent approved scope." : f ? f === "sre" ? "Read-only monitoring inbox showing tasks routed here because they are in the SRE monitoring stage or explicitly assign\
-ed to SRE-owned work." : `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${H(f)} role.` : "Task workspace show\
-ing Kanban board and list projections over the same lifecycle, with owner, priority, status, and search filters." : "Review blockers, ownership, readiness, and \
+ed to SRE-owned work." : `Read-only inbox surface showing tasks routed here because the current assigned owner maps to the ${H(f)} role.` : "Desktop operations console with grouped queue lanes, command bar controls, and a persistent task inspector." : "Review blockers, ownership, readiness, and \
 audit activity for the selected task." })] })] }), autonomyMetricsRouteActive ? e(AutonomyMetricsRoute, { ctx: routeContext }) : projectRouteActive ? e(ProjectsRoute, { ctx: routeContext }) : s.kind === "list" ? e(TaskWorkspaceRoute, { ctx: routeContext }) : e(TaskDetailRoute, { ctx: routeContext })] });
 }
 export { App };

@@ -164,11 +164,18 @@ function readAuthRuntimeConfig(env = {}, config = runtimeConfig(), location = gl
       env?.AUTH_PRODUCTION_AUTH_STRATEGY ||
       ''
   ).trim().toLowerCase();
-  const vercelEnv = String(firstValue(config, 'vercelEnv', 'VITE_VERCEL_ENV') || env?.VITE_VERCEL_ENV || '').trim().toLowerCase();
+  // Factory deploy profile (operator-hosted). VITE_VERCEL_ENV is ignored/removed from the stack.
+  const deployEnv = String(
+    firstValue(config, 'deployEnv', 'VITE_FACTORY_DEPLOY_ENV', 'VITE_DEPLOY_ENV')
+      || env?.VITE_FACTORY_DEPLOY_ENV
+      || env?.VITE_DEPLOY_ENV
+      || ''
+  ).trim().toLowerCase();
+  const productionLikeDeploy = deployEnv === 'production' || deployEnv === 'preview' || deployEnv === 'staging';
   const productionAuthStrategy =
     configuredStrategy === 'magic-link'
       ? 'registration'
-      : configuredStrategy || (env?.PROD || env?.MODE === 'production' || vercelEnv === 'production' || vercelEnv === 'preview' ? 'registration' : oidcDiscoveryUrl && oidcClientId ? 'oidc' : internalAuthBootstrapEnabled ? 'internal-bootstrap' : '');
+      : configuredStrategy || (env?.PROD || env?.MODE === 'production' || productionLikeDeploy ? 'registration' : oidcDiscoveryUrl && oidcClientId ? 'oidc' : internalAuthBootstrapEnabled ? 'internal-bootstrap' : '');
 
   return {
     productionAuthStrategy,

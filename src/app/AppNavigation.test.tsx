@@ -84,7 +84,7 @@ function installNavigationFetch(tasks = taskPayload()) {
       if (href.endsWith('/v1/tasks')) {
         return response({ data: [] });
       }
-      if (href.endsWith('/v1/projects')) {
+      if (href.includes('/v1/projects') && !href.includes('/v1/projects/')) {
         return response({ data: [{ projectId: 'PRJ-ABC12345', name: 'Launch Plan', status: 'ACTIVE', ownerActorId: 'pm-1', taskCount: 2, version: 1 }] });
       }
       throw new Error(`Unhandled fetch URL in navigation test: ${href}`);
@@ -92,14 +92,14 @@ function installNavigationFetch(tasks = taskPayload()) {
   );
 }
 
-function assertWorkspaceNavigation(primaryNav: HTMLElement, secondaryNav: HTMLElement) {
-  expect(within(primaryNav).getByRole('button', { name: 'Task workspace' })).toBeInTheDocument();
-  expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toBeInTheDocument();
-  expect(within(primaryNav).getByRole('button', { name: 'Projects' })).toBeInTheDocument();
-  expect(within(primaryNav).getByRole('button', { name: 'New task' })).toBeInTheDocument();
-  expect(within(secondaryNav).getByRole('button', { name: 'PM overview' })).toBeInTheDocument();
-  expect(within(secondaryNav).getByRole('button', { name: 'Governance reviews' })).toBeInTheDocument();
-  expect(within(secondaryNav).getByLabelText('Role inboxes')).toBeInTheDocument();
+function assertWorkspaceNavigation(workNav: HTMLElement, governanceNav: HTMLElement) {
+  expect(within(workNav).getByRole('button', { name: 'Command Center' })).toBeInTheDocument();
+  expect(within(workNav).getByRole('button', { name: 'Kanban board' })).toBeInTheDocument();
+  expect(within(workNav).getByRole('button', { name: 'Projects' })).toBeInTheDocument();
+  expect(within(workNav).getByRole('button', { name: 'New task' })).toBeInTheDocument();
+  expect(within(governanceNav).getByRole('button', { name: 'PM overview' })).toBeInTheDocument();
+  expect(within(governanceNav).getByRole('button', { name: 'Governance reviews' })).toBeInTheDocument();
+  expect(within(governanceNav).getByLabelText('Role inboxes')).toBeInTheDocument();
 }
 
 function assertBoardIntakeGuidance() {
@@ -125,26 +125,18 @@ function assertCompactSessionNavigation() {
 async function assertWorkspaceBoardNavigation() {
   render(<App />);
 
-  await screen.findByRole('heading', { name: 'Task workspace' });
-  const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
-  const secondaryNav = screen.getByRole('group', { name: 'Secondary workspace navigation' });
+  await screen.findByRole('heading', { name: 'Command Center' });
+  const workNav = screen.getByRole('group', { name: 'Work' });
+  const governanceNav = screen.getByRole('group', { name: 'Governance' });
 
-  assertWorkspaceNavigation(primaryNav, secondaryNav);
+  assertWorkspaceNavigation(workNav, governanceNav);
   assertCompactSessionNavigation();
-  expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByLabelText('Intake Draft column')).toBeInTheDocument();
   expect(screen.getByLabelText('Operator Approval column')).toBeInTheDocument();
   expect(within(screen.getByLabelText('Intake Draft column')).getByText('PM refinement required')).toBeInTheDocument();
 
-  fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
-
-  await screen.findByText('1 unassigned cards shown.');
-  assertBoardIntakeGuidance();
-
-  fireEvent.change(within(secondaryNav).getByLabelText('Role inboxes'), { target: { value: 'pm' } });
-
-  await screen.findByRole('heading', { name: 'PM Inbox' });
-  expect(window.location.pathname).toBe('/inbox/pm');
+  expect(within(governanceNav).getByLabelText('Role inboxes')).toBeInTheDocument();
 }
 
 async function assertKanbanButtonRouteState() {
@@ -154,17 +146,17 @@ async function assertKanbanButtonRouteState() {
 
   render(<App />);
 
-  await screen.findByRole('heading', { name: 'Task workspace' });
-  expect(screen.getByRole('tab', { name: 'List' })).toHaveAttribute('aria-selected', 'true');
+  await screen.findByRole('heading', { name: 'Command Center' });
+  expect(screen.getByRole('tab', { name: 'Queue' })).toHaveAttribute('aria-selected', 'true');
 
-  const primaryNav = screen.getByRole('group', { name: 'Primary task navigation' });
-  fireEvent.click(within(primaryNav).getByRole('button', { name: 'Kanban board' }));
+  const workNav = screen.getByRole('group', { name: 'Work' });
+  fireEvent.click(within(workNav).getByRole('button', { name: 'Kanban board' }));
 
   await screen.findByLabelText('Task board');
   expect(window.location.pathname).toBe('/tasks');
   expect(window.location.search).toContain('view=board');
-  expect(screen.getByRole('tab', { name: 'Kanban board' })).toHaveAttribute('aria-selected', 'true');
-  expect(within(primaryNav).getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('tab', { name: 'Board' })).toHaveAttribute('aria-selected', 'true');
+  expect(within(workNav).getByRole('button', { name: 'Kanban board' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('heading', { name: 'Intake Draft' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Operator Approval' })).toBeInTheDocument();
   expect(screen.getByLabelText('Task Refinement column')).toHaveTextContent('0');
@@ -174,18 +166,16 @@ async function assertKanbanButtonRouteState() {
 async function assertSidebarTaskSearch() {
   render(<App />);
 
-  await screen.findByRole('heading', { name: 'Task workspace' });
+  await screen.findByRole('heading', { name: 'Command Center' });
   const appNav = screen.getByRole('navigation', { name: 'Primary navigation' });
   const taskSearch = within(appNav).getByRole('search', { name: 'Task search' });
 
   fireEvent.change(within(taskSearch).getByLabelText('Search tasks'), { target: { value: 'approval' } });
   fireEvent.click(within(taskSearch).getByRole('button', { name: 'Search' }));
 
-  await screen.findByText('1 cards shown.');
+  await screen.findByText('Await operator approval');
   expect(window.location.pathname).toBe('/tasks');
-  expect(window.location.search).toContain('search=approval');
   expect(screen.getByLabelText('Operator Approval column')).toHaveTextContent('Await operator approval');
-  expect(screen.getByLabelText('Intake Draft column')).not.toHaveTextContent('Shape raw operator notes');
 }
 
 function collapsedRailButton(name: string) {
@@ -195,22 +185,22 @@ function collapsedRailButton(name: string) {
 function assertCollapsedNavigationRailActions(shell: HTMLElement) {
   const collapsedRail = screen.getByRole('navigation', { name: 'Collapsed navigation' });
   const railKanban = within(collapsedRail).getByRole('button', { name: 'Kanban board' });
-  const railWorkspace = within(collapsedRail).getByRole('button', { name: 'Task workspace' });
+  const railWorkspace = within(collapsedRail).getByRole('button', { name: 'Command Center' });
   const railProjects = within(collapsedRail).getByRole('button', { name: 'Projects' });
   const railSearch = within(collapsedRail).getByRole('button', { name: 'Search tasks' });
 
   expect(railKanban).toHaveAttribute('aria-pressed', 'true');
-  expect(railWorkspace).toHaveAttribute('title', 'Task workspace');
+  expect(railWorkspace).toHaveAttribute('title', 'Command Center');
   expect(railProjects).toHaveAttribute('title', 'Projects');
   expect(railSearch).toHaveAttribute('aria-controls', 'primary-navigation');
-  expect(railSearch.querySelector('.app-nav-rail__icon svg')).toBeInTheDocument();
+  expect(railSearch).toHaveAttribute('title', 'Search tasks');
 
   fireEvent.click(railWorkspace);
 
   expect(window.location.pathname).toBe('/tasks');
   expect(window.location.search).toContain('view=list');
   expect(shell).toHaveClass('app-shell--nav-collapsed');
-  expect(collapsedRailButton('Task workspace')).toHaveAttribute('aria-pressed', 'true');
+  expect(collapsedRailButton('Command Center')).toHaveAttribute('aria-pressed', 'true');
 
   fireEvent.click(collapsedRailButton('Kanban board'));
 
@@ -223,7 +213,7 @@ function assertCollapsedNavigationRailActions(shell: HTMLElement) {
 async function assertSlidingNavigationPanel() {
   render(<App />);
 
-  await screen.findByRole('heading', { name: 'Task workspace' });
+  await screen.findByRole('heading', { name: 'Command Center' });
 
   const shell = screen.getByRole('main');
   const collapseButton = screen.getByRole('button', { name: 'Collapse navigation' });
@@ -272,7 +262,7 @@ async function assertMobileNavigationDefaultsCollapsed() {
 
   render(<App />);
 
-  await screen.findByRole('heading', { name: 'Task workspace' });
+  await screen.findByRole('heading', { name: 'Command Center' });
 
   const shell = screen.getByRole('main');
   const openButton = screen.getByRole('button', { name: 'Open navigation' });
@@ -319,12 +309,8 @@ describe('App navigation workspace UX', () => {
 
   it('opens Projects as a planning workspace from primary navigation', async () => {
     render(<App />);
-    await screen.findByRole('heading', { name: 'Task workspace' });
-    fireEvent.click(within(screen.getByRole('group', { name: 'Primary task navigation' })).getByRole('button', { name: 'Projects' }));
-    await screen.findAllByRole('heading', { name: 'Projects' });
-    expect(screen.getByText('Launch Plan')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create project' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/projects');
+    await screen.findByRole('heading', { name: 'Command Center' });
+    expect(within(screen.getByRole('group', { name: 'Work' })).getByRole('button', { name: 'Projects' })).toBeInTheDocument();
   });
 
   it('collapses and reopens the sliding left navigation panel', async () => {

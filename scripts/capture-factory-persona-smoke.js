@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
-  submitFactoryRequirements,
+  submitFactoryRequirementsForQueue,
   runFactoryOrchestratorTick,
   resolveDeliveryStage,
   loadFactoryQueue,
@@ -38,56 +38,95 @@ function configureFactoryEnv() {
   process.env.FORGEADAPTER_SERVICE_TOKEN = process.env.FORGEADAPTER_SERVICE_TOKEN || 'local-forgeadapter-token';
 }
 
-async function main() {
+function resolveRunConfig() {
   const scratchDir = resolveScratchDir();
-  const queuePath = path.join(scratchDir, `factory-persona-queue-${Date.now().toString(36)}.json`);
-  const deliveryDir = path.join(scratchDir, 'factory-delivery');
-  const baseUrl = readArg('--base-url', process.env.FACTORY_BASE_URL || 'http://127.0.0.1:13000');
-  const maxTicks = Number(readArg('--max-ticks', '6'));
-  const tier = readArg('--tier', 'Standard');
+  return {
+    scratchDir,
+    queuePath: path.join(scratchDir, `factory-persona-queue-${Date.now().toString(36)}.json`),
+    deliveryDir: path.join(scratchDir, 'factory-delivery'),
+    baseUrl: readArg('--base-url', process.env.FACTORY_BASE_URL || 'http://127.0.0.1:13000'),
+    maxTicks: Number(readArg('--max-ticks', '6')),
+    tier: readArg('--tier', 'Standard'),
+    queueBackend: readArg('--queue-backend', process.env.FACTORY_QUEUE_BACKEND || 'postgres'),
+    allowFileQueue: process.argv.includes('--allow-file-queue'),
+  };
+}
 
-  configureFactoryEnv();
-  fs.mkdirSync(scratchDir, { recursive: true });
-  fs.writeFileSync(path.join(scratchDir, 'factory-iteration.log'), '');
-
+async function submitPersonaRequirement(config) {
   const captureSuffix = new Date().toISOString().replace(/[:.]/g, '-');
-  const submit = submitFactoryRequirements([
+  return submitFactoryRequirementsForQueue([
     {
       title: readArg('--title', `Multi-persona SDLC test ${captureSuffix}`),
       requirements: readArg(
         '--requirements',
         'Implement a minimal feature exercising PM intake, architect handoff, jr/sr/principal dispatch, QA, SRE verification',
       ),
-      templateTier: tier,
+      templateTier: config.tier,
     },
-  ], {
-    baseUrl,
-    queuePath,
-    deliveryDir,
-  });
+  ], config);
+}
 
-  appendLog(scratchDir, JSON.stringify({ step: 'submit', ...submit, at: new Date().toISOString() }, null, 2));
+function updateLastItemFromTick(config, lastItem, outcome) {
+  if (config.queueBackend === 'file') {
+    const queue = loadFactoryQueue(config.queuePath);
+    return queue.items.find((entry) => entry.id === lastItem.id) || lastItem;
+  }
+  const result = outcome.results.find((entry) => entry.id === lastItem.id) || null;
+  return {
+    ...lastItem,
+    stage: result?.stage || lastItem.stage,
+    taskId: result?.taskId || lastItem.taskId,
+    lastError: result?.error || lastItem.lastError,
+  };
+}
+
+function writeSuccess(config, lastItem, stage, tick, progression, personaCheck) {
+  const evidenceCopy = path.join(config.scratchDir, 'factory-evidence.json');
+  fs.copyFileSync(path.resolve(process.cwd(), lastItem.evidencePath), evidenceCopy);
+  appendLog(config.scratchDir, `=== factory persona progression summary ===`);
+  appendLog(config.scratchDir, JSON.stringify(progression, null, 2));
+  process.stdout.write(`${JSON.stringify({
+    ok: true,
+    scratchDir: config.scratchDir,
+    queuePath: config.queuePath,
+    queueBackend: config.queueBackend,
+    evidencePath: evidenceCopy,
+    taskId: lastItem.taskId,
+    stage,
+    ticks: tick,
+    personaProgression: progression,
+    personaCheck,
+  }, null, 2)}\n`);
+}
+
+async function main() {
+  configureFactoryEnv();
+  const config = resolveRunConfig();
+  fs.mkdirSync(config.scratchDir, { recursive: true });
+  fs.writeFileSync(path.join(config.scratchDir, 'factory-iteration.log'), '');
+
+  const submit = await submitPersonaRequirement(config);
+  appendLog(config.scratchDir, JSON.stringify({ step: 'submit', ...submit, at: new Date().toISOString() }, null, 2));
 
   let lastItem = submit.created[0];
   let tick = 0;
 
-  while (tick < maxTicks) {
+  while (tick < config.maxTicks) {
     tick += 1;
-    appendLog(scratchDir, `=== orchestrator tick ${tick} ===`);
-    const outcome = await runFactoryOrchestratorTick({ baseUrl, queuePath, deliveryDir });
-    appendLog(scratchDir, JSON.stringify({ ...outcome, at: new Date().toISOString() }, null, 2));
+    appendLog(config.scratchDir, `=== orchestrator tick ${tick} ===`);
+    const outcome = await runFactoryOrchestratorTick(config);
+    appendLog(config.scratchDir, JSON.stringify({ ...outcome, at: new Date().toISOString() }, null, 2));
 
-    const queue = loadFactoryQueue(queuePath);
-    lastItem = queue.items.find((entry) => entry.id === lastItem.id) || lastItem;
+    lastItem = updateLastItemFromTick(config, lastItem, outcome);
     const evidence = lastItem.evidencePath ? loadPilotEvidence(lastItem.evidencePath) : null;
     const stage = resolveDeliveryStage(lastItem, evidence);
     const progression = summarizeFactoryPersonaProgression(evidence || {});
     const personaCheck = assertRequiredFactoryPersonas(progression);
 
-    appendLog(scratchDir, `stage=${stage} taskId=${lastItem.taskId || 'null'} action=${lastItem.lastAction || 'null'}`);
-    appendLog(scratchDir, `evidence.status=${evidence?.status || 'null'}`);
-    appendLog(scratchDir, `personaProgression ${JSON.stringify(progression, null, 2)}`);
-    appendLog(scratchDir, `personaCheck ${JSON.stringify(personaCheck, null, 2)}`);
+    appendLog(config.scratchDir, `stage=${stage} taskId=${lastItem.taskId || 'null'} action=${lastItem.lastAction || 'null'}`);
+    appendLog(config.scratchDir, `evidence.status=${evidence?.status || 'null'}`);
+    appendLog(config.scratchDir, `personaProgression ${JSON.stringify(progression, null, 2)}`);
+    appendLog(config.scratchDir, `personaCheck ${JSON.stringify(personaCheck, null, 2)}`);
 
     if (lastItem.stage === 'failed' || outcome.results.some((entry) => entry.error)) {
       throw new Error(lastItem.lastError || outcome.results.find((entry) => entry.error)?.error || 'factory tick failed');
@@ -96,26 +135,12 @@ async function main() {
       if (!personaCheck.ok) {
         throw new Error(`Missing required personas: ${personaCheck.missing.join(', ')}`);
       }
-      const evidenceCopy = path.join(scratchDir, 'factory-evidence.json');
-      fs.copyFileSync(path.resolve(process.cwd(), lastItem.evidencePath), evidenceCopy);
-      appendLog(scratchDir, `=== factory persona progression summary ===`);
-      appendLog(scratchDir, JSON.stringify(progression, null, 2));
-      process.stdout.write(`${JSON.stringify({
-        ok: true,
-        scratchDir,
-        queuePath,
-        evidencePath: evidenceCopy,
-        taskId: lastItem.taskId,
-        stage,
-        ticks: tick,
-        personaProgression: progression,
-        personaCheck,
-      }, null, 2)}\n`);
+      writeSuccess(config, lastItem, stage, tick, progression, personaCheck);
       return;
     }
   }
 
-  throw new Error(`Factory orchestrator did not complete within ${maxTicks} ticks (last stage=${lastItem.stage})`);
+  throw new Error(`Factory orchestrator did not complete within ${config.maxTicks} ticks (last stage=${lastItem.stage})`);
 }
 
 main().catch((error) => {

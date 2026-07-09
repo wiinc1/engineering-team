@@ -1,8 +1,8 @@
 flowchart LR
-  Owner[Production configuration owner] --> Vercel[Vercel production env and deployment]
+  Owner[Production configuration owner] --> Host[Operator-hosted production env and deployment]
   Owner --> Email[Verification and reset delivery evidence]
   Owner --> IdP[OIDC provider evidence when selected]
-  Vercel --> Browser[Browser /sign-in]
+  Host --> Browser[Browser /sign-in]
   Browser --> AuthAPI[Auth API routes]
   AuthAPI --> DB[(Postgres auth/session data)]
   AuthAPI --> Evidence[observability/registration-auth-production-smoke.json]

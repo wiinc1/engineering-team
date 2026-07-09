@@ -1,5 +1,13 @@
 import { Fragment as q, jsx as e, jsxs as a } from "react/jsx-runtime";
+import c from "react";
 import { LiveTaskFreshnessIndicator, useLiveTaskFreshnessPolling } from "../live-task-freshness";
+import {
+  countActiveCommandCenterFilters,
+  formatTaskFreshnessLabel,
+} from "../command-center-queue.mjs";
+import { CommandCenterGroupedQueue } from "./CommandCenterQueue.jsx";
+
+let commandCenterQueueSelectionCleared = false;
 
 function TaskWorkspaceRoute({ ctx }) {
   const {
@@ -11,7 +19,27 @@ function TaskWorkspaceRoute({ ctx }) {
     Ss, u, Un, Va, vi, we, wt, x, xa,
     xt, ye, Yt, zs } = ctx;
   const liveFreshness = useLiveTaskFreshnessPolling({ session: u, defaultBaseUrl: At, scope: { kind: "list", pathname: ctx.i || "" }, onUpdates: k });
-  return a("section", { className: "task-list-panel", "aria-label": _ ? "PM overview view" : P ? "\
+  const isCommandCenter = !f && !_ && !P && !A, activeFilterCount = isCommandCenter ? countActiveCommandCenterFilters(N) : 0, selectedTaskId = isCommandCenter ? new URLSearchParams(o).get("selectedTask") || "" : "", selectedTask = selectedTaskId ? Ae.find((t) => t.task_id === selectedTaskId) || null : null, buildQueueTaskHref = (t) => {
+    const n = new URLSearchParams(o);
+    n.set("selectedTask", t);
+    return `/tasks?${n.toString()}`;
+  }, updateQueueSelection = (t) => {
+    const n = new URLSearchParams(o);
+    if (t) {
+      n.set("selectedTask", t);
+      commandCenterQueueSelectionCleared = false;
+    } else {
+      n.delete("selectedTask");
+      commandCenterQueueSelectionCleared = true;
+    }
+    l("/tasks", n.toString() ? `?${n.toString()}` : "");
+  }, autoSelectedRef = c.useRef(false);
+  c.useEffect(() => {
+    if (!isCommandCenter || selectedTaskId || x.kind !== "ready" || !Ae.length || autoSelectedRef.current || commandCenterQueueSelectionCleared) return;
+    autoSelectedRef.current = true;
+    updateQueueSelection(Ae[0].task_id);
+  }, [isCommandCenter, selectedTaskId, x.kind, Ae[0]?.task_id]);
+  return a("section", { className: `task-list-panel${isCommandCenter ? " task-list-panel--command-center" : selectedTask ? " task-list-panel--inspector-open" : ""}`, "aria-label": _ ? "PM overview view" : P ? "\
 Governance reviews view" : A ? "Deferred Considerations review queue" : f ? `${H(f)} inbox view` : "Task workspace view", children: [e("div", { className: "task\
 -list-toolbar", children: _ ? a("div", { className: "role-inbox-toolbar", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Cross-role \
 overview" }), e("h2", { children: "PM grouped list overview" }), e("p", { className: "role-inbox-toolbar__cue", children: "Tasks are grouped into routing bucket\
@@ -39,7 +67,7 @@ only when governed close review or escalation handling is explicitly waiting on 
 gned owner resolves to the ${H(f)} canonical role. Unassigned tasks appear in no role inbox.` })] }), a("div", { className: "task-list-toolbar__actions", children: [
   e("button", { type: "button", className: "button-secondary", onClick: () => l("/tasks"), children: "Open task workspace" }), e("button", { type: "button", onClick: () => {
     k();
-  }, children: "Refresh" })] })] }) : a(q, { children: [a("label", { children: ["Owner filter", a("select", { "aria-label": "Owner filter", value: N.owner, onChange: (t) => Ss(
+  }, children: "Refresh" })] })] }) : a(q, { children: [a("div", { className: "command-center-toolbar", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Command Center" }), e("h2", { children: "Operational queue" }), e("p", { className: "command-center-toolbar__cue", children: "Work is grouped by urgency so operators can scan needs-attention, blocked, ready, and monitoring lanes without leaving queue context." })] }), a("div", { className: "command-center-toolbar__badges", children: [e("div", { className: "command-center-toolbar__badge", children: "Inspector active" }), activeFilterCount ? e("div", { className: "command-center-toolbar__badge command-center-toolbar__badge--filters", children: `${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"}` }) : null] })] }), a("label", { children: ["Owner filter", a("select", { "aria-label": "Owner filter", value: N.owner, onChange: (t) => Ss(
   t.target.value), children: [e("option", { value: "", children: "All owners" }), e("option", { value: Fi, children: "Unassigned" }), En(Ne).map((t) => e("optio\
 n", { value: t.id, children: t.label }, t.id))] })] }), a("label", { children: ["Project filter", a("select", { "aria-label": "Project filter", value: N.project || "", onChange: (t) => wt({ project: t.target.value }), children: [e("option", { value: "", children: "All projects" }), projectOptions.map((t) => e("option", { value: t.projectId, children: t.name }, t.projectId))] })] }), a("label", { children: ["Priority filter", a("select", { "aria-label": "Priority filter", value: N.priority,
   onChange: (t) => wt({ priority: t.target.value }), children: [e("option", { value: "", children: "All priorities" }), gi.map((t) => e("option", { value: t, children: t },
@@ -48,8 +76,8 @@ n", { value: t.id, children: t.label }, t.id))] })] }), a("label", { children: [
 arch tasks", e("input", { "aria-label": "Search tasks", value: N.searchTerm, onChange: (t) => wt({ searchTerm: t.target.value }), placeholder: "Task ID or title" })] }),
   a("div", { className: "task-list-toolbar__actions", children: [a("div", { className: "view-toggle", role: "tablist", "aria-label": "Task workspace view", children: [
   e("button", { type: "button", role: "tab", "aria-selected": N.view === "list", className: N.view === "list" ? "" : "button-secondary", onClick: () => fn("list"),
-  children: "List" }), e("button", { type: "button", role: "tab", "aria-selected": N.view === "board", className: N.view === "board" ? "" : "button-secondary", onClick: () => fn(
-  "board"), children: "Kanban board" })] }), e("button", { type: "button", className: "button-secondary", onClick: () => wt({ owner: "", priority: "", status: "",
+  children: "Queue" }), e("button", { type: "button", role: "tab", "aria-selected": N.view === "board", className: N.view === "board" ? "" : "button-secondary", onClick: () => fn(
+  "board"), children: "Board" }), e("button", { type: "button", role: "tab", "aria-selected": false, className: "button-secondary", onClick: () => l("/projects"), children: "Projects" })] }), e("button", { type: "button", className: "button-secondary", onClick: () => wt({ owner: "", priority: "", status: "",
   searchTerm: "", project: "" }), disabled: !La, children: "Clear all filters" }), e("button", { type: "button", onClick: () => {
     k();
   }, children: "Refresh" })] })] }) }), e(LiveTaskFreshnessIndicator, { state: liveFreshness, onManualRefresh: k }), e("p", { className: "task-list-results", role: "status", "aria-live": "polite", children: bi }), _ && x.kind === "loadin\
@@ -158,18 +186,41 @@ Priority" }), e("th", { scope: "col", children: "Owner" })] }) }), e("tbody", { 
 task-list-meta", children: e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }) }) : null] }), e("td", { children: t.current_stage ||
   "\u2014" }), e("td", { children: t.priority || "\u2014" }), a("td", { children: [e("span", { className: `owner-badge owner-badge--${t.ownerPresentation.tone}`,
   children: t.ownerPresentation.label }), e("div", { className: "task-list-meta", children: "Governance-only owner metadata" })] })] }, t.task_id)) })] }) }) : null,
-  x.kind === "ready" && !f && !_ && !P && !A && Ae.length && N.view === "list" ? e("div", { className: "task-list-table-wrap", children: a("table", { className: "\
-task-list-table", children: [e("thead", { children: a("tr", { children: [e("th", { scope: "col", children: "Task" }), e("th", { scope: "col", children: "Stage" }),
-  e("th", { scope: "col", children: "Priority" }), e("th", { scope: "col", children: "Owner" })] }) }), e("tbody", { children: Ae.map((t) => {
-    const n = Li(t, j), r = Mn(t, N.searchTerm), d = Qa(t, h, j);
-    return a("tr", { className: r ? "task-list-row--match" : "", children: [a("td", { children: [e("a", { href: `/tasks/${encodeURIComponent(t.task_id)}`, onClick: (m) => {
-      m.preventDefault(), l(`/tasks/${encodeURIComponent(t.task_id)}`);
-    }, children: e("strong", { children: t.title || t.task_id }) }), e("div", { className: "task-list-meta", children: t.task_id }), Pt(t) ? a("div", { className: "\
-task-list-meta", children: [e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }), " ", t.next_required_action || "PM refine\
-ment required"] }) : null, t.project ? e("div", { className: "task-list-meta", children: e("a", { href: t.project.href || `/projects/${encodeURIComponent(t.project.projectId)}`, onClick: (m) => { m.preventDefault(), l(`/projects/${encodeURIComponent(t.project.projectId)}`); }, children: t.project.name }) }) : null, d ? e("div", { className: "task-list-meta", children: e("span", { className: "routing-badge", children: "Assigned to me" }) }) : null] }),
-    e("td", { children: t.current_stage || "\u2014" }), e("td", { children: t.priority || "\u2014" }), a("td", { children: [e("span", { className: `owner-badge \
-owner-badge--${n.tone}`, children: n.label }), e("div", { className: "task-list-meta", children: "Read-only owner metadata" })] })] }, t.task_id);
-  }) })] }) }) : null, x.kind === "ready" && !f && !_ && !P && !A && N.view === "board" ? a("div", { className: "task-board", "aria-label": "Task board", children: [
+  isCommandCenter ? a("div", {
+    role: "region",
+    className: `command-center-inspector${selectedTask ? "" : " command-center-inspector--empty"}`,
+    "aria-label": "Selected task inspector",
+    children: selectedTask ? [
+      a("div", { className: "command-center-inspector__header", children: [
+        a("div", { children: [e("p", { className: "eyebrow", children: "Inspector" }), e("h2", { children: selectedTask.title || selectedTask.task_id })] }),
+        e("button", { type: "button", className: "button-secondary", onClick: () => updateQueueSelection(""), children: "Close" }),
+      ] }),
+      a("div", { className: "command-center-inspector__chips", children: [
+        e("span", { className: "command-center-inspector__chip", children: selectedTask.current_stage || "Unknown stage" }),
+        e("span", { className: "command-center-inspector__chip command-center-inspector__chip--priority", children: selectedTask.priority || "Unprioritized" }),
+        selectedTask.project?.name ? e("span", { className: "command-center-inspector__chip", children: selectedTask.project.name }) : null,
+      ] }),
+      a("dl", { className: "command-center-inspector__facts", children: [
+        a("div", { children: [e("dt", { children: "Task" }), e("dd", { children: selectedTask.task_id })] }),
+        a("div", { children: [e("dt", { children: "Owner" }), e("dd", { children: e("span", { className: `owner-badge owner-badge--${Li(selectedTask, j).tone}`, children: Li(selectedTask, j).label }) })] }),
+        a("div", { children: [e("dt", { children: "Last updated" }), e("dd", { children: formatTaskFreshnessLabel(selectedTask) })] }),
+      ] }),
+      selectedTask.next_required_action ? a("div", { className: "command-center-inspector__note", children: [e("span", { children: "Next action" }), e("p", { children: selectedTask.next_required_action })] }) : null,
+      a("div", { className: "command-center-inspector__note", children: [e("span", { children: "Evidence" }), e("p", { children: selectedTask.next_required_action ? "Operator action and queue context are recorded on the task detail surface." : "No explicit evidence notes on this queue projection yet." })] }),
+      a("div", { className: "command-center-inspector__note", children: [e("span", { children: "Activity" }), e("p", { children: `Latest freshness signal: ${formatTaskFreshnessLabel(selectedTask)}.` })] }),
+      a("div", { className: "command-center-inspector__actions", children: [
+        e("button", { type: "button", onClick: () => l("/tasks/create"), children: "New task" }),
+        e("button", { type: "button", onClick: () => l(`/tasks/${encodeURIComponent(selectedTask.task_id)}`), children: "Open task" }),
+        e("button", { type: "button", className: "button-secondary", onClick: () => l(`/tasks/${encodeURIComponent(selectedTask.task_id)}`), children: "Assign owner" }),
+        e("button", { type: "button", className: "button-secondary", onClick: () => l(`/tasks/${encodeURIComponent(selectedTask.task_id)}`), children: "Add comment" }),
+        e("button", { type: "button", className: "button-secondary", onClick: () => updateQueueSelection(""), children: "Return to queue" }),
+      ] }),
+    ] : [
+      a("div", { className: "command-center-inspector__header", children: [a("div", { children: [e("p", { className: "eyebrow", children: "Inspector" }), e("h2", { children: "Select a task" })] })] }),
+      e("p", { className: "command-center-inspector__empty-copy", children: "Choose a task from the queue to preview stage, owner, and next action here while keeping queue context visible." }),
+    ],
+  }) : null,
+  x.kind === "ready" && !f && !_ && !P && !A && N.view === "list" ? e(CommandCenterGroupedQueue, { ctx, tasks: Ae, selectedTaskId, buildQueueTaskHref, updateQueueSelection }) : null, x.kind === "ready" && !f && !_ && !P && !A && N.view === "board" ? a("div", { className: "task-board command-center-queue", "aria-label": "Task board", children: [
   J.kind !== "idle" ? e("p", { className: `assignment-status assignment-status--${J.kind}`, role: J.kind === "error" ? "alert" : "status", children: J.message }) :
   null, e("div", { className: "task-board__scroll", children: e("div", { className: "task-board__columns", children: hi.map((t) => a("section", { className: `ta\
 sk-board__column${Yt.overStage === t.stage ? " task-board__column--drop-target" : ""}`, "aria-label": `${t.stageLabel || t.stage} column`, onDragOver: (n) => {
@@ -184,11 +235,11 @@ sk-board__column${Yt.overStage === t.stage ? " task-board__column--drop-target" 
 task-board__stage-meta", children: t.stageDescription || t.stage })] }), e("span", { children: t.items.length })] }), e("div", { className: "task-board__column-\
 body", children: t.items.length ? t.items.map((n) => {
     const r = Mn(n, N.searchTerm), d = Qa(n, h, j);
-    return a("article", { className: `task-board__card${r ? " task-board__card--match" : ""}${Yt.taskId === n.task_id ? " task-board__card--dragging" : ""}`, draggable: it(
+    return a("article", { className: `task-board__card${r ? " task-board__card--match" : ""}${Yt.taskId === n.task_id ? " task-board__card--dragging" : ""}${selectedTaskId === n.task_id ? " task-board__card--selected" : ""}`, draggable: it(
     n.current_stage), onDragStart: (m) => {
       m.dataTransfer.setData("text/task-id", n.task_id), m.dataTransfer.effectAllowed = "move", ft({ taskId: n.task_id, overStage: "" });
-    }, onDragEnd: () => ft({ taskId: null, overStage: "" }), children: [e("a", { href: `/tasks/${encodeURIComponent(n.task_id)}`, onClick: (m) => {
-      m.preventDefault(), l(`/tasks/${encodeURIComponent(n.task_id)}`);
+    }, onDragEnd: () => ft({ taskId: null, overStage: "" }), children: [e("a", { href: buildQueueTaskHref(n.task_id), onClick: (m) => {
+      m.preventDefault(), updateQueueSelection(n.task_id);
     }, children: e("strong", { children: n.title || n.task_id }) }), e("div", { className: "task-list-meta", children: n.task_id }), n.project ? e("div", { className: "task-list-meta", children: e("a", { href: n.project.href || `/projects/${encodeURIComponent(n.project.projectId)}`, onClick: (m) => { m.preventDefault(), l(`/projects/${encodeURIComponent(n.project.projectId)}`); }, children: n.project.name }) }) : null, Pt(n) ? a("div", { className: "\
 task-list-meta", children: [e("span", { className: "routing-badge routing-badge--intake", children: "Intake Draft" }), " ", n.next_required_action || "PM refine\
 ment required"] }) : null, t.stage === "VERIFY" || t.stage === "SRE_MONITORING" ? e("div", { className: "task-list-meta", children: e("span", { className: "rout\

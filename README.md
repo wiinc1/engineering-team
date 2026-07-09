@@ -9,6 +9,15 @@ The README summarizes the main developer entry points. Runtime boundaries,
 state ownership, release evidence, rollback posture, and monitoring operations
 belong in the canonical architecture and runbook docs.
 
+
+
+## Dual remotes
+
+- **Primary:** GitLab `origin` (`192.168.1.116`)
+- **Backup:** GitHub `github` (`wiinc1/engineering-team`)
+- Operations: `docs/runbooks/dual-remote-gitlab-primary.md`
+- Status: `npm run remotes:sync-status`
+
 ## Standards Governance
 
 This repo now includes a standards enforcement baseline for task planning and change review:
@@ -92,7 +101,7 @@ This repo now includes a materially more production-shaped `SF-017` slice:
 - `docs/api/execution-contract-refinement-openapi.yml` — versioned Execution Contract refinement API surface
 
 ### Backend model
-- **Supabase Postgres**: canonical production/staging backend.
+- **Operator-hosted Postgres**: canonical production/staging backend for the coordinated factory stack (not cloud Supabase).
 - **Dockerized Postgres**: canonical local development/testing backend. The checked-in compose stack is disposable-first so local state is easy to reset.
 - **File backend**: fallback-only local dev/test harness for isolated runs, not the standard local workflow.
 - **Projected history reads**: Postgres history queries now read from the `audit_task_history` projection instead of raw source-of-truth events.
@@ -119,7 +128,7 @@ This repo now includes a materially more production-shaped `SF-017` slice:
 - `npm run test:chaos`
 - `npm run test:integration:docker`
 - `npm run audit:migrate` (with `DATABASE_URL` pointed at your target Postgres)
-- For managed Postgres providers like Supabase, prefer verified TLS. If your environment must temporarily accept a self-signed chain, set `PGSSL_ACCEPT_SELF_SIGNED=1` explicitly instead of relying on `sslmode=no-verify` in the URL.
+- For operator-hosted Postgres with TLS, prefer verified TLS. If your environment must temporarily accept a self-signed chain, set `PGSSL_ACCEPT_SELF_SIGNED=1` explicitly instead of relying on `sslmode=no-verify` in the URL. Cloud Supabase is not part of the factory stack.
 - `npm run audit:rebuild -- /path/to/repo-root`
 - `npm run audit:project -- /path/to/repo-root [batchSize]`
 - `npm run audit:outbox -- /path/to/repo-root [batchSize]`
@@ -189,23 +198,20 @@ Point the browser app at the API:
 - set `VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED=false` for OIDC production browser builds so the internal fallback form is hidden
 - if no production IdP exists, use registration auth: set `AUTH_PRODUCTION_AUTH_STRATEGY=registration`, expose `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration`, configure email/session/registration variables, and keep both internal bootstrap flags disabled
 
-### Vercel deployment
-- This repo can now run on a single Vercel project with the SPA plus serverless API routes.
-- The Vercel API adapter lives under `api/` and wraps `lib/audit/http.js`.
-- Vercel also includes an explicit `api/v1/[...route].js` entry so `/api/v1/*` versioned task-platform routes resolve consistently in production.
-- Vercel additionally exposes explicit `api/v1/tasks/[taskId].js`, `api/v1/tasks/[taskId]/[action].js`, `api/v1/task-workflow-proxy.js`, and `api/v1/projects/[...route].js` handlers so the versioned task-platform, nested workflow, and Projects routes do not depend on nested catch-all matching quirks.
-- To avoid route collisions between SPA paths like `/tasks/...` and API paths like `/tasks/...`, set `VITE_TASK_API_BASE_URL=/backend` in Vercel.
-- `vercel.json` rewrites `/backend/*` to the Vercel API functions and falls back non-API browser routes to `index.html`.
-- Required backend env vars in Vercel: `DATABASE_URL` plus either OIDC verifier vars (`AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`) or registration vars (`AUTH_PRODUCTION_AUTH_STRATEGY=registration`, `AUTH_SESSION_SECRET`, `AUTH_EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `AUTH_PUBLIC_APP_URL`, `AUTH_REGISTRATION_MODE`, `AUTH_REGISTRATION_DEFAULT_TENANT`, `AUTH_SESSION_TTL_HOURS=8`, `AUTH_EMAIL_VERIFICATION_TTL_HOURS=24`, `AUTH_PASSWORD_RESET_TTL_MINUTES=30`, and either `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration` or documented runtime-config evidence via `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY=registration`).
+### Coordinated factory stack deployment
+- The factory runtime of record is the **operator-hosted coordinated stack** (`npm run dev:golden-path:up` for local proof): Docker Postgres, audit API, audit workers, UI, forgeadapter, and OpenClaw.
+- **Vercel and cloud Supabase are not part of the factory tech stack** and must not be used for factory green claims.
+- Node HTTP/API adapters live under `api/` and wrap shared handlers in `lib/audit/` / task-platform for the operator-hosted API process.
+- Prefer same-origin browser API paths (empty `VITE_TASK_API_BASE_URL`) with a reverse proxy mapping `/auth/*` and `/backend/*` (or `/api/*`) to the audit API.
+- Required backend env vars: `DATABASE_URL` (operator-hosted Postgres) plus either OIDC verifier vars (`AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`, `AUTH_JWT_JWKS_URL`) or registration vars (`AUTH_PRODUCTION_AUTH_STRATEGY=registration`, `AUTH_SESSION_SECRET`, `AUTH_EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `AUTH_EMAIL_FROM`, `AUTH_PUBLIC_APP_URL`, `AUTH_REGISTRATION_MODE`, `AUTH_REGISTRATION_DEFAULT_TENANT`, `AUTH_SESSION_TTL_HOURS=8`, `AUTH_EMAIL_VERIFICATION_TTL_HOURS=24`, `AUTH_PASSWORD_RESET_TTL_MINUTES=30`, and either `VITE_AUTH_PRODUCTION_AUTH_STRATEGY=registration` or documented runtime-config evidence via `AUTH_BROWSER_RUNTIME_PRODUCTION_AUTH_STRATEGY=registration`).
 - Keep `AUTH_PRODUCTION_AUTH_STRATEGY=registration` for the no-IdP production path. Use `AUTH_PRODUCTION_AUTH_STRATEGY=oidc` only when a provider exists; reserve `internal-bootstrap` for explicitly approved emergency or local/internal fallback use.
 - `npm run build` runs `npm run auth:deploy:bootstrap` first. When `DATABASE_URL` is present, that bootstrap applies database migrations under a Postgres advisory lock. When `AUTH_ADMIN_EMAIL` is also present, it seeds or updates the admin account; when `AUTH_ADMIN_INITIAL_PASSWORD` is present with `AUTH_ADMIN_SEED_CREDENTIAL=true`, it also creates/resets the optional seeded password credential. Missing optional admin seed values are logged without blocking migrations.
 - Seed the first production registration admin manually only for repair/debugging with `npm run auth:admin:seed` to inspect a redacted dry-run plan, then `npm run auth:admin:seed -- --apply` after the production owner confirms the target identifiers.
 - Production `npm run build` then runs the auth gate before Vite emits deployable assets and writes `observability/auth-config-diagnostics.json` with boolean presence status only.
-- Validate Vercel production env names with `npm run auth:config:check:vercel`; the script uses name-only `vercel env ls production --format json` output and never pulls or prints values.
-- Validate the canonical production auth status and evidence with `npm run auth:status:check`; before moving a production-auth issue to ship, run `npm run auth:status:check -- --require-complete`.
+- Validate auth config with `npm run auth:config:check`. Validate status and evidence with `npm run auth:status:check`; before ship, run `npm run auth:status:check -- --require-complete`.
 - Capture registration production smoke with `npm run auth:registration:production-smoke`; it writes `observability/registration-auth-production-smoke.json`.
 - If production switches to OIDC, use `npm run auth:oidc:production-smoke -- --require-complete` as the OIDC-equivalent production smoke and attach the redacted `observability/oidc-production-smoke.json` artifact.
-- After Vercel auth changes, trigger a new production deployment and attach deployment URL or ID, commit, Ready status, build timestamp, selected auth strategy, sign-in smoke result, post-login data check, monitoring evidence, and rollback evidence to the issue or PR.
+- After auth or stack changes, re-run coordinated-stack smokes and attach base URL, commit, build timestamp, selected auth strategy, sign-in smoke result, post-login data check, monitoring evidence, and rollback evidence.
 
 Build/package the thin browser app:
 - `npm run build:browser`

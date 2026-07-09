@@ -309,7 +309,7 @@ test('captures primary app token output', async ({ page }, testInfo) => {
   await installPrimaryAppFixture(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/tasks', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('heading', { name: 'Task workspace' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
 
   const appShot = await page.screenshot({ path: testInfo.outputPath('design-token-primary-app.png') });
   expect(appShot.byteLength).toBeGreaterThan(10_000);

@@ -74,7 +74,7 @@ architecture:
   - package.json
   - vite.config.js
   - playwright.config.ts
-  - vercel.json
+
   - Makefile
   - repo-contract.yaml
   - check-manifest.yaml
@@ -82,7 +82,7 @@ architecture:
   dependency_rules:
   - standards tooling depends on the repo contract, not ad hoc conventions
   - browser feature modules depend on route adapters and browser session utilities instead of server-only state
-  - API adapters delegate to shared lib handlers and preserve Vercel rewrite boundaries
+  - API adapters delegate to shared lib handlers and preserve operator-hosted reverse-proxy boundaries
   - auth, audit, task-platform, and software-factory modules own their runtime state transitions
   - monitoring and observability assets describe runtime behavior but must not contain secrets
   - workflow and standards gates are declared in Makefile, package.json, check-manifest.yaml, and GitHub Actions
@@ -128,11 +128,11 @@ architecture:
     owner: monitoring/
   - resource: generated-runtime-evidence
     owner: observability/
-  source_of_truth: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, package.json, Makefile, .github/workflows/validation.yml, .github/workflows/verify.yml, docs/architecture.md, docs/runbook.md, vercel.json, DESIGN.md]
+  source_of_truth: [repo-contract.yaml, agent-policy.yaml, check-manifest.yaml, package.json, Makefile, .github/workflows/validation.yml, .github/workflows/verify.yml, docs/architecture.md, docs/runbook.md, DESIGN.md]
   python_layers:
   - name: standards_tooling
     paths: [dev-standards/tooling/**/*.py]
-    module_prefixes: [check_maintainability, maintainability_core, repo_policy_utils, run_python_tests, standards_init, validate_agent_intent, validate_approval_proof, validate_architecture, validate_artifact_provenance, validate_change_metadata, validate_config_boundaries, validate_docs_freshness, validate_live_approval, validate_policy_files, validate_release_evidence, validate_shell_boundaries, validate_test_policy, validate_traceability, validate_visual_identity, validate_waivers]
+    module_prefixes: [build_release_evidence, check_maintainability, maintainability_core, repo_policy_utils, run_python_tests, standards_init, validate_agent_intent, validate_approval_proof, validate_architecture, validate_artifact_provenance, validate_change_metadata, validate_config_boundaries, validate_docs_freshness, validate_live_approval, validate_policy_files, validate_release_evidence, validate_shell_boundaries, validate_test_policy, validate_traceability, validate_visual_identity, validate_waivers]
   - name: standards_tests
     paths: [tests/**/*.py]
     module_prefixes: [tests]
@@ -156,14 +156,14 @@ critical_paths:
 - name: browser-runtime
   description: Vite and React browser routes for sign-in, task workspace, detail, role inbox, and task creation flows
   stronger_controls: [TypeScript checks, Vitest UI tests, Playwright browser tests, Vite build]
-- name: serverless-api-runtime
-  description: Vercel Node API adapters for auth, audit, and task-platform request paths
+- name: http-api-runtime
+  description: Operator-hosted Node HTTP/API adapters for auth, audit, and task-platform request paths
   stronger_controls: [Node unit tests, contract tests, security tests, deployment build]
 - name: auth-audit-task-platform-state
   description: PostgreSQL-backed auth, audit, task-platform, and merge-readiness state transitions
   stronger_controls: [migration tests, rollout scripts, smoke diagnostics, monitoring alerts]
 - name: deployment-and-observability
-  description: Vercel deployment config, monitoring dashboards, alerts, and redacted runtime evidence
+  description: Coordinated-stack deployment, monitoring dashboards, alerts, and redacted runtime evidence
   stronger_controls: [npm build, auth config diagnostics, monitoring docs, artifact provenance]
 quality_gates:
   risk_taxonomy: [low, medium, high, critical]
@@ -233,10 +233,9 @@ release_management:
     prod: 1
   irreversible_change_evidence: [rollback-verification]
   environments:
-    dev:
-      require_live_deploy_proof: false
-      required_live_checks: []
-      require_post_deploy_health: false
+    dev: {require_live_deploy_proof: false, required_live_checks: [], require_post_deploy_health: false}
+    staging: {require_live_deploy_proof: true, required_live_checks: [deploy-record], require_post_deploy_health: true, required_artifact_fields: [deployed_sha, environment, deployment_url, rollback_target], required_post_deploy_health_fields: [environment, deployment_url, checked_sha, status, commit_verified]}
+    prod: {require_live_deploy_proof: true, required_live_checks: [deploy-record, rollback-verification], require_post_deploy_health: true, required_artifact_fields: [deployed_sha, environment, deployment_url, rollback_target], required_post_deploy_health_fields: [environment, deployment_url, checked_sha, status, commit_verified], required_rollback_fields: [rollback_target, verification_status, verified_at]}
 artifact_provenance:
   schema_version: '1.0'
   required_fields: [schema_version, generated_by, generated_at, commit_sha]
@@ -311,7 +310,7 @@ documentation_freshness:
     message: standards changes must update the changelog or runbook
   - id: runtime-operations
     rule_class: runtime
-    when_paths: [src/**, lib/**, api/**, db/migrations/**, scripts/**, monitoring/**, package.json, vite.config.js, playwright.config.ts, vercel.json, docker-compose.yml, Dockerfile, Dockerfile.browser]
+    when_paths: [src/**, lib/**, api/**, db/migrations/**, scripts/**, monitoring/**, package.json, vite.config.js, playwright.config.ts, docker-compose.yml, Dockerfile, Dockerfile.browser]
     require_any_of: [docs/architecture.md, docs/runbook.md, docs/runbooks/**, docs/api/**, docs/design/**, README.md]
     requires_doc_update: true
     when_change_kinds: [feature, bugfix, refactor, security-fix, migration, release]
@@ -362,7 +361,7 @@ compatibility:
   matrix:
   - {os: linux, runtime: local-operator}
   - {os: macos, runtime: local-operator}
-  - {os: linux, runtime: node-22-vite-vercel}
+  - {os: linux, runtime: node-22-vite-coordinated-stack}
   - {os: linux, runtime: python-3.12-standards}
   - {os: linux, runtime: postgres-compatible}
   deprecation_policy:

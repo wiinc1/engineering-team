@@ -92,70 +92,88 @@ function issuePayload(overrides = {}) {
   };
 }
 
-test('issues.opened with factory-intake label creates an intake draft task', async () => {
-  await withServer(async ({ baseUrl, secret }) => {
-    const issueNumber = uniqueIssueNumber();
-    const body = JSON.stringify(issuePayload({ issue: { number: issueNumber } }));
-    const response = await fetch(`${baseUrl}/github/webhooks`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-github-event': 'issues',
-        'x-github-delivery': 'delivery-intake-1',
-        'x-hub-signature-256': githubSignature(secret, body),
-      },
-      body,
-    });
-    assert.equal(response.status, 201);
-    const payload = await response.json();
-    assert.equal(payload.created, true);
-    assert.ok(payload.taskId);
-    assert.equal(payload.githubIssueUrl, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
-    assert.ok(payload.projectId);
-    assert.equal(payload.projectBootstrap?.projectId, payload.projectId);
+function githubWebhookHeaders(secret, body, deliveryId) {
+  return {
+    'content-type': 'application/json',
+    'x-github-event': 'issues',
+    'x-github-delivery': deliveryId,
+    'x-hub-signature-256': githubSignature(secret, body),
+  };
+}
 
-    const duplicate = await fetch(`${baseUrl}/github/webhooks`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-github-event': 'issues',
-        'x-github-delivery': 'delivery-intake-2',
-        'x-hub-signature-256': githubSignature(secret, body),
-      },
-      body,
-    });
-    assert.equal(duplicate.status, 202);
-    const duplicatePayload = await duplicate.json();
-    assert.equal(duplicatePayload.reason, 'existing_intake_task');
-    assert.equal(duplicatePayload.taskId, payload.taskId);
-    assert.equal(duplicatePayload.projectId, payload.projectId);
-
-    const taskDetail = await fetch(`${baseUrl}/api/v1/tasks/${encodeURIComponent(payload.taskId)}`, {
-      headers: { authorization: `Bearer ${signJwt('jwt-secret', { roles: ['admin', 'pm', 'reader'] })}` },
-    });
-    assert.equal(taskDetail.status, 200);
-    const taskBody = await taskDetail.json();
-    assert.equal(taskBody.data?.projectId, payload.projectId);
-
-    const state = await fetch(`${baseUrl}/tasks/${encodeURIComponent(payload.taskId)}/state`, {
-      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
-    });
-    assert.equal(state.status, 200);
-    const stateBody = await state.json();
-    const currentStage = stateBody.current_stage || stateBody.data?.current_stage;
-    assert.ok(currentStage === 'DRAFT' || currentStage === 'INTAKE_DRAFT');
-    assert.equal(stateBody.waiting_state, 'task_refinement');
-    assert.equal(stateBody.assignee, 'pm');
-
-    const history = await fetch(`${baseUrl}/tasks/${encodeURIComponent(payload.taskId)}/history`, {
-      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
-    });
-    assert.equal(history.status, 200);
-    const historyBody = await history.json();
-    const created = historyBody.items.find((item) => item.event_type === 'task.created');
-    assert.equal(created.payload.github_issue_url, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
-    assert.ok(historyBody.items.some((item) => item.event_type === 'task.refinement_requested'));
+async function postGithubIssueWebhook(baseUrl, secret, body, deliveryId) {
+  return fetch(`${baseUrl}/github/webhooks`, {
+    method: 'POST',
+    headers: githubWebhookHeaders(secret, body, deliveryId),
+    body,
   });
+}
+
+async function assertCreatedGithubIntake(response, issueNumber) {
+  assert.equal(response.status, 201);
+  const payload = await response.json();
+  assert.equal(payload.created, true);
+  assert.ok(payload.taskId);
+  assert.equal(payload.githubIssueUrl, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
+  assert.ok(payload.projectId);
+  assert.equal(payload.projectBootstrap?.projectId, payload.projectId);
+  return payload;
+}
+
+async function assertDuplicateGithubIntake(response, payload) {
+  assert.equal(response.status, 202);
+  const duplicatePayload = await response.json();
+  assert.equal(duplicatePayload.reason, 'existing_intake_task');
+  assert.equal(duplicatePayload.taskId, payload.taskId);
+  assert.equal(duplicatePayload.projectId, payload.projectId);
+}
+
+async function assertTaskProjectLinked(baseUrl, payload) {
+  const taskDetail = await fetch(`${baseUrl}/api/v1/tasks/${encodeURIComponent(payload.taskId)}`, {
+    headers: { authorization: `Bearer ${signJwt('jwt-secret', { roles: ['admin', 'pm', 'reader'] })}` },
+  });
+  assert.equal(taskDetail.status, 200);
+  const taskBody = await taskDetail.json();
+  assert.equal(taskBody.data?.projectId, payload.projectId);
+}
+
+async function assertTaskRefinementState(baseUrl, taskId) {
+  const state = await fetch(`${baseUrl}/tasks/${encodeURIComponent(taskId)}/state`, {
+    headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
+  });
+  assert.equal(state.status, 200);
+  const stateBody = await state.json();
+  const currentStage = stateBody.current_stage || stateBody.data?.current_stage;
+  assert.ok(currentStage === 'DRAFT' || currentStage === 'INTAKE_DRAFT');
+  assert.equal(stateBody.waiting_state, 'task_refinement');
+  assert.equal(stateBody.assignee, 'pm');
+}
+
+async function assertTaskHistoryIncludesGithubIssue(baseUrl, taskId, issueNumber) {
+  const history = await fetch(`${baseUrl}/tasks/${encodeURIComponent(taskId)}/history`, {
+    headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
+  });
+  assert.equal(history.status, 200);
+  const historyBody = await history.json();
+  const created = historyBody.items.find((item) => item.event_type === 'task.created');
+  assert.equal(created.payload.github_issue_url, `https://github.com/wiinc1/engineering-team/issues/${issueNumber}`);
+  assert.ok(historyBody.items.some((item) => item.event_type === 'task.refinement_requested'));
+}
+
+async function runGithubIntakeCreationScenario({ baseUrl, secret }) {
+  const issueNumber = uniqueIssueNumber();
+  const body = JSON.stringify(issuePayload({ issue: { number: issueNumber } }));
+  const created = await postGithubIssueWebhook(baseUrl, secret, body, 'delivery-intake-1');
+  const payload = await assertCreatedGithubIntake(created, issueNumber);
+  const duplicate = await postGithubIssueWebhook(baseUrl, secret, body, 'delivery-intake-2');
+  await assertDuplicateGithubIntake(duplicate, payload);
+  await assertTaskProjectLinked(baseUrl, payload);
+  await assertTaskRefinementState(baseUrl, payload.taskId);
+  await assertTaskHistoryIncludesGithubIssue(baseUrl, payload.taskId, issueNumber);
+}
+
+test('issues.opened with factory-intake label creates an intake draft task', async () => {
+  await withServer(runGithubIntakeCreationScenario);
 });
 
 test('github intake normalizer is gated behind ff_github_intake_normalizer', async () => {

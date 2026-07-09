@@ -54,6 +54,7 @@ test('task updates expose a narrow permission-safe task payload', () => {
 
   assert.equal(update.entityType, 'task');
   assert.equal(update.entityId, 'TSK-1');
+  assert.equal(update.tenantId, 'tenant-a');
   assert.equal(update.version, 3);
   assert.equal(update.payload.task.title, 'Projected title');
   assert.equal(update.payload.task.current_stage, 'VERIFY');
@@ -93,6 +94,7 @@ test('live task update response filters deltas after the supplied cursor', async
 
   const first = await buildLiveTaskUpdateResponse({ store, taskPlatform, tenantId: 'tenant-a', cursor: '' });
   assert.equal(first.data.updates.length, 2);
+  assert.equal(first.data.updates.every(update => update.tenantId === 'tenant-a'), true);
   assert.equal(first.data.pollAfterMs, 8000);
   const second = await buildLiveTaskUpdateResponse({ store, taskPlatform, tenantId: 'tenant-a', cursor: first.data.cursor });
   assert.equal(second.data.updates.length, 0);
