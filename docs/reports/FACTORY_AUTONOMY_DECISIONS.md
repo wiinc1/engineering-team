@@ -7,14 +7,14 @@
 ## Standards Alignment
 
 - Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process; authentication and secret handling.
-- Evidence in this document: progressive autonomy product decisions, coordinated-stack runtime topology, operator-trusted delivery metric bar, and human PM/Architect review requirements on agent disagreement.
-- Gaps or exceptions: live OpenClaw-as-default factory proof remains follow-up work tracked in `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
+- Evidence expected for this change: progressive autonomy product decisions in this report and the PRD; coordinated-stack runtime topology in architecture and runbooks; human PM/Architect review gate unit tests; removal of Vercel/cloud Supabase factory platform claims.
+- Gap observed: Milestone and golden-path verify still default to fixture specialist runners for many claim paths. Documented rationale: progressive autonomy requires truthful live session evidence before operator-trusted delivery rate is claimed; fixture attribution is not acceptable under production-like proof profiles (source https://github.com/wiinc1/engineering-team/pull/296).
 
 ## Required Evidence
 
-- Commands run: targeted unit tests for human review gate, auth config residual cleanup, forge bridge restoration, ownership map lint, and `node scripts/verify-standards.js`.
-- Tests added or updated: `tests/unit/pm-architect-human-review-gate.test.js`, auth/deploy residual tests, release-artifact CLI CI env isolation.
-- Docs updated: this report, `docs/product/software-factory-control-plane-prd.md`, `docs/architecture.md`, `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
+- Commands run: `node --test tests/unit/pm-architect-human-review-gate.test.js`; targeted auth/forge residual unit tests; `node scripts/lint-change-ownership-map.js`; `node scripts/verify-standards.js`; `npm run design:change-guard`.
+- Tests added or updated: `tests/unit/pm-architect-human-review-gate.test.js`; auth config residual cleanup tests; release-artifact CLI CI env isolation.
+- Docs updated: this report; `docs/product/software-factory-control-plane-prd.md`; `docs/architecture.md`; `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
 - Rollout or rollback notes: factory claims use coordinated stack only; rollback by reverting the PR merge on `main`.
 
 These answers lock sequencing for the autonomous software factory work. They supersede open clarifying questions in the gap analysis for planning purposes.
