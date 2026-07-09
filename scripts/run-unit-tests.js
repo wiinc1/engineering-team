@@ -181,4 +181,12 @@ function main() {
   process.exit(vitestResult.status || 0);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildSanitizedEnv,
+  UNIT_TEST_FILES,
+  main,
+};
