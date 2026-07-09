@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-const fs = require('node:fs');
 const path = require('node:path');
 const {
   resolveStagingRuntime,
@@ -11,28 +10,19 @@ const {
 } = require('../lib/task-platform/golden-path-real-evidence-preflight');
 const {
   applyPrimaryFactoryProofProfile,
-  attachProofMetadata,
-  validateLiveSessionEvidence,
-  assertLiveProofAllowsCompletion,
+  finalizeLiveProofEvidence,
+  writeMilestoneVerifyReport,
   FACTORY_PROOF_ERROR_CODES,
+  readArg: readProofArg,
 } = require('../lib/task-platform/factory-proof-profile');
 const { runMilestoneDCloseoutVerify } = require('../lib/audit/milestone-d-closeout-verify');
 
 function readArg(name, fallback = '') {
-  const index = process.argv.indexOf(name);
-  return index === -1 || index === process.argv.length - 1 ? fallback : process.argv[index + 1];
+  return readProofArg(process.argv, name, fallback);
 }
 
-async function main() {
-  const outputDir = readArg('--output-dir', process.env.STAGING_EVIDENCE_DIR || 'observability/milestone-d-staging');
-  const proof = await applyPrimaryFactoryProofProfile({
-    argv: process.argv,
-    env: process.env,
-    openclawUrl: readArg('--openclaw-url'),
-  });
-
-  const realEvidenceOptions = readGoldenPathRealEvidenceCliOptions();
-  const runtime = applyLocalGoldenPathEnvIfNeeded(assertStagingRuntimeReady(resolveStagingRuntime({
+function resolveMilestoneRuntime(proof, outputDir, realEvidenceOptions) {
+  return applyLocalGoldenPathEnvIfNeeded(assertStagingRuntimeReady(resolveStagingRuntime({
     baseUrl: readArg('--base-url'),
     jwtSecret: readArg('--jwt-secret'),
     forgeAdapterUrl: readArg('--forgeadapter-url'),
@@ -44,10 +34,19 @@ async function main() {
     skipValidation: process.argv.includes('--skip-validation'),
     skipForgePhases: false,
   })));
+}
 
+async function main() {
+  const outputDir = readArg('--output-dir', process.env.STAGING_EVIDENCE_DIR || 'observability/milestone-d-staging');
+  const proof = await applyPrimaryFactoryProofProfile({
+    argv: process.argv,
+    env: process.env,
+    openclawUrl: readArg('--openclaw-url'),
+  });
+  const realEvidenceOptions = readGoldenPathRealEvidenceCliOptions();
+  const runtime = resolveMilestoneRuntime(proof, outputDir, realEvidenceOptions);
   process.env.FF_FACTORY_AGENT_DRIVEN_PHASE1 = 'true';
   process.env.FF_FACTORY_AGENT_DRIVEN_PHASES = 'true';
-
   const evidence = await runMilestoneDCloseoutVerify({
     ...runtime,
     ...realEvidenceOptions,
@@ -55,47 +54,14 @@ async function main() {
     openclawUrl: proof.openclawBaseUrl || runtime.openclawUrl,
     outputPath: path.join(outputDir, 'milestone-d-closeout-verify.json'),
   });
-
-  let factoryEvidence = evidence.factoryEvidence || evidence.factory?.factoryEvidence || {};
-  const factoryEvidencePath = evidence.artifacts?.factoryEvidence;
-  if ((!factoryEvidence || !Object.keys(factoryEvidence).length) && factoryEvidencePath && fs.existsSync(factoryEvidencePath)) {
-    factoryEvidence = JSON.parse(fs.readFileSync(factoryEvidencePath, 'utf8'));
-  }
-  const validation = validateLiveSessionEvidence({
-    factoryEvidence,
-    profile: proof.profile,
-    runner: process.env.SPECIALIST_DELEGATION_RUNNER,
-    requireAtLeastOneSession: proof.profile === 'live',
-  });
-  Object.assign(evidence, attachProofMetadata(evidence, proof, validation));
-  if (proof.profile === 'live') {
-    evidence.summary.checks.push({
-      name: 'live_session_evidence',
-      ok: validation.ok,
-      liveSessionCount: validation.liveSessions?.length || 0,
-      errors: validation.errors,
-    });
-    evidence.summary.passed = evidence.summary.checks.every((check) => check.ok);
-    if (!validation.ok) {
-      // Refuse live-passed complete artifacts when sessions are fixture-attributed.
-      assertLiveProofAllowsCompletion(proof, validation);
-    }
-  }
-
-  process.stdout.write(`${JSON.stringify({
-    ok: evidence.summary.passed,
+  finalizeLiveProofEvidence(evidence, proof);
+  writeMilestoneVerifyReport({
+    evidence,
+    proof,
     milestone: 'D',
     title: 'Closeout automation and delivery report',
     outputDir,
-    proofProfile: proof.profile,
-    fixtureDelegation: proof.fixtureDelegation,
-    openclawBaseUrl: proof.openclawBaseUrl,
-    summary: evidence.summary,
-    artifacts: evidence.artifacts,
-    milestoneDComplete: evidence.artifacts?.milestoneDComplete || null,
-  }, null, 2)}\n`);
-
-  if (!evidence.summary.passed) process.exitCode = 1;
+  });
 }
 
 main().catch((error) => {
