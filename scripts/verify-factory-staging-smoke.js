@@ -14,7 +14,7 @@ async function main() {
     jwtSecret: readArg('--jwt-secret'),
     outputDir: readArg('--output-dir', process.env.STAGING_EVIDENCE_DIR || 'observability/milestone-a-staging'),
     requireDelegationSmoke: process.argv.includes('--require-delegation-smoke'),
-    skipValidation: !process.argv.includes('--run-validation'),
+    skipValidation: process.argv.includes('--skip-validation'),
   }));
   const outputPath = readArg(
     '--out',

@@ -46,7 +46,7 @@ test('architecture documents runtime boundaries, state, and external systems', (
     'lib/audit/',
     'lib/task-platform/',
     'PostgreSQL',
-    'Vercel',
+    'coordinated stack',
     'monitoring/',
     'dev-standards/',
     'State Ownership',
@@ -101,7 +101,7 @@ test('architecture and workflow diagrams exist as Mermaid flowcharts', () => {
   assert.match(workflow, /^flowchart\s+TD/m);
   assert.match(architecture, /^flowchart\s+LR/m);
   assertIncludesAll(workflow, ['docs/architecture.md', 'docs/runbook.md']);
-  assertIncludesAll(architecture, ['Browser app', 'Vercel deployment', 'Node services']);
+  assertIncludesAll(architecture, ['Browser app', 'Node services']);
 });
 
 test('runbook command references exist in package scripts or Makefile targets', () => {

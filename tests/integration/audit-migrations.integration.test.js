@@ -48,3 +48,17 @@ test('autonomous delivery metrics migration defines reversible signal and snapsh
   assert.match(rollback, /DROP TABLE IF EXISTS autonomous_delivery_metric_snapshots/);
   assert.match(rollback, /DROP TABLE IF EXISTS autonomous_delivery_retrospective_signals/);
 });
+
+test('factory delivery queue migration defines durable leases and idempotent submit', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '../../db/migrations/015_factory_delivery_queue.sql'), 'utf8');
+  const rollback = fs.readFileSync(path.join(__dirname, '../../db/migrations/015_factory_delivery_queue.down.sql'), 'utf8');
+
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS factory_delivery_queue/);
+  assert.match(migration, /UNIQUE \(tenant_id, idempotency_key\)/);
+  assert.match(migration, /CHECK \(btrim\(queue_id\) <> ''\)/);
+  assert.match(migration, /CHECK \(btrim\(idempotency_key\) <> ''\)/);
+  assert.match(migration, /lease_expires_at/);
+  assert.match(migration, /dead_letter/);
+  assert.match(migration, /idx_factory_delivery_queue_claim/);
+  assert.match(rollback, /DROP TABLE IF EXISTS factory_delivery_queue/);
+});

@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const { createSpecialistCoordinator } = require('../../lib/software-factory/delegation');
 const { dispatchTaskToSpecialist } = require('../../lib/software-factory/task-dispatch');
+const { resolveRuntimeAgent } = require('../../scripts/openclaw-specialist-runner');
 
 const runtimeRunnerPath = path.join(__dirname, '..', 'fixtures', 'specialist-runtime-runner.js');
 
@@ -18,12 +19,12 @@ test('e2e: clear specialist request produces validated runtime attribution', asy
   const result = await coordinator.handleRequest('Please implement this bug fix', { coordinatorAgent: 'main' });
 
   assert.equal(result.mode, 'delegated');
-  assert.equal(result.attribution.handledBy, 'engineer');
+  assert.equal(result.attribution.handledBy, resolveRuntimeAgent('engineer'));
   assert.match(result.metadata.sessionId, /^runtime-session-/);
 
   const artifactPath = path.join(baseDir, 'observability', 'specialist-delegation.jsonl');
   const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8').trim().split('\n').at(-1));
-  assert.equal(artifact.actual_agent, 'engineer');
+  assert.equal(artifact.actual_agent, resolveRuntimeAgent('engineer'));
   assert.equal(artifact.fallback_reason, undefined);
 
   const workflowLogPath = path.join(baseDir, 'observability', 'workflow-audit.log');
@@ -148,6 +149,7 @@ test('e2e: attribution mismatches fall back truthfully and log a delegation-unve
     delegationRunnerCommand: `node ${runtimeRunnerPath}`,
     runnerEnv: {
       FIXTURE_RUNTIME_AGENT_ID: 'main',
+      FIXTURE_RUNTIME_SPECIALIST_ID: 'main',
     },
   });
 

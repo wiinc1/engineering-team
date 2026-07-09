@@ -41,7 +41,7 @@ test('audit workers production smoke posts through /api/v1 task routes', async (
 
   const evidence = await runAuditWorkersProductionSmoke({
     fetchImpl,
-    baseUrl: 'https://engineering-team-zeta.vercel.app',
+    baseUrl: 'https://factory.engineering-team.io',
     jwtSecret: 'test-secret',
     outputPath: 'observability/audit-workers-production-smoke.test.json',
     waitMs: 1,

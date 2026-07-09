@@ -1,12 +1,12 @@
 # Clawpatch Autonomous Workflow Runbook
 
-Use this runbook when a Software Factory operator asks how Clawpatch fits into an autonomous implementation loop. Clawpatch is an optional patch-review and repair aid; it does not replace Codex, OpenClaw, GitHub PRs, task approvals, branch protection, tests, Vercel checks, QA, SRE, or operator closeout.
+Use this runbook when a Software Factory operator asks how Clawpatch fits into an autonomous implementation loop. Clawpatch is an optional patch-review and repair aid; it does not replace Codex, OpenClaw, GitHub PRs, task approvals, branch protection, tests, deployment health checks, QA, SRE, or operator closeout.
 
 Related operator question: GitHub issue #207. Installation source: https://clawpatch.ai/#installation.
 
 ## Decision Summary
 
-For the first supervised autonomous pilot, Clawpatch is optional, not required. The default fallback remains the normal Codex/OpenClaw workflow: task and Project context, approved Execution Contract, branch, implementation, local validation, PR, required checks, Vercel status, merge, QA/SRE closeout, and retrospective evidence.
+For the first supervised autonomous pilot, Clawpatch is optional, not required. The default fallback remains the normal Codex/OpenClaw workflow: task and Project context, approved Execution Contract, branch, implementation, local validation, PR, required checks, deployment status, merge, QA/SRE closeout, and retrospective evidence.
 
 | Situation | Decision | Operator action |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ The smoke check is successful only when `clawpatch doctor` exits successfully an
 - Do not paste tokens, API keys, cookies, passwords, private keys, customer records, production env values, or credentials into Clawpatch prompts, configuration, generated reports, issue comments, PR bodies, or logs.
 - Do not ask Clawpatch to inspect unredacted `.env` files, production credentials, private incident records, or restricted customer data.
 - If a patch or report contains a secret-like value, stop the workflow, preserve a redacted summary, notify the security/operator owner, and rotate the credential when required.
-- Clawpatch does not bypass repo authentication, GitHub permissions, branch protection, PR metadata checks, Vercel checks, task approvals, or closeout gates.
+- Clawpatch does not bypass repo authentication, GitHub permissions, branch protection, PR metadata checks, deployment health checks, task approvals, or closeout gates.
 
 ## Operator Workflow
 
@@ -67,7 +67,7 @@ The smoke check is successful only when `clawpatch doctor` exits successfully an
 8. Review the diff manually. Reject patches that touch unrelated files, generated artifacts, secrets, auth boundaries, deployment configuration, or unapproved runtime behavior.
 9. Run the task validation matrix. At minimum, run the commands required by the task and the repo standards checks.
 10. Open the PR with normal metadata. Include whether Clawpatch was used, the setup smoke result, commands run, and any fallback or recovery action.
-11. Merge only after required GitHub checks and Vercel are green.
+11. Merge only after required GitHub checks and deployment are green.
 12. Record closeout evidence in the task history or report, including whether Clawpatch was used and whether any Clawpatch suggestion was rejected.
 
 ## Suggested Command Sequence
@@ -100,7 +100,7 @@ Use the normal agent workflow when Clawpatch is unavailable, optional but skippe
 3. Review `git diff` manually.
 4. Run the required local validation matrix.
 5. Open the PR with standards metadata and evidence.
-6. Wait for GitHub checks and Vercel.
+6. Wait for GitHub checks and deployment.
 7. Merge only when checks are green.
 8. Record closeout evidence and note `Clawpatch not used`.
 
@@ -128,7 +128,7 @@ Avoid broad destructive cleanup commands. If a patch must be discarded, preserve
 - Clawpatch commands run, if any.
 - Findings or repair target IDs, if any.
 - Diff review summary and rejected-patch notes.
-- Test, lint, standards, build, browser, and Vercel evidence as applicable.
+- Test, lint, standards, build, browser, and deployment evidence as applicable.
 - Failure recovery notes, if any.
 - Closeout note stating whether Clawpatch was used.
 
@@ -141,5 +141,5 @@ Avoid broad destructive cleanup commands. If a patch must be discarded, preserve
 ## Required Evidence
 
 - Required local checks for this runbook change: `npm run standards:check`, `npm run lint`, docs validation relevant to changed files, and external installation URL validation.
-- Required future evidence when Clawpatch is used on a task: setup smoke result, patch review summary, validation commands, PR checks, Vercel status when applicable, and closeout note.
+- Required future evidence when Clawpatch is used on a task: setup smoke result, patch review summary, validation commands, PR checks, deployment status when applicable, and closeout note.
 - Rollback: revert the documentation change if this guidance is rejected.

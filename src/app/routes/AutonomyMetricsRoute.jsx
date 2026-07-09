@@ -35,6 +35,48 @@ function latestSignals(signals = []) {
   return [...signals].slice(0, 8);
 }
 
+function latestQueueItems(items = []) {
+  return [...items].slice(0, 8);
+}
+
+function queueRows(summary = {}) {
+  return [
+    { label: "Queue pending", value: formatNumber(summary.pending), detail: `${formatNumber(summary.leased)} leased` },
+    { label: "Retrying", value: formatNumber(summary.retrying), detail: `${formatNumber(summary.expiredLeases)} expired leases` },
+    { label: "Dead letter", value: formatNumber(summary.deadLetter), detail: `${formatNumber(summary.completed)} completed` },
+  ];
+}
+
+function proofSummary(item = {}) {
+  const proof = item.realDelivery || null;
+  if (!proof?.requested) return "Not requested";
+  const release = proof.releaseEnv || "env missing";
+  const pr = proof.prNumber ? `PR #${proof.prNumber}` : proof.prUrl ? "PR provided" : "PR missing";
+  const rollback = proof.rollbackVerified ? "rollback verified" : "rollback missing";
+  return `${release} · ${pr} · ${rollback}`;
+}
+
+function preflightStatus(item = {}) {
+  const proof = item.realDelivery || null;
+  const preflight = proof?.preflight || null;
+  if (!proof?.requested) return { label: "Not required", kind: "neutral", failures: [] };
+  if (!preflight) return { label: "Not evaluated", kind: "warning", failures: [] };
+  if (preflight.ok === true) return { label: "Preflight ready", kind: "ready", failures: [] };
+  return {
+    label: "Preflight blocked",
+    kind: "blocked",
+    failures: Array.isArray(preflight.failures) ? preflight.failures.slice(0, 2) : [],
+  };
+}
+
+function PreflightCell({ item }) {
+  const status = preflightStatus(item);
+  return a("div", { className: "autonomy-metrics__preflight", children: [
+    e("span", { className: `autonomy-metrics__preflight-status autonomy-metrics__preflight-status--${status.kind}`, children: status.label }),
+    status.failures.length ? e("ul", { className: "autonomy-metrics__preflight-failures", children: status.failures.map((failure) => e("li", { children: failure }, failure)) }) : null,
+  ] });
+}
+
 function MetricsToolbar({ includeUnknown, setIncludeUnknown, load, rebuild, busy }) {
   return a("div", { className: "autonomy-metrics__toolbar", children: [
     a("label", { className: "autonomy-metrics__toggle", children: [
@@ -111,6 +153,29 @@ function RetrospectivePanel({ signal, unknownSignals }) {
   ] });
 }
 
+function FactoryQueuePanel({ queueState }) {
+  if (!queueState) return null;
+  const queue = queueState?.data || null;
+  const items = latestQueueItems(queue?.items || []);
+  return a("section", { className: "autonomy-metrics__panel", "aria-labelledby": "factory-queue-heading", children: [
+    e("h2", { id: "factory-queue-heading", children: "Factory queue" }),
+    queueState?.kind === "error" ? e("p", { className: "task-list-empty", children: queueState.message }) : null,
+    queue ? e(MetricsGrid, { rows: queueRows(queue.summary || {}) }) : null,
+    queue && items.length ? e("div", { className: "task-list-table-wrap autonomy-metrics__table-wrap", children: a("table", { className: "task-list-table", children: [
+      e("thead", { children: a("tr", { children: ["Item", "Stage", "Attempts", "Lease", "Proof", "Preflight", "Evidence"].map((label) => e("th", { scope: "col", children: label }, label)) }) }),
+      e("tbody", { children: items.map((item) => a("tr", { children: [
+        e("td", { children: item.taskId ? e("a", { href: `/tasks/${encodeURIComponent(item.taskId)}`, children: item.id }) : item.id }),
+        e("td", { children: item.stage }),
+        e("td", { children: `${formatNumber(item.attempts)} / ${formatNumber(item.maxAttempts)}` }),
+        e("td", { children: item.leaseActive ? `Leased by ${item.lockedBy}` : item.leaseExpired ? "Expired" : item.retrying ? "Retry scheduled" : "Available" }),
+        e("td", { children: proofSummary(item) }),
+        e("td", { children: e(PreflightCell, { item }) }),
+        e("td", { children: item.evidencePath || "None" }),
+      ] }, item.id)) }),
+    ] }) }) : queue ? e("p", { className: "task-list-empty", children: "No factory queue items are visible." }) : null,
+  ] });
+}
+
 async function fetchAutonomyJson(url, options, fallbackMessage) {
   const response = await window.fetch(url, options);
   const payload = await response.json().catch(() => ({}));
@@ -122,19 +187,27 @@ function useAutonomyMetricsState(ctx = {}) {
   const session = ctx.u || readBrowserSessionConfig();
   const baseUrl = ctx.D || resolveApiBaseUrl(session, ctx.At || "");
   const [includeUnknown, setIncludeUnknown] = c.useState(false);
-  const [state, setState] = c.useState({ kind: "loading", data: null, message: "Loading autonomous delivery metrics." });
+  const [state, setState] = c.useState({ kind: "loading", data: null, queue: null, message: "Loading autonomous delivery metrics." });
   const load = c.useCallback(async () => {
-    setState((current) => ({ kind: current.data ? "refreshing" : "loading", data: current.data, message: "Loading autonomous delivery metrics." }));
+    setState((current) => ({ kind: current.data ? "refreshing" : "loading", data: current.data, queue: current.queue, message: "Loading autonomous delivery metrics." }));
     const params = new URLSearchParams();
     includeUnknown && params.set("includeUnknown", "true");
+    const headers = buildAuthHeaders(session);
     try {
+      const queueRequest = fetchAutonomyJson(`${baseUrl}/v1/factory/queue?limit=8`, {
+        credentials: "same-origin",
+        headers,
+      }, "Factory queue status is unavailable.")
+        .then((data) => ({ kind: "ready", data, message: "Factory queue status loaded." }))
+        .catch((error) => ({ kind: "error", data: null, message: error?.message || "Factory queue status is unavailable." }));
       const data = await fetchAutonomyJson(`${baseUrl}/v1/metrics/autonomous-delivery${params.toString() ? `?${params}` : ""}`, {
         credentials: "same-origin",
-        headers: buildAuthHeaders(session),
+        headers,
       }, "Autonomous delivery metrics are unavailable.");
-      setState({ kind: "ready", data, message: "Autonomous delivery metrics loaded." });
+      const queue = await queueRequest;
+      setState({ kind: "ready", data, queue, message: "Autonomous delivery metrics loaded." });
     } catch (error) {
-      setState((current) => ({ kind: "error", data: current.data, message: error?.message || "Autonomous delivery metrics are unavailable." }));
+      setState((current) => ({ kind: "error", data: current.data, queue: current.queue, message: error?.message || "Autonomous delivery metrics are unavailable." }));
     }
   }, [baseUrl, includeUnknown, session]);
   c.useEffect(() => {
@@ -149,7 +222,7 @@ function useAutonomyMetricsState(ctx = {}) {
         headers: { ...buildAuthHeaders(session), "content-type": "application/json" },
         body: JSON.stringify({ includeUnknown, persist: true }),
       }, "Metrics rebuild failed.");
-      setState({ kind: "ready", data, message: "Metrics rebuild completed." });
+      setState((current) => ({ kind: "ready", data, queue: current.queue, message: "Metrics rebuild completed." }));
     } catch (error) {
       setState((current) => ({ ...current, kind: "error", message: error?.message || "Metrics rebuild failed." }));
     }
@@ -161,6 +234,7 @@ function AutonomyMetricsRoute({ ctx = {} }) {
   const { includeUnknown, setIncludeUnknown, state, load, rebuild } = useAutonomyMetricsState(ctx);
 
   const data = state.data;
+  const queueState = state.queue;
   const summary = data?.summary || {};
   const rows = metricRows(summary);
   const grouped = breakdownRows(data?.breakdowns || {});
@@ -177,6 +251,7 @@ function AutonomyMetricsRoute({ ctx = {} }) {
       e(SignalsPanel, { signals }),
     ] }) : null,
     data ? e(RetrospectivePanel, { signal: inspectedSignal, unknownSignals: summary.unknown_signals }) : null,
+    e(FactoryQueuePanel, { queueState }),
   ] });
 }
 

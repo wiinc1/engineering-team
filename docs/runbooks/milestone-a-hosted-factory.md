@@ -33,11 +33,12 @@ Confirm:
 
 ```bash
 npm run dev:golden-path:status
+curl -s http://127.0.0.1:13000/version
 curl -s http://127.0.0.1:13000/metrics | grep workflow_projection_lag_seconds
 curl -s http://127.0.0.1:14010/health
 ```
 
-Workers log to `observability/golden-path-local-dev/logs/audit-workers.log`. State: `observability/golden-path-local-dev/stack.json`.
+`/version` exposes the audit API commit SHA used by strict release-health proof when the coordinated stack is promoted through a non-local operator/API endpoint. Workers log to `observability/golden-path-local-dev/logs/audit-workers.log`. State: `observability/golden-path-local-dev/stack.json`.
 
 Optional: enable continuous factory ticks when bringing the stack up:
 
@@ -99,6 +100,18 @@ Use `--require-delegation-smoke --openclaw-url http://127.0.0.1:<port>` when pro
 npm run factory:submit -- --file /tmp/factory-requirements.json
 npm run factory:orchestrator -- --once
 ```
+
+The factory queue uses Postgres table `factory_delivery_queue` by default instead of the JSON queue file. Run migrations first, then submit and tick the orchestrator:
+
+```bash
+npm run audit:migrate
+npm run factory:submit -- --file /tmp/factory-requirements.json
+npm run factory:orchestrator -- --once
+```
+
+Operators can inspect status with `GET /api/v1/factory/queue`. If a row reaches `dead_letter`, SRE/admin review the failure evidence, then call `POST /api/v1/factory/queue/<queue-id>/requeue` with `factory-queue:write` and a reason. Requeue only succeeds for tenant-scoped rows already in `dead_letter`; it clears stale lease/error fields and resumes from the recorded failed stage.
+
+Use `FACTORY_QUEUE_BACKEND=file FACTORY_ALLOW_FILE_QUEUE=true` only for isolated local smoke fixtures with a non-default `FACTORY_QUEUE_PATH` or `--queue`; the migrated default queue path stays reserved for Postgres.
 
 ## Step 5 — Projection fallback policy (P1.1)
 

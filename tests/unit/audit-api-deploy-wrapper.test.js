@@ -10,6 +10,7 @@ const API_ENTRYPOINTS = [
   '../../api/auth/password-reset/[...route].js',
   '../../api/auth/users/[userId].js',
   '../../api/v1/[...route].js',
+  '../../api/v1/factory/[...route].js',
   '../../api/v1/projects/[...route].js',
   '../../api/v1/task-workflow-proxy.js',
   '../../api/v1/tasks/[taskId].js',
@@ -52,7 +53,7 @@ function createResponseRecorder() {
   };
 }
 
-test('Vercel API entrypoints return the request handler promise', () => {
+test('operator-hosted API entrypoints return the request handler promise', () => {
   for (const entrypoint of API_ENTRYPOINTS) {
     const expected = Promise.resolve({ handled: entrypoint });
     withStubbedServer(() => expected, () => {
@@ -155,7 +156,7 @@ test('task workflow proxy rejects routes outside the versioned workflow allowlis
   });
 });
 
-test('Vercel server wrapper selects and logs the canonical runtime backend', () => {
+test('API server wrapper selects and logs the canonical runtime backend', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const source = fs.readFileSync(path.join(__dirname, '../../api/_server.js'), 'utf8');

@@ -169,7 +169,7 @@ function buildReadinessEvidence({ context, pilotAgents, appWorkflowDispatch, run
   return {
     evidenceVersion: 'pilot-delegation-readiness.v1',
     validatedAt: new Date().toISOString(),
-    targetEnvironment: context.options.targetEnvironment || context.env.PILOT_TARGET_ENVIRONMENT || context.env.VERCEL_ENV || 'local',
+    targetEnvironment: context.options.targetEnvironment || context.env.PILOT_TARGET_ENVIRONMENT || context.env.FACTORY_RUNTIME_ENV || context.env.NODE_ENV || 'local',
     tenantId: context.tenantId,
     runtimeConfig: context.runtimeConfig,
     pilotAgents,

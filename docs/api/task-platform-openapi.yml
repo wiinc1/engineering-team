@@ -14,7 +14,7 @@ info:
     `lib/task-platform/golden-path-shared.js` exposes `pollForgeExecutionReadiness` for bounded forge readiness polling during Postgres replay seeding.
     Standalone golden-path smoke verifiers: `npm run golden-path:smoke:gp-002`, `npm run golden-path:smoke:gp-015`, and `npm run golden-path:smoke:gp-013` (GP-013 accepts `--openclaw-url` for live delegation).
     Hosted worker preflight uses `npm run audit:workers:production-smoke` against `/api/v1/tasks/{taskId}/events` and `/state` on the deployed operator URL.
-    Single-server factory delivery uses `npm run factory:submit` and `npm run factory:orchestrator` (`lib/task-platform/factory-delivery.js`) to queue requirements and advance golden-path phases on the local stack.
+    Single-server factory delivery uses `npm run factory:submit` and `npm run factory:orchestrator` (`lib/task-platform/factory-delivery.js`) to queue requirements and advance golden-path phases on the local stack. Operators can read durable queue health through `GET /api/v1/factory/queue`, which is backed by Postgres `factory_delivery_queue` and returns pending, leased, retrying, completed, and dead-letter state. SRE/admin operators can recover terminal failures through `POST /api/v1/factory/queue/{queueId}/requeue`; the mutation only requeues tenant-scoped rows already in `dead_letter`.
     `npm run test:unit` runs through `scripts/run-unit-tests.js`, which clears shell `DATABASE_URL` and deployment env vars so unit tests stay on isolated file backends.
     Golden-path phase 4 waits for contract-coverage audit history rows matching the current implementation attempt before leaving `IMPLEMENTATION`; phase 5 waits for `task.sre_monitoring_started` to project before SRE approve (`lib/task-platform/golden-path-phases.js`).
 servers:
@@ -591,6 +591,89 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /factory/queue:
+    get:
+      summary: Read durable factory queue operational status
+      operationId: getFactoryQueueStatus
+      tags: [Factory Queue]
+      security:
+        - BearerAuth: []
+      description: |
+        Returns tenant-scoped Postgres queue health for autonomous factory delivery. Requires `metrics:read`.
+        Rows are ordered for operator review with dead-letter, leased, and retrying work first.
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            $ref: '#/components/schemas/FactoryQueueStage'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Durable factory queue status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FactoryQueueStatusEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /factory/queue/{queueId}/requeue:
+    post:
+      summary: Requeue a tenant-scoped dead-lettered factory item
+      operationId: requeueFactoryQueueItem
+      tags: [Factory Queue]
+      security:
+        - BearerAuth: []
+      description: |
+        Recovers a durable queue row from `dead_letter` after operator review. Requires `factory-queue:write`.
+        The row resumes from the recorded failed stage, clears stale lease/error fields, resets attempts, and records actor/reason metadata.
+        Real-delivery rows run the hosted-evidence preflight before mutation; missing proof returns `factory_queue_requeue_preflight_failed`.
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FactoryQueueRequeueRequest'
+      responses:
+        '200':
+          description: Factory queue item requeued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FactoryQueueRequeueEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Queue item was not found in `dead_letter` for this tenant; returns `factory_queue_item_not_requeueable`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Real-delivery preflight still blocks requeue; returns `factory_queue_requeue_preflight_failed` with `details.failures`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 components:
   parameters:
     TaskId:
@@ -607,6 +690,198 @@ components:
         type: string
         pattern: '^PRJ-[A-Z0-9]{8}$'
   schemas:
+    FactoryQueueStage:
+      type: string
+      enum: [queued, intake_complete, phase1_complete, phase6_complete, completed, dead_letter]
+    FactoryQueueSummary:
+      type: object
+      required: [total, pending, leased, expiredLeases, retrying, completed, deadLetter, byStage]
+      properties:
+        total: { type: integer }
+        pending: { type: integer }
+        leased: { type: integer }
+        expiredLeases: { type: integer }
+        retrying: { type: integer }
+        completed: { type: integer }
+        deadLetter: { type: integer }
+        byStage:
+          type: object
+          additionalProperties:
+            type: integer
+    FactoryQueueItem:
+      type: object
+      required: [id, title, stage, attempts, maxAttempts, leaseActive, leaseExpired, retrying, terminal]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        stage:
+          $ref: '#/components/schemas/FactoryQueueStage'
+        taskId:
+          type: string
+          nullable: true
+        projectId:
+          type: string
+          nullable: true
+        projectName:
+          type: string
+          nullable: true
+        evidencePath:
+          type: string
+          nullable: true
+        realDelivery:
+          $ref: '#/components/schemas/FactoryQueueRealDeliveryStatus'
+          nullable: true
+        forgeTaskId:
+          type: string
+          nullable: true
+        evidenceStatus:
+          type: string
+          nullable: true
+        lastAction:
+          type: string
+          nullable: true
+        lastError:
+          type: string
+          nullable: true
+        attempts: { type: integer }
+        maxAttempts: { type: integer }
+        availableAt:
+          type: string
+          nullable: true
+          format: date-time
+        lockedAt:
+          type: string
+          nullable: true
+          format: date-time
+        lockedBy:
+          type: string
+          nullable: true
+        leaseExpiresAt:
+          type: string
+          nullable: true
+          format: date-time
+        deadLetteredAt:
+          type: string
+          nullable: true
+          format: date-time
+        completedAt:
+          type: string
+          nullable: true
+          format: date-time
+        createdAt:
+          type: string
+          nullable: true
+          format: date-time
+        updatedAt:
+          type: string
+          nullable: true
+          format: date-time
+        leaseActive: { type: boolean }
+        leaseExpired: { type: boolean }
+        retrying: { type: boolean }
+        terminal: { type: boolean }
+    FactoryQueueRealDeliveryStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        requested: { type: boolean }
+        repository: { type: string, nullable: true }
+        branchName: { type: string, nullable: true }
+        commitSha: { type: string, nullable: true }
+        prUrl: { type: string, nullable: true }
+        prNumber: { type: integer, nullable: true }
+        autoMerge: { type: boolean }
+        releaseEnv: { type: string, nullable: true }
+        deploymentUrl: { type: string, nullable: true }
+        candidateProofPath: { type: string, nullable: true }
+        finalEvidencePath: { type: string, nullable: true }
+        rollbackTarget: { type: string, nullable: true }
+        rollbackVerified: { type: boolean }
+        rollbackEvidenceProvided: { type: boolean }
+        riskLevel: { type: string, nullable: true }
+        productionSafe: { type: boolean }
+        productionSafetyEvidenceProvided: { type: boolean }
+        healthCheckPath: { type: string, nullable: true }
+        requireHealthCommit: { type: boolean }
+        releaseArtifactDir: { type: string, nullable: true }
+        useExistingReleaseArtifacts: { type: boolean }
+        releaseArtifactCommandsCount: { type: integer }
+        checksCount: { type: integer }
+        requiredChecksCount: { type: integer }
+        branchProtectionProvided: { type: boolean }
+        branchProtectionSource: { type: string, nullable: true }
+        mergeReadinessProvided: { type: boolean }
+        testCommandsCount: { type: integer }
+        preflight:
+          $ref: '#/components/schemas/FactoryQueueRealDeliveryPreflight'
+    FactoryQueueRealDeliveryPreflight:
+      type: object
+      additionalProperties: false
+      required: [required, ok, failures]
+      properties:
+        required: { type: boolean }
+        ok: { type: boolean }
+        failures:
+          type: array
+          items:
+            type: string
+    FactoryQueueStatus:
+      type: object
+      required: [schemaVersion, queueBackend, queueTable, tenantId, generatedAt, filter, summary, items]
+      properties:
+        schemaVersion:
+          type: string
+          enum: [factory-queue-status.v1]
+        queueBackend:
+          type: string
+          enum: [postgres]
+        queueTable:
+          type: string
+          enum: [factory_delivery_queue]
+        tenantId: { type: string }
+        generatedAt:
+          type: string
+          format: date-time
+        filter:
+          type: object
+          additionalProperties: true
+        summary:
+          $ref: '#/components/schemas/FactoryQueueSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FactoryQueueItem'
+    FactoryQueueStatusEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          $ref: '#/components/schemas/FactoryQueueStatus'
+    FactoryQueueRequeueRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    FactoryQueueRequeueResult:
+      type: object
+      required: [action, item]
+      properties:
+        action:
+          type: string
+          enum: [operator_requeued]
+        item:
+          $ref: '#/components/schemas/FactoryQueueItem'
+    FactoryQueueRequeueEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          $ref: '#/components/schemas/FactoryQueueRequeueResult'
     AiAgent:
       type: object
       required: [agentId, displayName, role, active, assignable, version]

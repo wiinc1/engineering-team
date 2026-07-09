@@ -1,7 +1,7 @@
 flowchart TD
   start([Issue 208 readiness gate]) --> deploy[Inspect latest production deployment]
   deploy --> deployReady{Deployment ready for commit bbf4916?}
-  deployReady -->|yes| authConfig[Validate Vercel auth env names]
+  deployReady -->|yes| authConfig[Validate operator-hosted auth env config]
   deployReady -->|no| blocked[Block pilot and link remediation]
 
   authConfig --> authSmoke[Run registration auth production smoke]

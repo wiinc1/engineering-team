@@ -44,6 +44,14 @@ release_management:
       required_artifact_fields:
         - deployed_sha
         - environment
+        - deployment_url
+        - rollback_target
+      required_post_deploy_health_fields:
+        - environment
+        - deployment_url
+        - checked_sha
+        - status
+        - commit_verified
     prod:
       require_live_deploy_proof: true
       required_live_checks:
@@ -53,6 +61,18 @@ release_management:
       required_artifact_fields:
         - deployed_sha
         - environment
+        - deployment_url
+        - rollback_target
+      required_post_deploy_health_fields:
+        - environment
+        - deployment_url
+        - checked_sha
+        - status
+        - commit_verified
+      required_rollback_fields:
+        - rollback_target
+        - verification_status
+        - verified_at
 """
 
 

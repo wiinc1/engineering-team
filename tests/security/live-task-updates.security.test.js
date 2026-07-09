@@ -59,8 +59,9 @@ test('live task updates stay tenant-scoped and omit restricted detail fields', a
     });
     assert.equal(response.status, 200);
     let payload = await response.json();
-    assert.equal(payload.data.updates.some(update => update.entityId === taskA.taskId), false);
-    assert.equal(payload.data.updates.some(update => update.entityId === taskB.taskId), true);
+    assert.equal(payload.data.updates.some(update => update.tenantId === 'tenant-a'), false);
+    assert.equal(payload.data.updates.some(update => update.payload?.task?.title === 'Tenant A task'), false);
+    assert.equal(payload.data.updates.some(update => update.entityId === taskB.taskId && update.tenantId === 'tenant-b'), true);
     assert.equal(payload.data.updates.every(update => update.payload?.task?.tenant_id === 'tenant-b' || update.entityType !== 'task'), true);
 
     response = await fetch(`${baseUrl}/api/v1/tasks/updates`, {
@@ -68,7 +69,7 @@ test('live task updates stay tenant-scoped and omit restricted detail fields', a
     });
     assert.equal(response.status, 200);
     payload = await response.json();
-    const taskUpdate = payload.data.updates.find(update => update.entityId === taskA.taskId);
+    const taskUpdate = payload.data.updates.find(update => update.entityId === taskA.taskId && update.tenantId === 'tenant-a');
     assert.ok(taskUpdate);
     for (const key of RESTRICTED_KEYS) {
       assert.equal(Object.hasOwn(taskUpdate.payload, key), false);

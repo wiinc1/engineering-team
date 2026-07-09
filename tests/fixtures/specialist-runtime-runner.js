@@ -40,7 +40,7 @@ process.stdin.on('end', () => {
     sessionId,
     output,
     ownership: {
-      specialistId: payload.specialist,
+      specialistId: process.env.FIXTURE_RUNTIME_SPECIALIST_ID || payload.specialist,
       runtimeAgentId,
       sessionId,
       runtime: 'fixture-openclaw',

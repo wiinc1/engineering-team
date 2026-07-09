@@ -9,7 +9,7 @@ test('live task freshness OpenAPI contract documents the polling endpoint and pa
 
   assert.match(spec, /\/v1\/tasks\/updates:/);
   assert.match(spec, /operationId: listLiveTaskFreshnessUpdates/);
-  for (const field of ['cursor', 'pollAfterMs', 'updates', 'entityType', 'entityId', 'updateType', 'version', 'updatedAt', 'payload']) {
+  for (const field of ['cursor', 'pollAfterMs', 'updates', 'entityType', 'entityId', 'tenantId', 'updateType', 'version', 'updatedAt', 'payload']) {
     assert.match(spec, new RegExp(`${field}:`));
   }
   assert.match(spec, /additionalProperties: false/);
@@ -43,5 +43,6 @@ test('runtime live task update payload conforms to the documented envelope shape
   assert.equal(update.entityType, 'task');
   assert.equal(update.updateType, 'task_snapshot');
   assert.equal(update.entityId, 'TSK-CONTRACT');
+  assert.equal(update.tenantId, 'tenant-contract');
   assert.equal(update.payload.task.task_id, 'TSK-CONTRACT');
 });

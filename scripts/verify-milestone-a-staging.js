@@ -18,7 +18,7 @@ async function main() {
     openclawUrl: readArg('--openclaw-url'),
     outputDir,
     requireDelegationSmoke: process.argv.includes('--require-delegation-smoke'),
-    skipValidation: !process.argv.includes('--run-validation'),
+    skipValidation: process.argv.includes('--skip-validation'),
     skipForgePhases: !process.argv.includes('--full-replay'),
   }));
 

@@ -90,8 +90,8 @@ e email").trim(), p = String(readConfigValue(r, "oidcLogoutUrl", "VITE_OIDC_LOGO
   "oidcLogoutRedirectUri", "VITE_OIDC_LOGOUT_REDIRECT_URI") || e?.VITE_OIDC_LOGOUT_REDIRECT_URI || n).trim(), f = parseBoolean(readConfigValue(r, "internalAuthB\
 ootstrapEnabled", "VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED") || e?.VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED, l), u = String(readConfigValue(r, "productionAuthStrategy",
   "VITE_AUTH_PRODUCTION_AUTH_STRATEGY", "AUTH_PRODUCTION_AUTH_STRATEGY") || e?.VITE_AUTH_PRODUCTION_AUTH_STRATEGY || e?.AUTH_PRODUCTION_AUTH_STRATEGY || "").trim().
-  toLowerCase(), h = String(readConfigValue(r, "vercelEnv", "VITE_VERCEL_ENV") || e?.VITE_VERCEL_ENV || "").trim().toLowerCase(), T = u === "magic-link" ? "regi\
-stration" : u || (e?.PROD || e?.MODE === "production" || h === "production" || h === "preview" ? "registration" : a && c ? "oidc" : f ? "internal-bootstrap" : "");
+  toLowerCase(), h = String(readConfigValue(r, "deployEnv", "VITE_FACTORY_DEPLOY_ENV", "VITE_DEPLOY_ENV") || e?.VITE_FACTORY_DEPLOY_ENV || e?.VITE_DEPLOY_ENV || "").trim().toLowerCase(), T = u === "magic-link" ? "regi\
+stration" : u || (e?.PROD || e?.MODE === "production" || h === "production" || h === "preview" || h === "staging" ? "registration" : a && c ? "oidc" : f ? "internal-bootstrap" : "");
   return { productionAuthStrategy: T, oidcDiscoveryUrl: a, oidcClientId: c, oidcRedirectUri: d, oidcScope: s, oidcLogoutUrl: p, oidcLogoutRedirectUri: o, internalAuthBootstrapEnabled: f,
   isOidcConfigured: !!(a && c), isRegistrationConfigured: T === "registration", isMagicLinkConfigured: false };
 }

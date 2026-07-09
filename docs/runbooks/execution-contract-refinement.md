@@ -53,6 +53,13 @@ Authoritative references:
 - `execution_contract_approval_blocked`: at least one required reviewer approval
   is missing or a blocking question is unresolved. Resolve the decision cluster
   before retrying approval.
+- `blocked_human_review` / `missing_human_pm_review` / `missing_human_architect_review`:
+  PM and Architect agents disagree (conflicting reviewer statuses, open blocking
+  feedback from both roles, or an explicit `agent_disagreement` record). Record
+  human Product Manager and human Architect reviews on `human_reviews.pm` and
+  `human_reviews.architect` (actor type `user`/`human`, not agent) before
+  Operator Approval or policy auto-approval. Policy:
+  `pm-architect-human-review-gate.v1` in `lib/audit/pm-architect-human-review-gate.js`.
 - `execution_contract_auto_approval_blocked`: low-risk Simple policy approval
   was requested but eligibility failed. Record explicit Operator Approval.
 - `artifact_bundle_approval_blocked`: PM, section-owner, or operator approval is

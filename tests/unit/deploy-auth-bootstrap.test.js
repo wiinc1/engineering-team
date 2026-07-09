@@ -60,15 +60,10 @@ test('deploy auth bootstrap stays skipped unless explicitly enabled or database 
   }).enabled, true);
   assert.deepEqual(resolveDeployAuthBootstrap({
     ...VALID_ENV,
-    VERCEL: '1',
+    AUTH_DEPLOY_BOOTSTRAP_ENABLED: 'false',
   }).enabled, false);
   assert.deepEqual(resolveDeployAuthBootstrap({
     ...VALID_ENV,
-    VERCEL_ENV: 'production',
-  }).enabled, false);
-  assert.deepEqual(resolveDeployAuthBootstrap({
-    ...VALID_ENV,
-    VERCEL: '1',
     AUTH_DEPLOY_BOOTSTRAP_ENABLED: 'true',
   }).enabled, true);
 });

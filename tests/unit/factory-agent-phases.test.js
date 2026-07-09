@@ -15,11 +15,11 @@ test('parseDelegationJsonOutput extracts JSON payloads from agent output', () =>
   assert.equal(parsed.commitSha, 'abc123');
 });
 
-test('resolveImplementerArtifacts falls back to generated commit when output is not JSON', () => {
+test('resolveImplementerArtifacts falls back to generated commit without fake PR evidence', () => {
   const artifacts = resolveImplementerArtifacts({ delegated: true, message: 'implemented' });
   assert.equal(artifacts.delegated, true);
   assert.match(artifacts.commitSha, /^[0-9a-f]{40}$/);
-  assert.match(artifacts.prUrl, /^https:\/\/github\.com\/wiinc1\/engineering-team\/pull\/\d+$/);
+  assert.equal(artifacts.prUrl, null);
 });
 
 test('resolveQaOutcome defaults to pass when agent output is empty', () => {
@@ -31,6 +31,12 @@ test('buildCiValidationEvidence links local validation to workflow metadata', ()
   const evidence = buildCiValidationEvidence({ ok: true }, { repository: 'wiinc1/engineering-team' });
   assert.equal(evidence.repository, 'wiinc1/engineering-team');
   assert.match(evidence.ciUrl, /validation\.yml/);
+});
+
+test('buildCiValidationEvidence does not invent repository identity', () => {
+  const evidence = buildCiValidationEvidence({ ok: true });
+  assert.equal(evidence.repository, null);
+  assert.equal(evidence.ciUrl, null);
 });
 
 test('resolveSreApproval approves agent JSON payloads by default', () => {

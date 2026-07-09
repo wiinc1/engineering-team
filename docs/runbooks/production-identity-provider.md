@@ -18,11 +18,11 @@ The active no-IdP strategy is registration auth:
 
 The historical magic-link implementation and artifacts are retained only as audit history for Issue #151 and earlier production remediation. They are not a valid production strategy after Issue #167.
 
-Production-like browser bundles, including Vercel preview deployments, default to registration when no explicit browser strategy is selected. The trusted internal bootstrap fallback is visible only when an operator explicitly selects `internal-bootstrap` through the browser auth strategy config.
+Production-like browser bundles, including preview/staging deploy profiles, default to registration when no explicit browser strategy is selected. The trusted internal bootstrap fallback is visible only when an operator explicitly selects `internal-bootstrap` through the browser auth strategy config.
 
 ## Required Environment
 
-Registration production checks require these names to exist in Vercel:
+Registration production checks require these names to exist in the operator host environment:
 
 ```text
 DATABASE_URL
@@ -58,7 +58,7 @@ Local value validation additionally enforces:
    `npm run build` runs `npm run auth:deploy:bootstrap` before the auth config
    gate and browser build. In local/operator runs, `DATABASE_URL` enables
    bootstrap by default and applies database migrations under a Postgres advisory
-   lock. Vercel builds require `AUTH_DEPLOY_BOOTSTRAP_ENABLED=true` explicitly
+   lock. Operators may require `AUTH_DEPLOY_BOOTSTRAP_ENABLED=true` explicitly
    before bootstrap work runs, so routine deploys are not blocked by a saturated
    database pool when migrations are already applied. When the admin seed
    variables are present, bootstrap also seeds the admin user and optional credential.
@@ -88,14 +88,14 @@ Local value validation additionally enforces:
    ```
 
    The password is hashed into `auth_credentials` and is never printed by the
-   script. Keep `AUTH_ADMIN_INITIAL_PASSWORD` as a Vercel secret, rotate it when
+   script. Keep `AUTH_ADMIN_INITIAL_PASSWORD` as a host secret, rotate it when
    shared access changes, and avoid leaving a shared bootstrap password enabled
    in production longer than necessary.
 
 3. Validate configuration:
 
    ```bash
-   npm run auth:config:check:vercel
+   npm run auth:config:check
    npm run auth:config:check
    ```
 

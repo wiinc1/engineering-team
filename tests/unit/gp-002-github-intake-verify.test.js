@@ -14,7 +14,7 @@ test('stackHasAuditApi detects audit-api process in stack state', () => {
   assert.equal(stackHasAuditApi({ processes: [{ name: 'audit-api', pid: 42 }] }, { requireAlive: false }), true);
 });
 
-test('runGp002GithubIntakeVerify writes smoke and complete evidence', async () => {
+function createGp002Fixture() {
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gp-002-verify-'));
   const stackDir = path.join(outputDir, 'stack-state');
   fs.mkdirSync(stackDir, { recursive: true });
@@ -22,75 +22,90 @@ test('runGp002GithubIntakeVerify writes smoke and complete evidence', async () =
   fs.writeFileSync(stackStatePath, JSON.stringify({
     processes: [{ name: 'audit-api', pid: process.pid }],
   }));
+  return { outputDir, stackStatePath };
+}
 
-  const issueNumber = 991_234;
-  let webhookPosts = 0;
-  const expectedIssueUrl = `http://192.168.1.116/wiinc1/engineering-team/-/issues/${issueNumber}`;
-  const fetchImpl = async (url, options = {}) => {
-    if (String(url).endsWith('/gitlab/webhooks') && options.method === 'POST') {
-      webhookPosts += 1;
-      if (webhookPosts === 1) {
-        return {
-          ok: true,
-          status: 201,
-          json: async () => ({
-            received: true,
-            created: true,
-            taskId: 'TSK-GP002',
-            intakeProvider: 'gitlab',
-            forgeIssueUrl: expectedIssueUrl,
-            gitlabIssueUrl: expectedIssueUrl,
-            intakeDraft: true,
-          }),
-        };
-      }
-      return {
-        ok: true,
-        status: 202,
-        json: async () => ({
-          received: true,
-          ignored: true,
-          reason: 'existing_intake_task',
-          taskId: 'TSK-GP002',
-        }),
-      };
-    }
-    if (String(url).includes('/api/v1/tasks/TSK-GP002/state')) {
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({
-          data: {
-            task_id: 'TSK-GP002',
-            waiting_state: 'task_refinement',
-            assignee: 'pm',
-          },
-        }),
-      };
-    }
-    if (String(url).includes('/tasks/TSK-GP002/history')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
-          items: [
-            {
-              event_type: 'task.created',
-              payload: {
-                forge_issue_url: expectedIssueUrl,
-                gitlab_issue_url: expectedIssueUrl,
-              },
-            },
-            { event_type: 'task.refinement_requested' },
-          ],
-        }),
-      };
-    }
-    return { ok: false, status: 404, json: async () => ({}), text: async () => '{}' };
+function jsonResponse(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
   };
+}
 
+function gp002CreatedWebhookResponse(expectedIssueUrl) {
+  return jsonResponse(201, {
+    received: true,
+    created: true,
+    taskId: 'TSK-GP002',
+    intakeProvider: 'gitlab',
+    forgeIssueUrl: expectedIssueUrl,
+    gitlabIssueUrl: expectedIssueUrl,
+    intakeDraft: true,
+  });
+}
+
+function gp002DuplicateWebhookResponse() {
+  return jsonResponse(202, {
+    received: true,
+    ignored: true,
+    reason: 'existing_intake_task',
+    taskId: 'TSK-GP002',
+  });
+}
+
+function gp002TaskStateResponse() {
+  return jsonResponse(200, {
+    data: {
+      task_id: 'TSK-GP002',
+      waiting_state: 'task_refinement',
+      assignee: 'pm',
+    },
+  });
+}
+
+function gp002HistoryResponse(expectedIssueUrl) {
+  return jsonResponse(200, {
+    items: [
+      {
+        event_type: 'task.created',
+        payload: {
+          forge_issue_url: expectedIssueUrl,
+          gitlab_issue_url: expectedIssueUrl,
+        },
+      },
+      { event_type: 'task.refinement_requested' },
+    ],
+  });
+}
+
+function gp002WebhookResponse(state, expectedIssueUrl) {
+  state.webhookPosts += 1;
+  return state.webhookPosts === 1
+    ? gp002CreatedWebhookResponse(expectedIssueUrl)
+    : gp002DuplicateWebhookResponse();
+}
+
+function createGp002FetchMock(state, expectedIssueUrl) {
+  return async function fetchImpl(url, options = {}) {
+    const route = String(url);
+    if (route.endsWith('/gitlab/webhooks') && options.method === 'POST') {
+      return gp002WebhookResponse(state, expectedIssueUrl);
+    }
+    if (route.includes('/api/v1/tasks/TSK-GP002/state')) return gp002TaskStateResponse();
+    if (route.includes('/tasks/TSK-GP002/history')) return gp002HistoryResponse(expectedIssueUrl);
+    return jsonResponse(404, {});
+  };
+}
+
+test('runGp002GithubIntakeVerify writes smoke and complete evidence', async () => {
+  const { outputDir, stackStatePath } = createGp002Fixture();
+  const issueNumber = 991_234;
+  const expectedIssueUrl = `http://192.168.1.116/wiinc1/engineering-team/-/issues/${issueNumber}`;
+  const fetchState = { webhookPosts: 0 };
   const { evidence, complete } = await runGp002GithubIntakeVerify({
-    fetchImpl,
+    fetchImpl: createGp002FetchMock(fetchState, expectedIssueUrl),
     baseUrl: 'http://127.0.0.1:13000',
     jwtSecret: 'test-secret',
     githubWebhookSecret: 'test-webhook-secret',

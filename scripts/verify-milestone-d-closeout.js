@@ -5,6 +5,9 @@ const {
   assertStagingRuntimeReady,
   applyLocalGoldenPathEnvIfNeeded,
 } = require('../lib/task-platform/staging-runtime');
+const {
+  readGoldenPathRealEvidenceCliOptions,
+} = require('../lib/task-platform/golden-path-real-evidence-preflight');
 const { runMilestoneDCloseoutVerify } = require('../lib/audit/milestone-d-closeout-verify');
 
 function readArg(name, fallback = '') {
@@ -14,14 +17,17 @@ function readArg(name, fallback = '') {
 
 async function main() {
   const outputDir = readArg('--output-dir', process.env.STAGING_EVIDENCE_DIR || 'observability/milestone-d-staging');
+  const realEvidenceOptions = readGoldenPathRealEvidenceCliOptions();
   const runtime = applyLocalGoldenPathEnvIfNeeded(assertStagingRuntimeReady(resolveStagingRuntime({
     baseUrl: readArg('--base-url'),
     jwtSecret: readArg('--jwt-secret'),
     forgeAdapterUrl: readArg('--forgeadapter-url'),
     openclawUrl: readArg('--openclaw-url'),
+    ...realEvidenceOptions,
+    agentDrivenPhases: true,
     outputDir,
     requireDelegationSmoke: !process.argv.includes('--skip-delegation-smoke'),
-    skipValidation: !process.argv.includes('--run-validation'),
+    skipValidation: process.argv.includes('--skip-validation'),
     skipForgePhases: false,
   })));
 
@@ -31,6 +37,7 @@ async function main() {
 
   const evidence = await runMilestoneDCloseoutVerify({
     ...runtime,
+    ...realEvidenceOptions,
     outputPath: path.join(outputDir, 'milestone-d-closeout-verify.json'),
   });
 

@@ -5,13 +5,13 @@
 
 ## Problem
 
-The Vercel-hosted audit API accepts Postgres writes but does not run long-lived workers. Without always-on projection + outbox loops, read models lag and workflow gates fail until an operator runs `POST /projections/process` or `npm run audit:project`.
+The request-scoped audit API accepts Postgres writes but does not run long-lived workers. Without always-on projection + outbox loops, read models lag and workflow gates fail until an operator runs `POST /projections/process` or `npm run audit:project`.
 
 ## Architecture
 
 | Component | Runtime | Responsibility |
 | --- | --- | --- |
-| Audit API | Vercel / `run-audit-api.js` | Append events, enqueue projection + outbox work |
+| Audit API | operator host / `run-audit-api.js` | Append events, enqueue projection + outbox work |
 | Audit workers | `run-audit-workers.js` | Drain projection queue + publish outbox (incl. ET→forge bridge) |
 | Postgres | Docker `:15432` on coordinated stack (`dev:golden-path:up`) | Shared `DATABASE_URL` between API and workers |
 

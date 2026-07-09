@@ -215,6 +215,55 @@ For any production-affecting change, capture:
 - rollback target and rollback verification
 - redacted smoke artifacts when auth or task-platform behavior changes
 
+The release gate is environment-specific. `dev` can validate with local lint,
+typecheck, and test evidence. `staging` and `prod` must include a live
+`deploy-record`, `post-deploy-health`, immutable artifact evidence, and a
+rollback target; `prod` also requires explicit `rollback-verification`.
+Hosted health evidence must name the environment, deployment URL, checked SHA,
+and status. Production rollback evidence must name the rollback target,
+verification status, and verification timestamp.
+Assemble the final gate input from concrete artifact files instead of editing
+the release evidence bundle by hand:
+
+```bash
+python3 dev-standards/tooling/build_release_evidence.py \
+  --environment staging \
+  --evidence build=.artifacts/build.json \
+  --evidence compatibility-report=.artifacts/compatibility-report.json \
+  --evidence vulnerability-scan=.artifacts/vulnerability-scan.json \
+  --evidence secret-scan=.artifacts/secret-scan.json \
+  --deploy-record .artifacts/deploy-record.json \
+  --post-deploy-health .artifacts/post-deploy-health.json \
+  --immutable-artifact .artifacts/immutable-artifact.json
+```
+
+For production, add `--rollback-verification .artifacts/rollback-verification.json`.
+Use `RELEASE_ENV=staging make standards-policy-gates` or
+`RELEASE_ENV=prod make standards-policy-gates` before claiming hosted
+promotion readiness.
+
+Golden-path strict mode can assemble those artifacts from a real GitHub PR and
+hosted health check when the branch, commit, PR, required checks, deployment URL,
+and rollback target already exist:
+
+```bash
+RELEASE_ENV=staging \
+CHANGE_KIND=bugfix \
+FACTORY_TEMPLATE_TIER=Standard \
+DEPLOYMENT_URL=<hosted-staging-url> \
+ROLLBACK_TARGET=<last-known-good-release-or-url> \
+GITHUB_TOKEN=<github-token> \
+node scripts/run-golden-path-phases.js \
+  --from 6 --to 6 \
+  --collect-real-evidence \
+  --require-real-evidence \
+  --agent-driven-phases \
+  --pr-url https://github.com/wiinc1/engineering-team/pull/<pr-number>
+```
+
+For `RELEASE_ENV=prod`, add `--rollback-verified` only after rollback has been
+verified. Otherwise production release evidence fails closed.
+
 Generated evidence must not include raw secrets, raw cookies, bearer tokens,
 database URLs, API keys, passwords, CSRF values, raw email bodies, or private
 production identifiers.
@@ -229,7 +278,7 @@ Active production strategy: `registration`.
 Before shipping auth-affecting production changes:
 
 ```bash
-npm run auth:config:check:vercel
+npm run auth:config:check
 npm run auth:config:check
 npm run auth:registration:production-smoke
 npm run auth:status:check -- --require-complete
@@ -382,7 +431,7 @@ Emergency protected-path changes must:
 
 | System | Symptom | First response |
 |---|---|---|
-| Vercel | Deployment fails, rewrites break, or protected routes return the SPA incorrectly | Check `vercel.json`, deployment logs, env names, and auth config; roll back to last known-good deployment if production is affected |
+| Coordinated stack | Deployment fails, proxies break, or protected routes miss the API | Check Docker/operator host logs, reverse-proxy routes, env names, and auth config; restart stack or roll back to last known-good release |
 | PostgreSQL or Supabase | Auth/task/audit writes fail or migrations hang | Stop rollout, verify `DATABASE_URL`, inspect migration state, run read-only SQL checks before retry |
 | Resend | Verification or reset email delivery fails | Preserve generic user response, inspect registration dashboard/alerts, rerun auth smoke after provider recovery |
 | OIDC provider | Hosted sign-in or callback fails | Confirm selected strategy is really `oidc`, inspect OIDC smoke artifact, revert to approved registration config only with product/security approval |
