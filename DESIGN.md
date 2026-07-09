@@ -800,3 +800,7 @@ Golden-path `dev:golden-path:up` runs the Vite UI with an empty `VITE_TASK_API_B
 - If a needed token is missing, use the closest existing semantic token for the current change and record a follow-up.
 - Do not invent new normative tokens unless the task explicitly includes updating `DESIGN.md` and the required approval path is satisfied.
 - Material token, typography, source-of-truth, generated-output, accessibility, or agent-usage changes require owner approval and, when applicable, an ADR.
+
+## Factory stack note (non-visual)
+
+Progressive autonomy and coordinated-stack deployment decisions do not change visual tokens. Session/env renames and factory route wiring are operational only.

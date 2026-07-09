@@ -10,6 +10,13 @@
 - Evidence in this document: progressive autonomy product decisions, coordinated-stack runtime topology, operator-trusted delivery metric bar, and human PM/Architect review requirements on agent disagreement.
 - Gaps or exceptions: live OpenClaw-as-default factory proof remains follow-up work tracked in `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
 
+## Required Evidence
+
+- Commands run: targeted unit tests for human review gate, auth config residual cleanup, forge bridge restoration, ownership map lint, and `node scripts/verify-standards.js`.
+- Tests added or updated: `tests/unit/pm-architect-human-review-gate.test.js`, auth/deploy residual tests, release-artifact CLI CI env isolation.
+- Docs updated: this report, `docs/product/software-factory-control-plane-prd.md`, `docs/architecture.md`, `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
+- Rollout or rollback notes: factory claims use coordinated stack only; rollback by reverting the PR merge on `main`.
+
 These answers lock sequencing for the autonomous software factory work. They supersede open clarifying questions in the gap analysis for planning purposes.
 
 ---
