@@ -42,3 +42,16 @@ Add whatever helps you do your job. This is your cheat sheet.
 ## Related
 
 - [Agent workspace](/concepts/agent-workspace)
+
+
+## Dual remotes (this engineering-team worktree)
+
+| Role | Remote name | URL |
+| --- | --- | --- |
+| **Primary** | `origin` | `ssh://git@192.168.1.116:2424/wiinc1/engineering-team.git` (GitLab) |
+| **Backup** | `github` | `https://github.com/wiinc1/engineering-team.git` |
+
+- Prefer basing branches on **`origin/main`** when it is current.
+- Push **`origin` first**, then **`github`**.
+- Status: `npm run remotes:sync-status`
+- Runbook: `docs/runbooks/dual-remote-gitlab-primary.md`
