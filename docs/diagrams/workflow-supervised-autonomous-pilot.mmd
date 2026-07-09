@@ -19,7 +19,7 @@ flowchart TD
   attribution -->|no| failClosed[Fail closed and link blocker]
   attribution -->|yes| branch[Branch, commit, and open PR]
 
-  branch --> checks[Run unit, standards, PR, browser, and Vercel checks]
+  branch --> checks[Run unit, standards, PR, browser, and deployment health checks]
   checks --> checksPass{Validation passed?}
   checksPass -->|no| repair[Repair or block with visible reason]
   repair --> checks

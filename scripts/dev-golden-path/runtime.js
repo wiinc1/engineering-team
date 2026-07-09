@@ -2,7 +2,6 @@ const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, DEFAULTS } = require('./constants');
-const { buildOpenClawPmRefinementEnv } = require('../../lib/audit/pm-refinement-delegate-config');
 
 function composeArgs() {
   return [
@@ -103,11 +102,6 @@ function buildSharedEnv(options = {}) {
     FF_AUDIT_FOUNDATION: 'true',
     FF_WORKFLOW_ENGINE: 'true',
     FF_INTAKE_DRAFT_CREATION: 'true',
-    FF_EXECUTION_CONTRACTS: 'true',
-    GOLDEN_PATH_LOCAL_PM_REFINEMENT: 'false',
-    GOLDEN_PATH_OPENCLAW_PM_REFINEMENT: 'true',
-    PM_REFINEMENT_DELEGATE_WORK: 'openclaw',
-    ...buildOpenClawPmRefinementEnv(process.env, ROOT),
     FF_GITLAB_INTAKE_NORMALIZER: 'true',
     FF_GITLAB_INTAKE_PROJECT_BOOTSTRAP: 'true',
     FF_GITHUB_INTAKE_NORMALIZER: 'false',

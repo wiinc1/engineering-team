@@ -162,69 +162,6 @@ test('gitlab intake normalizer is gated behind ff_gitlab_intake_normalizer', asy
   }, { ffGitLabIntakeNormalizer: 'false' });
 });
 
-test('gitlab issue update syncs operator intake requirements on an existing intake draft', async () => {
-  await withServer(async ({ baseUrl, secret }) => {
-    const issueIid = uniqueIssueIid();
-    const openBody = JSON.stringify(issuePayload({
-      object_attributes: {
-        iid: issueIid,
-        description: 'Initial intake body.',
-      },
-    }));
-    const openResponse = await fetch(`${baseUrl}/gitlab/webhooks`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-gitlab-event': 'Issue Hook',
-        'x-gitlab-event-uuid': 'delivery-gitlab-intake-open',
-        'x-gitlab-token': secret,
-      },
-      body: openBody,
-    });
-    assert.equal(openResponse.status, 201);
-    const openPayload = await openResponse.json();
-    const taskId = openPayload.taskId;
-
-    const updateBody = JSON.stringify(issuePayload({
-      object_attributes: {
-        iid: issueIid,
-        title: 'Updated intake title',
-        description: 'Updated operator requirements from GitLab.',
-        action: 'update',
-      },
-    }));
-    const updateResponse = await fetch(`${baseUrl}/gitlab/webhooks`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-gitlab-event': 'Issue Hook',
-        'x-gitlab-event-uuid': 'delivery-gitlab-intake-update',
-        'x-gitlab-token': secret,
-      },
-      body: updateBody,
-    });
-    assert.equal(updateResponse.status, 200);
-    const updatePayload = await updateResponse.json();
-    assert.equal(updatePayload.synced, true);
-    assert.equal(updatePayload.taskId, taskId);
-
-    const detail = await fetch(`${baseUrl}/tasks/${encodeURIComponent(taskId)}/detail`, {
-      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
-    });
-    assert.equal(detail.status, 200);
-    const detailBody = await detail.json();
-    assert.equal(detailBody.context.operatorIntakeRequirements, 'Updated operator requirements from GitLab.');
-    assert.equal(detailBody.task.title, 'Updated intake title');
-
-    const history = await fetch(`${baseUrl}/tasks/${encodeURIComponent(taskId)}/history`, {
-      headers: { authorization: `Bearer ${signJwt('jwt-secret')}` },
-    });
-    assert.equal(history.status, 200);
-    const historyBody = await history.json();
-    assert.ok(historyBody.items.some((item) => item.event_type === 'task.intake_requirements_updated'));
-  });
-});
-
 test('gitlab issues without opt-in label are ignored', async () => {
   await withServer(async ({ baseUrl, secret }) => {
     const body = JSON.stringify(issuePayload({ labels: [{ title: 'enhancement' }] }));

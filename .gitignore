@@ -31,11 +31,5 @@ observability/golden-path-postgres-pilot-2026-*.json
 observability/milestone-*-staging/factory-milestone-c-queue-*.json
 observability/milestone-*-staging/factory-delivery/stack/
 observability/workflow-audit.log
-observability/milestone-*-staging/
-observability/milestone-*-staging-test/
-observability/milestone-*-staging-test-debug/
-observability/milestone-hosted-staging/
-observability/pilot-delegation-readiness.json
-observability/et-forge-bridge-smoke.test.json
 observability/specialist-delegation.jsonl
 observability/*.png

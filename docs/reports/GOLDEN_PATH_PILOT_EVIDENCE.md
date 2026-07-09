@@ -1,13 +1,33 @@
 # Golden Path Pilot Evidence
 
-**Status:** Phases 0–6 complete on **local Postgres golden-path stack** with **live OpenClaw delegation** (GP-013) and **GP-023 validation without skip**
+**Status:** Phases 0–6 complete on **coordinated local stack** (`dev:golden-path:up`). Factory orchestrator milestones **A–E** verified; GP-023 validation without skip.
 **Epic issue:** https://github.com/wiinc1/engineering-team/issues/269  
 **Pilot issue:** https://github.com/wiinc1/engineering-team/issues/271  
-**Pilot task ID:** `TSK-7030B644` (Postgres golden-path stack, delegation replay)  
-**Project ID:** `PRJ-30D9900E` (Golden Path Pilot - Issue 271 (2026-06-24 delegation replay))  
-**Forge task ID:** `TSK-GOLDENRCUX0J`  
-**Canonical evidence:** `observability/golden-path-postgres-pilot.json` (`phase6_complete`, GP-001–GP-027)  
-**Timestamped replay artifact:** `observability/golden-path-postgres-pilot-2026-06-24T00-48-55.json`
+
+### Factory orchestrator (canonical, 2026-06-24)
+
+| Field | Value |
+| --- | --- |
+| Pilot task | `TSK-013` |
+| Project | `PRJ-D4F207CA` |
+| Forge task | `TSK-GOLDENSLNF5Q` |
+| Factory queue | `factory-milestone-c-mqslnf5q` |
+| Verify command | `npm run milestone-d:verify` (passed 2026-06-24T21:46Z) |
+| Canonical rollup | `observability/golden-path-pilot.json` |
+| Factory evidence | `observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqslnf5q.json` |
+| Closeout report | `observability/factory-closeout/TSK-013.json` |
+| Milestone complete | `observability/milestone-d-complete.json`, `observability/milestone-e-complete.json` |
+| Live GP-013 verify | `npm run milestone-c:verify:live` passed 2026-06-24T22:03Z (`factory-milestone-c-mqsmdppp`) |
+
+### Prior Postgres delegation replay
+
+| Field | Value |
+| --- | --- |
+| Pilot task | `TSK-7030B644` |
+| Project | `PRJ-30D9900E` |
+| Forge task | `TSK-GOLDENRCUX0J` |
+| Canonical evidence | `observability/golden-path-postgres-pilot.json` |
+| Timestamped replay | `observability/golden-path-postgres-pilot-2026-06-24T00-48-55.json` |
 
 ## Decision
 
@@ -33,7 +53,7 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 - Evidence in this report: golden-path phase runners, Postgres pilot evidence JSON, manual-step classifications, validation command output, forge lifecycle jobs, live OpenClaw delegation smoke, UI sign-in verification, and closeout events for issue #271.
 - GP-013: executed in replay path with `--require-delegation-smoke` and `FF_REAL_SPECIALIST_DELEGATION=true` against `http://127.0.0.1:18789`.
 - GP-023: `validation.ok: true` for `lint`, `test:unit`, `standards:check` (vitest worktree exclusion fix, PR #277).
-- Gap observed: hosted staging replay (Supabase `DATABASE_URL`, projection workers, webhooks) not yet executed. Documented rationale: local golden-path stack proves phases 0–6; hosted promotion requires deployed ET API, operator session, and Supabase-backed workers. Source https://github.com/wiinc1/engineering-team/issues/269.
+- Gap observed: GP-022 auto-merge remains simulated until `FF_FACTORY_AUTO_MERGE` and `GITHUB_TOKEN` are set in verify runs. Documented rationale: coordinated local stack proves factory milestones A–E; Vercel and Supabase are not part of engineering-team factory runtime; GP-024/GP-025 apply to target apps under delivery. Source https://github.com/wiinc1/engineering-team/issues/269.
 
 ## Required Evidence
 
@@ -48,7 +68,7 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 | --- | --- | --- |
 | Production `seed-golden-path-phase0` 500 (`tenant/user postgres... not found`) | operator intervention | Use production operator JWT (browser session or prod env file), not local `.env.local` secret |
 | `forge-execution-readiness` 422 while task stage is `DRAFT` | routine observation | Expected until GP-009 workflow advancement; contract is approved with `forge_dispatch` |
-| Hosted staging replay (Supabase workers, webhooks) | out of scope v1 | Next roadmap item after local epic close |
+| GP-024/GP-025 target-app infra (Supabase/Redis) | out of scope platform | Manual only when factory delivers non-platform repos |
 
 ## Manual action log (Postgres delegation replay)
 
@@ -87,7 +107,7 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 
 | Step | Gap |
 | --- | --- |
-| GP-003 | PM refinement still requires runtime delegate or operator-triggered `/refinement/start` |
+| GP-003 | **Automated** via `FF_FACTORY_AGENT_DRIVEN_PHASE1` in factory-orchestrator verify |
 | GP-007 | Postgres projection catch-up between gates (mitigated in phase runner with retry) |
 | GP-009 → GP-011 | **Bridged** via `et-forge-dispatch-bridge.js` when `ET_FORGE_DISPATCH_ENABLED=true` |
 | GP-013 | **Proven** with `--require-delegation-smoke`; default replay still skips unless flag set |
@@ -95,13 +115,15 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 | GP-018 | **Bridged** via `et-forge-dispatch-bridge.js` on engineer submission v2 (forge resume) |
 | GP-020 → GP-021 | **Bridged** via `et-forge-dispatch-bridge.js` on QA retest pass (forge gates + ET close recommendations) |
 | GP-020/GP-021 | ET close review and forge gates are parallel manual systems |
-| GP-023 | Wire CI validation on merge (local proof scripted in phase 6) |
-| GP-026 | SRE monitoring now runs in phase 5 before `PM_CLOSE_REVIEW` advance |
+| GP-022 | Auto-merge wired (`github-auto-merge.js`); simulated when `FF_FACTORY_AUTO_MERGE` off |
+| GP-023 | **Proven** in factory closeout (`lint`, `test:unit`, `standards:check`, no skip) |
+| GP-026 | **Proven** via `runSreAgentPhase` in factory phase 5/6 |
+| GP-027 | **Proven** via `factory-closeout.js` closeout report + step classification |
 
 ## Required evidence checklist
 
 - [x] GitHub issue URL
-- [x] ET task + Project IDs (`TSK-7030B644`, `PRJ-30D9900E`)
+- [x] ET task + Project IDs — factory: `TSK-013`, `PRJ-D4F207CA`; prior replay: `TSK-7030B644`, `PRJ-30D9900E`
 - [x] Execution contract version + approval mode
 - [x] forge-execution-readiness HTTP 200 capture
 - [x] forgeadapter start job + runtime projection
@@ -112,7 +134,9 @@ Prior Postgres replay without live delegation: `TSK-D54F1849` / `PRJ-95FA1A5E` (
 - [x] Operator UI sign-in + closed task visible in browser
 - [x] GP-023 local deploy validation (`lint`, `test:unit`, `standards:check`, no skip)
 - [x] GP-026 SRE monitoring + human closeout events
-- [x] `observability/golden-path-postgres-pilot.json` committed
+- [x] `observability/golden-path-pilot.json` factory rollup committed
+- [x] `observability/golden-path-postgres-pilot.json` prior replay committed
+- [x] `npm run milestone-d:verify` passed (22 automated / 2 manual GP steps)
 - [x] `task.closed` event recorded
 
 ## Prior art: file-backend replay

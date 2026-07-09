@@ -101,6 +101,18 @@ npm run factory:submit -- --file /tmp/factory-requirements.json
 npm run factory:orchestrator -- --once
 ```
 
+The factory queue uses Postgres table `factory_delivery_queue` by default instead of the JSON queue file. Run migrations first, then submit and tick the orchestrator:
+
+```bash
+npm run audit:migrate
+npm run factory:submit -- --file /tmp/factory-requirements.json
+npm run factory:orchestrator -- --once
+```
+
+Operators can inspect status with `GET /api/v1/factory/queue`. If a row reaches `dead_letter`, SRE/admin review the failure evidence, then call `POST /api/v1/factory/queue/<queue-id>/requeue` with `factory-queue:write` and a reason. Requeue only succeeds for tenant-scoped rows already in `dead_letter`; it clears stale lease/error fields and resumes from the recorded failed stage.
+
+Use `FACTORY_QUEUE_BACKEND=file FACTORY_ALLOW_FILE_QUEUE=true` only for isolated local smoke fixtures with a non-default `FACTORY_QUEUE_PATH` or `--queue`; the migrated default queue path stays reserved for Postgres.
+
 ## Step 5 — Projection fallback policy (P1.1)
 
 Phase runners call `lib/audit/projection-catch-up.js`:

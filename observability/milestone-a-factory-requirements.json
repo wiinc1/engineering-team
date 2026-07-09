@@ -1,0 +1,5 @@
+{
+  "title": "Milestone A completion — docs-only factory delivery",
+  "requirements": "Docs-only Simple tier delivery to prove coordinated-stack factory orchestrator reaches phase6 with validation (lint, test:unit, standards:check).",
+  "templateTier": "Simple"
+}

@@ -25,7 +25,8 @@ export function reconcileLiveUpdates(current = {}, updates = []) {
   const ignored = [];
   const versions = new Map(Object.entries(current.versions || {}));
   for (const update of updates) {
-    const key = `${update.entityType}:${update.entityId}`;
+    const tenantKey = update.tenantId || update.payload?.task?.tenant_id || update.payload?.project?.tenantId || "default";
+    const key = `${update.entityType}:${tenantKey}:${update.entityId}`;
     const prior = versions.get(key);
     if (prior && compareLiveUpdateVersions(prior, update) <= 0) {
       ignored.push(update);

@@ -10,7 +10,7 @@ Related production remediation issue: Issue #137
 
 Active production strategy: `registration`
 
-Registration auth replaces the durable no-IdP magic-link path. Production must expose the browser strategy as `registration`, keep internal bootstrap disabled, and use the same-origin Vercel `/backend` API rewrite for protected app routes.
+Registration auth replaces the durable no-IdP magic-link path. Production must expose the browser strategy as `registration`, keep internal bootstrap disabled, and use same-origin operator-hosted reverse-proxy routes for protected app routes.
 
 Issue #151 is superseded by the registration cutover work in Issues #160-#167. The production status gate still exists, but its selected strategy and smoke evidence are now registration-based. Magic-link evidence is historical only and cannot satisfy the ship gate.
 
@@ -21,14 +21,13 @@ Production registration mode must be explicit and approval-gated:
 - `admin-approved`: anyone can create an account, but the account stays pending until an admin activates it.
 - `open` and `invite-only` remain recognized by the service for non-production/local compatibility, but they are not valid production registration modes for this product policy.
 
-First-admin creation remains operator-owned but is automated through `npm run auth:deploy:bootstrap`, which runs first inside `npm run build`. Local/operator builds enable bootstrap when `DATABASE_URL` is present. Vercel builds require `AUTH_DEPLOY_BOOTSTRAP_ENABLED=true` explicitly before they run migrations or seed the first admin, so routine production deploys are not blocked by a saturated database pool when migrations are already applied. For fast preview verification, the bootstrap can also create or reset the seeded admin password when `AUTH_ADMIN_SEED_CREDENTIAL=true` and `AUTH_ADMIN_INITIAL_PASSWORD` are provided. Missing optional admin seed values are logged without blocking database migrations. The seed workflow writes only redacted identifiers and never prints database URLs, raw email addresses, passwords, cookies, or secrets. The manual `npm run auth:admin:seed -- --apply` command remains available for repair/debugging.
+First-admin creation remains operator-owned but is automated through `npm run auth:deploy:bootstrap`, which runs first inside `npm run build`. Local/operator builds enable bootstrap when `DATABASE_URL` is present. Operators may set `AUTH_DEPLOY_BOOTSTRAP_ENABLED=false` to skip bootstrap on hosts that already migrated, so routine deploys are not blocked by a saturated database pool when migrations are already applied. For fast preview verification, the bootstrap can also create or reset the seeded admin password when `AUTH_ADMIN_SEED_CREDENTIAL=true` and `AUTH_ADMIN_INITIAL_PASSWORD` are provided. Missing optional admin seed values are logged without blocking database migrations. The seed workflow writes only redacted identifiers and never prints database URLs, raw email addresses, passwords, cookies, or secrets. The manual `npm run auth:admin:seed -- --apply` command remains available for repair/debugging.
 
 ## Deployment State
 
 Before moving to the ship portion of the workflow:
 
 ```bash
-npm run auth:config:check:vercel
 npm run auth:config:check
 npm run auth:registration:production-smoke
 npm run auth:status:check -- --require-complete
@@ -36,7 +35,7 @@ npm run auth:status:check -- --require-complete
 
 The status check requires fresh production smoke evidence generated on or after 2026-05-08. The historical April issue #92 smoke and the Issue #151 magic-link smoke artifact remain audit history only.
 
-Latest checked-in production evidence was generated on 2026-05-15 against `https://engineering-team-zeta.vercel.app`; the artifact records the production URL, selected `registration` strategy, and rollback target.
+Latest checked-in production evidence was generated on 2026-05-15 against `https://factory.engineering-team.local`; the artifact records the production URL, selected `registration` strategy, and rollback target.
 
 ## Evidence Artifact
 

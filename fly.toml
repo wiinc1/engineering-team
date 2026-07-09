@@ -1,4 +1,4 @@
-# GP-007: long-running audit workers (projection + outbox). Deploy separately from Vercel API.
+# GP-007: long-running audit workers (projection + outbox) for the coordinated factory stack.
 app = "engineering-team-audit-workers"
 primary_region = "iad"
 

@@ -3,6 +3,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
+const {
+  assertGoldenPathRealEvidencePreflight,
+  collectGoldenPathRealEvidenceCliArgs,
+  readGoldenPathRealEvidenceCliOptions,
+} = require('../lib/task-platform/golden-path-real-evidence-preflight');
 
 const execFileAsync = promisify(execFile);
 
@@ -15,7 +20,6 @@ const DEFAULTS = {
   databaseUrl: 'postgres://audit:audit@127.0.0.1:15432/engineering_team',
   outputPath: 'observability/golden-path-postgres-pilot.json',
   persistDir: 'observability/golden-path-postgres-stack/audit-data',
-  childIssue: '271',
 };
 
 function readArg(name, fallback = '') {
@@ -89,7 +93,19 @@ async function runScript(scriptPath, args, env) {
   return { stdout, stderr };
 }
 
-async function main() {
+function assertPostgresReplayRealEvidencePreflight({ realEvidenceOptions, baseUrl, forgeadapterUrl, fromPhase, toPhase }) {
+  assertGoldenPathRealEvidencePreflight({
+    ...realEvidenceOptions,
+    baseUrl,
+    operatorUrl: DEFAULTS.uiUrl,
+    forgeAdapterBaseUrl: forgeadapterUrl,
+    requireReadableCandidateProof: true,
+    fromPhase: Number(fromPhase),
+    toPhase: Number(toPhase),
+  }, { context: 'Postgres golden-path replay' });
+}
+
+function buildReplayConfig() {
   const freshBootstrap = hasFlag('--fresh-bootstrap');
   const baseUrl = readArg('--base-url', DEFAULTS.baseUrl);
   const outputPath = readArg(
@@ -104,11 +120,15 @@ async function main() {
       ? `observability/golden-path-postgres-stack/bootstrap-${Date.now()}`
       : DEFAULTS.persistDir,
   );
-  const childIssue = readArg('--child-issue', DEFAULTS.childIssue);
+  const childIssue = readArg('--child-issue');
+  const childIssueUrl = readArg(
+    '--child-issue-url',
+    childIssue ? `https://github.com/wiinc1/engineering-team/issues/${childIssue}` : '',
+  );
   const projectName = readArg(
     '--project-name',
     freshBootstrap
-      ? `Golden Path Pilot - Issue ${childIssue} (${new Date().toISOString().slice(0, 10)} fresh)`
+      ? `Golden Path Pilot - Issue ${childIssue || 'TBD'} (${new Date().toISOString().slice(0, 10)} fresh)`
       : '',
   );
   const bootstrapPhase1 = hasFlag('--bootstrap') || freshBootstrap || !fs.existsSync(path.resolve(process.cwd(), outputPath));
@@ -118,81 +138,73 @@ async function main() {
   const openclawUrl = readArg('--openclaw-url', process.env.OPENCLAW_BASE_URL || stackUrls.openclawUrl);
   const hermesUrl = readArg('--hermes-url', process.env.HERMES_BASE_URL || stackUrls.hermesUrl);
   const forgeadapterUrl = readArg('--forgeadapter-url', process.env.FORGEADAPTER_BASE_URL || stackUrls.forgeadapterUrl);
-  const skipDelegationSmoke = !hasFlag('--require-delegation-smoke')
-    || hasFlag('--skip-delegation-smoke');
+  const skipDelegationSmoke = !hasFlag('--require-delegation-smoke') || hasFlag('--skip-delegation-smoke');
   const forgeTaskId = readArg(
     '--forge-task-id',
     freshBootstrap
       ? `TSK-GOLDEN${Date.now().toString(36).slice(-6).toUpperCase()}`
       : 'TSK-GOLDEN001',
   );
+  return {
+    baseUrl, childIssue, childIssueUrl, forgeadapterUrl, forgeTaskId, freshBootstrap,
+    hermesUrl, openclawUrl, outputPath, persistDir, projectName, skipDelegationSmoke,
+    fromPhase, toPhase,
+  };
+}
 
-  ensurePostgresProcessEnv();
-  await assertStackReady(baseUrl);
-  await seedForgeTask(baseUrl, DEFAULTS.forgeServiceToken, forgeTaskId);
-  const env = buildReplayChildEnv();
+async function runPhase1IfRequested(config, env) {
+  if (Number(config.fromPhase) > 1) return;
+  const phase1Args = buildPhase1Args({
+    baseUrl: config.baseUrl,
+    childIssue: config.childIssue,
+    childIssueUrl: config.childIssueUrl,
+    outputPath: config.outputPath,
+    projectName: config.projectName,
+  });
+  const phase1 = await runScript('scripts/run-golden-path-phase1.js', phase1Args, env);
+  process.stdout.write(phase1.stdout);
+  if (phase1.stderr) process.stderr.write(phase1.stderr);
+}
 
-  if (Number(fromPhase) <= 1) {
-    const phase1Args = [
-      '--bootstrap',
-      '--base-url', baseUrl,
-      '--child-issue', childIssue,
-      '--child-issue-url', `https://github.com/wiinc1/engineering-team/issues/${childIssue}`,
-      '--out', outputPath,
-    ];
-    if (projectName) {
-      phase1Args.push('--project-name', projectName);
-    }
-    const phase1 = await runScript('scripts/run-golden-path-phase1.js', phase1Args, env);
-    process.stdout.write(phase1.stdout);
-    if (phase1.stderr) {
-      process.stderr.write(phase1.stderr);
-    }
-  }
+async function runRemainingPhasesIfRequested(config, env) {
+  if (Number(config.toPhase) < 2) return;
+  const phaseArgs = [
+    '--base-url', config.baseUrl,
+    '--from', String(Math.max(2, Number(config.fromPhase))),
+    '--to', config.toPhase,
+    '--operator-url', DEFAULTS.uiUrl,
+    '--out', config.outputPath,
+    '--persist-dir', config.persistDir,
+    '--jwt-secret', env.AUTH_JWT_SECRET,
+    '--forge-service-token', env.FORGE_SERVICE_TOKEN,
+    '--forge-adapter-token', env.FORGEADAPTER_SERVICE_TOKEN,
+    ...collectGoldenPathRealEvidenceCliArgs(),
+  ];
+  if (config.skipDelegationSmoke) phaseArgs.push('--skip-delegation-smoke');
+  if (config.openclawUrl) phaseArgs.push('--openclaw-url', config.openclawUrl);
+  if (config.hermesUrl) phaseArgs.push('--hermes-url', config.hermesUrl);
+  phaseArgs.push('--forgeadapter-url', config.forgeadapterUrl, '--forge-task-id', config.forgeTaskId);
+  const phases = await runScript('scripts/run-golden-path-phases.js', phaseArgs, {
+    ...env,
+    FORGEADAPTER_BASE_URL: config.forgeadapterUrl,
+    ...(config.openclawUrl ? { OPENCLAW_BASE_URL: config.openclawUrl } : {}),
+    ...(config.hermesUrl ? { HERMES_BASE_URL: config.hermesUrl } : {}),
+    ...(config.skipDelegationSmoke ? {} : { FF_REAL_SPECIALIST_DELEGATION: 'true' }),
+  });
+  process.stdout.write(phases.stdout);
+  if (phases.stderr) process.stderr.write(phases.stderr);
+}
 
-  if (Number(toPhase) >= 2) {
-    const phaseArgs = [
-      '--base-url', baseUrl,
-      '--from', String(Math.max(2, Number(fromPhase))),
-      '--to', toPhase,
-      '--operator-url', DEFAULTS.uiUrl,
-      '--out', outputPath,
-      '--persist-dir', persistDir,
-      '--jwt-secret', env.AUTH_JWT_SECRET,
-      '--forge-service-token', env.FORGE_SERVICE_TOKEN,
-      '--forge-adapter-token', env.FORGEADAPTER_SERVICE_TOKEN,
-    ];
-    if (skipDelegationSmoke) {
-      phaseArgs.push('--skip-delegation-smoke');
-    }
-    if (openclawUrl) {
-      phaseArgs.push('--openclaw-url', openclawUrl);
-    }
-    if (hermesUrl) {
-      phaseArgs.push('--hermes-url', hermesUrl);
-    }
-    phaseArgs.push('--forgeadapter-url', forgeadapterUrl, '--forge-task-id', forgeTaskId);
-    const phases = await runScript('scripts/run-golden-path-phases.js', phaseArgs, {
-      ...env,
-      ET_FORGE_LIFECYCLE_TASK_ID: forgeTaskId,
-      FORGEADAPTER_BASE_URL: forgeadapterUrl,
-      ...(openclawUrl ? { OPENCLAW_BASE_URL: openclawUrl } : {}),
-      ...(hermesUrl ? { HERMES_BASE_URL: hermesUrl } : {}),
-      ...(skipDelegationSmoke ? {} : { FF_REAL_SPECIALIST_DELEGATION: 'true' }),
-    });
-    process.stdout.write(phases.stdout);
-    if (phases.stderr) {
-      process.stderr.write(phases.stderr);
-    }
-  }
-
-  let evidence = null;
+function readReplayEvidence(outputPath) {
   try {
-    evidence = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), outputPath), 'utf8'));
+    return JSON.parse(fs.readFileSync(path.resolve(process.cwd(), outputPath), 'utf8'));
   } catch {
-    evidence = null;
+    return null;
   }
+}
 
+function printReplaySummary(outputPath) {
+  const evidence = readReplayEvidence(outputPath);
   process.stdout.write(`${JSON.stringify({
     ok: true,
     status: evidence?.status || 'unknown',
@@ -204,6 +216,37 @@ async function main() {
     uiTasksUrl: `${DEFAULTS.uiUrl}/tasks`,
     preserveDataHint: 'npm run dev:golden-path:down -- --keep-postgres',
   }, null, 2)}\n`);
+}
+
+async function main() {
+  const config = buildReplayConfig();
+  const realEvidenceOptions = readGoldenPathRealEvidenceCliOptions();
+  assertPostgresReplayRealEvidencePreflight({
+    realEvidenceOptions,
+    baseUrl: config.baseUrl,
+    forgeadapterUrl: config.forgeadapterUrl,
+    fromPhase: config.fromPhase,
+    toPhase: config.toPhase,
+  });
+
+  ensurePostgresProcessEnv();
+  await assertStackReady(config.baseUrl);
+  await seedForgeTask(config.baseUrl, DEFAULTS.forgeServiceToken, config.forgeTaskId);
+  const env = buildReplayChildEnv();
+  await runPhase1IfRequested(config, env);
+  await runRemainingPhasesIfRequested(config, env);
+  printReplaySummary(config.outputPath);
+}
+
+function buildPhase1Args({ baseUrl, childIssue, childIssueUrl, outputPath, projectName }) {
+  if (!childIssue && !childIssueUrl) {
+    throw new Error('Phase 1 replay requires an explicit --child-issue or --child-issue-url; default pilot issue 271 is not reused');
+  }
+  const args = ['--bootstrap', '--base-url', baseUrl, '--out', outputPath];
+  if (childIssue) args.push('--child-issue', childIssue);
+  if (childIssueUrl) args.push('--child-issue-url', childIssueUrl);
+  if (projectName) args.push('--project-name', projectName);
+  return args;
 }
 
 function ensurePostgresProcessEnv() {
@@ -224,7 +267,19 @@ function buildReplayChildEnv() {
   };
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  DEFAULTS,
+  buildPhase1Args,
+  buildReplayChildEnv,
+  loadLocalStackServiceUrls,
+  main,
+  readArg,
+  hasFlag,
+};

@@ -387,10 +387,10 @@ test.beforeEach(async ({ page }) => {
     await expect(page.getByLabel('Trusted auth code')).toHaveCount(0);
   });
 
-  test('defaults Vercel preview runtime config to registration auth', async ({ page }) => {
+  test('defaults factory preview deploy runtime config to registration auth', async ({ page }) => {
     await page.addInitScript(() => {
       window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
-        vercelEnv: 'preview',
+        deployEnv: 'preview',
         internalAuthBootstrapEnabled: true,
       };
     });

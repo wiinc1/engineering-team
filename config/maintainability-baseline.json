@@ -36,7 +36,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1399,
+      "line": 1401,
       "ordinal": 78,
       "name": "runGoldenPathPhase6",
       "actual": 278,
@@ -75,43 +75,34 @@
       "line": 339,
       "ordinal": 20,
       "name": "runGoldenPathPhase1",
-      "actual": 229,
+      "actual": 227,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1678,
+      "line": 1680,
       "ordinal": 79,
       "name": "runGoldenPathPhase5",
-      "actual": 227,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/gp-002-github-intake-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 56,
-      "ordinal": 7,
-      "name": "runGp002GithubIntakeVerify",
       "actual": 219,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1906,
-      "ordinal": 81,
-      "name": "runGoldenPathPhases",
-      "actual": 196,
+      "line": 795,
+      "ordinal": 62,
+      "name": "runGoldenPathPhase2",
+      "actual": 192,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 788,
-      "ordinal": 62,
-      "name": "runGoldenPathPhase2",
-      "actual": 195,
+      "line": 1900,
+      "ordinal": 80,
+      "name": "runGoldenPathPhases",
+      "actual": 187,
       "cap": 50
     },
     {
@@ -180,25 +171,16 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 984,
+      "line": 988,
       "ordinal": 63,
       "name": "runGoldenPathPhase3",
       "actual": 147,
       "cap": 50
     },
     {
-      "path": "lib/audit/gp-005-github-intake-project-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 27,
-      "ordinal": 3,
-      "name": "runGp005GithubIntakeProjectVerify",
-      "actual": 145,
-      "cap": 50
-    },
-    {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1132,
+      "line": 1136,
       "ordinal": 67,
       "name": "runGoldenPathPhase4",
       "actual": 140,
@@ -220,42 +202,6 @@
       "ordinal": 16,
       "name": "buildTaskDetailCss",
       "actual": 133,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/milestone-b-orchestration-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 10,
-      "ordinal": 1,
-      "name": "runMilestoneBOrchestrationVerify",
-      "actual": 132,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/github-auto-merge.js",
-      "rule": "maintainability:function-lines",
-      "line": 55,
-      "ordinal": 7,
-      "name": "mergePullRequestWhenReady",
-      "actual": 128,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/milestone-c-agent-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 9,
-      "ordinal": 1,
-      "name": "runMilestoneCAgentVerify",
-      "actual": 126,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/milestone-a-staging-verify.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 5,
-      "ordinal": 1,
-      "name": "<arrow>",
-      "actual": 125,
       "cap": 50
     },
     {
@@ -295,18 +241,9 @@
       "cap": 50
     },
     {
-      "path": "scripts/replay-golden-path-postgres.js",
-      "rule": "maintainability:function-lines",
-      "line": 92,
-      "ordinal": 7,
-      "name": "main",
-      "actual": 116,
-      "cap": 50
-    },
-    {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 601,
+      "line": 608,
       "ordinal": 57,
       "name": "completeContractCoverageAuditGate",
       "actual": 113,
@@ -340,33 +277,6 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/gitlab-intake-project-bootstrap.js",
-      "rule": "maintainability:function-lines",
-      "line": 122,
-      "ordinal": 12,
-      "name": "bootstrapProjectForIssueIntake",
-      "actual": 105,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/github-intake-project-bootstrap.js",
-      "rule": "maintainability:function-lines",
-      "line": 114,
-      "ordinal": 14,
-      "name": "bootstrapProjectForIssueIntake",
-      "actual": 103,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/staging-runtime.js",
-      "rule": "maintainability:function-lines",
-      "line": 11,
-      "ordinal": 3,
-      "name": "resolveStagingRuntime",
-      "actual": 101,
-      "cap": 50
-    },
-    {
       "path": "scripts/dev-golden-path/mocks.js",
       "rule": "maintainability:function-lines",
       "line": 48,
@@ -394,30 +304,12 @@
       "cap": 50
     },
     {
-      "path": "tests/unit/gp-002-github-intake-verify.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 17,
-      "ordinal": 2,
-      "name": "<arrow>",
-      "actual": 94,
-      "cap": 50
-    },
-    {
       "path": "scripts/advance-tsk-001-qa-loop.js",
       "rule": "maintainability:function-lines",
       "line": 324,
       "ordinal": 22,
       "name": "main",
       "actual": 93,
-      "cap": 50
-    },
-    {
-      "path": "scripts/setup-gitlab-intake-webhook.js",
-      "rule": "maintainability:function-lines",
-      "line": 53,
-      "ordinal": 5,
-      "name": "main",
-      "actual": 92,
       "cap": 50
     },
     {
@@ -430,38 +322,11 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/milestone-a-staging-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 40,
-      "ordinal": 2,
-      "name": "runFactoryStagingSmoke",
-      "actual": 89,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/milestone-a-staging-verify.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 14,
-      "ordinal": 2,
-      "name": "<arrow>",
-      "actual": 87,
-      "cap": 50
-    },
-    {
       "path": "lib/task-platform/et-forge-dispatch-bridge.js",
       "rule": "maintainability:function-lines",
       "line": 542,
       "ordinal": 37,
       "name": "dispatchForgeDelegate",
-      "actual": 85,
-      "cap": 50
-    },
-    {
-      "path": "scripts/setup-github-intake-webhook.js",
-      "rule": "maintainability:function-lines",
-      "line": 52,
-      "ordinal": 4,
-      "name": "main",
       "actual": 85,
       "cap": 50
     },
@@ -484,15 +349,6 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/milestone-hosted-phase6-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 7,
-      "ordinal": 1,
-      "name": "runMilestoneHostedPhase6Verify",
-      "actual": 81,
-      "cap": 50
-    },
-    {
       "path": "src/app/session-browser-registration.test.tsx",
       "rule": "maintainability:function-lines",
       "line": 31,
@@ -508,15 +364,6 @@
       "ordinal": 30,
       "name": "<arrow>",
       "actual": 80,
-      "cap": 50
-    },
-    {
-      "path": "scripts/capture-factory-persona-smoke.js",
-      "rule": "maintainability:function-lines",
-      "line": 41,
-      "ordinal": 5,
-      "name": "main",
-      "actual": 79,
       "cap": 50
     },
     {
@@ -544,15 +391,6 @@
       "ordinal": 100,
       "name": "login",
       "actual": 77,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/http.js",
-      "rule": "maintainability:function-lines",
-      "line": 221,
-      "ordinal": 17,
-      "name": "recordPmRefinementContract",
-      "actual": 76,
       "cap": 50
     },
     {
@@ -610,15 +448,6 @@
       "cap": 50
     },
     {
-      "path": "tests/unit/factory-delivery.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 112,
-      "ordinal": 16,
-      "name": "<arrow>",
-      "actual": 74,
-      "cap": 50
-    },
-    {
       "path": "scripts/reseed-tsk-001-local.js",
       "rule": "maintainability:function-lines",
       "line": 128,
@@ -651,15 +480,6 @@
       "line": 118,
       "ordinal": 8,
       "name": "runProjectionCatchUp",
-      "actual": 71,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/gp-005-github-intake-project-verify.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 8,
-      "ordinal": 1,
-      "name": "<arrow>",
       "actual": 71,
       "cap": 50
     },
@@ -709,57 +529,12 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/http.js",
-      "rule": "maintainability:function-lines",
-      "line": 367,
-      "ordinal": 23,
-      "name": "submitUxImplementationReview",
-      "actual": 66,
-      "cap": 50
-    },
-    {
       "path": "lib/task-platform/et-forge-dispatch-bridge.js",
       "rule": "maintainability:function-lines",
       "line": 746,
       "ordinal": 43,
       "name": "handleEtForgeDispatchEvent",
       "actual": 66,
-      "cap": 50
-    },
-    {
-      "path": "scripts/replay-golden-path-staging.js",
-      "rule": "maintainability:function-lines",
-      "line": 16,
-      "ordinal": 2,
-      "name": "main",
-      "actual": 66,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/gitlab-intake-normalizer.js",
-      "rule": "maintainability:function-lines",
-      "line": 195,
-      "ordinal": 10,
-      "name": "processGitLabIssueIntakeWebhook",
-      "actual": 65,
-      "cap": 50
-    },
-    {
-      "path": "lib/audit/http.js",
-      "rule": "maintainability:function-lines",
-      "line": 297,
-      "ordinal": 18,
-      "name": "startPmRefinementWorkflow",
-      "actual": 65,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/audit-api-github-intake.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 95,
-      "ordinal": 9,
-      "name": "<arrow>",
-      "actual": 65,
       "cap": 50
     },
     {
@@ -817,20 +592,20 @@
       "cap": 50
     },
     {
+      "path": "lib/audit/pm-architect-human-review-gate.js",
+      "rule": "maintainability:function-lines",
+      "line": 255,
+      "ordinal": 19,
+      "name": "evaluatePmArchitectHumanReviewGate",
+      "actual": 63,
+      "cap": 50
+    },
+    {
       "path": "lib/audit/product-delivery-integrity.js",
       "rule": "maintainability:function-lines",
       "line": 446,
       "ordinal": 29,
       "name": "evaluateRunnableSurfaceVerification",
-      "actual": 63,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/audit-api-github-intake.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 96,
-      "ordinal": 10,
-      "name": "<arrow>",
       "actual": 63,
       "cap": 50
     },
@@ -849,24 +624,6 @@
       "line": 287,
       "ordinal": 15,
       "name": "buildTaskCreationFormCss",
-      "actual": 62,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/audit-api-gitlab-intake.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 165,
-      "ordinal": 14,
-      "name": "<arrow>",
-      "actual": 62,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/gp-002-github-intake-verify.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 29,
-      "ordinal": 3,
-      "name": "<arrow>",
       "actual": 62,
       "cap": 50
     },
@@ -921,15 +678,6 @@
       "line": 3,
       "ordinal": 1,
       "name": "AuthRoute",
-      "actual": 60,
-      "cap": 50
-    },
-    {
-      "path": "tests/unit/audit-api-gitlab-intake.test.js",
-      "rule": "maintainability:function-lines",
-      "line": 166,
-      "ordinal": 15,
-      "name": "<arrow>",
       "actual": 60,
       "cap": 50
     },
@@ -1006,15 +754,6 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/milestone-a-staging-verify.js",
-      "rule": "maintainability:function-lines",
-      "line": 130,
-      "ordinal": 3,
-      "name": "runMilestoneAStagingVerify",
-      "actual": 55,
-      "cap": 50
-    },
-    {
       "path": "lib/task-platform/et-forge-dispatch-bridge.js",
       "rule": "maintainability:function-lines",
       "line": 486,
@@ -1071,7 +810,7 @@
     {
       "path": "src/app/session.browser.js",
       "rule": "maintainability:function-lines",
-      "line": 313,
+      "line": 320,
       "ordinal": 33,
       "name": "completeOidcSignIn",
       "actual": 54,
@@ -1114,18 +853,9 @@
       "cap": 50
     },
     {
-      "path": "lib/task-platform/factory-delivery.js",
-      "rule": "maintainability:function-lines",
-      "line": 122,
-      "ordinal": 5,
-      "name": "runFactoryPhase1",
-      "actual": 51,
-      "cap": 50
-    },
-    {
       "path": "src/features/task-creation/schema.js",
       "rule": "maintainability:function-lines",
-      "line": 7,
+      "line": 38,
       "ordinal": 1,
       "name": "validateTaskCreatePayload",
       "actual": 51,
@@ -1137,7 +867,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 2133,
+      "actual": 2124,
       "cap": 400
     },
     {
@@ -1195,15 +925,6 @@
       "cap": 400
     },
     {
-      "path": "lib/audit/http.js",
-      "rule": "maintainability:source-file-lines",
-      "line": 1,
-      "ordinal": null,
-      "name": null,
-      "actual": 619,
-      "cap": 400
-    },
-    {
       "path": "scripts/generate-design-tokens.mjs",
       "rule": "maintainability:source-file-lines",
       "line": 1,
@@ -1218,7 +939,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 577,
+      "actual": 575,
       "cap": 400
     },
     {
@@ -1236,7 +957,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 499,
+      "actual": 506,
       "cap": 400
     },
     {
@@ -1285,6 +1006,15 @@
       "cap": 400
     },
     {
+      "path": "lib/audit/pm-architect-human-review-gate.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 409,
+      "cap": 400
+    },
+    {
       "path": "tests/unit/et-forge-dispatch-bridge.test.js",
       "rule": "maintainability:test-file-lines",
       "line": 1,
@@ -1299,8 +1029,44 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 514,
+      "actual": 508,
       "cap": 500
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 221,
+      "ordinal": 17,
+      "name": "recordPmRefinementContract",
+      "actual": 76,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 367,
+      "ordinal": 23,
+      "name": "submitUxImplementationReview",
+      "actual": 66,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:function-lines",
+      "line": 297,
+      "ordinal": 18,
+      "name": "startPmRefinementWorkflow",
+      "actual": 65,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/http.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 619,
+      "cap": 400
     }
   ]
 }

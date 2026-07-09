@@ -26,6 +26,7 @@ TEST_MODULES = [
     "tests.test_waiver_validator",
     "tests.test_docs_freshness_validator",
     "tests.test_architecture_validator",
+    "tests.test_release_evidence_builder",
     "tests.test_release_evidence_validator",
     "tests.test_test_policy_validator",
     "tests.test_artifact_provenance_validator",

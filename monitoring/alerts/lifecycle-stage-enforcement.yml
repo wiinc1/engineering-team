@@ -1,0 +1,34 @@
+alerts:
+  - name: lifecycle-stage-transition-error-rate-p1
+    severity: P1
+    description: "PRD GAP-01: Alert when transition error rate exceeds 5% over 10 minutes"
+    condition: lifecycle_stage_transitions_error_rate_gt_threshold_10m
+    metric_name: lifecycle_stage_transitions_total
+    metric_type: counter
+    query: |
+      sum(increase(lifecycle_stage_transitions_total{result="blocked"}[10m]))
+        /
+      sum(increase(lifecycle_stage_transitions_total[10m]))
+        > 0.05
+    route: pagerduty
+    labels:
+      team: engineering-operations
+      prd_gap: GAP-01
+      component: workflow
+    annotations:
+      summary: "Lifecycle stage transition error rate above 5% for {{ $labels.task_id || 'all tasks' }}"
+      description: "Over the last 10 minutes, more than 5% of lifecycle stage transitions were blocked. This may indicate a systemic issue with task workflow or operator training."
+
+  - name: lifecycle-stage-transition-error-rate-p2
+    severity: P2
+    condition: lifecycle_stage_transitions_blocked_spike_1h
+    metric_name: lifecycle_stage_transitions_total
+    metric_type: counter
+    query: |
+      sum(increase(lifecycle_stage_transitions_total{result="blocked"}[1h])) > 50
+    route: slack:#incidents-engineering
+    labels:
+      team: engineering-operations
+      prd_gap: GAP-01
+    annotations:
+      summary: "High volume of blocked transitions (>50) in the last hour"

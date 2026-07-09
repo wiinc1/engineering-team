@@ -48,7 +48,7 @@ architecture:
     - name: standards_tooling
       paths:
         - dev-standards/tooling/**/*.py
-      module_prefixes: [check_maintainability, maintainability_core, repo_policy_utils, run_python_tests, standards_init, validate_agent_intent, validate_approval_proof, validate_architecture, validate_artifact_provenance, validate_change_metadata, validate_config_boundaries, validate_docs_freshness, validate_live_approval, validate_policy_files, validate_release_evidence, validate_shell_boundaries, validate_test_policy, validate_traceability, validate_visual_identity, validate_waivers]
+      module_prefixes: [build_release_evidence, check_maintainability, maintainability_core, repo_policy_utils, run_python_tests, standards_init, validate_agent_intent, validate_approval_proof, validate_architecture, validate_artifact_provenance, validate_change_metadata, validate_config_boundaries, validate_docs_freshness, validate_live_approval, validate_policy_files, validate_release_evidence, validate_shell_boundaries, validate_test_policy, validate_traceability, validate_visual_identity, validate_waivers]
     - name: standards_tests
       paths:
         - tests/**/*.py

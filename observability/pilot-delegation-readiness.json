@@ -1,0 +1,281 @@
+{
+  "evidenceVersion": "pilot-delegation-readiness.v1",
+  "validatedAt": "2026-05-31T16:27:32.200Z",
+  "targetEnvironment": "local",
+  "tenantId": "engineering-team",
+  "runtimeConfig": {
+    "ffRealSpecialistDelegation": "true",
+    "specialistDelegationRunner": "node scripts/openclaw-specialist-runner.js",
+    "expectedRunner": "node scripts/openclaw-specialist-runner.js",
+    "enabled": true,
+    "runnerConfigured": true,
+    "usesExpectedOpenClawRunner": true
+  },
+  "pilotAgents": {
+    "tenantId": "engineering-team",
+    "actorId": "system:pilot-readiness",
+    "requiredRoles": [
+      "pm",
+      "architect",
+      "engineer",
+      "qa",
+      "sre"
+    ],
+    "created": [],
+    "updated": [],
+    "unchanged": [
+      "pm",
+      "architect",
+      "engineer",
+      "qa",
+      "sre"
+    ],
+    "missingRoles": [],
+    "ok": true,
+    "agents": [
+      {
+        "action": "unchanged",
+        "agentId": "pm",
+        "displayName": "Pilot Product Manager",
+        "role": "pm",
+        "description": "Pilot PM agent for intake, refinement, approval, and closeout ownership.",
+        "executionKind": "software-factory",
+        "active": true,
+        "assignable": true,
+        "environmentScope": "pilot",
+        "metadata": {
+          "seededFor": "supervised-autonomous-pilot",
+          "requiredBy": "issue-247"
+        },
+        "version": 1,
+        "createdAt": "2026-05-31T03:20:10.537Z",
+        "updatedAt": "2026-05-31T03:20:10.537Z",
+        "createdByActorId": "system:pilot-readiness",
+        "updatedByActorId": "system:pilot-readiness"
+      },
+      {
+        "action": "unchanged",
+        "agentId": "architect",
+        "displayName": "Pilot Architect",
+        "role": "architect",
+        "description": "Pilot architecture agent for design review and technical handoff ownership.",
+        "executionKind": "software-factory",
+        "active": true,
+        "assignable": true,
+        "environmentScope": "pilot",
+        "metadata": {
+          "seededFor": "supervised-autonomous-pilot",
+          "requiredBy": "issue-247"
+        },
+        "version": 1,
+        "createdAt": "2026-05-31T03:20:10.538Z",
+        "updatedAt": "2026-05-31T03:20:10.538Z",
+        "createdByActorId": "system:pilot-readiness",
+        "updatedByActorId": "system:pilot-readiness"
+      },
+      {
+        "action": "unchanged",
+        "agentId": "engineer",
+        "displayName": "Pilot Engineer",
+        "role": "engineer",
+        "description": "Pilot implementation agent for app-dispatched OpenClaw specialist work.",
+        "executionKind": "software-factory",
+        "active": true,
+        "assignable": true,
+        "environmentScope": "pilot",
+        "metadata": {
+          "seededFor": "supervised-autonomous-pilot",
+          "requiredBy": "issue-247"
+        },
+        "version": 1,
+        "createdAt": "2026-05-31T03:20:10.538Z",
+        "updatedAt": "2026-05-31T03:20:10.538Z",
+        "createdByActorId": "system:pilot-readiness",
+        "updatedByActorId": "system:pilot-readiness"
+      },
+      {
+        "action": "unchanged",
+        "agentId": "qa",
+        "displayName": "Pilot QA",
+        "role": "qa",
+        "description": "Pilot QA agent for verification and regression evidence ownership.",
+        "executionKind": "software-factory",
+        "active": true,
+        "assignable": true,
+        "environmentScope": "pilot",
+        "metadata": {
+          "seededFor": "supervised-autonomous-pilot",
+          "requiredBy": "issue-247"
+        },
+        "version": 1,
+        "createdAt": "2026-05-31T03:20:10.538Z",
+        "updatedAt": "2026-05-31T03:20:10.538Z",
+        "createdByActorId": "system:pilot-readiness",
+        "updatedByActorId": "system:pilot-readiness"
+      },
+      {
+        "action": "unchanged",
+        "agentId": "sre",
+        "displayName": "Pilot SRE",
+        "role": "sre",
+        "description": "Pilot SRE agent for monitoring and operational closeout ownership.",
+        "executionKind": "software-factory",
+        "active": true,
+        "assignable": true,
+        "environmentScope": "pilot",
+        "metadata": {
+          "seededFor": "supervised-autonomous-pilot",
+          "requiredBy": "issue-247"
+        },
+        "version": 1,
+        "createdAt": "2026-05-31T03:20:10.538Z",
+        "updatedAt": "2026-05-31T03:20:10.538Z",
+        "createdByActorId": "system:pilot-readiness",
+        "updatedByActorId": "system:pilot-readiness"
+      }
+    ]
+  },
+  "appWorkflowDispatch": {
+    "workflow": "orchestration_scheduler",
+    "taskId": "TSK-PILOT-DELEGATION-PROOF",
+    "specialist": "engineer",
+    "agentId": "sr-engineer",
+    "sessionId": "specialist-delegation-f8f0a34d-297b-4750-b438-585f8554f18c",
+    "delegationArtifactPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/specialist-delegation.jsonl",
+    "runtimeAttribution": {
+      "handledBy": "sr-engineer",
+      "delegated": true,
+      "coordinator": "system:pilot-readiness"
+    },
+    "delegated": true,
+    "fallbackReason": null,
+    "userFacingReasonCategory": null,
+    "lastMessage": "OK"
+  },
+  "orchestration": {
+    "run": {
+      "runId": "4736b866-e400-4e4d-b9de-31a3bb98f90e",
+      "startedAt": "2026-05-31T16:27:22.543Z",
+      "updatedAt": "2026-05-31T16:27:22.544Z",
+      "coordinatorAgent": "system:pilot-readiness",
+      "concurrencyLimit": 1,
+      "items": [
+        {
+          "id": "TSK-PILOT-DELEGATION-PROOF",
+          "title": "Implement a no-op app-dispatched delegation proof by replying OK only. Do not inspect or edit files.",
+          "taskType": "engineer",
+          "dependencyState": "ready",
+          "dependsOn": [],
+          "blockers": [],
+          "dispatchAttempts": 1,
+          "lastUpdatedAt": "2026-05-31T16:27:22.544Z",
+          "delegated": true,
+          "specialist": "engineer",
+          "actualAgent": "sr-engineer",
+          "sessionId": "specialist-delegation-f8f0a34d-297b-4750-b438-585f8554f18c",
+          "delegationArtifactPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/specialist-delegation.jsonl",
+          "runtimeAttribution": {
+            "handledBy": "sr-engineer",
+            "delegated": true,
+            "coordinator": "system:pilot-readiness"
+          },
+          "state": "running",
+          "fallbackReason": null,
+          "userFacingReasonCategory": null,
+          "lastMessage": "OK",
+          "lastDispatchAt": "2026-05-31T16:27:22.544Z"
+        }
+      ],
+      "summary": {
+        "readyCount": 0,
+        "runningCount": 1,
+        "blockedCount": 0,
+        "failedCount": 0,
+        "completedCount": 0,
+        "total": 1
+      }
+    },
+    "view": {
+      "planner": {
+        "summary": {
+          "total": 1,
+          "readyCount": 1,
+          "blockedCount": 0,
+          "inProgressCount": 0,
+          "doneCount": 0,
+          "invalidCount": 0
+        },
+        "readyWork": [
+          {
+            "id": "TSK-PILOT-DELEGATION-PROOF",
+            "title": "Implement a no-op app-dispatched delegation proof by replying OK only. Do not inspect or edit files.",
+            "taskType": "engineer",
+            "dependsOn": []
+          }
+        ],
+        "items": [
+          {
+            "id": "TSK-PILOT-DELEGATION-PROOF",
+            "title": "Implement a no-op app-dispatched delegation proof by replying OK only. Do not inspect or edit files.",
+            "taskType": "engineer",
+            "stage": "TODO",
+            "status": "active",
+            "owner": null,
+            "dependencyState": "ready",
+            "dependsOn": [],
+            "blockers": []
+          }
+        ]
+      },
+      "run": {
+        "runId": "4736b866-e400-4e4d-b9de-31a3bb98f90e",
+        "state": "active",
+        "startedAt": "2026-05-31T16:27:22.543Z",
+        "updatedAt": "2026-05-31T16:27:22.544Z",
+        "coordinatorAgent": "system:pilot-readiness",
+        "summary": {
+          "readyCount": 0,
+          "runningCount": 1,
+          "blockedCount": 0,
+          "failedCount": 0,
+          "completedCount": 0,
+          "total": 1
+        },
+        "items": [
+          {
+            "id": "TSK-PILOT-DELEGATION-PROOF",
+            "title": "Implement a no-op app-dispatched delegation proof by replying OK only. Do not inspect or edit files.",
+            "taskType": "engineer",
+            "stage": "TODO",
+            "owner": null,
+            "state": "running",
+            "dependencyState": "ready",
+            "dependsOn": [],
+            "blockers": [],
+            "specialist": "engineer",
+            "actualAgent": "sr-engineer",
+            "sessionId": "specialist-delegation-f8f0a34d-297b-4750-b438-585f8554f18c",
+            "delegationArtifactPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/specialist-delegation.jsonl",
+            "runtimeAttribution": {
+              "handledBy": "sr-engineer",
+              "delegated": true,
+              "coordinator": "system:pilot-readiness"
+            },
+            "fallbackReason": null,
+            "userFacingReasonCategory": null,
+            "lastMessage": "OK",
+            "lastUpdatedAt": "2026-05-31T16:27:22.544Z",
+            "lastDispatchAt": "2026-05-31T16:27:22.544Z",
+            "dispatchAttempts": 1,
+            "delegated": true
+          }
+        ]
+      }
+    }
+  },
+  "supervisedPilot": {
+    "status": "ready_for_supervised_pilot",
+    "requiredCloseoutEvidenceTarget": "#242",
+    "manualActionClassificationRequired": true
+  }
+}

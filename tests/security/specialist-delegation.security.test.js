@@ -50,15 +50,15 @@ test('default live smoke request is bounded against repository edits', () => {
   assert.doesNotMatch(DEFAULT_SMOKE_REQUEST, /\bQA\b|\btest\b/i);
 });
 
-test('serverless artifact base selection avoids read-only Vercel bundle paths', () => {
+test('serverless artifact base selection avoids read-only bundle paths', () => {
   assert.equal(
-    resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { VERCEL: '1' }),
+    resolveDelegationArtifactBaseDir({ baseDir: '/var/task' }, { FACTORY_SERVERLESS: '1' }),
     path.join('/tmp', 'engineering-team'),
   );
   assert.equal(
     resolveDelegationArtifactBaseDir(
       { baseDir: '/var/task' },
-      { VERCEL: '1', SPECIALIST_DELEGATION_ARTIFACT_DIR: '/tmp/delegation-artifacts' },
+      { FACTORY_SERVERLESS: '1', SPECIALIST_DELEGATION_ARTIFACT_DIR: '/tmp/delegation-artifacts' },
     ),
     '/tmp/delegation-artifacts',
   );

@@ -49,62 +49,63 @@ async function githubRequest(token, path, { method = 'GET', body = null } = {}) 
   return { status: response.status, ok: response.ok, body: payload };
 }
 
-async function main() {
+function normalizeGithubWebhookUrl(targetUrl) {
+  const trimmed = targetUrl.replace(/\/+$/, '');
+  return trimmed.endsWith('/github/webhooks') ? trimmed : `${trimmed}/github/webhooks`;
+}
+
+function resolveGithubWebhookRuntime() {
   const token = readArg('--token', process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '');
   const { owner, repo } = parseRepo(readArg('--repo', process.env.GITHUB_INTAKE_REPO || 'wiinc1/engineering-team'));
   const targetUrl = readArg('--url', process.env.WEBHOOK_TARGET_URL || process.env.ENGINEERING_TEAM_WEBHOOK_URL || '');
   const secret = readArg('--secret', process.env.GITHUB_WEBHOOK_SECRET || 'golden-path-local-webhook-secret');
   const dryRun = process.argv.includes('--dry-run');
+  return { token, owner, repo, targetUrl, secret, dryRun };
+}
 
-  if (!token) {
-    throw new Error('GITHUB_TOKEN (or --token) is required');
+function assertGithubWebhookRuntime(runtime) {
+  if (!runtime.token) throw new Error('GITHUB_TOKEN (or --token) is required');
+  if (!runtime.targetUrl) {
+    throw new Error('WEBHOOK_TARGET_URL (or --url) is required - e.g. https://<hosted-et-api>/github/webhooks');
   }
-  if (!targetUrl) {
-    throw new Error('WEBHOOK_TARGET_URL (or --url) is required — e.g. https://<hosted-et-api>/github/webhooks');
-  }
+}
 
-  const config = {
-    url: targetUrl.replace(/\/+$/, '').endsWith('/github/webhooks')
-      ? targetUrl.replace(/\/+$/, '')
-      : `${targetUrl.replace(/\/+$/, '')}/github/webhooks`,
+function buildGithubHookConfig(runtime) {
+  return {
+    url: normalizeGithubWebhookUrl(runtime.targetUrl),
     content_type: 'json',
-    secret,
+    secret: runtime.secret,
     insecure_ssl: '0',
   };
+}
 
-  const list = await githubRequest(token, `/repos/${owner}/${repo}/hooks`);
+async function listGithubHooks(runtime) {
+  const list = await githubRequest(runtime.token, `/repos/${runtime.owner}/${runtime.repo}/hooks`);
   if (!list.ok) {
     throw new Error(`List hooks failed (${list.status}): ${JSON.stringify(list.body)}`);
   }
+  return Array.isArray(list.body) ? list.body : [];
+}
 
-  const existing = (Array.isArray(list.body) ? list.body : []).find((hook) => (
+function findExistingGithubHook(hooks, config) {
+  return hooks.find((hook) => (
     hook.config?.url === config.url
     || String(hook.config?.url || '').includes('/github/webhooks')
   ));
+}
 
-  const payload = {
+function buildGithubHookPayload(config) {
+  return {
     name: 'web',
     active: true,
     events: ['issues', 'pull_request', 'issue_comment'],
     config,
   };
+}
 
-  if (dryRun) {
-    process.stdout.write(`${JSON.stringify({
-      ok: true,
-      dryRun: true,
-      repo: `${owner}/${repo}`,
-      action: existing ? 'update' : 'create',
-      hookId: existing?.id || null,
-      config,
-      note: 'Remove --dry-run to apply',
-    }, null, 2)}\n`);
-    return;
-  }
-
-  let result;
+async function upsertGithubHook(runtime, existing, payload) {
   if (existing) {
-    result = await githubRequest(token, `/repos/${owner}/${repo}/hooks/${existing.id}`, {
+    return githubRequest(runtime.token, `/repos/${runtime.owner}/${runtime.repo}/hooks/${existing.id}`, {
       method: 'PATCH',
       body: {
         active: true,
@@ -112,27 +113,59 @@ async function main() {
         config,
       },
     });
-  } else {
-    result = await githubRequest(token, `/repos/${owner}/${repo}/hooks`, {
-      method: 'POST',
-      body: payload,
-    });
   }
+  return githubRequest(runtime.token, `/repos/${runtime.owner}/${runtime.repo}/hooks`, {
+    method: 'POST',
+    body: payload,
+  });
+}
 
+function assertGithubHookResult(result, existing) {
   if (!result.ok) {
     throw new Error(`Webhook ${existing ? 'update' : 'create'} failed (${result.status}): ${JSON.stringify(result.body)}`);
   }
+}
 
+function deliveryIdHint() {
+  return crypto.createHash('sha256').update(`${Date.now()}`).digest('hex').slice(0, 12);
+}
+
+function writeGithubDryRun(runtime, existing, config) {
   process.stdout.write(`${JSON.stringify({
     ok: true,
-    repo: `${owner}/${repo}`,
+    dryRun: true,
+    repo: `${runtime.owner}/${runtime.repo}`,
+    action: existing ? 'update' : 'create',
+    hookId: existing?.id || null,
+    config,
+    note: 'Remove --dry-run to apply',
+  }, null, 2)}\n`);
+}
+
+function writeGithubHookResult(runtime, existing, result, payload, config) {
+  process.stdout.write(`${JSON.stringify({
+    ok: true,
+    repo: `${runtime.owner}/${runtime.repo}`,
     action: existing ? 'updated' : 'created',
     hookId: result.body.id,
     url: result.body.config?.url || config.url,
     events: result.body.events || payload.events,
-    deliveryIdHint: crypto.createHash('sha256').update(`${Date.now()}`).digest('hex').slice(0, 12),
+    deliveryIdHint: deliveryIdHint(),
     verifyLocal: 'npm run gp-002:verify && npm run gp-005:verify',
   }, null, 2)}\n`);
+}
+
+async function main() {
+  const runtime = resolveGithubWebhookRuntime();
+  assertGithubWebhookRuntime(runtime);
+  const config = buildGithubHookConfig(runtime);
+  const hooks = await listGithubHooks(runtime);
+  const existing = findExistingGithubHook(hooks, config);
+  const payload = buildGithubHookPayload(config);
+  if (runtime.dryRun) return writeGithubDryRun(runtime, existing, config);
+  const result = await upsertGithubHook(runtime, existing, payload);
+  assertGithubHookResult(result, existing);
+  return writeGithubHookResult(runtime, existing, result, payload, config);
 }
 
 main().catch((error) => {

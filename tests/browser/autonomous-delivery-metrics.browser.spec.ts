@@ -43,6 +43,38 @@ function metricsPayload() {
   };
 }
 
+function queuePayload() {
+  return {
+    success: true,
+    data: {
+      schemaVersion: 'factory-queue-status.v1',
+      queueBackend: 'postgres',
+      queueTable: 'factory_delivery_queue',
+      tenantId: 'tenant-a',
+      generatedAt: '2026-07-05T12:00:00.000Z',
+      summary: {
+        total: 1,
+        pending: 1,
+        leased: 1,
+        expiredLeases: 0,
+        retrying: 0,
+        completed: 0,
+        deadLetter: 0,
+      },
+      items: [{
+        id: 'factory-browser-1',
+        stage: 'phase1_complete',
+        taskId: 'TSK-QUEUE-1',
+        evidencePath: 'observability/factory-delivery/factory-browser-1.json',
+        attempts: 0,
+        maxAttempts: 5,
+        leaseActive: true,
+        lockedBy: 'worker-1',
+      }],
+    },
+  };
+}
+
 test('autonomous delivery metrics dashboard renders the pilot report without overflow', async ({ page }) => {
   await installBrowserQualityApp(page, { roles: ['sre', 'reader'] });
   await page.route('**/api/v1/metrics/autonomous-delivery', async (route) => {
@@ -50,6 +82,9 @@ test('autonomous delivery metrics dashboard renders the pilot report without ove
   });
   await page.route('**/api/v1/metrics/autonomous-delivery/rebuild', async (route) => {
     await route.fulfill({ status: 202, json: metricsPayload() });
+  });
+  await page.route('**/api/v1/factory/queue**', async (route) => {
+    await route.fulfill({ json: queuePayload() });
   });
 
   await page.goto('/metrics/autonomous-delivery', { waitUntil: 'domcontentloaded' });
@@ -59,6 +94,8 @@ test('autonomous delivery metrics dashboard renders the pilot report without ove
   await expect(page.getByText('Autonomous delivery', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Metric breakdown' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'TSK-AUTO-1' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Factory queue' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'factory-browser-1' })).toBeVisible();
 
   const overflow = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('.autonomy-metrics, .autonomy-metric, .task-list-table-wrap'))

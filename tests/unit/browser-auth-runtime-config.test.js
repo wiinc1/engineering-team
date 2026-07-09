@@ -2,12 +2,12 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { readAuthRuntimeConfig } = require('../../src/app/session');
 
-test('browser auth runtime defaults Vercel preview bundles to registration', () => {
+test('browser auth runtime defaults factory preview/staging deploy profile to registration', () => {
   const config = readAuthRuntimeConfig(
     {
       MODE: 'production',
       PROD: true,
-      VITE_VERCEL_ENV: 'preview',
+      VITE_FACTORY_DEPLOY_ENV: 'preview',
       VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED: 'true',
     },
     {},
@@ -24,7 +24,7 @@ test('browser auth runtime keeps internal bootstrap only when explicitly selecte
     {
       MODE: 'production',
       PROD: true,
-      VITE_VERCEL_ENV: 'preview',
+      VITE_FACTORY_DEPLOY_ENV: 'preview',
       VITE_AUTH_INTERNAL_BOOTSTRAP_ENABLED: 'true',
       VITE_AUTH_PRODUCTION_AUTH_STRATEGY: 'internal-bootstrap',
     },

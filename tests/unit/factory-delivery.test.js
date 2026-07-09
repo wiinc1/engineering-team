@@ -9,21 +9,196 @@ const {
   submitFactoryRequirements,
   loadFactoryQueue,
   advanceFactoryItem,
+  runFactoryOrchestratorTick,
   resolveFactoryExecutionPhaseRange,
-  summarizeFactoryPersonaProgression,
-  assertRequiredFactoryPersonas,
+  assertFactoryItemRealEvidencePreflight,
 } = require('../../lib/task-platform/factory-delivery');
-const { savePilotEvidence } = require('../../lib/task-platform/golden-path-shared');
 const { resolveGoldenPathStackPersistDir } = require('../../lib/task-platform/golden-path-phases');
 const { persistDirForItem, resolveFactoryConfig } = require('../../lib/task-platform/factory-delivery-shared');
+const { writeIntakeEvidence } = require('../../lib/task-platform/factory-intake');
+const { buildInlineRequirement } = require('../../scripts/submit-factory-requirements');
 
 test('resolveFactoryConfig defaults to live delegation and validation enabled', () => {
-  const config = resolveFactoryConfig({});
-  assert.equal(config.requireDelegationSmoke, true);
-  assert.equal(config.skipValidation, false);
-  const skipped = resolveFactoryConfig({ skipDelegationSmoke: true, skipValidation: true });
-  assert.equal(skipped.requireDelegationSmoke, false);
-  assert.equal(skipped.skipValidation, true);
+  const previousBackend = process.env.FACTORY_QUEUE_BACKEND;
+  delete process.env.FACTORY_QUEUE_BACKEND;
+  try {
+    const config = resolveFactoryConfig({});
+    assert.equal(config.requireDelegationSmoke, true);
+    assert.equal(config.skipValidation, false);
+    assert.equal(config.queueBackend, 'postgres');
+    assert.throws(
+      () => resolveFactoryConfig({ queueBackend: 'file' }),
+      /FACTORY_ALLOW_FILE_QUEUE=true/,
+    );
+    const skipped = resolveFactoryConfig({
+      skipDelegationSmoke: true,
+      skipValidation: true,
+      queueBackend: 'file',
+      allowFileQueue: true, queuePath: path.join(os.tmpdir(), 'factory-config-file-queue.json'),
+    });
+    assert.equal(skipped.requireDelegationSmoke, false);
+    assert.equal(skipped.skipValidation, true);
+    assert.equal(skipped.queueBackend, 'file');
+    assert.throws(
+      () => resolveFactoryConfig({ queueBackend: 'memory' }),
+      /Unsupported FACTORY_QUEUE_BACKEND/,
+    );
+  } finally {
+    if (previousBackend == null) delete process.env.FACTORY_QUEUE_BACKEND;
+    else process.env.FACTORY_QUEUE_BACKEND = previousBackend;
+  }
+});
+
+test('resolveFactoryConfig fails closed on invalid durable queue numeric settings', () => {
+  assert.throws(
+    () => resolveFactoryConfig({ factoryQueueLeaseSeconds: 0 }),
+    /factoryQueueLeaseSeconds must be a positive integer/,
+  );
+  assert.throws(
+    () => resolveFactoryConfig({ factoryQueueRetryBaseSeconds: -1 }),
+    /factoryQueueRetryBaseSeconds must be a positive integer/,
+  );
+  assert.throws(
+    () => resolveFactoryConfig({ factoryQueueMaxAttempts: Number.NaN }),
+    /factoryQueueMaxAttempts must be a positive integer/,
+  );
+
+  const config = resolveFactoryConfig({
+    factoryQueueLeaseSeconds: 60,
+    factoryQueueRetryBaseSeconds: 10,
+    factoryQueueMaxAttempts: 2,
+  });
+  assert.equal(config.factoryQueueLeaseSeconds, 60);
+  assert.equal(config.factoryQueueRetryBaseSeconds, 10);
+  assert.equal(config.factoryQueueMaxAttempts, 2);
+});
+
+test('resolveFactoryConfig makes factory real-evidence collection strict', () => {
+  const previousCollect = process.env.FF_GOLDEN_PATH_COLLECT_REAL_EVIDENCE;
+  const previousRequire = process.env.FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE;
+  const previousAgentDriven = process.env.FF_FACTORY_AGENT_DRIVEN_PHASES;
+  try {
+    delete process.env.FF_GOLDEN_PATH_COLLECT_REAL_EVIDENCE;
+    delete process.env.FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE;
+    delete process.env.FF_FACTORY_AGENT_DRIVEN_PHASES;
+
+    const collected = resolveFactoryConfig({
+      queueBackend: 'postgres',
+      collectRealEvidence: true,
+    });
+    assert.equal(collected.collectRealEvidence, true);
+    assert.equal(collected.requireRealEvidence, true);
+    assert.throws(
+      () => resolveFactoryConfig({ queueBackend: 'file', allowFileQueue: true, collectRealEvidence: true }),
+      /real-evidence runs require FACTORY_QUEUE_BACKEND=postgres/,
+    );
+
+    const agentDriven = resolveFactoryConfig({
+      queueBackend: 'postgres',
+      agentDrivenPhases: true,
+    });
+    assert.equal(agentDriven.collectRealEvidence, true);
+    assert.equal(agentDriven.requireRealEvidence, true);
+
+    process.env.FF_FACTORY_AGENT_DRIVEN_PHASES = 'true';
+    const envAgentDriven = resolveFactoryConfig({ queueBackend: 'postgres' });
+    assert.equal(envAgentDriven.collectRealEvidence, true);
+    assert.equal(envAgentDriven.requireRealEvidence, true);
+    delete process.env.FF_FACTORY_AGENT_DRIVEN_PHASES;
+
+    process.env.FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE = 'true';
+    const required = resolveFactoryConfig({ queueBackend: 'postgres' });
+    assert.equal(required.collectRealEvidence, false);
+    assert.equal(required.requireRealEvidence, true);
+  } finally {
+    if (previousCollect == null) delete process.env.FF_GOLDEN_PATH_COLLECT_REAL_EVIDENCE;
+    else process.env.FF_GOLDEN_PATH_COLLECT_REAL_EVIDENCE = previousCollect;
+    if (previousRequire == null) delete process.env.FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE;
+    else process.env.FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE = previousRequire;
+    if (previousAgentDriven == null) delete process.env.FF_FACTORY_AGENT_DRIVEN_PHASES;
+    else process.env.FF_FACTORY_AGENT_DRIVEN_PHASES = previousAgentDriven;
+  }
+});
+
+test('resolveFactoryConfig carries real PR target evidence for strict factory runs', () => {
+  const config = resolveFactoryConfig({
+    queueBackend: 'postgres',
+    collectRealEvidence: true,
+    ciRepository: 'wiinc1/engineering-team',
+    branchName: 'factory/real-change',
+    implementationCommitSha: '3f4a7c9e12b84d6f90a1c2e3b4d5f6789012abcd',
+    prUrl: 'https://github.com/wiinc1/engineering-team/pull/312',
+    prNumber: 312,
+    fixCommitSha: '4c8d1f0a9b2e3d7c6a5f4b3e2d1c0a9876543210',
+    mergeCommitSha: '5a7e3c9d1b2f4a6c8e0d3b5f7a9c1e2d4f678901',
+  });
+
+  assert.equal(config.requireRealEvidence, true);
+  assert.equal(config.ciRepository, 'wiinc1/engineering-team');
+  assert.equal(config.branchName, 'factory/real-change');
+  assert.equal(config.implementationCommitSha, '3f4a7c9e12b84d6f90a1c2e3b4d5f6789012abcd');
+  assert.equal(config.prUrl, 'https://github.com/wiinc1/engineering-team/pull/312');
+  assert.equal(config.prNumber, 312);
+  assert.equal(config.fixCommitSha, '4c8d1f0a9b2e3d7c6a5f4b3e2d1c0a9876543210');
+  assert.equal(config.mergeCommitSha, '5a7e3c9d1b2f4a6c8e0d3b5f7a9c1e2d4f678901');
+});
+
+function realDeliveryPreflightItem(overrides = {}) {
+  const realDelivery = {
+    ciRepository: 'wiinc1/engineering-team',
+    branchName: 'factory/real-row',
+    implementationCommitSha: '3f4a7c9e12b84d6f90a1c2e3b4d5f6789012abcd',
+    prUrl: 'https://github.com/wiinc1/engineering-team/pull/312',
+    prNumber: 312,
+    autoMerge: true,
+    releaseEnv: 'staging',
+    deploymentUrl: 'https://factory-staging.engineering-team.io',
+    rollbackTarget: 'release-previous',
+    rollbackVerified: true,
+    rollbackEvidence: 'observability/release/rollback-verification.json',
+    candidateProofPath: 'observability/factory-delivery/factory-real-row-candidate-proof.json',
+    riskLevel: 'low',
+    productionSafe: true,
+    productionSafetyEvidence: 'observability/release/production-safety.json',
+    testCommands: ['node --test tests/unit/factory-delivery.test.js'],
+    healthCheckPath: '/version',
+    requireHealthCommit: true,
+    releaseArtifactCommands: {
+      build: 'npm run build',
+      compatibility: 'npm run test:unit',
+      vulnerability: 'npm audit --audit-level=high',
+      secret: 'npm run secrets:scan',
+    },
+    ...(overrides.realDelivery || {}),
+  };
+  return {
+    id: 'factory-real-row',
+    title: 'Row-level real delivery',
+    requirements: 'Run a real low-risk code change from durable queue metadata.',
+    templateTier: 'Standard',
+    changeKind: 'bugfix',
+    changedFiles: ['lib/task-platform/factory-delivery.js'],
+    ...(overrides.item || {}),
+    metadata: { realDelivery },
+  };
+}
+
+test('factory real-evidence preflight uses item metadata as authoritative proof inputs', () => {
+  const config = resolveFactoryConfig({
+    queueBackend: 'postgres',
+    collectRealEvidence: true,
+    baseUrl: 'https://api.factory.openclaw.app',
+    operatorUrl: 'https://operator.factory.openclaw.app',
+    forgeAdapterUrl: 'https://forgeadapter.factory.openclaw.app',
+    githubToken: 'test-github-token',
+  });
+  const item = realDeliveryPreflightItem();
+
+  assert.doesNotThrow(() => assertFactoryItemRealEvidencePreflight(config, item));
+  assert.throws(
+    () => assertFactoryItemRealEvidencePreflight(config, { ...item, metadata: {} }),
+    /Factory delivery item preflight failed: .*actual pull request target.*rollback-target/s,
+  );
 });
 
 test('normalizeRequirement requires body text', () => {
@@ -34,14 +209,44 @@ test('normalizeRequirement requires body text', () => {
   const normalized = normalizeRequirement({
     title: 'Add factory queue',
     requirements: 'Queue requirements and advance through SDLC phases.',
+    changeKind: 'bugfix',
+    changedFiles: ['lib/task-platform/factory-delivery.js'],
   });
   assert.equal(normalized.title, 'Add factory queue');
   assert.equal(normalized.templateTier, 'Simple');
+  assert.equal(normalized.changeKind, 'bugfix');
+  assert.deepEqual(normalized.changedFiles, ['lib/task-platform/factory-delivery.js']);
+});
+
+test('factory submit inline arguments carry code-change scope metadata', () => {
+  const entry = buildInlineRequirement([
+    'node',
+    'scripts/submit-factory-requirements.js',
+    '--title',
+    'Low-risk code change',
+    '--requirements',
+    'Add focused unit coverage for factory submit scope handling.',
+    '--change-kind',
+    'bugfix',
+    '--changed-file',
+    'scripts/submit-factory-requirements.js',
+    '--changed-files',
+    'tests/unit/factory-delivery.test.js,docs/runbooks/golden-path-autonomous-delivery.md',
+  ]);
+
+  assert.equal(entry.templateTier, 'Standard');
+  assert.equal(entry.changeKind, 'bugfix');
+  assert.deepEqual(entry.changedFiles, [
+    'scripts/submit-factory-requirements.js',
+    'tests/unit/factory-delivery.test.js',
+    'docs/runbooks/golden-path-autonomous-delivery.md',
+  ]);
 });
 
 test('resolveDeliveryStage maps evidence status to orchestrator stage', () => {
   const item = { stage: 'phase1_complete', taskId: 'TSK-1', projectId: 'PRJ-1' };
-  assert.equal(resolveDeliveryStage(item, { status: 'phase6_complete' }), 'completed');
+  assert.equal(resolveDeliveryStage(item, { status: 'phase6_complete' }), 'phase6_complete');
+  assert.equal(resolveDeliveryStage({ stage: 'completed' }, { status: 'phase6_complete' }), 'completed');
   assert.equal(resolveDeliveryStage({ stage: 'queued' }), 'queued');
   assert.equal(resolveDeliveryStage({ stage: 'queued', taskId: 'TSK-1', projectId: 'PRJ-1' }), 'intake_complete');
 });
@@ -73,12 +278,71 @@ test('submitFactoryRequirements appends queue entries', () => {
   const queuePath = path.join(tmp, 'queue.json');
   const result = submitFactoryRequirements([
     { title: 'Req A', requirements: 'Build orchestrator intake.' },
-  ], { queuePath, deliveryDir: path.join(tmp, 'delivery') });
+  ], {
+    queuePath,
+    queueBackend: 'file',
+    allowFileQueue: true,
+    deliveryDir: path.join(tmp, 'delivery'),
+  });
   assert.equal(result.created.length, 1);
   const queue = loadFactoryQueue(queuePath);
   assert.equal(queue.items.length, 1);
   assert.equal(queue.items[0].stage, 'queued');
   assert.equal(queue.items[0].title, 'Req A');
+});
+
+test('submitFactoryRequirements preserves code-change scope metadata on queued entries', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-queue-scope-'));
+  const queuePath = path.join(tmp, 'queue.json');
+  submitFactoryRequirements([
+    {
+      title: 'Req A',
+      requirements: 'Build low-risk code path.',
+      templateTier: 'Standard',
+      changeKind: 'bugfix',
+      changedFiles: ['lib/task-platform/factory-delivery.js'],
+    },
+  ], {
+    queuePath,
+    queueBackend: 'file',
+    allowFileQueue: true,
+    deliveryDir: path.join(tmp, 'delivery'),
+  });
+  const queue = loadFactoryQueue(queuePath);
+  assert.equal(queue.items[0].templateTier, 'Standard');
+  assert.equal(queue.items[0].changeKind, 'bugfix');
+  assert.deepEqual(queue.items[0].changedFiles, ['lib/task-platform/factory-delivery.js']);
+});
+
+test('writeIntakeEvidence persists code-change scope for real proof validation', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-intake-scope-'));
+  const item = {
+    id: 'factory-scope',
+    title: 'Scoped intake',
+    requirements: 'Build low-risk code path.',
+    templateTier: 'Standard',
+    changeKind: 'bugfix',
+    changedFiles: ['lib/task-platform/factory-delivery.js'],
+    forgeTaskId: 'TSK-GOLDENSCOPE',
+    createdAt: '2026-07-04T00:00:00.000Z',
+  };
+  const paths = writeIntakeEvidence({
+    deliveryDir: path.join(tmp, 'delivery'),
+    baseUrl: 'http://127.0.0.1:13000',
+    tenantId: 'engineering-team',
+    actorId: 'factory-test',
+  }, item, {
+    projectId: 'PRJ-SCOPE',
+    taskId: 'TSK-SCOPE',
+    projectName: 'Factory scope',
+  });
+  const evidence = JSON.parse(fs.readFileSync(paths.evidencePath, 'utf8'));
+  assert.equal(evidence.engineeringTeam.changeKind, 'bugfix');
+  assert.deepEqual(evidence.engineeringTeam.changedFiles, ['lib/task-platform/factory-delivery.js']);
+  assert.deepEqual(evidence.change, {
+    kind: 'bugfix',
+    changedFiles: ['lib/task-platform/factory-delivery.js'],
+  });
 });
 
 test('golden-path stack wires optional factory orchestrator process', () => {
@@ -108,81 +372,6 @@ function createFactoryIntakeFetchMock(calls) {
     return { ok: false, status: 404, json: async () => ({}) };
   };
 }
-
-test('advanceFactoryItem advances phase1_complete to phase6_complete via injected runPhasesFn', async () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-phases-'));
-  const deliveryDir = path.join(tmp, 'delivery');
-  const evidencePath = path.join(deliveryDir, 'factory-phase-stub.json');
-  fs.mkdirSync(deliveryDir, { recursive: true });
-  savePilotEvidence({
-    schemaVersion: '1.0',
-    status: 'phase1_complete',
-    engineeringTeam: { taskId: 'TSK-STUB1', projectId: 'PRJ-STUB1' },
-    phase0: { mode: 'factory_intake', actorId: 'factory-orchestrator' },
-    phase1: {
-      api: {
-        pmRefinementMode: 'refinement_start',
-        architectHandoffMode: 'embedded_in_execution_contract',
-      },
-      architectSpec: { engineerTier: 'Jr' },
-    },
-  }, evidencePath);
-
-  const { buildEngineerPersonaRouting } = require('../../lib/task-platform/factory-persona-progression');
-  const routing = buildEngineerPersonaRouting('Standard');
-
-  const runPhasesFn = async (options) => {
-    const evidence = options.pilot;
-    evidence.status = 'phase6_complete';
-    evidence.engineeringTeam = { ...evidence.engineeringTeam, templateTier: 'Standard' };
-    evidence.phase2 = {
-      personaRouting: routing,
-      personas: { engineer: 'engineer-sr', engineerPersonas: routing.engineerPersonas, forge: 'main' },
-    };
-    evidence.phase3 = { personas: { qa: 'qa', qaOutcome: 'fail_intentional', engineer: 'engineer-sr' } };
-    evidence.phase4 = {
-      personas: { engineer: 'engineer-sr', qa: 'qa', qaOutcome: 'pass' },
-      api: { qaPass: { ok: true } },
-    };
-    evidence.phase5 = {
-      personas: { sre: 'sre', pm: 'pm', architect: 'architect', qa: 'qa' },
-      api: { sreMonitoring: { start: { ok: true }, approve: { ok: true } } },
-    };
-    evidence.phase6 = {
-      personas: { sre: 'sre', human: 'admin' },
-      api: { humanClose: { ok: true }, taskClosed: { ok: true } },
-    };
-    savePilotEvidence(evidence, options.outputPath);
-    return { evidence };
-  };
-
-  const outcome = await advanceFactoryItem({
-    id: 'factory-phase-stub',
-    title: 'Stub phases',
-    requirements: 'Exercise persona routing.',
-    templateTier: 'Standard',
-    stage: 'phase1_complete',
-    taskId: 'TSK-STUB1',
-    projectId: 'PRJ-STUB1',
-    evidencePath,
-    forgeTaskId: 'TSK-GOLDENSTUB1',
-    createdAt: new Date().toISOString(),
-  }, {
-    jwtSecret: 'factory-test-secret',
-    baseUrl: 'http://127.0.0.1:13000',
-    deliveryDir,
-    runPhasesFn,
-    skipForgeSeed: true,
-  });
-
-  assert.equal(outcome.action, 'phases_2_6');
-  assert.equal(outcome.item.stage, 'phase6_complete');
-  const progression = summarizeFactoryPersonaProgression(JSON.parse(fs.readFileSync(evidencePath, 'utf8')));
-  const personaCheck = assertRequiredFactoryPersonas(progression);
-  assert.equal(personaCheck.ok, true);
-  assert.equal(progression.personas.engineer, 'engineer-sr');
-  assert.equal(progression.engineerPersonas.principal, 'engineer-principal');
-});
 
 test('advanceFactoryItem performs factory intake against API', async () => {
   const calls = [];

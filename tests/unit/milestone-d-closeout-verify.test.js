@@ -10,6 +10,17 @@ test('milestone D verify module exports closeout verifier', () => {
   assert.equal(typeof buildMilestoneDCompleteEvidence, 'function');
 });
 
+test('milestone D closeout verify inherits Milestone C real-proof preflight', async () => {
+  await assert.rejects(
+    () => runMilestoneDCloseoutVerify({
+      baseUrl: 'https://staging.example',
+      jwtSecret: 'secret',
+      factoryQueueDatabaseUrl: 'postgres://queue/unused',
+    }),
+    /Milestone C agent verify preflight failed: .*pull request target/s,
+  );
+});
+
 test('buildMilestoneDCompleteEvidence maps verify checks to exit criteria', () => {
   const complete = buildMilestoneDCompleteEvidence({
     profile: 'coordinated-stack',

@@ -90,13 +90,16 @@ components:
                 $ref: "#/components/schemas/LiveTaskUpdate"
     LiveTaskUpdate:
       type: object
-      required: [entityType, entityId, updateType, version, updatedAt, position, payload]
+      required: [entityType, entityId, tenantId, updateType, version, updatedAt, position, payload]
       properties:
         entityType:
           type: string
           enum: [task, project]
         entityId:
           type: string
+        tenantId:
+          type: string
+          description: Tenant namespace for the update. Entity IDs are unique within this tenant, not necessarily globally.
         updateType:
           type: string
           enum: [task_snapshot, project_snapshot]

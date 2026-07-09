@@ -9,11 +9,11 @@ test('authenticated browser API contract documents deploy bootstrap wrapper beha
     'utf8'
   );
 
-  assert.match(spec, /Vercel API entrypoints await deploy auth bootstrap/);
+  assert.match(spec, /Operator-hosted API entrypoints await deploy auth bootstrap/);
   assert.match(spec, /bootstrap failures fail closed/);
 });
 
-test('audit foundation API contract documents Vercel workflow proxy aliases', () => {
+test('audit foundation API contract documents workflow proxy aliases', () => {
   const spec = fs.readFileSync(
     path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'),
     'utf8'
@@ -25,7 +25,7 @@ test('audit foundation API contract documents Vercel workflow proxy aliases', ()
   assert.match(spec, /api\/v1\/task-workflow-proxy\.js/);
 });
 
-test('audit foundation API contract documents Vercel task detail read aliases', () => {
+test('audit foundation API contract documents task detail read aliases', () => {
   const spec = fs.readFileSync(
     path.join(__dirname, '../../docs/api/audit-foundation-openapi.yml'),
     'utf8'

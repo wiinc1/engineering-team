@@ -1,6 +1,37 @@
 const VALID_PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const VALID_TASK_TYPES = ['Feature', 'Bug', 'Refactor', 'Debt', 'Docs'];
-const VALID_STAGES = ['DRAFT', 'BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
+// PRD GAP-01: 7-stage canonical lifecycle (Intake Draft through Closeout).
+// Maps to workflow.js STAGES: DRAFT -> INTAKE_DRAFT, BACKLOG -> TASK_REFINEMENT,
+// TODO -> OPERATOR_APPROVAL, IMPLEMENTATION -> IMPLEMENTATION, QA_TESTING -> QA_VERIFICATION,
+// SRE_MONITORING -> SRE_VERIFICATION, DONE -> CLOSEOUT.
+const LIFECYCLE_STAGES = Object.freeze([
+  'INTAKE_DRAFT',
+  'TASK_REFINEMENT',
+  'OPERATOR_APPROVAL',
+  'IMPLEMENTATION',
+  'QA_VERIFICATION',
+  'SRE_VERIFICATION',
+  'CLOSEOUT',
+]);
+
+// PRD GAP-01: VALID_STAGES is now the canonical 7-stages lifecycle.
+// Legacy values are preserved as VALID_STAGES._legacy for backward compatibility only.
+const _legacyStages = Object.freeze(['DRAFT', 'BACKLOG', 'TODO', 'IN_PROGRESS', 'REVIEW', 'DONE']);
+const VALID_STAGES = [...LIFECYCLE_STAGES];
+Object.defineProperty(VALID_STAGES, '_legacy', {
+  enumerable: false,
+  value: _legacyStages,
+});
+Object.freeze(VALID_STAGES);
+const VALID_LIFECYCLE_MAP = Object.freeze({
+  INTAKE_DRAFT: 0,
+  TASK_REFINEMENT: 1,
+  OPERATOR_APPROVAL: 2,
+  IMPLEMENTATION: 3,
+  QA_VERIFICATION: 4,
+  SRE_VERIFICATION: 5,
+  CLOSEOUT: 6,
+});
 const UNTITLED_INTAKE_DRAFT_TITLE = 'Untitled intake draft';
 const INTAKE_DRAFT_TITLE_MAX_LENGTH = 120;
 
@@ -61,6 +92,7 @@ module.exports = {
   VALID_PRIORITIES,
   VALID_TASK_TYPES,
   VALID_STAGES,
+  VALID_LIFECYCLE_MAP,
   UNTITLED_INTAKE_DRAFT_TITLE,
   INTAKE_DRAFT_TITLE_MAX_LENGTH,
 };
