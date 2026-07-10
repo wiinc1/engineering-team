@@ -72,3 +72,5 @@ test('audit foundation release health contract returns commit metadata without a
     assert.equal(body.commit_sha, commitSha, url);
   }
 });
+
+// Note: local live OpenClaw C/D proof may skip forge seed while audit API paths remain required.
