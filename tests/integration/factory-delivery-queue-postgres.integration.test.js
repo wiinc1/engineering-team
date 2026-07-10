@@ -276,3 +276,5 @@ test('factory proof profile surface is loadable for claim-path orchestration', (
     true,
   );
 });
+
+// Note: local live OpenClaw C/D proof keeps postgres queue path (STAGING_SKIP_FORGE_*).
