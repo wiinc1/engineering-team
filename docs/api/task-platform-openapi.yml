@@ -1699,3 +1699,5 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+# Note: local live OpenClaw C/D factory proof path uses existing task APIs; no new endpoints.
