@@ -10,7 +10,7 @@
 
 - Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process.
 - Evidence expected for this change: live milestone C/D completion artifacts; dual-remote policy and tip status; host runtime snapshot (OpenClaw live vs mocks); factory autonomy decisions and control-plane PRD.
-- Gap observed: durable host stack and real multi-service topology remain incomplete; success metric cohort (≥10 Simple trusted closes) not run. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source `docs/reports/FACTORY_AUTONOMY_DECISIONS.md`).
+- Gap observed: durable host stack and real multi-service topology remain incomplete; success metric cohort (≥10 Simple trusted closes) not run. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source https://github.com/wiinc1/engineering-team/blob/main/docs/reports/FACTORY_AUTONOMY_DECISIONS.md).
 
 ## Required Evidence
 
