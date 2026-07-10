@@ -6,6 +6,19 @@
 **Primary goal reference:** operator-trusted progressive autonomy on a long-running coordinated stack  
 (`docs/reports/FACTORY_AUTONOMY_DECISIONS.md`, `docs/product/software-factory-control-plane-prd.md`)
 
+## Standards Alignment
+
+- Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process.
+- Evidence expected for this change: live milestone C/D completion artifacts; dual-remote policy and tip status; host runtime snapshot (OpenClaw live vs mocks); factory autonomy decisions and control-plane PRD.
+- Gap observed: durable host stack and real multi-service topology remain incomplete; success metric cohort (≥10 Simple trusted closes) not run. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source `docs/reports/FACTORY_AUTONOMY_DECISIONS.md`).
+
+## Required Evidence
+
+- Commands run: live `verify-milestone-c-agent` / `verify-milestone-d-closeout` with `FACTORY_PROOF_PROFILE=live`; `node scripts/dual-remote-sync-status.js`; host health probes on `:13000`/`:18789`/`:14001`/`:14002`; `npm run coverage` for full GP-023 path.
+- Tests added or updated: none required for this report-only assessment (prior live-proof unit coverage already shipped).
+- Docs updated: this report; dual-remote mirror note in `docs/runbooks/dual-remote-gitlab-primary.md` when GitHub backup is synced.
+- Rollout or rollback notes: assessment is documentation/evidence only; rollback by reverting the merge that introduced this file.
+
 ---
 
 ## 1. Executive summary
@@ -311,9 +324,6 @@ Evidence is current as of 2026-07-10 live C/D and host runtime snapshot. Re-scor
 
 ---
 
-## 12. Standards alignment (this report)
+## 12. Standards alignment (see top of document)
 
-- **Areas:** architecture and design; testing and quality assurance; deployment and release; team and process.  
-- **Evidence:** live C/D artifacts, dual-remote status, host process/health snapshot, factory autonomy decisions.  
-- **Gaps observed:** persistent stack and real multi-service topology incomplete; success metric cohort not run.  
-- **Rationale:** progressive autonomy requires truthful live evidence and a durable factory of record before delivery-rate claims (aligned with accepted factory decisions and live-proof requirements).
+The required `## Standards Alignment` and `## Required Evidence` sections appear at the top of this report for `scripts/verify-standards.js` compliance.
