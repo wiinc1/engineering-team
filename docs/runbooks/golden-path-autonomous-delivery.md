@@ -67,6 +67,30 @@ node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --
 
 Hosted real-evidence collection remains opt-in via explicit `FF_GOLDEN_PATH_*` / `STAGING_REQUIRE_REAL_EVIDENCE` flags and is not implied by agent-driven phases alone on a local base URL.
 
+### Durable factory stack on this host (reboot-safe API + workers)
+
+Use **launchd KeepAlive** units for the factory of record (audit API + projection/outbox workers). OpenClaw remains the separate host unit `ai.openclaw.gateway` on `:18789`.
+
+```bash
+# Install/load launchd services + ensure Postgres (existing :15432 or docker compose when Docker is installed)
+npm run factory:stack:up
+npm run factory:stack:status   # health: postgres, API :13000, live OpenClaw :18789
+npm run factory:stack:restart
+npm run factory:stack:down     # stop services; plists retained so reboot restarts them
+npm run factory:stack:uninstall  # remove plists permanently
+```
+
+| Service | LaunchAgent label | Port / role |
+| --- | --- | --- |
+| Audit API | `com.engineering-team.factory-audit-api` | `:13000` |
+| Audit workers | `com.engineering-team.factory-audit-workers` | projection + outbox |
+| Postgres | Docker golden-path compose **or** existing listener | `:15432` |
+| OpenClaw (live) | `ai.openclaw.gateway` (pre-existing) | `:18789` |
+
+Logs: `~/Library/Logs/engineering-team-factory/`. Env example: `deploy/launchd/factory-stack.env.example`. Runtime env copy: `observability/factory-stack/service.env`.
+
+**Postgres note:** If Docker is unavailable and nothing listens on `:15432`, `factory:stack:up` fails with a clear error. Start Postgres first (or install Docker and let the script run `docker-compose.golden-path.yml`).
+
 | Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
 **Browser sign-in** (seeded on stack startup):

@@ -500,4 +500,13 @@ The implementation uses `audit_task_*` for PostgreSQL read models and `task-*-pr
 
 ## Local live factory proof
 
-When proving live OpenClaw milestone C/D on the coordinated stack, prefer `npm run audit:workers` if Docker Compose workers are unavailable so projection catch-up does not rely solely on manual fallback.
+When proving live OpenClaw milestone C/D on the coordinated stack, prefer durable workers so projection catch-up does not rely solely on manual fallback:
+
+```bash
+npm run factory:stack:up      # launchd KeepAlive for API + workers (reboots)
+npm run factory:stack:status
+# fallback if not using launchd:
+npm run audit:workers
+```
+
+See also `docs/runbooks/golden-path-autonomous-delivery.md` (durable factory stack section) and GitLab issue #269.
