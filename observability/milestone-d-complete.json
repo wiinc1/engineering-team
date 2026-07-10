@@ -3,7 +3,7 @@
   "kind": "milestone-d-complete",
   "milestone": "D",
   "title": "Closeout automation and delivery report",
-  "generatedAt": "2026-06-24T21:46:08.853Z",
+  "generatedAt": "2026-07-10T17:01:46.656Z",
   "profile": "coordinated-stack",
   "baseUrl": "http://127.0.0.1:13000",
   "summary": {
@@ -15,7 +15,7 @@
     "gp027TaskClosed": true,
     "gp027StepClassification": true,
     "gp023ValidationInCloseout": true,
-    "automatedSteps": 22,
+    "automatedSteps": 21,
     "stillManualSteps": 2
   },
   "exitCriteria": {
@@ -29,18 +29,18 @@
     "automatedStepsAtLeast12": true
   },
   "artifacts": {
-    "verify": "observability/milestone-d-staging/milestone-d-closeout-verify.json",
-    "milestoneC": "observability/milestone-d-staging/milestone-c-agent-verify.json",
-    "factoryQueue": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-milestone-c-queue-mqslnf5q.json",
-    "factoryEvidence": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-d-staging/factory-delivery/factory-milestone-c-mqslnf5q.json",
-    "closeoutReport": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-013.json"
+    "verify": "observability/milestone-d-staging-live/milestone-d-closeout-verify.json",
+    "milestoneC": "observability/milestone-d-staging-live/milestone-c-agent-verify.json",
+    "factoryQueue": "factory_delivery_queue",
+    "factoryEvidence": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf6h8wv.json",
+    "closeoutReport": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-020.json"
   },
   "factoryDelivery": {
-    "queueId": "factory-milestone-c-mqslnf5q",
-    "taskId": "TSK-013",
-    "projectId": "PRJ-D4F207CA",
+    "queueId": "factory-milestone-c-mrf6h8wv",
+    "taskId": "TSK-020",
+    "projectId": "PRJ-AA06E6F5",
     "stage": "phase6_complete",
-    "stepsCompleted": 27
+    "stepsCompleted": 26
   },
   "notes": [
     "Milestone D extends Milestone C with GP-027 closeout report generation and GP-023 validation embedded in closeout.",

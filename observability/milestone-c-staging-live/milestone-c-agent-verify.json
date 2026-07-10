@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-c-agent-verify",
+  "generatedAt": "2026-07-10T16:51:56.498Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "observability/milestone-c-staging-live",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "factory_phase6_complete",
+        "ok": true,
+        "stage": "phase6_complete",
+        "error": null
+      },
+      {
+        "name": "gp014_implementer_agent",
+        "ok": true
+      },
+      {
+        "name": "gp019_qa_agent",
+        "ok": true
+      },
+      {
+        "name": "gp017_fix_loop",
+        "ok": true
+      },
+      {
+        "name": "gp023_ci_validation_evidence",
+        "ok": true
+      },
+      {
+        "name": "agent_session_evidence",
+        "ok": true
+      }
+    ]
+  },
+  "artifacts": {
+    "factoryQueue": "factory_delivery_queue",
+    "factoryQueueBackend": "postgres",
+    "factoryEvidence": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf6azte.json"
+  },
+  "factory": {
+    "ticks": [
+      {
+        "queueBackend": "postgres",
+        "queueTable": "factory_delivery_queue",
+        "processed": 1,
+        "recovery": {
+          "recovered": 0,
+          "deadLettered": 0
+        },
+        "results": [
+          {
+            "id": "factory-milestone-c-mrf6azte",
+            "action": "intake",
+            "stage": "intake_complete",
+            "taskId": "TSK-019",
+            "attempts": 0,
+            "deadLetter": false,
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      },
+      {
+        "queueBackend": "postgres",
+        "queueTable": "factory_delivery_queue",
+        "processed": 1,
+        "recovery": {
+          "recovered": 0,
+          "deadLettered": 0
+        },
+        "results": [
+          {
+            "id": "factory-milestone-c-mrf6azte",
+            "action": "phase1",
+            "stage": "phase1_complete",
+            "taskId": "TSK-019",
+            "attempts": 0,
+            "deadLetter": false,
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      },
+      {
+        "queueBackend": "postgres",
+        "queueTable": "factory_delivery_queue",
+        "processed": 1,
+        "recovery": {
+          "recovered": 0,
+          "deadLettered": 0
+        },
+        "results": [
+          {
+            "id": "factory-milestone-c-mrf6azte",
+            "action": "phases_2_6",
+            "stage": "phase6_complete",
+            "taskId": "TSK-019",
+            "attempts": 0,
+            "deadLetter": false,
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      }
+    ],
+    "queueId": "factory-milestone-c-mrf6azte",
+    "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf6azte.json"
+  }
+}

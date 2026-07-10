@@ -1,0 +1,402 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase5_complete",
+  "factoryQueueId": "factory-milestone-c-mrf3vuuv",
+  "githubIssueUrl": null,
+  "engineeringTeam": {
+    "projectId": "PRJ-F2106A8C",
+    "taskId": "TSK-013",
+    "projectName": "Factory delivery — Milestone C agent autonomy verify [factory-milestone-c-mrf3vuuv]",
+    "requirements": "Prove GP-003/004/014/017/019/020-021/023 agent-driven factory delivery on coordinated stack.",
+    "templateTier": "Simple",
+    "changeKind": null,
+    "changedFiles": [],
+    "contractVersion": 1,
+    "contractValidationStatus": "valid",
+    "approvalMode": "policy",
+    "forgeDispatch": {
+      "targetRepo": "wiinc1/engineering-team",
+      "projectId": "engineering-team",
+      "domain": "workflow",
+      "affectsUi": false
+    },
+    "forgeExecutionReadiness": null
+  },
+  "change": {
+    "kind": null,
+    "changedFiles": []
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDENF3VUUV",
+    "startJobId": null,
+    "completeJobId": null,
+    "forgeAuditDir": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/stack/factory-milestone-c-mrf3vuuv/forge-seed",
+    "runtimeExecutionState": "skipped_forge_seed"
+  },
+  "stepsCompleted": [
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008",
+    "GP-009",
+    "GP-010",
+    "GP-011",
+    "GP-012",
+    "GP-013",
+    "GP-014",
+    "GP-015",
+    "GP-016",
+    "GP-017",
+    "GP-018",
+    "GP-019",
+    "GP-020",
+    "GP-021",
+    "GP-026"
+  ],
+  "startedAt": "2026-07-10T15:44:11.005Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/stack/factory-milestone-c-mrf3vuuv"
+  },
+  "phase1": {
+    "completedAt": "2026-07-10T15:44:27.772Z",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": null,
+    "bootstrappedPhase0": false,
+    "projectionRuns": [
+      {
+        "label": "pre-contract-record",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      },
+      {
+        "label": "execution-contract-recorded",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      },
+      {
+        "label": "execution-contract-approved",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      }
+    ],
+    "api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": null,
+      "pmRefinementDelegated": false,
+      "pmRefinementSessionId": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectDelegated": false,
+      "architectSessionId": null,
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    },
+    "contract": {
+      "version": 1,
+      "templateTier": "Simple",
+      "factoryTemplateTier": "Simple",
+      "validationStatus": "valid",
+      "autoApprovalPolicy": {
+        "policy_version": "execution-contract-low-risk-simple-auto-approval.v1",
+        "status": "ready",
+        "canAutoApprove": true,
+        "operatorApprovalRequired": false,
+        "rationale": "Low-risk Simple Execution Contract meets all policy criteria: complete acceptance criteria, no risk flags, no unresolved dependencies, no production auth/security/data-model paths, and a clear rollback path.",
+        "criteria": {
+          "templateTier": "Simple",
+          "riskFlags": [],
+          "acceptanceCriteriaComplete": true,
+          "acceptanceCriteriaCount": 1,
+          "unresolvedDependencies": [],
+          "productionSensitivePaths": [],
+          "rollbackPathClear": true,
+          "rollbackPath": "Rollback by reverting the pilot PR and removing the README golden-path marker.",
+          "reviewerApprovalReady": true
+        },
+        "blockingReasons": [],
+        "metricsPolicy": {
+          "measuredBy": [
+            "feature_operator_trusted_autonomous_delivery_rate",
+            "feature_execution_contract_auto_approvals_total",
+            "feature_operator_trusted_autonomous_deliveries_total"
+          ],
+          "reason": "Autonomous delivery is trusted only when low-risk policy approval later closes successfully."
+        }
+      },
+      "autoApprovalApproved": true
+    },
+    "architectSpec": {
+      "mode": "embedded_in_execution_contract",
+      "engineerTier": "Jr",
+      "monitoringRunbook": "docs/runbooks/golden-path-autonomous-delivery.md"
+    },
+    "forgeReadinessNote": "Forge execution readiness remains GP-009; intake-draft DRAFT stage blocks readiness until workflow advances post-approval."
+  },
+  "github": {
+    "branchName": "tsk-013-agent-driven-factory-delivery",
+    "commitSha": "0123456789abcdef0123456789abcdef01234567",
+    "prUrl": "https://github.com/openclaw/engineering-team/pull/13",
+    "prNumber": 13
+  },
+  "phase2": {
+    "completedAt": "2026-07-10T15:45:02.616Z",
+    "personaRouting": {
+      "seededAgents": [
+        "engineer-jr",
+        "engineer-sr",
+        "engineer-principal"
+      ],
+      "runtimeAgents": {
+        "jr-engineer": "jr-engineer",
+        "sr-engineer": "sr-engineer",
+        "principal": "principal",
+        "ux": "ux-designer"
+      },
+      "assignees": {
+        "Jr": "engineer-jr",
+        "Sr": "engineer-sr",
+        "Principal": "engineer-principal"
+      },
+      "assignedTier": "Jr",
+      "assignedOwner": "engineer-jr",
+      "engineerPersonas": {
+        "jr": "engineer-jr",
+        "sr": "engineer-sr",
+        "principal": "engineer-principal"
+      }
+    },
+    "personas": {
+      "engineer": "engineer-jr",
+      "engineerPersonas": {
+        "jr": "engineer-jr",
+        "sr": "engineer-sr",
+        "principal": "engineer-principal"
+      },
+      "personaRouting": {
+        "seededAgents": [
+          "engineer-jr",
+          "engineer-sr",
+          "engineer-principal"
+        ],
+        "runtimeAgents": {
+          "jr-engineer": "jr-engineer",
+          "sr-engineer": "sr-engineer",
+          "principal": "principal",
+          "ux": "ux-designer"
+        },
+        "assignees": {
+          "Jr": "engineer-jr",
+          "Sr": "engineer-sr",
+          "Principal": "engineer-principal"
+        },
+        "assignedTier": "Jr",
+        "assignedOwner": "engineer-jr",
+        "engineerPersonas": {
+          "jr": "engineer-jr",
+          "sr": "engineer-sr",
+          "principal": "engineer-principal"
+        }
+      },
+      "ux": "ux",
+      "delegation": "delegated",
+      "forge": "main"
+    },
+    "api": {
+      "seed": {
+        "ok": true,
+        "skipped": true,
+        "reason": "skip_forge_seed"
+      },
+      "readiness": {
+        "status": 200,
+        "ready": {
+          "ready": true,
+          "skipped": true
+        }
+      },
+      "stackHealth": {
+        "ok": true,
+        "skipped": true,
+        "reason": "skip_forge_seed"
+      },
+      "stackSource": "skip_forge_seed",
+      "startJobId": null,
+      "runtimeExecutionState": "skipped_forge_seed",
+      "pilotAgentsSeed": {
+        "ok": true,
+        "status": 0
+      },
+      "personaRouting": {
+        "seededAgents": [
+          "engineer-jr",
+          "engineer-sr",
+          "engineer-principal"
+        ],
+        "runtimeAgents": {
+          "jr-engineer": "jr-engineer",
+          "sr-engineer": "sr-engineer",
+          "principal": "principal",
+          "ux": "ux-designer"
+        },
+        "assignees": {
+          "Jr": "engineer-jr",
+          "Sr": "engineer-sr",
+          "Principal": "engineer-principal"
+        },
+        "assignedTier": "Jr",
+        "assignedOwner": "engineer-jr",
+        "engineerPersonas": {
+          "jr": "engineer-jr",
+          "sr": "engineer-sr",
+          "principal": "engineer-principal"
+        }
+      },
+      "implementerAgent": {
+        "delegated": true,
+        "sessionId": "specialist-delegation-fb50f5f2-d33b-4588-9823-68caba141cb1",
+        "agentId": "jr-engineer",
+        "branchName": "tsk-013-agent-driven-factory-delivery",
+        "commitSha": "0123456789abcdef0123456789abcdef01234567",
+        "prUrl": "https://github.com/openclaw/engineering-team/pull/13"
+      },
+      "delegationSmoke": {
+        "ok": true,
+        "skipped": false,
+        "sessionId": "specialist-delegation-f3f63e45-2776-4fce-950d-d1a7a7501ba1"
+      },
+      "engineerSubmission": {
+        "status": 200,
+        "ok": true,
+        "markerPresentAtSubmission": true
+      },
+      "implementation": {
+        "branchName": "tsk-013-agent-driven-factory-delivery",
+        "commitSha": "0123456789abcdef0123456789abcdef01234567",
+        "prUrl": "https://github.com/openclaw/engineering-team/pull/13",
+        "prNumber": 13
+      }
+    }
+  },
+  "phase3": {
+    "completedAt": "2026-07-10T15:46:26.145Z",
+    "personas": {
+      "qa": "qa",
+      "qaOutcome": "fail_intentional",
+      "engineer": "engineer-jr"
+    },
+    "api": {
+      "qaFail": {
+        "status": 201,
+        "ok": true,
+        "runId": "qa-94d26440"
+      },
+      "qaAgent": {
+        "delegated": true,
+        "sessionId": "specialist-delegation-adae12cf-4165-4037-a238-a9d9f770d7a5",
+        "agentId": "qa-engineer",
+        "outcome": "fail"
+      },
+      "forgeRejectJobId": null,
+      "executionState": "skipped_forge_seed",
+      "workflowState": "skipped_forge_seed"
+    }
+  },
+  "phase4": {
+    "completedAt": "2026-07-10T15:47:40.705Z",
+    "personas": {
+      "engineer": "engineer-sr",
+      "qa": "qa",
+      "qaOutcome": "pass"
+    },
+    "api": {
+      "readmeFix": {
+        "changed": false,
+        "path": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/README.md"
+      },
+      "engineerSubmission": {
+        "status": 200,
+        "ok": true
+      },
+      "forgeResumeJobId": null,
+      "runtimeExecutionState": "skipped_forge_seed",
+      "qaPass": {
+        "status": 201,
+        "ok": true
+      },
+      "fixCommitSha": "0123456789abcdef0123456789abcdef01234567"
+    }
+  },
+  "phase5": {
+    "completedAt": "2026-07-10T15:47:58.670Z",
+    "personas": {
+      "sre": "sre",
+      "pm": "pm",
+      "architect": "architect",
+      "qa": "qa",
+      "qaVerification": "pass"
+    },
+    "api": {
+      "stageAdvanceForSre": {
+        "currentStage": "SRE_MONITORING",
+        "transitions": []
+      },
+      "sreMonitoring": {
+        "agentSessionId": "specialist-delegation-4db88656-5ff0-4477-bee9-c5565cbf67e8",
+        "agentId": "sre",
+        "delegated": true,
+        "approved": true
+      },
+      "stageAdvanceForCloseReview": {
+        "currentStage": "PM_CLOSE_REVIEW",
+        "transitions": [
+          {
+            "from": "SRE_MONITORING",
+            "to": "PM_CLOSE_REVIEW",
+            "status": 202
+          }
+        ]
+      },
+      "forgeCompleteJobId": null,
+      "executionState": "skipped_forge_seed",
+      "workflowState": "skipped_forge_seed",
+      "pmCloseReview": {
+        "status": 201,
+        "ok": true
+      },
+      "architectCloseReview": {
+        "status": 201,
+        "ok": true
+      }
+    }
+  }
+}
