@@ -1701,3 +1701,5 @@ components:
       bearerFormat: JWT
 
 # Note: local live OpenClaw C/D factory proof path uses existing task APIs; no new endpoints.
+
+# Note: factory:stack durable services use existing /health and task APIs; no new endpoints (#269).

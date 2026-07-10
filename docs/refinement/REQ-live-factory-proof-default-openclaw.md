@@ -405,3 +405,7 @@ There is one primary path through golden-path / milestone verify that produces *
 ## Local coordinated-stack note (2026-07-10)
 
 Local live milestone C/D may set `STAGING_SKIP_FORGE_SEED/PHASES=true` and does not imply hosted real-evidence collection unless explicit `FF_GOLDEN_PATH_*` flags are set.
+
+## Durable stack (2026-07-10)
+
+Operator host can run `npm run factory:stack:up` for launchd KeepAlive audit API + workers with live OpenClaw defaults (GitLab #269).

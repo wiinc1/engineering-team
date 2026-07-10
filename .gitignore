@@ -33,3 +33,6 @@ observability/milestone-*-staging/factory-delivery/stack/
 observability/workflow-audit.log
 observability/specialist-delegation.jsonl
 observability/*.png
+
+# Durable factory stack local state/logs
+observability/factory-stack/
