@@ -497,3 +497,7 @@ Operators should watch task-detail route errors, action submission errors, next-
 
 ## Schema naming note
 The implementation uses `audit_task_*` for PostgreSQL read models and `task-*-projection.json` for the file backend. That naming split is now documented rather than silently divergent; no schema expansion from Issue #24 was pulled into this pass.
+
+## Local live factory proof
+
+When proving live OpenClaw milestone C/D on the coordinated stack, prefer `npm run audit:workers` if Docker Compose workers are unavailable so projection catch-up does not rely solely on manual fallback.

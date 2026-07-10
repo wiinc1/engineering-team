@@ -359,3 +359,5 @@ test("qa-results submission requires events:write authorization", async () => {
     assert.equal(history.items.some((item) => item.event_type === "task.qa_result_recorded"), false);
   });
 });
+
+// Note: milestone-c agent verify local path remains coordinated-stack only for live OpenClaw C/D.
