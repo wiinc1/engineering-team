@@ -51,6 +51,22 @@ export FACTORY_USE_FIXTURE_DELEGATION=false
 
 See `docs/refinement/REQ-live-factory-proof-default-openclaw.md` and milestone B/C/D runbooks.
 
+**Local coordinated-stack live C/D** (agent sessions without hosted forge/real-evidence):
+
+```bash
+export FACTORY_PROOF_PROFILE=live
+export OPENCLAW_BASE_URL=http://127.0.0.1:18789
+export STAGING_SKIP_FORGE_SEED=true
+export STAGING_SKIP_FORGE_PHASES=true
+export FF_REAL_SPECIALIST_DELEGATION=true
+export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
+# Prefer always-on workers: npm run audit:workers (or docker compose audit-workers when available)
+node scripts/verify-milestone-c-agent.js --base-url http://127.0.0.1:13000 --openclaw-url http://127.0.0.1:18789
+node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --openclaw-url http://127.0.0.1:18789
+```
+
+Hosted real-evidence collection remains opt-in via explicit `FF_GOLDEN_PATH_*` / `STAGING_REQUIRE_REAL_EVIDENCE` flags and is not implied by agent-driven phases alone on a local base URL.
+
 | Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
 **Browser sign-in** (seeded on stack startup):
