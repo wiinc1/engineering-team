@@ -121,6 +121,23 @@ test('milestone C agent verify preflights real proof before queue work', async (
   );
 });
 
+test('milestone C local coordinated-stack path skips hosted real-evidence preflight', async () => {
+  // Should fail later on network/queue work, not on hosted release evidence fields.
+  await assert.rejects(
+    () => runMilestoneCAgentVerify({
+      baseUrl: 'http://127.0.0.1:13000',
+      jwtSecret: 'golden-path-local-dev-secret',
+      // Force file queue so unit test does not require postgres SSL wiring.
+      allowFileQueue: true,
+      queueBackend: 'file',
+      fetchImpl: async () => {
+        throw new Error('local-stack-fetch-blocked-in-unit-test');
+      },
+    }),
+    /local-stack-fetch-blocked-in-unit-test|ECONNREFUSED|fetch failed|queue|Factory|ENOENT/i,
+  );
+});
+
 test('milestone C factory options carry strict real-evidence fields', () => {
   const options = realEvidenceFactoryOptions(strictMilestoneRuntime());
   assertStrictMilestoneIdentity(options);
