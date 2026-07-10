@@ -1,0 +1,174 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase1_complete",
+  "factoryQueueId": "factory-milestone-c-mrf0y2eq",
+  "githubIssueUrl": null,
+  "engineeringTeam": {
+    "projectId": "PRJ-379CEB22",
+    "taskId": "TSK-002",
+    "projectName": "Factory delivery — Milestone C agent autonomy verify [factory-milestone-c-mrf0y2eq]",
+    "requirements": "Prove GP-003/004/014/017/019/020-021/023 agent-driven factory delivery on coordinated stack.",
+    "templateTier": "Simple",
+    "changeKind": null,
+    "changedFiles": [],
+    "contractVersion": 1,
+    "contractValidationStatus": "valid",
+    "approvalMode": "policy",
+    "forgeDispatch": {
+      "targetRepo": "wiinc1/engineering-team",
+      "projectId": "engineering-team",
+      "domain": "workflow",
+      "affectsUi": false
+    },
+    "forgeExecutionReadiness": null
+  },
+  "change": {
+    "kind": null,
+    "changedFiles": []
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDENF0Y2EQ",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "stepsCompleted": [
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008",
+    "GP-012"
+  ],
+  "startedAt": "2026-07-10T14:21:55.263Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/stack/factory-milestone-c-mrf0y2eq"
+  },
+  "phase1": {
+    "completedAt": "2026-07-10T14:26:13.800Z",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": null,
+    "bootstrappedPhase0": false,
+    "projectionRuns": [
+      {
+        "skipped": false,
+        "fallback": true,
+        "mode": "manual_script",
+        "processed": 3,
+        "failed": 0,
+        "raw": {
+          "baseDir": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review",
+          "backend": "postgres",
+          "processed": 3,
+          "failed": 0,
+          "expiredProcessed": 0
+        },
+        "label": "pre-contract-record",
+        "retries": 5,
+        "warning": "projection_worker_lag_detected_manual_catchup_invoked",
+        "remediation": "Start always-on audit workers (npm run audit:workers:up) or POST /projections/process as admin fallback."
+      },
+      {
+        "skipped": false,
+        "fallback": true,
+        "mode": "manual_script",
+        "processed": 1,
+        "failed": 0,
+        "raw": {
+          "baseDir": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review",
+          "backend": "postgres",
+          "processed": 1,
+          "failed": 0,
+          "expiredProcessed": 0
+        },
+        "label": "execution-contract-recorded",
+        "retries": 5,
+        "warning": "projection_worker_lag_detected_manual_catchup_invoked",
+        "remediation": "Start always-on audit workers (npm run audit:workers:up) or POST /projections/process as admin fallback."
+      },
+      {
+        "skipped": false,
+        "fallback": true,
+        "mode": "manual_script",
+        "processed": 1,
+        "failed": 0,
+        "raw": {
+          "baseDir": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review",
+          "backend": "postgres",
+          "processed": 1,
+          "failed": 0,
+          "expiredProcessed": 0
+        },
+        "label": "execution-contract-approved",
+        "retries": 5,
+        "warning": "projection_worker_lag_detected_manual_catchup_invoked",
+        "remediation": "Start always-on audit workers (npm run audit:workers:up) or POST /projections/process as admin fallback."
+      }
+    ],
+    "api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": null,
+      "pmRefinementDelegated": false,
+      "pmRefinementSessionId": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectDelegated": false,
+      "architectSessionId": null,
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    },
+    "contract": {
+      "version": 1,
+      "templateTier": "Simple",
+      "factoryTemplateTier": "Simple",
+      "validationStatus": "valid",
+      "autoApprovalPolicy": {
+        "policy_version": "execution-contract-low-risk-simple-auto-approval.v1",
+        "status": "ready",
+        "canAutoApprove": true,
+        "operatorApprovalRequired": false,
+        "rationale": "Low-risk Simple Execution Contract meets all policy criteria: complete acceptance criteria, no risk flags, no unresolved dependencies, no production auth/security/data-model paths, and a clear rollback path.",
+        "criteria": {
+          "templateTier": "Simple",
+          "riskFlags": [],
+          "acceptanceCriteriaComplete": true,
+          "acceptanceCriteriaCount": 1,
+          "unresolvedDependencies": [],
+          "productionSensitivePaths": [],
+          "rollbackPathClear": true,
+          "rollbackPath": "Rollback by reverting the pilot PR and removing the README golden-path marker.",
+          "reviewerApprovalReady": true
+        },
+        "blockingReasons": [],
+        "metricsPolicy": {
+          "measuredBy": [
+            "feature_operator_trusted_autonomous_delivery_rate",
+            "feature_execution_contract_auto_approvals_total",
+            "feature_operator_trusted_autonomous_deliveries_total"
+          ],
+          "reason": "Autonomous delivery is trusted only when low-risk policy approval later closes successfully."
+        }
+      },
+      "autoApprovalApproved": true
+    },
+    "architectSpec": {
+      "mode": "embedded_in_execution_contract",
+      "engineerTier": "Jr",
+      "monitoringRunbook": "docs/runbooks/golden-path-autonomous-delivery.md"
+    },
+    "forgeReadinessNote": "Forge execution readiness remains GP-009; intake-draft DRAFT stage blocks readiness until workflow advances post-approval."
+  }
+}

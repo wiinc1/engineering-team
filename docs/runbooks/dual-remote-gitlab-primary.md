@@ -66,3 +66,7 @@ If work landed on GitHub first (emergency CI path):
 
 - Branch protection (GitHub backup CI): `.github/BRANCH_PROTECTION.md`
 - Local remote cheat sheet: `TOOLS.md`
+
+## Last operator mirror
+
+GitHub backup was re-synced from GitLab primary after readiness assessment !286 (2026-07-10).

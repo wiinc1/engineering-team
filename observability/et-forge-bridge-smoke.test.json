@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "kind": "et-forge-bridge-smoke",
-  "generatedAt": "2026-07-07T21:03:15.851Z",
+  "generatedAt": "2026-07-10T17:01:06.635Z",
   "summary": {
     "passed": true,
     "checks": [
@@ -31,7 +31,7 @@
     "enabled": true,
     "forgeAdapterBaseUrl": "http://forge.local",
     "engineeringTeamBaseUrl": "http://et.local",
-    "lifecycleTaskId": "TSK-BRIDGESMOKE"
+    "lifecycleTaskId": "TSK-GOLDENF6H8WV"
   },
   "dryRun": {
     "configEnabled": true,
@@ -39,11 +39,11 @@
     "dispatchAction": "start",
     "calls": [
       {
-        "url": "http://et.local/tasks/TSK-BRIDGESMOKE/forge-execution-readiness",
+        "url": "http://et.local/tasks/TSK-GOLDENF6H8WV/forge-execution-readiness",
         "method": "GET"
       },
       {
-        "url": "http://forge.local/tasks/TSK-BRIDGESMOKE/start",
+        "url": "http://forge.local/tasks/TSK-GOLDENF6H8WV/start",
         "method": "POST"
       }
     ]

@@ -1,0 +1,305 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-closeout-report",
+  "generatedAt": "2026-07-10T15:53:02.747Z",
+  "taskId": "TSK-014",
+  "factoryQueueId": "factory-milestone-c-mrf42j01",
+  "projectId": "PRJ-FF48BDF5",
+  "deliveryStatus": "phase6_complete",
+  "stepsCompleted": [
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008",
+    "GP-009",
+    "GP-010",
+    "GP-011",
+    "GP-012",
+    "GP-013",
+    "GP-014",
+    "GP-015",
+    "GP-016",
+    "GP-017",
+    "GP-018",
+    "GP-019",
+    "GP-020",
+    "GP-021",
+    "GP-026"
+  ],
+  "stepClassification": {
+    "total": 27,
+    "automated": 21,
+    "completedManual": 0,
+    "stillManual": 2,
+    "automatedPending": 4
+  },
+  "steps": [
+    {
+      "id": "GP-001",
+      "phase": "0-intake",
+      "action": "Open or select GitHub issue with full requirements template",
+      "system": "github",
+      "status": "automated_pending",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-intake.js writeIntakeEvidence (githubIssueUrl on factory queue item)"
+    },
+    {
+      "id": "GP-002",
+      "phase": "0-intake",
+      "action": "Copy issue requirements into engineering-team intake draft",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/audit/github-intake-normalizer.js (FF_GITHUB_INTAKE_NORMALIZER=true)"
+    },
+    {
+      "id": "GP-003",
+      "phase": "0-intake",
+      "action": "PM refines title, acceptance criteria, priority, task type",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-orchestration.js + refinement/start API (FF_FACTORY_AGENT_DRIVEN_PHASE1)"
+    },
+    {
+      "id": "GP-004",
+      "phase": "0-intake",
+      "action": "Architect adds technical spec, tier, monitoring spec",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-orchestration.js runArchitectAgentHandoff"
+    },
+    {
+      "id": "GP-005",
+      "phase": "1-contract",
+      "action": "Create pilot Project and link single task",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/audit/github-intake-project-bootstrap.js (FF_GITHUB_INTAKE_PROJECT_BOOTSTRAP=true) + factory-intake.js"
+    },
+    {
+      "id": "GP-006",
+      "phase": "1-contract",
+      "action": "Record execution contract with forge_dispatch targetRepo",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-orchestration.js buildFactoryExecutionContractBody"
+    },
+    {
+      "id": "GP-007",
+      "phase": "1-contract",
+      "action": "Run bounded projection catch-up after each production write",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "scripts/run-audit-workers.js + docker-compose.production-workers.yml / fly.toml"
+    },
+    {
+      "id": "GP-008",
+      "phase": "1-contract",
+      "action": "Approve execution contract (policy or explicit operator)",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-phase1.js approveExecutionContractWithRetry (Simple tier policy)"
+    },
+    {
+      "id": "GP-009",
+      "phase": "2-forge",
+      "action": "Seed task for forge-execution-readiness or verify existing seed",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-delivery.js seedFactoryForgeTask + et-forge-dispatch-bridge ensureForgeExecutionReady"
+    },
+    {
+      "id": "GP-010",
+      "phase": "2-forge",
+      "action": "Start local forgeadapter + upstream mocks (or production forge host)",
+      "system": "forgeadapter",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-stack-probe.js + npm run dev:golden-path:up"
+    },
+    {
+      "id": "GP-011",
+      "phase": "2-forge",
+      "action": "POST forgeadapter /tasks/:id/start",
+      "system": "forgeadapter",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-phases.js phase2 + et-forge-dispatch-bridge (ET_FORGE_DISPATCH_ENABLED)"
+    },
+    {
+      "id": "GP-012",
+      "phase": "2-forge",
+      "action": "Seed pilot AI-agent roster",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-intake.js bootstrapFactoryIntakeAgents"
+    },
+    {
+      "id": "GP-013",
+      "phase": "2-forge",
+      "action": "Run OpenClaw live delegation smoke",
+      "system": "openclaw",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "scripts/verify-gp-013-delegation-smoke.js (npm run golden-path:smoke:gp-013; use --openclaw-url for live proof)"
+    },
+    {
+      "id": "GP-014",
+      "phase": "2-forge",
+      "action": "Engineer implements change (branch, commits, PR)",
+      "system": "github",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runImplementerAgentPhase (FF_FACTORY_AGENT_DRIVEN_PHASES)"
+    },
+    {
+      "id": "GP-015",
+      "phase": "3-qa",
+      "action": "QA records initial fail (intentional on first pass for golden path)",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-phases.js runGoldenPathPhase3 + scripts/verify-gp-015-qa-fail-smoke.js"
+    },
+    {
+      "id": "GP-016",
+      "phase": "3-qa",
+      "action": "Forge review gate rejected or revision_required path",
+      "system": "forgeadapter",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-phases.js + et-forge-dispatch-bridge (ET_FORGE_DISPATCH_ENABLED)"
+    },
+    {
+      "id": "GP-017",
+      "phase": "4-fix",
+      "action": "Engineer fixes findings and pushes new commit",
+      "system": "github",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runImplementerFixAgentPhase (FF_FACTORY_AGENT_DRIVEN_PHASES)"
+    },
+    {
+      "id": "GP-018",
+      "phase": "4-fix",
+      "action": "POST forgeadapter /tasks/:id/resume after QA fail",
+      "system": "forgeadapter",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-phases.js phase4 + et-forge-dispatch-bridge"
+    },
+    {
+      "id": "GP-019",
+      "phase": "4-fix",
+      "action": "QA records retest pass with prior_run_id scope",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runQaAgentPhase + golden-path-phases phase4"
+    },
+    {
+      "id": "GP-020",
+      "phase": "5-signoff",
+      "action": "Approve forgeadapter qa/architect/pm review gates",
+      "system": "forgeadapter",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/golden-path-phases.js phase5 + et-forge-dispatch-bridge closeout"
+    },
+    {
+      "id": "GP-021",
+      "phase": "5-signoff",
+      "action": "ET close review — PM + Architect approve",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/et-forge-dispatch-bridge.js (ET_FORGE_DISPATCH_ENABLED)"
+    },
+    {
+      "id": "GP-022",
+      "phase": "6-deploy",
+      "action": "Merge PR after required GitHub checks",
+      "system": "github",
+      "status": "automated_pending",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/github-auto-merge.js mergePullRequestWhenReady (FF_FACTORY_AUTO_MERGE + GITHUB_TOKEN)"
+    },
+    {
+      "id": "GP-023",
+      "phase": "6-deploy",
+      "action": "Local deploy validation (lint, test:unit, standards:check)",
+      "system": "engineering-team",
+      "status": "automated_pending",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-agent-phases.js buildCiValidationEvidence + golden-path-phases phase6"
+    },
+    {
+      "id": "GP-024",
+      "phase": "6-deploy",
+      "action": "Provision/use Supabase Postgres for target app (if not platform-only)",
+      "system": "supabase",
+      "status": "manual",
+      "manualInInventory": true,
+      "automatedBy": null
+    },
+    {
+      "id": "GP-025",
+      "phase": "6-deploy",
+      "action": "Provision Redis (if required by target app)",
+      "system": "redis",
+      "status": "manual",
+      "manualInInventory": true,
+      "automatedBy": null
+    },
+    {
+      "id": "GP-026",
+      "phase": "6-deploy",
+      "action": "SRE monitoring approval and 48h window",
+      "system": "engineering-team",
+      "status": "automated",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-agent-phases.js runSreAgentPhase + golden-path-phases phase5/6"
+    },
+    {
+      "id": "GP-027",
+      "phase": "6-deploy",
+      "action": "Task closeout report with manual-action classification",
+      "system": "engineering-team",
+      "status": "automated_pending",
+      "manualInInventory": false,
+      "automatedBy": "lib/task-platform/factory-closeout.js writeFactoryCloseoutReport (phase6)"
+    }
+  ],
+  "manualInterventions": [],
+  "phase6": {
+    "validationOk": false,
+    "taskClosedOk": true,
+    "humanCloseOk": true,
+    "ciValidation": {
+      "mode": "local_and_ci",
+      "workflowFile": ".github/workflows/validation.yml",
+      "repository": "openclaw/engineering-team",
+      "ciUrl": "https://github.com/openclaw/engineering-team/actions/workflows/validation.yml",
+      "local": {
+        "skipped": true,
+        "reason": "skip_validation_flag"
+      },
+      "recordedAt": "2026-07-10T15:52:57.528Z"
+    }
+  },
+  "artifacts": {
+    "factoryEvidence": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf42j01.json",
+    "inventory": "observability/golden-path-manual-steps.json"
+  }
+}

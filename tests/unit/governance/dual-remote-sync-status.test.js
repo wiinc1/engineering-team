@@ -18,3 +18,5 @@ test('dual-remote-sync-status reports GitLab primary policy and exit codes', () 
   assert.ok(report.tips['github/main']);
   assert.ok([0, 2, 3].includes(result.status));
 });
+
+// Note: GitHub backup mirror of GitLab primary after assessment ship (2026-07-10).
