@@ -32,7 +32,8 @@ function resolveMilestoneRuntime(proof, outputDir, realEvidenceOptions) {
     outputDir,
     requireDelegationSmoke: !process.argv.includes('--skip-delegation-smoke'),
     skipValidation: process.argv.includes('--skip-validation'),
-    skipForgePhases: false,
+    skipForgePhases: process.env.STAGING_SKIP_FORGE_PHASES === 'true',
+    skipForgeSeed: process.env.STAGING_SKIP_FORGE_SEED === 'true',
   })));
 }
 
