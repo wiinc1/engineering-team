@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { buildPlist } = require('../../lib/task-platform/factory-stack/launchd');
 const { buildServiceEnv, DEFAULT_PORTS } = require('../../lib/task-platform/factory-stack/defaults');
 const { probeHttp } = require('../../lib/task-platform/factory-stack/health');
+const { resolveDockerBin, dockerAvailable } = require('../../lib/task-platform/factory-stack/postgres');
 
 describe('factory-stack defaults', () => {
   it('builds live OpenClaw-oriented service env', () => {
@@ -39,5 +40,13 @@ describe('factory-stack health probe', () => {
     assert.equal(result.ok, false);
     assert.equal(result.status, 0);
     assert.ok(result.error);
+  });
+});
+
+describe('factory-stack postgres docker resolution', () => {
+  it('exposes docker bin resolution without throwing', () => {
+    const bin = resolveDockerBin();
+    assert.ok(bin === null || typeof bin === 'string');
+    assert.equal(typeof dockerAvailable(), 'boolean');
   });
 });

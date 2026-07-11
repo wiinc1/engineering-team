@@ -17,6 +17,12 @@ const DEFAULTS = {
   etApiPort: 13000,
   uiPort: 15173,
   forgeadapterPort: 14010,
+  /** Live OpenClaw gateway (factory of record default). */
+  openclawLivePort: 18789,
+  openclawLiveUrl: process.env.FACTORY_STACK_OPENCLAW_URL
+    || process.env.OPENCLAW_BASE_URL
+    || 'http://127.0.0.1:18789',
+  /** Mock OpenClaw only when explicitly requested via --use-openclaw-mock. */
   openclawPort: 14001,
   hermesPort: 14002,
   tenantId: 'engineering-team',

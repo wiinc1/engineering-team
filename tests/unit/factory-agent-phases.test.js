@@ -6,6 +6,8 @@ const {
   resolveQaOutcome,
   resolveSreApproval,
   buildCiValidationEvidence,
+  buildImplementerPrompt,
+  isTrustedDeliveryMode,
 } = require('../../lib/task-platform/factory-agent-phases');
 
 test('parseDelegationJsonOutput extracts JSON payloads from agent output', () => {
@@ -57,4 +59,34 @@ test('resolveSreApproval rejects explicit reject outcomes', () => {
   });
   assert.equal(approval.approved, false);
   assert.equal(approval.reason, 'alerts firing');
+});
+
+test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
+  const session = buildImplementerPrompt({ taskId: 'TSK-1', requirements: 'x' });
+  assert.match(session, /SESSION PROOF ONLY/);
+  assert.doesNotMatch(session, /Synthetic values are acceptable for local factory proof/);
+
+  const trusted = buildImplementerPrompt({
+    taskId: 'TSK-1',
+    requirements: 'x',
+    requireRealEvidence: true,
+  });
+  assert.match(trusted, /TRUSTED DELIVERY/);
+  assert.match(trusted, /FORBIDDEN/);
+});
+
+test('isTrustedDeliveryMode is opt-in via real-evidence flags', () => {
+  assert.equal(isTrustedDeliveryMode({}), false);
+  assert.equal(isTrustedDeliveryMode({ requireRealEvidence: true }), true);
+  assert.equal(isTrustedDeliveryMode({ sessionProofOnly: true, requireRealEvidence: true }), false);
+});
+
+test('resolveImplementerArtifacts rejects synthetic under trusted delivery', () => {
+  assert.throws(
+    () => resolveImplementerArtifacts(
+      { delegated: true, message: '{"branchName":"x","commitSha":"deadbeef","prUrl":"https://example.com"}' },
+      { requireRealEvidence: true },
+    ),
+    /real/,
+  );
 });

@@ -29,12 +29,12 @@ This brings up (pinned ports by default):
 
 | Service | URL | Notes |
 | --- | --- | --- |
-| Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`) |
-| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true` |
+| Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`); reusable by `factory:stack:up` |
+| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true`; stack injects live OpenClaw env by default |
 | ET audit workers | background | Projection + outbox on 3s interval; **ET→forge dispatch bridge** when `ET_FORGE_DISPATCH_ENABLED=true` |
 | ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
 | forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
-| OpenClaw | `http://127.0.0.1:14001` | **Mock** unless `--openclaw-url` points at a real runtime |
+| OpenClaw (live default) | `http://127.0.0.1:18789` | **Live gateway** is the stack default (launchd `ai.openclaw.gateway`). Mock `:14001` only with `--use-openclaw-mock` (not valid for operator-trusted claims) |
 
 ### Live factory proof (default for milestone claim verifies)
 
@@ -89,7 +89,14 @@ npm run factory:stack:uninstall  # remove plists permanently
 
 Logs: `~/Library/Logs/engineering-team-factory/`. Env example: `deploy/launchd/factory-stack.env.example`. Runtime env copy: `observability/factory-stack/service.env`.
 
-**Postgres note:** If Docker is unavailable and nothing listens on `:15432`, `factory:stack:up` fails with a clear error. Start Postgres first (or install Docker and let the script run `docker-compose.golden-path.yml`).
+**Postgres durability:** `factory:stack:up` reuses an existing `:15432` listener (Docker/OrbStack/native) or starts compose when Docker is available (PATH, `/usr/local/bin/docker`, OrbStack). API + workers are launchd KeepAlive; Postgres durability is the container engine or external service staying up across reboot. If nothing listens and Docker is missing, up fails with remediation steps.
+
+**OpenClaw mock (optional smoke only):**
+
+```bash
+npm run dev:golden-path:up -- --use-openclaw-mock
+# or GOLDEN_PATH_USE_OPENCLAW_MOCK=true
+```
 
 | Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
@@ -111,10 +118,10 @@ The stack uses **registration auth** (`AUTH_PRODUCTION_AUTH_STRATEGY=registratio
 - `AUTH_JWT_SECRET=golden-path-local-dev-secret`
 - `AUTH_SESSION_SECRET=golden-path-local-session-secret`
 
-**Use real OpenClaw for GP-013** (ET specialist delegation) while keeping the stack default mock for forgeadapter review gates:
+**Use real OpenClaw for GP-013** (stack default is already live `:18789`):
 
 ```bash
-# Stack default: OpenClaw mock on :14001 (forgeadapter review child sessions)
+# Stack default: live OpenClaw on :18789
 npm run dev:golden-path:up
 
 # Postgres replay with live GP-013 delegation (ET path only)
