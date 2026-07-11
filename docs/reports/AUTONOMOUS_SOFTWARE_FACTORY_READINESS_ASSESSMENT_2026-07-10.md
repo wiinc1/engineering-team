@@ -72,7 +72,7 @@ Control-plane PRD still defines the product spine: intake → refinement → app
 | --- | --- |
 | Live factory proof code path | Merged GitLab primary MRs !280–!285; GitHub backup PR **#299** merged |
 | Policy | GitLab `origin` primary, GitHub `github` backup (`docs/runbooks/dual-remote-gitlab-primary.md`) |
-| Sync status (2026-07-10) | Tips **diverged** (`remotes:sync-status`: not content-identical; both sides have unique merge commits) — **operational debt**, not a product gap by itself |
+| Sync status | **#270:** dual-remote tips equalized under AC1 bar (`remotes:sync-status` → `divergence.synced`; trees may match with forge-local merge SHAs). See `docs/runbooks/dual-remote-gitlab-primary.md` |
 
 ### 3.3 Runtime snapshot (this host, assessment time)
 
