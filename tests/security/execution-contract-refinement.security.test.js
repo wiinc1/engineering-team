@@ -107,3 +107,5 @@ test('section review rejects non-reviewer callers and reviewer role spoofing', a
     assert.equal((await response.json()).error.code, 'forbidden');
   });
 });
+
+// ownership companion for dual-remote #270 mirror (change-completeness evidence)

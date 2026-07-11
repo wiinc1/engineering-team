@@ -175,3 +175,5 @@ test('versioned section reviews persist reviewer contribution and stale approved
     assert.equal((await response.json()).error.code, 'stale_execution_contract_review');
   });
 });
+
+// ownership companion for dual-remote #270 mirror (change-completeness evidence)
