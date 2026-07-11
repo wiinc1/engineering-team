@@ -278,3 +278,5 @@ test('factory proof profile surface is loadable for claim-path orchestration', (
 });
 
 // Note: local live OpenClaw C/D proof keeps postgres queue path (STAGING_SKIP_FORGE_*).
+
+// Note: factory:stack launchd services keep postgres queue path durable across reboots (#269).

@@ -80,6 +80,13 @@
     "audit:api": "node scripts/run-audit-api.js",
     "forge:local-smoke:seed": "node scripts/seed-forge-local-smoke-task.js",
     "audit:workers": "node scripts/run-audit-workers.js",
+    "factory:stack": "node scripts/factory-stack.js",
+    "factory:stack:up": "node scripts/factory-stack.js up",
+    "factory:stack:down": "node scripts/factory-stack.js down",
+    "factory:stack:status": "node scripts/factory-stack.js status",
+    "factory:stack:restart": "node scripts/factory-stack.js restart",
+    "factory:stack:install": "node scripts/factory-stack.js install",
+    "factory:stack:uninstall": "node scripts/factory-stack.js uninstall",
     "audit:workers:production-smoke": "node scripts/verify-audit-workers-production-smoke.js",
     "audit:et-forge:smoke": "node scripts/verify-et-forge-bridge-smoke.js",
     "audit:workers:up": "docker compose -f docker-compose.production-workers.yml up -d audit-workers",
@@ -140,7 +147,9 @@
     "design:audit": "node scripts/generate-design-adoption-audit.mjs",
     "design:audit:check": "node scripts/generate-design-adoption-audit.mjs --check",
     "design:change-guard": "node scripts/check-design-change-guard.mjs",
-    "design:lint": "design.md lint DESIGN.md"
+    "design:lint": "design.md lint DESIGN.md",
+    "factory:stack:accept": "node scripts/factory-stack.js accept",
+    "factory:stack:verify": "node scripts/verify-factory-stack-acceptance.js"
   },
   "repository": {
     "type": "git",

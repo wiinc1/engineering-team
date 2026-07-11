@@ -174,3 +174,48 @@ test('no disagreement keeps human gate optional', () => {
   assert.equal(gate.satisfied, true);
   assert.equal(gate.disagreementActive, false);
 });
+
+test('agent-authored proposals require human acceptance even without disagreement (Q6)', () => {
+  const blocked = evaluatePmArchitectHumanReviewGate(baseContract({
+    reviewers: {
+      pm: { status: 'approved', actorId: 'pm-agent', actorType: 'agent' },
+      architect: { status: 'approved', actorId: 'architect-agent', actorType: 'agent' },
+    },
+  }));
+  assert.equal(blocked.required, true);
+  assert.equal(blocked.satisfied, false);
+  assert.equal(blocked.agentProposalReviewRequired, true);
+  assert.ok(blocked.missingHumanReviews.some((item) => item.code === 'missing_human_pm_review'));
+  assert.ok(blocked.missingHumanReviews.some((item) => item.code === 'missing_human_architect_review'));
+
+  const accepted = evaluatePmArchitectHumanReviewGate(baseContract({
+    reviewers: {
+      pm: { status: 'approved', actorId: 'pm-agent', actorType: 'agent' },
+      architect: { status: 'approved', actorId: 'architect-agent', actorType: 'agent' },
+    },
+    human_reviews: {
+      pm: { status: 'approved', actorId: 'human-pm-1', actorType: 'user' },
+      architect: { status: 'approved', actorId: 'human-arch-1', actorType: 'human' },
+    },
+  }));
+  assert.equal(accepted.required, true);
+  assert.equal(accepted.satisfied, true);
+  assert.equal(accepted.canApprove, true);
+});
+
+test('require_human_pm_architect_review forces human gate on factory contracts', () => {
+  const blocked = evaluatePmArchitectHumanReviewGate(baseContract({
+    require_human_pm_architect_review: true,
+  }));
+  assert.equal(blocked.required, true);
+  assert.equal(blocked.satisfied, false);
+
+  const accepted = evaluatePmArchitectHumanReviewGate(baseContract({
+    require_human_pm_architect_review: true,
+    human_reviews: {
+      pm: { status: 'approved', actorId: 'op-pm', actorType: 'human' },
+      architect: { status: 'approved', actorId: 'op-arch', actorType: 'human' },
+    },
+  }));
+  assert.equal(accepted.satisfied, true);
+});

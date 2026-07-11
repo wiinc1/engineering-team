@@ -10,7 +10,7 @@
 
 - Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process.
 - Evidence expected for this change: live milestone C/D completion artifacts; dual-remote policy and tip status; host runtime snapshot (OpenClaw live vs mocks); factory autonomy decisions and control-plane PRD.
-- Gap observed: durable host stack and real multi-service topology remain incomplete; success metric cohort (≥10 Simple trusted closes) not run. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source https://github.com/wiinc1/engineering-team/blob/main/docs/reports/FACTORY_AUTONOMY_DECISIONS.md).
+- Gap observed: success metric cohort (≥10 Simple trusted closes) not run; Hermes remains mock; forge often skipped on local live path. Durable API+workers launchd stack shipped (#269); golden-path defaults live OpenClaw; Q6 human PM/Architect factory wiring landed. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source https://github.com/wiinc1/engineering-team/blob/main/docs/reports/FACTORY_AUTONOMY_DECISIONS.md).
 
 ## Required Evidence
 
@@ -30,11 +30,11 @@ It does **not** yet meet the locked success bar for an autonomous software facto
 | Horizon (from decisions) | Bar | Status |
 | --- | --- | --- |
 | Near-term (~15 days) | ≥80% operator-trusted autonomous delivery on **≥10 closed Simple/low-risk tasks**, zero post-approval interventions | **Not met** — loop proven once; not 10 trusted closes |
-| Factory of record | Always-on coordinated stack (Postgres + API + workers + UI + forgeadapter + **real** OpenClaw) | **Partial** — stack runs; only OpenClaw is launchd-persistent; Docker missing on this host |
-| Human gates | Human PM/Architect review before contract authority | **Partial** — product policy exists; live C/D proof still uses policy auto-path / embedded architect, not a measured human review gate |
-| Real services | Live OpenClaw/Hermes/forge in the loop (not mocks) | **Partial** — live OpenClaw used for ET agents; Hermes mock + stack OpenClaw mock still present; forge often skipped in local live proof |
+| Factory of record | Always-on coordinated stack (Postgres + API + workers + UI + forgeadapter + **real** OpenClaw) | **Met for host stack (#269)** — `factory:stack:*` launchd KeepAlive for postgres-ensure, API, workers, UI, forgeadapter; compose Postgres `restart: unless-stopped` + volume; OpenClaw live launchd |
+| Human gates | Human PM/Architect review before contract authority | **Partial → improved** — Q6 gate blocks agent-authored proposals without human acceptance; factory agent-driven phase1 records supervised human PM/Architect reviews on the contract |
+| Real services | Live OpenClaw/Hermes/forge in the loop (not mocks) | **Partial → improved** — `dev:golden-path:up` defaults to live OpenClaw `:18789` (mock only with `--use-openclaw-mock`); Hermes mock remains; forge often skipped in local live proof |
 
-**Overall readiness (goal attainment, not code maturity): ~35–45%.**
+**Overall readiness (goal attainment, not code maturity): ~45–55%.** (was ~35–45% pre #269 + gap closeout)
 
 Local milestones A–D are **necessary proofs of the loop**. They remain **insufficient alone** for “we have an autonomous factory” (explicit in factory autonomy decisions).
 
@@ -72,7 +72,7 @@ Control-plane PRD still defines the product spine: intake → refinement → app
 | --- | --- |
 | Live factory proof code path | Merged GitLab primary MRs !280–!285; GitHub backup PR **#299** merged |
 | Policy | GitLab `origin` primary, GitHub `github` backup (`docs/runbooks/dual-remote-gitlab-primary.md`) |
-| Sync status (2026-07-10) | Tips **diverged** (`remotes:sync-status`: not content-identical; both sides have unique merge commits) — **operational debt**, not a product gap by itself |
+| Sync status | **#270:** dual-remote tips equalized under AC1 bar (`remotes:sync-status` → `divergence.synced`; trees may match with forge-local merge SHAs). See `docs/runbooks/dual-remote-gitlab-primary.md` |
 
 ### 3.3 Runtime snapshot (this host, assessment time)
 
@@ -102,19 +102,19 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 
 | Capability | Status | Evidence / gap |
 | --- | --- | --- |
-| Coordinated local stack boots | **Partial** | Scripts + processes run; not reboot-durable as a unit |
-| Postgres-backed audit / projections | **Works** (when workers up) | Workers process events; lag appears when workers down |
+| Coordinated local stack boots | **Works** | `dev:golden-path:up` + `factory:stack:up`; live OpenClaw default |
+| Postgres-backed audit / projections | **Works** (when workers up) | launchd workers reduce forgotten-worker lag |
 | Factory delivery queue (Postgres) | **Works** | Live C/D ticks: intake → phase1 → phases_2_6 → phase6_complete |
 | Live OpenClaw specialist delegation | **Works** (ET agent phases) | Real sessionIds; fail-closed live proof profile shipped |
 | Fixture fail-closed under live profile | **Works** | Factory proof profile + unit tests; C/D used non-fixture runner |
-| Agent implement / QA / fix loop (GP-014…019) | **Partial** | Live sessions; implementer often returns **synthetic** branch/PR JSON (acceptable for local session proof, **not** operator-trusted delivery) |
+| Agent implement / QA / fix loop (GP-014…019) | **Partial** | Session-proof vs **trusted delivery** prompts/enforcement split; trusted path forbids synthetic branch/PR JSON |
 | GP-023 validation in loop | **Works** (with prep) | Full lint/unit/standards when `.artifacts/coverage-summary.json` present |
 | GP-027 closeout report | **Works** | Closeout JSON + classification |
-| Human PM/Architect review as authority | **Partial** | Policy locked; live proof does not demonstrate human gate completion rate |
+| Human PM/Architect review as authority | **Partial** | Gate enforces Q6 on agent proposals; factory path records human acceptance; cohort metric still missing |
 | Real GitHub PR merge as default GP-022 | **Partial** | Code paths exist; local live proof often has no real PR target |
 | forgeadapter full lifecycle in live proof | **Partial** | Service up; local live path commonly `STAGING_SKIP_FORGE_*` |
 | Hermes real runtime | **Missing** | Mock only on `:14002` |
-| Always-on host services (API/workers/DB) | **Missing** | Only OpenClaw launchd; no docker on host |
+| Always-on host services (API/workers/DB/UI/forge) | **Works** (#269) | Full `factory:stack` launchd set + postgres ensure watcher; OpenClaw separate launchd |
 | ≥10 Simple operator-trusted closes | **Missing** | Single-task proof (e.g. TSK-020), not cohort metric |
 | Metrics MVP (delivery rate / interventions) | **Partial** | Metrics surfaces exist historically; not shown as live cohort dashboard for 10-task bar |
 | Dual-remote primary/backup discipline | **Partial** | Policy + tooling; tips currently diverge |
@@ -155,27 +155,29 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 
 ## 6. What is partial (works, but not factory-grade)
 
-### 6.1 Persistent stack (item 3)
+### 6.1 Persistent stack (item 3) — **#269 complete**
 
-| Have | Lack |
+| Have | Notes |
 | --- | --- |
-| `dev:golden-path:up/down/status`, compose files, worker scripts | Reboot-safe multi-unit host service |
-| OpenClaw via launchd | API, workers, Postgres, UI, forge as services |
-| Compose definitions in repo | **Docker unavailable on this host** |
+| `factory:stack:up/down/status/restart/accept` | One-script recovery after reboot or process kill |
+| launchd KeepAlive: postgres-ensure, API, workers, UI, forgeadapter | Claim topology included when forgeadapter checkout present |
+| Compose Postgres `restart: unless-stopped` + `factory_pgdata` volume | Survives container restarts; ensure watcher re-ups after reboot |
+| OpenClaw via launchd `ai.openclaw.gateway` | Separate host unit on `:18789` |
+| Acceptance audit | `npm run factory:stack:accept` / `factory:stack:verify` |
 
-**Risk:** After reboot, factory “of record” is tribal knowledge + manual process resurrection. Projection lag and hung queue locks reappear when workers are forgotten.
+**Risk residual:** Docker/OrbStack engine itself must be installed for compose path; without Docker, an external `:15432` listener is still required.
 
-### 6.2 Real services vs mocks (item 4)
+### 6.2 Real services vs mocks (item 4) — improved
 
 | Real today | Still mock / skipped |
 | --- | --- |
-| OpenClaw `:18789` for ET agents | OpenClaw mock `:14001` (stack default port in table) |
+| OpenClaw `:18789` **default** for `dev:golden-path:up` and factory stack | OpenClaw mock `:14001` only with `--use-openclaw-mock` |
 | forgeadapter process | Hermes `:14002` mock |
 | Live C/D agent sessions | Full forge seed/start/review often **skipped** for local live proof |
 
-**Risk:** Operators can still green-path against mock OpenClaw if env is wrong; forge-backed review child sessions are not proven live on this path.
+**Risk residual:** Hermes + forge still incomplete for full claim topology; mock path remains for isolated smoke only.
 
-### 6.3 “Autonomous delivery” vs “agent session proof”
+### 6.3 “Autonomous delivery” vs “agent session proof” — improved labeling
 
 Live C/D proves:
 
@@ -187,10 +189,9 @@ It does **not** yet prove:
 
 - real code change in a target repo,  
 - real PR merge under branch protection as the normal path,  
-- zero human intervention after approval on a **cohort** of tasks,  
-- human PM/Architect gates as measured gates.
+- zero human intervention after approval on a **cohort** of tasks.
 
-Implementer prompts for local proof explicitly allow synthetic branch/PR JSON — correct for session evidence, **incorrect** as evidence of autonomous software delivery rate.
+Implementer prompts now distinguish **SESSION PROOF ONLY** vs **TRUSTED DELIVERY** (synthetic forbidden + real artifact assertion when `requireRealEvidence` / trusted flags are set).
 
 ### 6.4 Dual-remote content drift
 
@@ -280,17 +281,17 @@ This file is the exhaustive readiness assessment requested as item 5. It should 
 
 ### Item 3 — Make the stack persistent
 
-**Status: not done.**  
-Scripts and compose exist; **only OpenClaw is durable via launchd**. Docker is unavailable here, so compose cannot be the persistence mechanism until Docker is restored or launchd units replace it.
+**Status: done (#269).**  
+`factory:stack:*` installs launchd KeepAlive for postgres-ensure, audit API, workers, UI, and forgeadapter (when checkout exists). Postgres compose uses `restart: unless-stopped` + persistent volume. OpenClaw remains separate launchd. Acceptance: `npm run factory:stack:accept`.
 
 **Why it matters for the goal:** always-on workers and API are part of the factory of record definition; without them, projection lag and manual resurrection remain interventions.
 
 ### Item 4 — Replace proof mocks with real services
 
-**Status: partial.**  
-**Real OpenClaw agents are proven** in live C/D. **Hermes mock remains.** **Stack still advertises mock OpenClaw on :14001.** **Forge is real as a process but optional/skipped in the local live proof that just passed.**
+**Status: partial (OpenClaw default fixed).**  
+**Real OpenClaw is stack default** (`:18789`). Mock is opt-in only. **Hermes mock remains.** **Forge is real as a process but optional/skipped in local live proof.** Trusted-delivery implementer path forbids synthetic PR evidence.
 
-**Why it matters for the goal:** fixture/mock-free claims are a prerequisite for operator-trusted delivery rate; dual mock+live topology is an operator footgun.
+**Why it matters for the goal:** fixture/mock-free claims are a prerequisite for operator-trusted delivery rate; dual mock+live topology was an operator footgun.
 
 ### Item 5 — Exhaustive assessment
 
@@ -301,11 +302,11 @@ Evidence is current as of 2026-07-10 live C/D and host runtime snapshot. Re-scor
 
 ## 10. Recommended next action (single sequence)
 
-1. **P0.1** — Implement reboot-safe stack services on this host (prefer launchd if Docker stays unavailable).  
-2. **P0.2** — Sync dual-remote tips to GitLab primary policy.  
-3. **P0.3 / P1** — Collapse claim path onto live OpenClaw; decide Hermes; decide forge.  
-4. **P2** — Run and instrument **≥10 Simple** trusted closes with human PM/Architect gates where required.  
-5. **Re-issue this assessment** with updated scorecard and metric table.
+1. **Done (partial):** P0.1 API+workers launchd; P0.3 live OpenClaw stack default; Q6 factory human gate wiring; trusted vs session implementer prompts.  
+2. **P0.2** — Keep dual-remote tips equalized (GitLab primary).  
+3. **P1** — Hermes real-or-descope; forge live integration or Simple forge-optional policy.  
+4. **P2** — Run and instrument **≥10 Simple** trusted closes (real PR path + measured human gates).  
+5. **Re-issue this assessment** after the 10-task cohort.
 
 ---
 
@@ -318,6 +319,8 @@ Evidence is current as of 2026-07-10 live C/D and host runtime snapshot. Re-scor
 | Live proof REQ | `docs/refinement/REQ-live-factory-proof-default-openclaw.md` |
 | Golden-path runbook | `docs/runbooks/golden-path-autonomous-delivery.md` |
 | Dual-remote | `docs/runbooks/dual-remote-gitlab-primary.md` |
+| Factory stack (#269) | `scripts/factory-stack.js`, `scripts/factory-stack-postgres-watch.js`, `scripts/verify-factory-stack-acceptance.js`, `lib/task-platform/factory-stack/*`, runbook § Durable factory stack |
+| Human PM/Architect gate | `lib/audit/pm-architect-human-review-gate.js`, `lib/task-platform/factory-human-pm-architect.js` |
 | D complete | `observability/milestone-d-complete.json` |
 | Closeout | `observability/factory-closeout/TSK-020.json` |
 | Step inventory | `observability/golden-path-manual-steps.json` |
