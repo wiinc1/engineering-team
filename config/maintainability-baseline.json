@@ -70,21 +70,21 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phase1.js",
+      "rule": "maintainability:function-lines",
+      "line": 339,
+      "ordinal": 20,
+      "name": "runGoldenPathPhase1",
+      "actual": 241,
+      "cap": 50
+    },
+    {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
       "line": 1649,
       "ordinal": 76,
       "name": "runGoldenPathPhase5",
       "actual": 234,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/golden-path-phase1.js",
-      "rule": "maintainability:function-lines",
-      "line": 339,
-      "ordinal": 20,
-      "name": "runGoldenPathPhase1",
-      "actual": 227,
       "cap": 50
     },
     {
@@ -304,6 +304,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/factory-stack/health.js",
+      "rule": "maintainability:function-lines",
+      "line": 187,
+      "ordinal": 9,
+      "name": "evaluateFactoryStackAcceptance",
+      "actual": 94,
+      "cap": 50
+    },
+    {
       "path": "scripts/advance-tsk-001-qa-loop.js",
       "rule": "maintainability:function-lines",
       "line": 324,
@@ -319,6 +328,24 @@
       "ordinal": 99,
       "name": "register",
       "actual": 91,
+      "cap": 50
+    },
+    {
+      "path": "lib/audit/pm-architect-human-review-gate.js",
+      "rule": "maintainability:function-lines",
+      "line": 303,
+      "ordinal": 20,
+      "name": "evaluatePmArchitectHumanReviewGate",
+      "actual": 89,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/factory-stack/launchd.js",
+      "rule": "maintainability:function-lines",
+      "line": 102,
+      "ordinal": 10,
+      "name": "buildServiceSpecs",
+      "actual": 88,
       "cap": 50
     },
     {
@@ -390,6 +417,15 @@
       "line": 920,
       "ordinal": 100,
       "name": "login",
+      "actual": 77,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/factory-stack/health.js",
+      "rule": "maintainability:function-lines",
+      "line": 106,
+      "ordinal": 6,
+      "name": "collectHealthReport",
       "actual": 77,
       "cap": 50
     },
@@ -619,20 +655,20 @@
       "cap": 50
     },
     {
-      "path": "lib/audit/pm-architect-human-review-gate.js",
-      "rule": "maintainability:function-lines",
-      "line": 255,
-      "ordinal": 19,
-      "name": "evaluatePmArchitectHumanReviewGate",
-      "actual": 63,
-      "cap": 50
-    },
-    {
       "path": "lib/audit/product-delivery-integrity.js",
       "rule": "maintainability:function-lines",
       "line": 446,
       "ordinal": 29,
       "name": "evaluateRunnableSurfaceVerification",
+      "actual": 63,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/dual-remote-sync-status.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 9,
+      "ordinal": 1,
+      "name": "<arrow>",
       "actual": 63,
       "cap": 50
     },
@@ -736,6 +772,24 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/factory-human-pm-architect.js",
+      "rule": "maintainability:function-lines",
+      "line": 56,
+      "ordinal": 4,
+      "name": "applyFactoryHumanPmArchitectContractFields",
+      "actual": 58,
+      "cap": 50
+    },
+    {
+      "path": "scripts/factory-stack.js",
+      "rule": "maintainability:function-lines",
+      "line": 148,
+      "ordinal": 13,
+      "name": "cmdUp",
+      "actual": 58,
+      "cap": 50
+    },
+    {
       "path": "src/app/registration-auth-flows.test.tsx",
       "rule": "maintainability:function-lines",
       "line": 15,
@@ -778,6 +832,15 @@
       "ordinal": 5,
       "name": "<arrow>",
       "actual": 57,
+      "cap": 50
+    },
+    {
+      "path": "scripts/verify-factory-stack-acceptance.js",
+      "rule": "maintainability:function-lines",
+      "line": 19,
+      "ordinal": 1,
+      "name": "codeOnlyChecks",
+      "actual": 56,
       "cap": 50
     },
     {
@@ -826,6 +889,15 @@
       "cap": 50
     },
     {
+      "path": "scripts/dev-golden-path/stack.js",
+      "rule": "maintainability:function-lines",
+      "line": 305,
+      "ordinal": 24,
+      "name": "commandUp",
+      "actual": 54,
+      "cap": 50
+    },
+    {
       "path": "src/app/routes/CommandCenterQueue.jsx",
       "rule": "maintainability:function-lines",
       "line": 89,
@@ -844,12 +916,39 @@
       "cap": 50
     },
     {
+      "path": "scripts/dev-golden-path/stack.js",
+      "rule": "maintainability:function-lines",
+      "line": 195,
+      "ordinal": 15,
+      "name": "resolveUpstreamUrls",
+      "actual": 53,
+      "cap": 50
+    },
+    {
       "path": "scripts/generate-design-tokens.mjs",
       "rule": "maintainability:function-lines",
       "line": 233,
       "ordinal": 14,
       "name": "buildButtonCss",
       "actual": 53,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/factory-stack-service.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 93,
+      "ordinal": 16,
+      "name": "<arrow>",
+      "actual": 53,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/factory-orchestration.js",
+      "rule": "maintainability:function-lines",
+      "line": 133,
+      "ordinal": 12,
+      "name": "buildFactoryExecutionContractBody",
+      "actual": 52,
       "cap": 50
     },
     {
@@ -876,6 +975,15 @@
       "line": 36,
       "ordinal": 3,
       "name": "buildForgeReadyApprovedContract",
+      "actual": 51,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/factory-stack/postgres.js",
+      "rule": "maintainability:function-lines",
+      "line": 58,
+      "ordinal": 4,
+      "name": "ensurePostgres",
       "actual": 51,
       "cap": 50
     },
@@ -975,7 +1083,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 575,
+      "actual": 589,
       "cap": 400
     },
     {
@@ -994,6 +1102,15 @@
       "ordinal": null,
       "name": null,
       "actual": 506,
+      "cap": 400
+    },
+    {
+      "path": "lib/audit/pm-architect-human-review-gate.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 486,
       "cap": 400
     },
     {
@@ -1051,21 +1168,21 @@
       "cap": 400
     },
     {
-      "path": "lib/audit/pm-architect-human-review-gate.js",
-      "rule": "maintainability:source-file-lines",
-      "line": 1,
-      "ordinal": null,
-      "name": null,
-      "actual": 409,
-      "cap": 400
-    },
-    {
       "path": "lib/task-platform/golden-path-real-evidence-collector.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
       "actual": 405,
+      "cap": 400
+    },
+    {
+      "path": "scripts/dev-golden-path/stack.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 401,
       "cap": 400
     },
     {
