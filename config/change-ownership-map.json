@@ -168,7 +168,8 @@
             "^tests/unit/execution-contracts\\.test\\.js$",
             "^tests/unit/execution-contract-refinement\\.test\\.js$",
             "^tests/unit/live-task-updates\\.test\\.js$",
-            "^tests/unit/task-platform-projects\\.test\\.js$"
+            "^tests/unit/task-platform-projects\\.test\\.js$",
+            "^tests/unit/pm-architect-human-review-gate\\.test\\.js$"
           ]
         },
         {
