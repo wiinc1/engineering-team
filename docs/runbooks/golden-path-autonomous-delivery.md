@@ -38,7 +38,7 @@ This brings up (pinned ports by default):
 
 ### Live factory proof (default for milestone claim verifies)
 
-Primary `npm run milestone-{b,c,d}:verify` probes **live OpenClaw** (`OPENCLAW_BASE_URL`, default `http://127.0.0.1:18789`) and **fails closed** if the gateway is unavailable. Fixtures are opt-in only (`milestone-*:verify:fixture` or `--allow-fixture-delegation`) and are **not** valid for operator-trusted factory claims.
+Primary `npm run milestone-{b,c,d}:verify` probes **live OpenClaw** (`OPENCLAW_BASE_URL`, default `http://127.0.0.1:18789`) and **fails closed** if the gateway is unavailable, if the fixture specialist runner is configured, or if `OPENCLAW_BASE_URL` points at the **mock** (`:14001`) — mock health cannot satisfy `FACTORY_PROOF_PROFILE=live` (GitLab #271). Fixtures are opt-in only (`milestone-*:verify:fixture` or `--allow-fixture-delegation`) and are **not** valid for operator-trusted factory claims.
 
 Configure the **audit API process** (not only the verify client):
 
