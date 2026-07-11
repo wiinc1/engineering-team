@@ -29,12 +29,12 @@ This brings up (pinned ports by default):
 
 | Service | URL | Notes |
 | --- | --- | --- |
-| Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`) |
-| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true` |
+| Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`); reusable by `factory:stack:up` |
+| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true`; stack injects live OpenClaw env by default |
 | ET audit workers | background | Projection + outbox on 3s interval; **ET→forge dispatch bridge** when `ET_FORGE_DISPATCH_ENABLED=true` |
 | ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
 | forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
-| OpenClaw | `http://127.0.0.1:14001` | **Mock** unless `--openclaw-url` points at a real runtime |
+| OpenClaw (live default) | `http://127.0.0.1:18789` | **Live gateway** is the stack default (launchd `ai.openclaw.gateway`). Mock `:14001` only with `--use-openclaw-mock` (not valid for operator-trusted claims) |
 
 ### Live factory proof (default for milestone claim verifies)
 
@@ -67,29 +67,53 @@ node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --
 
 Hosted real-evidence collection remains opt-in via explicit `FF_GOLDEN_PATH_*` / `STAGING_REQUIRE_REAL_EVIDENCE` flags and is not implied by agent-driven phases alone on a local base URL.
 
-### Durable factory stack on this host (reboot-safe API + workers)
+### Durable factory stack on this host (GitLab #269)
 
-Use **launchd KeepAlive** units for the factory of record (audit API + projection/outbox workers). OpenClaw remains the separate host unit `ai.openclaw.gateway` on `:18789`.
+Use **`npm run factory:stack:*`** for the reboot-safe factory of record. One command restores the stack after reboot or a full process kill.
 
 ```bash
-# Install/load launchd services + ensure Postgres (existing :15432 or docker compose when Docker is installed)
+# Install/load launchd services + ensure Postgres (existing :15432 or docker compose)
 npm run factory:stack:up
-npm run factory:stack:status   # health: postgres, API :13000, live OpenClaw :18789
+npm run factory:stack:status          # health + launchd
+npm run factory:stack:accept          # GitLab #269 acceptance criteria audit
+npm run factory:stack:verify          # code + live acceptance (or --code-only)
 npm run factory:stack:restart
-npm run factory:stack:down     # stop services; plists retained so reboot restarts them
-npm run factory:stack:uninstall  # remove plists permanently
+npm run factory:stack:down            # stop units; plists retained so reboot restarts them
+npm run factory:stack:uninstall       # remove plists permanently
 ```
 
 | Service | LaunchAgent label | Port / role |
 | --- | --- | --- |
-| Audit API | `com.engineering-team.factory-audit-api` | `:13000` |
-| Audit workers | `com.engineering-team.factory-audit-workers` | projection + outbox |
-| Postgres | Docker golden-path compose **or** existing listener | `:15432` |
-| OpenClaw (live) | `ai.openclaw.gateway` (pre-existing) | `:18789` |
+| Postgres ensure watcher | `com.engineering-team.factory-postgres-ensure` | keeps `:15432` up via compose/reuse |
+| Audit API | `com.engineering-team.factory-audit-api` | `:13000` live factory env |
+| Audit workers | `com.engineering-team.factory-audit-workers` | projection + outbox (no invent-worker path) |
+| UI (Vite) | `com.engineering-team.factory-ui` | `:15173` claim topology |
+| forgeadapter | `com.engineering-team.factory-forgeadapter` | `:14010` when checkout present |
+| Postgres data | Docker compose `restart: unless-stopped` + volume `factory_pgdata` | `:15432` |
+| OpenClaw (live) | `ai.openclaw.gateway` (pre-existing host unit) | `:18789` |
+
+**Omit claim-topology units when needed:**
+
+```bash
+npm run factory:stack:up -- --skip-ui --skip-forgeadapter
+```
 
 Logs: `~/Library/Logs/engineering-team-factory/`. Env example: `deploy/launchd/factory-stack.env.example`. Runtime env copy: `observability/factory-stack/service.env`.
 
-**Postgres note:** If Docker is unavailable and nothing listens on `:15432`, `factory:stack:up` fails with a clear error. Start Postgres first (or install Docker and let the script run `docker-compose.golden-path.yml`).
+**Postgres durability:** compose uses `restart: unless-stopped` and a named volume (`factory_pgdata`). `factory:stack:up` starts compose when nothing listens on `:15432` and Docker/OrbStack is available. The `factory-postgres-ensure` KeepAlive watcher re-ensures Postgres after reboot. If Docker is missing and nothing listens, up fails with remediation steps.
+
+**Recovery drill (AC1):** kill API/workers/UI/forge processes (or `factory:stack:down` then reboot). Run `npm run factory:stack:up` once — required health (postgres, API, workers heartbeat, live OpenClaw, UI, forgeadapter when present) should return ok without tribal manual steps.
+
+**Workers (AC2):** workers are a launchd KeepAlive unit. Live milestone C must not invent a one-off `audit:workers` process when `factory:stack:up` has been run.
+
+**Docs (AC3):** this section + `docs/runbooks/audit-foundation.md` + readiness assessment appendix (`docs/reports/AUTONOMOUS_SOFTWARE_FACTORY_READINESS_ASSESSMENT_2026-07-10.md`).
+
+**OpenClaw mock (optional smoke only):**
+
+```bash
+npm run dev:golden-path:up -- --use-openclaw-mock
+# or GOLDEN_PATH_USE_OPENCLAW_MOCK=true
+```
 
 | Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
@@ -111,10 +135,10 @@ The stack uses **registration auth** (`AUTH_PRODUCTION_AUTH_STRATEGY=registratio
 - `AUTH_JWT_SECRET=golden-path-local-dev-secret`
 - `AUTH_SESSION_SECRET=golden-path-local-session-secret`
 
-**Use real OpenClaw for GP-013** (ET specialist delegation) while keeping the stack default mock for forgeadapter review gates:
+**Use real OpenClaw for GP-013** (stack default is already live `:18789`):
 
 ```bash
-# Stack default: OpenClaw mock on :14001 (forgeadapter review child sessions)
+# Stack default: live OpenClaw on :18789
 npm run dev:golden-path:up
 
 # Postgres replay with live GP-013 delegation (ET path only)

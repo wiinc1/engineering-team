@@ -147,7 +147,9 @@
     "design:audit": "node scripts/generate-design-adoption-audit.mjs",
     "design:audit:check": "node scripts/generate-design-adoption-audit.mjs --check",
     "design:change-guard": "node scripts/check-design-change-guard.mjs",
-    "design:lint": "design.md lint DESIGN.md"
+    "design:lint": "design.md lint DESIGN.md",
+    "factory:stack:accept": "node scripts/factory-stack.js accept",
+    "factory:stack:verify": "node scripts/verify-factory-stack-acceptance.js"
   },
   "repository": {
     "type": "git",

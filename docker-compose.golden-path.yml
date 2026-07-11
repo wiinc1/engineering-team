@@ -1,15 +1,19 @@
 services:
   postgres:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit
       POSTGRES_DB: engineering_team
     ports: ['15432:5432']
-    tmpfs:
-      - /var/lib/postgresql/data
+    volumes:
+      - factory_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U audit -d engineering_team']
       interval: 2s
       timeout: 2s
       retries: 30
+
+volumes:
+  factory_pgdata:
