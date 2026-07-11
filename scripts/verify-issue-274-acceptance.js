@@ -20,6 +20,8 @@ const {
   writeTrustedSimpleCloseEvidence,
   isTrustedSimpleCloseRequired,
   applyTrustedSimpleCloseOptions,
+  githubCheckFailures,
+  resolveGithubProofSurface,
 } = require('../lib/task-platform/trusted-simple-close-evidence');
 const { evidenceModeOptions } = require('../lib/task-platform/factory-phase-runner-options');
 
@@ -33,18 +35,24 @@ function safeGit(args) {
 
 function main() {
   const criteria = [];
+  const scopeRows = [];
   const root = process.cwd();
 
   // Scope: mode split
   const sessionPrompt = buildImplementerPrompt({ taskId: 'TSK-SESSION' });
   const trustedPrompt = buildImplementerPrompt({ taskId: 'TSK-TRUSTED', requireRealEvidence: true });
+  const modeSplitOk = /SESSION PROOF ONLY/.test(sessionPrompt)
+    && /TRUSTED DELIVERY/.test(trustedPrompt)
+    && isTrustedDeliveryMode({ requireRealEvidence: true }) === true
+    && isTrustedDeliveryMode({ sessionProofOnly: true, requireRealEvidence: true }) === false;
   criteria.push({
     id: 'SCOPE-mode-split',
-    ok: /SESSION PROOF ONLY/.test(sessionPrompt)
-      && /TRUSTED DELIVERY/.test(trustedPrompt)
-      && isTrustedDeliveryMode({ requireRealEvidence: true }) === true
-      && isTrustedDeliveryMode({ sessionProofOnly: true, requireRealEvidence: true }) === false,
+    ok: modeSplitOk,
     detail: 'session vs trusted prompts and isTrustedDeliveryMode',
+  });
+  scopeRows.push({
+    bullet: 'Distinguish local session-proof mode vs trusted-delivery mode',
+    ok: modeSplitOk,
   });
 
   // AC2: synthetic cannot satisfy trusted
@@ -63,30 +71,85 @@ function main() {
     detail: syntheticRejected ? 'synthetic/fixture/pilot PR rejected under trusted mode' : 'synthetic accepted',
   });
 
-  // Real inputs from this repo / known merged PR #301 (real merge on GitHub backup for #270)
+  // Real branch + PR + checks (scope bullet)
+  let checksMissingRejected = false;
+  try {
+    assertTrustedSimpleCloseEvidence({
+      templateTier: 'Simple',
+      branchName: 'feat/x',
+      commitSha: 'e9c769fe45eef8e1498ff018c1c939109e8047bd',
+      prUrl: 'https://github.com/wiinc1/engineering-team/pull/301',
+      prNumber: 301,
+      mergeCommitSha: '6f8ebd8ad9d48b27480dcc06845e8fc9a24f31f1',
+      mergedAt: '2026-07-11T00:00:00.000Z',
+      merged: true,
+      repository: 'wiinc1/engineering-team',
+      changedFiles: ['README.md'],
+      github: {
+        repository: 'wiinc1/engineering-team',
+        branchName: 'feat/x',
+        commitSha: 'e9c769fe45eef8e1498ff018c1c939109e8047bd',
+        prUrl: 'https://github.com/wiinc1/engineering-team/pull/301',
+        prNumber: 301,
+        changedFiles: ['README.md'],
+      },
+    });
+  } catch (error) {
+    checksMissingRejected = /checks are required|mergeReadiness|branchProtection/i.test(error.message);
+  }
+  const surfaceEmpty = resolveGithubProofSurface({ github: { checks: [], requiredChecks: [] } });
+  const emptyCheckFailures = githubCheckFailures({ github: surfaceEmpty });
+  const realBranchPrChecksOk = checksMissingRejected && emptyCheckFailures.length > 0;
+  criteria.push({
+    id: 'SCOPE-real-branch-pr-checks',
+    ok: realBranchPrChecksOk,
+    detail: realBranchPrChecksOk
+      ? `missing checks fail closed (${emptyCheckFailures.slice(0, 3).join('; ')})`
+      : 'missing checks/mergeReadiness not rejected',
+  });
+  scopeRows.push({
+    bullet: 'Real branch + PR + checks for trusted mode',
+    ok: realBranchPrChecksOk,
+  });
+
+  // Real inputs from this repo / known merged PR #301
   const headSha = safeGit(['rev-parse', 'HEAD']);
   const realMergeSha = '6f8ebd8ad9d48b27480dcc06845e8fc9a24f31f1';
   const realPrUrl = 'https://github.com/wiinc1/engineering-team/pull/301';
-  // Prefer HEAD when it is a real 40-char non-fixture sha for implementer commit field
   const implSha = headSha && headSha.length === 40 ? headSha : 'e9c769fe45eef8e1498ff018c1c939109e8047bd';
 
   let packageOk = false;
   let evidencePath = null;
+  let checkFailuresOnPackage = null;
   try {
     const evidence = buildTrustedSimpleCloseEvidence({
       templateTier: 'Simple',
+      repository: 'wiinc1/engineering-team',
       branchName: safeGit(['rev-parse', '--abbrev-ref', 'HEAD']) || 'feat/issue-274-trusted-simple-pr-merge',
       commitSha: implSha,
       prUrl: realPrUrl,
       prNumber: 301,
       mergeCommitSha: realMergeSha,
       mergedAt: '2026-07-11T03:30:00.000Z',
-      notes: 'Issue #274 auditor: evidence built from real git HEAD + real merged GitHub PR #301.',
+      changedFiles: [
+        'lib/task-platform/trusted-simple-close-evidence.js',
+        'tests/unit/trusted-simple-close-evidence.test.js',
+        'scripts/verify-issue-274-acceptance.js',
+      ],
+      includeGithubCheckProof: true,
+      requiredChecks: ['unit tests', 'Merge readiness'],
+      notes: 'Issue #274 auditor: real git HEAD + real merged GitHub PR #301 + GitHub check/mergeReadiness proof surface.',
     });
     assertTrustedSimpleCloseEvidence(evidence);
+    checkFailuresOnPackage = githubCheckFailures({ github: evidence.github });
     evidencePath = path.join(root, 'observability', 'trusted-simple-close', 'issue-274-evidence.json');
     writeTrustedSimpleCloseEvidence(evidencePath, evidence);
-    packageOk = Boolean(evidence.prUrl && evidence.mergeCommitSha && evidence.merged === true);
+    packageOk = Boolean(
+      evidence.prUrl
+      && evidence.mergeCommitSha
+      && evidence.merged === true
+      && checkFailuresOnPackage.length === 0,
+    );
   } catch (error) {
     criteria.push({
       id: 'AC1-evidence-package',
@@ -98,11 +161,15 @@ function main() {
     criteria.push({
       id: 'AC1-evidence-package',
       ok: true,
-      detail: `wrote ${evidencePath} with real PR URL + merge SHA`,
+      detail: `wrote ${evidencePath}; githubCheckFailures=${checkFailuresOnPackage.length}`,
     });
   }
+  scopeRows.push({
+    bullet: 'Evidence package stores real PR URLs and merge SHAs',
+    ok: packageOk,
+  });
 
-  // GP-022 eligibility rejection
+  // GP-022 eligibility rejection (+ missing_token)
   let ineligibleRejected = false;
   try {
     assertRealPhase6AutoMerge({
@@ -122,19 +189,24 @@ function main() {
       ? 'missing_github_token / disabled auto-merge rejected for trusted close'
       : 'ineligible auto-merge accepted',
   });
+  scopeRows.push({
+    bullet: 'GP-022 auto-merge only for eligible Simple with green checks',
+    ok: ineligibleRejected && packageOk,
+  });
 
-  // Wiring: factory options
+  // Wiring
   const opts = evidenceModeOptions(
     { trustedDelivery: true, templateTier: 'Simple' },
     { templateTier: 'Simple', id: 'audit' },
   );
   const applied = applyTrustedSimpleCloseOptions({ templateTier: 'Simple', trustedDelivery: true });
+  const wiringOk = opts.requireRealEvidence === true
+    && opts.trustedSimpleClose === true
+    && applied.requireRealEvidence === true
+    && isTrustedSimpleCloseRequired({ trustedDelivery: true, templateTier: 'Simple' }) === true;
   criteria.push({
     id: 'SCOPE-factory-wiring',
-    ok: opts.requireRealEvidence === true
-      && opts.trustedSimpleClose === true
-      && applied.requireRealEvidence === true
-      && isTrustedSimpleCloseRequired({ trustedDelivery: true, templateTier: 'Simple' }) === true,
+    ok: wiringOk,
     detail: JSON.stringify({
       requireRealEvidence: opts.requireRealEvidence,
       trustedSimpleClose: opts.trustedSimpleClose,
@@ -142,11 +214,11 @@ function main() {
     }),
   });
 
-  // Structural: modules present
   const modules = [
     'lib/task-platform/trusted-simple-close-evidence.js',
     'lib/task-platform/factory-agent-phases.js',
     'lib/task-platform/golden-path-phase6-auto-merge-proof.js',
+    'lib/task-platform/final-github-proof.js',
   ];
   criteria.push({
     id: 'SCOPE-modules-present',
@@ -157,8 +229,9 @@ function main() {
   const report = {
     issue: 274,
     title: 'Real PR/merge path for Simple trusted closes (not synthetic implementer JSON)',
-    ok: criteria.every((c) => c.ok),
+    ok: criteria.every((c) => c.ok) && scopeRows.every((r) => r.ok),
     criteria,
+    scopeMatrix: scopeRows,
     evidencePath,
   };
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
