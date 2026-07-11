@@ -140,6 +140,7 @@
     "milestone-c:verify:fixture": "node scripts/verify-milestone-c-agent.js --base-url http://127.0.0.1:13000 --run-validation --allow-fixture-delegation",
     "milestone-d:verify": "node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --run-validation",
     "milestone-d:verify:fixture": "node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --run-validation --allow-fixture-delegation",
+    "issue-271:verify": "node scripts/verify-issue-271-acceptance.js",
     "dev:delegation-smoke:down": "docker compose down --remove-orphans",
     "design:tokens": "node scripts/generate-design-tokens.mjs",
     "design:tokens:check": "node scripts/generate-design-tokens.mjs --check",
