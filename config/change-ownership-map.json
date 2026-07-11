@@ -510,7 +510,7 @@
         "^scripts/dev-golden-path/.+\\.js$",
         "^docker-compose\\.golden-path\\.yml$",
         "^db/migrations/015_factory_delivery_queue(\\.down)?\\.sql$",
-        "^scripts/(build-production-safety-evidence|build-real-autonomous-delivery-evidence|build-release-artifacts|build-rollback-evidence|capture-factory-persona-smoke|check-secrets|check-source-integrity|discover-real-delivery-pr|execute-real-autonomous-delivery-plan|migrate-factory-queue-postgres|plan-real-autonomous-delivery|preflight-real-autonomous-delivery|setup-github-intake-webhook|setup-gitlab-intake-webhook|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-issue-271-acceptance|factory-stack|factory-stack-postgres-watch|verify-factory-stack-acceptance|verify-milestone-hosted-phase6|verify-real-autonomous-delivery-plan-execution|verify-real-autonomous-delivery|verify-real-delivery-candidate)\\.js$",
+        "^scripts/(build-production-safety-evidence|build-real-autonomous-delivery-evidence|build-release-artifacts|build-rollback-evidence|capture-factory-persona-smoke|check-secrets|check-source-integrity|discover-real-delivery-pr|execute-real-autonomous-delivery-plan|migrate-factory-queue-postgres|plan-real-autonomous-delivery|preflight-real-autonomous-delivery|setup-github-intake-webhook|setup-gitlab-intake-webhook|verify-milestone-b-orchestration|verify-milestone-c-agent|verify-milestone-d-closeout|verify-issue-271-acceptance|verify-issue-274-acceptance|factory-stack|factory-stack-postgres-watch|verify-factory-stack-acceptance|verify-milestone-hosted-phase6|verify-real-autonomous-delivery-plan-execution|verify-real-autonomous-delivery|verify-real-delivery-candidate)\\.js$",
         "^api/v1/factory/",
         "^lib/audit/(factory-queue-http|factory-real-evidence-runtime-options|pm-architect-human-review-gate|release-health-http)\\.js$",
         "^scripts/(advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-issue-279-local|reseed-tsk-001-local|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers)\\.js$",
@@ -547,7 +547,8 @@
             "^tests/unit/github-evidence-source-policy\\.test\\.js$",
             "^tests/unit/pm-architect-human-review-gate\\.test\\.js$",
             "^tests/unit/audit-release-health-http\\.test\\.js$",
-            "^tests/unit/governance/(check-secrets|source-integrity)\\.test\\.js$"
+            "^tests/unit/governance/(check-secrets|source-integrity)\\.test\\.js$",
+            "^tests/unit/trusted-simple-close-evidence\\.test\\.js$"
           ]
         },
         {

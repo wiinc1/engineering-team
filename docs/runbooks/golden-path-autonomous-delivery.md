@@ -67,6 +67,17 @@ node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --
 
 Hosted real-evidence collection remains opt-in via explicit `FF_GOLDEN_PATH_*` / `STAGING_REQUIRE_REAL_EVIDENCE` flags and is not implied by agent-driven phases alone on a local base URL.
 
+### Trusted Simple close (GitLab #274)
+
+**Session-proof** (default local C/D without real-evidence flags) may use short implementer JSON for session attribution only — that is **not** operator-trusted autonomous delivery.
+
+**Trusted delivery** (`requireRealEvidence` / `trustedDelivery` / `FACTORY_TRUSTED_DELIVERY=true` / `FF_FACTORY_TRUSTED_SIMPLE_CLOSE=true` for Simple tier):
+
+- Implementer must return real `branchName`, non-fixture 40-char `commitSha`, and a real PR URL (not pilot #271).
+- GP-022 auto-merge proof requires real merge confirmation + `mergeCommitSha` + `mergedAt` (no simulation / no skip for missing token).
+- Evidence package must store real PR URL + merge SHA (`lib/task-platform/trusted-simple-close-evidence.js`).
+- Auditor: `npm run issue-274:verify`.
+
 ### Durable factory stack on this host (GitLab #269)
 
 Use **`npm run factory:stack:*`** for the reboot-safe factory of record. One command restores the stack after reboot or a full process kill.
