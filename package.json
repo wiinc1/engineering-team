@@ -150,7 +150,8 @@
     "design:change-guard": "node scripts/check-design-change-guard.mjs",
     "design:lint": "design.md lint DESIGN.md",
     "factory:stack:accept": "node scripts/factory-stack.js accept",
-    "factory:stack:verify": "node scripts/verify-factory-stack-acceptance.js"
+    "factory:stack:verify": "node scripts/verify-factory-stack-acceptance.js",
+    "issue-274:verify": "node scripts/verify-issue-274-acceptance.js"
   },
   "repository": {
     "type": "git",
