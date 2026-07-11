@@ -774,7 +774,8 @@
         {
           "name": "governance-unit",
           "patterns": [
-            "^tests/unit/governance/.+\\.test\\.js$"
+            "^tests/unit/governance/.+\\.test\\.js$",
+            "^tests/unit/dual-remote-sync-status\\.test\\.js$"
           ]
         }
       ],
