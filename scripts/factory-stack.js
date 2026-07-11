@@ -2,12 +2,17 @@
 'use strict';
 
 /**
- * Durable factory-of-record stack control for this host.
- * Commands: up | down | status | restart | install | uninstall
+ * Durable factory-of-record stack control for this host (GitLab #269).
+ * Commands: up | down | status | restart | install | uninstall | accept
  *
- * Manages launchd KeepAlive services for audit API + workers.
- * Postgres: reuses existing :15432 or docker compose golden-path when Docker exists.
- * OpenClaw live gateway is expected via existing launchd (ai.openclaw.gateway).
+ * Manages launchd KeepAlive services for:
+ *   - Postgres ensure watcher (docker compose / existing :15432)
+ *   - audit API (:13000)
+ *   - audit workers (projection + outbox)
+ *   - UI Vite (:15173) claim topology
+ *   - forgeadapter (:14010) claim topology when checkout present
+ *
+ * OpenClaw live gateway remains separate launchd (ai.openclaw.gateway on :18789).
  */
 
 const { execFileSync } = require('node:child_process');
@@ -19,10 +24,15 @@ const {
   ENV_EXAMPLE,
   ENV_FILE,
   DEFAULT_PORTS,
+  LABELS,
   buildServiceEnv,
   defaultOpenclawUrl,
+  resolveForgeadapterDir,
 } = require('../lib/task-platform/factory-stack/defaults');
-const { collectHealthReport } = require('../lib/task-platform/factory-stack/health');
+const {
+  collectHealthReport,
+  evaluateFactoryStackAcceptance,
+} = require('../lib/task-platform/factory-stack/health');
 const {
   installLaunchdServices,
   stopLaunchdServices,
@@ -30,36 +40,56 @@ const {
   launchdStatus,
   kickstart,
 } = require('../lib/task-platform/factory-stack/launchd');
-const { LABELS } = require('../lib/task-platform/factory-stack/defaults');
 const { ensurePostgres, dockerAvailable, stopDockerPostgres } = require('../lib/task-platform/factory-stack/postgres');
 
 function usage() {
-  process.stdout.write(`Usage: node scripts/factory-stack.js <up|down|status|restart|install|uninstall> [options]
+  process.stdout.write(`Usage: node scripts/factory-stack.js <up|down|status|restart|install|uninstall|accept> [options]
 
 Commands:
-  up         Ensure Postgres, install/start launchd API+workers, wait for health
-  down       Stop launchd API+workers (optional --stop-postgres if Docker-managed)
-  status     Show launchd + health probes (JSON with --json)
+  up         Ensure Postgres, install/start launchd units, wait for health
+  down       Stop launchd units (optional --stop-postgres if Docker-managed)
+  status     Show launchd + health probes (+ acceptance with --accept)
   restart    down then up
   install    Write env + plists and load launchd services
   uninstall  Unload and remove launchd plists
+  accept     Evaluate GitLab #269 acceptance criteria against live stack
 
 Options:
-  --json              status as JSON
+  --json              machine-readable output
   --stop-postgres     on down, also docker-stop golden-path postgres when Docker is present
   --skip-wait         on up, do not wait for health probes
+  --skip-ui           omit UI launchd unit
+  --skip-forgeadapter omit forgeadapter launchd unit
+  --forgeadapter-dir  path to forgeadapter checkout
+  --accept            include #269 acceptance evaluation on status
 `);
 }
 
 function parseArgs(argv) {
   const args = new Set(argv.slice(2));
-  const command = ['up', 'down', 'status', 'restart', 'install', 'uninstall', 'help', '-h', '--help']
+  const readValue = (flag, fallback = '') => {
+    const index = argv.indexOf(flag);
+    return index === -1 || index === argv.length - 1 ? fallback : argv[index + 1];
+  };
+  const command = ['up', 'down', 'status', 'restart', 'install', 'uninstall', 'accept', 'help', '-h', '--help']
     .find((name) => args.has(name)) || 'status';
   return {
     command: command === '-h' ? 'help' : command,
     json: args.has('--json'),
     stopPostgres: args.has('--stop-postgres'),
     skipWait: args.has('--skip-wait'),
+    skipUi: args.has('--skip-ui'),
+    skipForgeadapter: args.has('--skip-forgeadapter'),
+    forgeadapterDirExplicit: readValue('--forgeadapter-dir', process.env.FORGEADAPTER_DIR || ''),
+    includeAccept: args.has('--accept') || command === 'accept',
+  };
+}
+
+function stackOptions(options) {
+  return {
+    skipUi: options.skipUi,
+    skipForgeadapter: options.skipForgeadapter,
+    forgeadapterDirExplicit: options.forgeadapterDirExplicit || undefined,
   };
 }
 
@@ -80,22 +110,27 @@ function runMigrations(env) {
   });
 }
 
-async function waitForRequiredHealth(timeoutMs = 45000) {
+async function waitForRequiredHealth(options, timeoutMs = 60000) {
   const deadline = Date.now() + timeoutMs;
   let last = null;
   while (Date.now() < deadline) {
-    last = await collectHealthReport({ apiPort: DEFAULT_PORTS.api });
+    last = await collectHealthReport({
+      apiPort: DEFAULT_PORTS.api,
+      uiPort: DEFAULT_PORTS.ui,
+      requireUi: !options.skipUi,
+      requireForgeadapter: !options.skipForgeadapter && Boolean(resolveForgeadapterDir(options.forgeadapterDirExplicit)),
+    });
     if (last.ok) return last;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return last;
 }
 
-async function cmdInstall() {
+async function cmdInstall(options) {
   ensureExampleEnv();
   fs.mkdirSync(STATE_DIR, { recursive: true });
   const env = buildServiceEnv();
-  const installed = installLaunchdServices(env);
+  const installed = installLaunchdServices(env, stackOptions(options));
   return {
     ok: true,
     action: 'install',
@@ -110,7 +145,7 @@ async function cmdUninstall() {
   return { ok: true, action: 'uninstall', ...result };
 }
 
-async function cmdUp({ skipWait }) {
+async function cmdUp(options) {
   ensureExampleEnv();
   const env = buildServiceEnv();
   const postgres = await ensurePostgres();
@@ -120,7 +155,8 @@ async function cmdUp({ skipWait }) {
       action: 'up',
       postgres,
       error: postgres.error,
-      hint: 'Start Postgres on 15432 or install Docker Desktop/colima, then re-run npm run factory:stack:up',
+      hint: 'Start Postgres on 15432 or install Docker Desktop/OrbStack, then re-run npm run factory:stack:up',
+      remediation: postgres.remediation,
     };
   }
 
@@ -135,23 +171,36 @@ async function cmdUp({ skipWait }) {
     };
   }
 
-  const installed = installLaunchdServices(env);
-  kickstart(LABELS.api);
-  kickstart(LABELS.workers);
+  const installed = installLaunchdServices(env, stackOptions(options));
+  for (const label of installed.labels || Object.values(LABELS)) {
+    kickstart(label);
+  }
 
-  const health = skipWait
-    ? await collectHealthReport({ apiPort: DEFAULT_PORTS.api })
-    : await waitForRequiredHealth();
+  const health = options.skipWait
+    ? await collectHealthReport({
+      requireUi: !options.skipUi,
+      requireForgeadapter: !options.skipForgeadapter && Boolean(installed.forgeadapterDir),
+    })
+    : await waitForRequiredHealth(options);
+
+  const launchd = launchdStatus();
+  const acceptance = evaluateFactoryStackAcceptance({
+    health,
+    launchd,
+    dockerAvailable: dockerAvailable(),
+  });
 
   return {
     ok: health.ok === true,
     action: 'up',
     postgres,
     installed,
-    launchd: launchdStatus(),
+    launchd,
     health,
+    acceptance,
     dockerAvailable: dockerAvailable(),
     openclawNote: 'Live OpenClaw is managed separately (launchd ai.openclaw.gateway on :18789).',
+    recovery: 'After reboot: npm run factory:stack:up (or rely on RunAtLoad KeepAlive units + postgres ensure watcher).',
   };
 }
 
@@ -163,23 +212,49 @@ async function cmdDown({ stopPostgres }) {
     action: 'down',
     launchd,
     postgres,
-    note: 'Plists retained (reboot will restart API/workers). OpenClaw left running.',
+    note: 'Plists retained (reboot will restart stack units). OpenClaw left running.',
   };
 }
 
-async function cmdStatus() {
-  const health = await collectHealthReport({ apiPort: DEFAULT_PORTS.api });
+async function cmdStatus(options) {
+  const requireForge = !options.skipForgeadapter && Boolean(resolveForgeadapterDir(options.forgeadapterDirExplicit));
+  const health = await collectHealthReport({
+    requireUi: !options.skipUi,
+    requireForgeadapter: requireForge,
+  });
   const launchd = launchdStatus();
-  return {
-    ok: health.ok === true && launchd.api.loaded === true && launchd.workers.loaded === true,
+  const result = {
+    ok: health.ok === true
+      && launchd.api.loaded === true
+      && launchd.workers.loaded === true
+      && launchd.postgresEnsure.loaded === true,
     action: 'status',
     ports: DEFAULT_PORTS,
     openclawUrl: defaultOpenclawUrl(),
     envFile: ENV_FILE,
     envExample: ENV_EXAMPLE,
     dockerAvailable: dockerAvailable(),
+    forgeadapterDir: resolveForgeadapterDir(options.forgeadapterDirExplicit),
     launchd,
     health,
+  };
+  if (options.includeAccept) {
+    result.acceptance = evaluateFactoryStackAcceptance({
+      health,
+      launchd,
+      dockerAvailable: dockerAvailable(),
+    });
+    result.ok = result.ok && result.acceptance.ok === true;
+  }
+  return result;
+}
+
+async function cmdAccept(options) {
+  const status = await cmdStatus({ ...options, includeAccept: true });
+  return {
+    ...status,
+    action: 'accept',
+    ok: status.acceptance?.ok === true,
   };
 }
 
@@ -191,7 +266,7 @@ async function main() {
   }
 
   let result;
-  if (options.command === 'install') result = await cmdInstall();
+  if (options.command === 'install') result = await cmdInstall(options);
   else if (options.command === 'uninstall') result = await cmdUninstall();
   else if (options.command === 'up') result = await cmdUp(options);
   else if (options.command === 'down') result = await cmdDown(options);
@@ -199,13 +274,10 @@ async function main() {
     await cmdDown({ stopPostgres: false });
     result = await cmdUp(options);
     result.action = 'restart';
-  } else result = await cmdStatus();
+  } else if (options.command === 'accept') result = await cmdAccept(options);
+  else result = await cmdStatus(options);
 
-  if (options.json || options.command === 'status') {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  } else {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  }
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (result.ok === false) process.exitCode = 1;
 }
 

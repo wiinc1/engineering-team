@@ -30,7 +30,7 @@ It does **not** yet meet the locked success bar for an autonomous software facto
 | Horizon (from decisions) | Bar | Status |
 | --- | --- | --- |
 | Near-term (~15 days) | ≥80% operator-trusted autonomous delivery on **≥10 closed Simple/low-risk tasks**, zero post-approval interventions | **Not met** — loop proven once; not 10 trusted closes |
-| Factory of record | Always-on coordinated stack (Postgres + API + workers + UI + forgeadapter + **real** OpenClaw) | **Partial → improved** — launchd KeepAlive for API+workers (`factory:stack:*`, #269); OpenClaw live launchd; Postgres via existing :15432 / Docker-OrbStack when available |
+| Factory of record | Always-on coordinated stack (Postgres + API + workers + UI + forgeadapter + **real** OpenClaw) | **Met for host stack (#269)** — `factory:stack:*` launchd KeepAlive for postgres-ensure, API, workers, UI, forgeadapter; compose Postgres `restart: unless-stopped` + volume; OpenClaw live launchd |
 | Human gates | Human PM/Architect review before contract authority | **Partial → improved** — Q6 gate blocks agent-authored proposals without human acceptance; factory agent-driven phase1 records supervised human PM/Architect reviews on the contract |
 | Real services | Live OpenClaw/Hermes/forge in the loop (not mocks) | **Partial → improved** — `dev:golden-path:up` defaults to live OpenClaw `:18789` (mock only with `--use-openclaw-mock`); Hermes mock remains; forge often skipped in local live proof |
 
@@ -114,7 +114,7 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 | Real GitHub PR merge as default GP-022 | **Partial** | Code paths exist; local live proof often has no real PR target |
 | forgeadapter full lifecycle in live proof | **Partial** | Service up; local live path commonly `STAGING_SKIP_FORGE_*` |
 | Hermes real runtime | **Missing** | Mock only on `:14002` |
-| Always-on host services (API/workers/DB) | **Partial** | API+workers launchd KeepAlive; Postgres depends on Docker/OrbStack/external :15432 |
+| Always-on host services (API/workers/DB/UI/forge) | **Works** (#269) | Full `factory:stack` launchd set + postgres ensure watcher; OpenClaw separate launchd |
 | ≥10 Simple operator-trusted closes | **Missing** | Single-task proof (e.g. TSK-020), not cohort metric |
 | Metrics MVP (delivery rate / interventions) | **Partial** | Metrics surfaces exist historically; not shown as live cohort dashboard for 10-task bar |
 | Dual-remote primary/backup discipline | **Partial** | Policy + tooling; tips currently diverge |
@@ -155,15 +155,17 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 
 ## 6. What is partial (works, but not factory-grade)
 
-### 6.1 Persistent stack (item 3) — improved by #269
+### 6.1 Persistent stack (item 3) — **#269 complete**
 
-| Have | Lack |
+| Have | Notes |
 | --- | --- |
-| `factory:stack:up/down/status/restart` launchd KeepAlive for audit API + workers | UI + forgeadapter not launchd units |
-| OpenClaw via launchd `ai.openclaw.gateway` | Postgres not a launchd unit (relies on Docker/OrbStack/external :15432) |
-| Compose definitions + multi-path Docker bin resolution | Host must keep container engine or external Postgres running across reboot |
+| `factory:stack:up/down/status/restart/accept` | One-script recovery after reboot or process kill |
+| launchd KeepAlive: postgres-ensure, API, workers, UI, forgeadapter | Claim topology included when forgeadapter checkout present |
+| Compose Postgres `restart: unless-stopped` + `factory_pgdata` volume | Survives container restarts; ensure watcher re-ups after reboot |
+| OpenClaw via launchd `ai.openclaw.gateway` | Separate host unit on `:18789` |
+| Acceptance audit | `npm run factory:stack:accept` / `factory:stack:verify` |
 
-**Risk residual:** Postgres/UI/forge still need explicit durability; API+workers no longer depend on ad-hoc terminals.
+**Risk residual:** Docker/OrbStack engine itself must be installed for compose path; without Docker, an external `:15432` listener is still required.
 
 ### 6.2 Real services vs mocks (item 4) — improved
 
@@ -279,8 +281,8 @@ This file is the exhaustive readiness assessment requested as item 5. It should 
 
 ### Item 3 — Make the stack persistent
 
-**Status: partial (API+workers done).**  
-`factory:stack:*` installs launchd KeepAlive for audit API + workers; OpenClaw remains separate launchd. Postgres reuses `:15432` or docker compose (Docker/OrbStack bin resolution). UI/forge not yet durable units.
+**Status: done (#269).**  
+`factory:stack:*` installs launchd KeepAlive for postgres-ensure, audit API, workers, UI, and forgeadapter (when checkout exists). Postgres compose uses `restart: unless-stopped` + persistent volume. OpenClaw remains separate launchd. Acceptance: `npm run factory:stack:accept`.
 
 **Why it matters for the goal:** always-on workers and API are part of the factory of record definition; without them, projection lag and manual resurrection remain interventions.
 
@@ -317,7 +319,7 @@ Evidence is current as of 2026-07-10 live C/D and host runtime snapshot. Re-scor
 | Live proof REQ | `docs/refinement/REQ-live-factory-proof-default-openclaw.md` |
 | Golden-path runbook | `docs/runbooks/golden-path-autonomous-delivery.md` |
 | Dual-remote | `docs/runbooks/dual-remote-gitlab-primary.md` |
-| Factory stack | `scripts/factory-stack.js`, `lib/task-platform/factory-stack/*` |
+| Factory stack (#269) | `scripts/factory-stack.js`, `scripts/factory-stack-postgres-watch.js`, `scripts/verify-factory-stack-acceptance.js`, `lib/task-platform/factory-stack/*`, runbook § Durable factory stack |
 | Human PM/Architect gate | `lib/audit/pm-architect-human-review-gate.js`, `lib/task-platform/factory-human-pm-architect.js` |
 | D complete | `observability/milestone-d-complete.json` |
 | Closeout | `observability/factory-closeout/TSK-020.json` |
