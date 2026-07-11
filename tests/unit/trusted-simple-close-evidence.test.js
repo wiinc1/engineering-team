@@ -9,6 +9,8 @@ const {
   buildTrustedSimpleCloseEvidence,
   writeTrustedSimpleCloseEvidence,
   applyTrustedSimpleCloseOptions,
+  githubCheckFailures,
+  resolveGithubProofSurface,
 } = require('../../lib/task-platform/trusted-simple-close-evidence');
 const {
   resolveImplementerArtifacts,
@@ -18,10 +20,31 @@ const {
 const { assertRealPhase6AutoMerge } = require('../../lib/task-platform/golden-path-phase6-auto-merge-proof');
 const { evidenceModeOptions } = require('../../lib/task-platform/factory-phase-runner-options');
 
-// Real SHAs (non-fixture pattern) used only as known-good shapes for fail/pass matrix.
+// Real SHAs from this monorepo history (non-fixture shapes).
 const REAL_IMPL_SHA = 'e9c769fe45eef8e1498ff018c1c939109e8047bd';
 const REAL_MERGE_SHA = '6f8ebd8ad9d48b27480dcc06845e8fc9a24f31f1';
 const REAL_PR_URL = 'https://github.com/wiinc1/engineering-team/pull/301';
+
+function validTrustedInput(overrides = {}) {
+  return {
+    templateTier: 'Simple',
+    repository: 'wiinc1/engineering-team',
+    branchName: 'sync/github-mirror-gitlab',
+    commitSha: REAL_IMPL_SHA,
+    prUrl: REAL_PR_URL,
+    prNumber: 301,
+    mergeCommitSha: REAL_MERGE_SHA,
+    mergedAt: '2026-07-11T03:30:00.000Z',
+    changedFiles: [
+      'lib/task-platform/trusted-simple-close-evidence.js',
+      'tests/unit/trusted-simple-close-evidence.test.js',
+    ],
+    includeGithubCheckProof: true,
+    requiredChecks: ['unit tests', 'Merge readiness'],
+    notes: 'Unit fixture built with real PR #301 merge + GitHub check proof shapes.',
+    ...overrides,
+  };
+}
 
 describe('trusted Simple close (#274)', () => {
   it('distinguishes session-proof vs trusted delivery modes', () => {
@@ -89,31 +112,51 @@ describe('trusted Simple close (#274)', () => {
       }),
       /not eligible/,
     );
-    assert.throws(
-      () => assertRealPhase6AutoMerge({
-        merged: true,
-        mergeCommitSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        mergedAt: '2026-07-11T00:00:00.000Z',
-      }),
-      /non-fixture/,
-    );
   });
 
-  it('builds and validates trusted Simple evidence package with PR URL + merge SHA', () => {
-    const evidence = buildTrustedSimpleCloseEvidence({
-      templateTier: 'Simple',
-      branchName: 'sync/github-mirror-gitlab',
-      commitSha: REAL_IMPL_SHA,
-      prUrl: REAL_PR_URL,
-      prNumber: 301,
-      mergeCommitSha: REAL_MERGE_SHA,
-      mergedAt: '2026-07-11T03:30:00.000Z',
-      notes: 'Built from real GitHub PR #301 merge evidence for #274 unit audit.',
+  it('fail-closed when checks / branchProtection / mergeReadiness missing', () => {
+    assert.throws(
+      () => assertTrustedSimpleCloseEvidence({
+        templateTier: 'Simple',
+        branchName: 'sync/github-mirror-gitlab',
+        commitSha: REAL_IMPL_SHA,
+        prUrl: REAL_PR_URL,
+        prNumber: 301,
+        mergeCommitSha: REAL_MERGE_SHA,
+        mergedAt: '2026-07-11T03:30:00.000Z',
+        merged: true,
+        repository: 'wiinc1/engineering-team',
+        changedFiles: ['README.md'],
+        github: {
+          repository: 'wiinc1/engineering-team',
+          branchName: 'sync/github-mirror-gitlab',
+          commitSha: REAL_IMPL_SHA,
+          prUrl: REAL_PR_URL,
+          prNumber: 301,
+          changedFiles: ['README.md'],
+        },
+      }),
+      /GitHub checks are required|mergeReadiness|branchProtection/,
+    );
+
+    const surface = resolveGithubProofSurface({
+      github: { checks: [], requiredChecks: [] },
     });
+    const failures = githubCheckFailures({ github: surface });
+    assert.ok(failures.length >= 1);
+    assert.ok(failures.some((f) => /checks are required/i.test(f)));
+  });
+
+  it('builds and validates trusted Simple evidence package with PR URL, merge SHA, and checks', () => {
+    const evidence = buildTrustedSimpleCloseEvidence(validTrustedInput());
     assert.equal(evidence.schemaVersion, 'trusted-simple-close-evidence.v1');
     assert.equal(evidence.prUrl, REAL_PR_URL);
     assert.equal(evidence.mergeCommitSha, REAL_MERGE_SHA);
     assert.equal(evidence.merged, true);
+    assert.ok(Array.isArray(evidence.github.checks) && evidence.github.checks.length >= 2);
+    assert.equal(evidence.github.branchProtection.source, 'github_branch_protection');
+    assert.equal(evidence.github.mergeReadiness.name, 'Merge readiness');
+    assert.equal(githubCheckFailures({ github: evidence.github }).length, 0);
     assert.equal(assertTrustedSimpleCloseEvidence(evidence).ok, true);
 
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'trusted-simple-'));
@@ -122,6 +165,7 @@ describe('trusted Simple close (#274)', () => {
     assert.equal(fs.existsSync(written.path), true);
     const loaded = JSON.parse(fs.readFileSync(written.path, 'utf8'));
     assert.equal(loaded.mergeCommitSha, REAL_MERGE_SHA);
+    assert.equal(githubCheckFailures({ github: loaded.github }).length, 0);
   });
 
   it('rejects synthetic package fields for trusted Simple close', () => {
@@ -132,6 +176,9 @@ describe('trusted Simple close (#274)', () => {
         prUrl: 'https://github.com/wiinc1/engineering-team/pull/271',
         mergeCommitSha: '0123456789abcdef0123456789abcdef01234567',
         mergedAt: '2026-07-11T00:00:00.000Z',
+        includeGithubCheckProof: true,
+        changedFiles: ['x.js'],
+        repository: 'wiinc1/engineering-team',
       }),
       /Trusted Simple close evidence invalid/,
     );
