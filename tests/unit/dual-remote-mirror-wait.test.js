@@ -88,23 +88,6 @@ describe('decideWaitMergeStep', () => {
     assert.equal(d.ready, true);
   });
 
-  it('merges after post even if Merge readiness missing from rollup', () => {
-    const d = decideWaitMergeStep({
-      rollup: rollup([
-        ['Pull request metadata', 'COMPLETED', 'SUCCESS'],
-        ['Repo validation', 'COMPLETED', 'SUCCESS'],
-        ['Browser validation', 'COMPLETED', 'SUCCESS'],
-        ['verify', 'COMPLETED', 'SUCCESS'],
-      ]),
-      mergeReadinessPosted: true,
-      mergeStateStatus: 'CLEAN',
-      elapsedMs: 1000,
-      timeoutMs: 60000,
-    });
-    assert.equal(d.step, 'merge');
-    assert.equal(d.ready, true);
-  });
-
   it('uses merge_admin when BEHIND but green', () => {
     const d = decideWaitMergeStep({
       rollup: rollup([
@@ -145,6 +128,25 @@ describe('decideWaitMergeStep', () => {
       timeoutMs: 60000,
     });
     assert.equal(d.step, 'rerun_failed');
+  });
+});
+
+describe('decideWaitMergeStep rollup lag', () => {
+  it('merges after post even if Merge readiness missing from rollup', () => {
+    const d = decideWaitMergeStep({
+      rollup: rollup([
+        ['Pull request metadata', 'COMPLETED', 'SUCCESS'],
+        ['Repo validation', 'COMPLETED', 'SUCCESS'],
+        ['Browser validation', 'COMPLETED', 'SUCCESS'],
+        ['verify', 'COMPLETED', 'SUCCESS'],
+      ]),
+      mergeReadinessPosted: true,
+      mergeStateStatus: 'CLEAN',
+      elapsedMs: 1000,
+      timeoutMs: 60000,
+    });
+    assert.equal(d.step, 'merge');
+    assert.equal(d.ready, true);
   });
 });
 
