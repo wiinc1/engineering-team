@@ -97,3 +97,44 @@ If work landed on GitHub first (emergency CI path):
 
 - **2026-07-10:** GitHub backup re-synced from GitLab primary after readiness assessment !286.
 - **2026-07-11 (#270):** Equalized tips after factory-stack ships (!289/!290) left unique commits on both sides. GitLab primary merged `github/main` history, then GitHub backup mirrored `origin/main`. Confirm with `npm run remotes:sync-status` (`divergence.synced` / tree equality).
+
+## Automation backlog (GitLab → GitHub mirror)
+
+Today dual-remote sync is **operator-driven** (`npm run remotes:sync-status` + manual mirror PR). Desired state: after GitLab `main` updates, GitHub backup is content-aligned shortly thereafter without manual steps.
+
+### Current state
+
+| Capability | Status |
+| --- | --- |
+| Status evaluator | Shipped: `scripts/dual-remote-sync-status.js` / `npm run remotes:sync-status` (#270 AC1 tree-equality) |
+| Manual equalize/mirror runbook | Shipped (this document) |
+| Auto-mirror on GitLab merge | **Missing** |
+| Auto-open/merge GitHub PR with green CI | **Missing** |
+| Auto-emit Merge readiness status | Partial (script exists; not wired to mirror path) |
+
+### Recommended automation design
+
+1. **GitLab webhook or scheduled poller** (local OrbStack/GitLab or launchd) on `Push Hook` for `refs/heads/main` (or `Merge Request Hook` on merge to main).
+2. **Mirror job** (script `scripts/dual-remote-mirror-github.js` or extend `dual-remote-sync-status.js`):
+   - `git fetch origin github`
+   - If already `divergence.synced` → no-op success
+   - Else push `origin/main` → `github:sync/github-mirror-gitlab` (force-with-lease on mirror branch only)
+   - Open or update GitHub PR head → `main` with **governance-complete PR body template** (required fields for `npm run pr:check`)
+   - Optionally `gh pr merge --auto` once required checks + `Merge readiness` are green
+3. **Secrets**: GitHub `GH_TOKEN`/`gh` auth with PR+merge rights; never use read-only GitLab MCP PAT for merges.
+4. **Equalize path**: if `primaryBehindBackup` (GitHub unique content), fail closed and open/notify GitLab equalize MR instead of force-overwriting primary.
+5. **Observability**: write `observability/dual-remote/last-sync.json` with tips, trees, PR URL, outcome; alert if unsynced > N minutes.
+6. **CI companion**: GitHub Action on `schedule` + `workflow_dispatch` that only runs when `github/main` tree ≠ recorded GitLab tip (defense in depth if webhook missed).
+
+### MVP slice (suggested issue)
+
+- Script: push mirror branch + open/update PR with template body
+- launchd or cron every 5–15 minutes calling the script
+- Exit codes aligned with `dual-remote-sync-status.js` (0 synced, 3 backup behind, 2 primary behind, 1 error)
+
+### Non-goals for MVP
+
+- Rewriting GitHub history / force-push to protected `main`
+- Making GitHub primary
+- Skipping required GitHub checks
+
