@@ -5,7 +5,9 @@ const {
   FIXTURE_WARNING,
   isFixtureSessionId,
   isFixtureDelegationRunner,
+  isOpenClawMockBaseUrl,
   probeOpenClawGateway,
+  resolveOpenClawBaseUrl,
   resolveFactoryProofProfile,
   applyFactoryProofProfileToEnv,
   validateLiveSessionEvidence,
@@ -45,6 +47,16 @@ test('resolveFactoryProofProfile selects live when gateway probe succeeds', asyn
   assert.match(proof.runner, /openclaw-specialist-runner\.js/);
 });
 
+test('resolveFactoryProofProfile defaults to live OpenClaw URL without --openclaw-url (GitLab #271)', async () => {
+  const proof = await resolveFactoryProofProfile({
+    argv: ['node', 'verify-milestone-c-agent.js'],
+    env: {},
+    probe: { available: true, baseUrl: 'http://127.0.0.1:18789', latencyMs: 2 },
+  });
+  assert.equal(proof.profile, 'live');
+  assert.equal(proof.openclawBaseUrl, 'http://127.0.0.1:18789');
+});
+
 test('resolveFactoryProofProfile fails closed when gateway unavailable on primary path', async () => {
   await assert.rejects(
     () => resolveFactoryProofProfile({
@@ -59,6 +71,34 @@ test('resolveFactoryProofProfile fails closed when gateway unavailable on primar
       },
     }),
     (error) => error.code === FACTORY_PROOF_ERROR_CODES.GATEWAY_UNAVAILABLE,
+  );
+});
+
+test('resolveFactoryProofProfile rejects OpenClaw mock :14001 for live claim path (GitLab #271 AC2)', async () => {
+  await assert.rejects(
+    () => resolveFactoryProofProfile({
+      argv: ['node', 'verify', '--live-openclaw'],
+      env: { FACTORY_PROOF_PROFILE: 'live', OPENCLAW_BASE_URL: 'http://127.0.0.1:14001' },
+      openclawUrl: 'http://127.0.0.1:14001',
+      // Even if mock health would succeed, live claim path must fail closed.
+      probe: { available: true, baseUrl: 'http://127.0.0.1:14001', latencyMs: 1 },
+    }),
+    (error) => error.code === FACTORY_PROOF_ERROR_CODES.MOCK_GATEWAY_FORBIDDEN,
+  );
+});
+
+test('resolveFactoryProofProfile rejects fixture specialist runner under live profile', async () => {
+  await assert.rejects(
+    () => resolveFactoryProofProfile({
+      argv: ['node', 'verify'],
+      env: {
+        FACTORY_PROOF_PROFILE: 'live',
+        SPECIALIST_DELEGATION_RUNNER: 'node tests/fixtures/specialist-runtime-runner.js',
+      },
+      openclawUrl: 'http://127.0.0.1:18789',
+      probe: { available: true, baseUrl: 'http://127.0.0.1:18789', latencyMs: 1 },
+    }),
+    (error) => error.code === FACTORY_PROOF_ERROR_CODES.FIXTURE_FORBIDDEN,
   );
 });
 
@@ -93,6 +133,28 @@ test('fixture session detection recognizes fixture markers', () => {
   assert.equal(isFixtureSessionId('fixture-session-1'), true);
   assert.equal(isFixtureSessionId('sess_live_9f3a'), false);
   assert.equal(isFixtureDelegationRunner('node tests/fixtures/specialist-runtime-runner.js'), true);
+});
+
+test('isOpenClawMockBaseUrl detects claim-invalid mock topology', () => {
+  assert.equal(isOpenClawMockBaseUrl('http://127.0.0.1:14001'), true);
+  assert.equal(isOpenClawMockBaseUrl('http://127.0.0.1:14001/health'), true);
+  assert.equal(isOpenClawMockBaseUrl('http://127.0.0.1:18789'), false);
+  assert.equal(isOpenClawMockBaseUrl(''), false);
+});
+
+test('resolveOpenClawBaseUrl prefers live default for claim path', () => {
+  assert.equal(
+    resolveOpenClawBaseUrl({ argv: [], env: {}, preferDefaultLive: true }),
+    'http://127.0.0.1:18789',
+  );
+  assert.equal(
+    resolveOpenClawBaseUrl({
+      argv: ['node', 'x', '--openclaw-url', 'http://127.0.0.1:18789'],
+      env: {},
+      preferDefaultLive: true,
+    }),
+    'http://127.0.0.1:18789',
+  );
 });
 
 test('validateLiveSessionEvidence accepts live sessions and rejects fixture attribution', () => {
