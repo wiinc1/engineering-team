@@ -36,7 +36,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1427,
+      "line": 1436,
       "ordinal": 75,
       "name": "runGoldenPathPhase6",
       "actual": 278,
@@ -63,7 +63,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1706,
+      "line": 1715,
       "ordinal": 76,
       "name": "runGoldenPathPhase5",
       "actual": 248,
@@ -93,13 +93,13 @@
       "line": 813,
       "ordinal": 62,
       "name": "runGoldenPathPhase2",
-      "actual": 214,
+      "actual": 223,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1955,
+      "line": 1964,
       "ordinal": 77,
       "name": "runGoldenPathPhases",
       "actual": 214,
@@ -135,7 +135,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1028,
+      "line": 1037,
       "ordinal": 63,
       "name": "runGoldenPathPhase3",
       "actual": 173,
@@ -162,7 +162,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1202,
+      "line": 1211,
       "ordinal": 67,
       "name": "runGoldenPathPhase4",
       "actual": 160,
@@ -691,6 +691,15 @@
       "cap": 50
     },
     {
+      "path": "tests/unit/forge-claim-policy.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 81,
+      "ordinal": 15,
+      "name": "<arrow>",
+      "actual": 64,
+      "cap": 50
+    },
+    {
       "path": "lib/audit/milestone-d-closeout-verify.js",
       "rule": "maintainability:function-lines",
       "line": 6,
@@ -1047,7 +1056,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 2206,
+      "actual": 2215,
       "cap": 400
     },
     {
