@@ -92,10 +92,11 @@ describe('dual-remote-mirror-core PR body / evidence', () => {
     assert.ok(sel.docEvidence.includes('docs/runbooks/golden-path-autonomous-delivery.md'));
   });
 
-  it('falls back to dual-remote defaults when diff has no tests/docs', () => {
+  it('never lists evidence paths outside the diff', () => {
     const sel = selectEvidencePaths(['lib/task-platform/foo.js']);
-    assert.deepEqual(sel.testEvidence, ['tests/unit/dual-remote-sync-status.test.js']);
-    assert.ok(sel.docEvidence[0].includes('dual-remote'));
+    assert.deepEqual(sel.testEvidence, ['lib/task-platform/foo.js']);
+    assert.ok(sel.testEvidence.every((p) => sel.files.includes(p)));
+    assert.ok(sel.docEvidence.every((p) => sel.files.includes(p) || p === sel.files[0]));
   });
 
   it('builds governance-complete PR body fields', () => {

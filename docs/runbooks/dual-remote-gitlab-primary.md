@@ -110,7 +110,8 @@ Desired state: after GitLab `main` updates, GitHub backup is content-aligned sho
 | Status evaluator | `npm run remotes:sync-status` (#270 AC1 tree-equality) |
 | Mirror job | `npm run remotes:mirror` → `scripts/dual-remote-mirror-github.js` |
 | Governance PR body | Auto-built; template `docs/templates/dual-remote-mirror-pr-body.md` |
-| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` + Merge readiness status) |
+| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` wait loop + Merge readiness + merge) |
+| Wait/merge I/O | `lib/task-platform/dual-remote-mirror-ops.js` (split from agent so preflight maintainability stays green) |
 | launchd agent (macOS) | `npm run remotes:mirror:install` (default every **15 minutes**) |
 | Observability | `observability/dual-remote/last-sync.json` |
 | Fail-closed equalize | Exit **2** when GitLab is behind GitHub content (no force-overwrite) |
@@ -185,3 +186,68 @@ node scripts/dual-remote-mirror-agent.js install --interval-sec 600
 - Making GitHub primary
 - Skipping required GitHub checks
 
+## E2E automation (definition of done)
+
+The mirror agent is **end-to-end** when a GitLab-ahead tip becomes `divergence.synced: true` with **no human steps**:
+
+1. Detect backup behind primary  
+2. Preflight (maintainability + ownership lint)  
+3. Push `sync/github-mirror-gitlab` (single-flight; skip thrash if CI running and head not stale)  
+4. Open/update PR with governance body (evidence paths ⊆ live diff only)  
+5. **Wait** for required checks (metadata, Repo validation, Browser validation, verify)  
+6. Post **Merge readiness** on final head  
+7. Merge (admin fallback if `BEHIND` from forge-local merge SHAs only)  
+8. Next poll → `noop_synced` / `mirror_merged_synced`
+
+### Required GitHub contexts
+
+- Pull request metadata  
+- Repo validation  
+- Browser validation  
+- verify  
+- Merge readiness  
+
+### Durable install (recommended)
+
+```bash
+# Stable clone (not a disposable worktree)
+git clone ssh://git@192.168.1.116:2424/wiinc1/engineering-team.git ~/src/engineering-team
+cd ~/src/engineering-team
+git remote add github https://github.com/wiinc1/engineering-team.git   # if missing
+git fetch origin github
+gh auth status   # must work non-interactively for launchd user
+npm run remotes:mirror:install
+# or: node scripts/dual-remote-mirror-agent.js install --root "$HOME/src/engineering-team"
+
+npm run remotes:mirror:status
+```
+
+Auth: `gh` login or `GH_TOKEN`/`GITHUB_TOKEN` with PR create/edit/merge + commit statuses.  
+Token scopes: `repo` (or fine-grained: contents, PRs, commit statuses). Rotate via operator secrets store.
+
+### E2E drill
+
+```bash
+# Dry-run decision matrix
+npm run remotes:mirror:dry
+
+# Full agent cycle with wait+merge (can take ≤25m while CI runs)
+npm run remotes:mirror:merge
+
+# Expect last-sync action mirror_merged_synced or noop_synced
+cat observability/dual-remote/last-sync.json
+npm run remotes:sync-status   # divergence.synced true
+```
+
+### Single-flight + locks
+
+- Lock file: `observability/dual-remote/mirror.lock`  
+- Skip force-push while an open mirror PR has CI in progress **unless** head is stale vs `origin/main`  
+- Overlapping launchd ticks exit with `lock_busy`
+
+### Follow-ups (optional)
+
+- GitLab Push Hook on `main` for near-real-time runs  
+- Auto-open GitLab equalize MR on exit 2 (notify only; no auto-merge to primary)  
+- GitHub Actions schedule backup watcher if host agent is down  
+- Alerting when exit ≠ 0 or last-sync older than 2× interval  
