@@ -500,7 +500,7 @@
     {
       "name": "task-platform",
       "runtime_patterns": [
-        "^lib/task-platform/(?!pilot-agents\\.js$)",
+        "^lib/task-platform/(?!pilot-agents\\.js$|dual-remote-mirror-core\\.js$)",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^db/migrations/012_projects(\\.down)?\\.sql$",
