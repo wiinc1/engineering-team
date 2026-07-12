@@ -63,6 +63,42 @@ function changedFilesBetween(baseRef, headRef) {
   }
 }
 
+function isAncestor(possibleAncestor, commit) {
+  if (!possibleAncestor || !commit) return false;
+  try {
+    runGit(['merge-base', '--is-ancestor', possibleAncestor, commit]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function treeInHistory(treeSha, tipRef) {
+  if (!treeSha || !tipRef) return false;
+  try {
+    const out = runGit(['log', tipRef, '--pretty=%T']);
+    return out.split('\n').includes(treeSha);
+  } catch {
+    return false;
+  }
+}
+
+function withContentHints(report) {
+  const origin = report.tips?.['origin/main']?.fullSha || '';
+  const github = report.tips?.['github/main']?.fullSha || '';
+  const originTree = report.tips?.['origin/main']?.tree || '';
+  const githubTree = report.tips?.['github/main']?.tree || '';
+  return {
+    ...report,
+    content: {
+      githubIsAncestorOfOrigin: isAncestor(github, origin),
+      originIsAncestorOfGithub: isAncestor(origin, github),
+      githubTreeInOriginHistory: treeInHistory(githubTree, 'origin/main'),
+      originTreeInGithubHistory: treeInHistory(originTree, 'github/main'),
+    },
+  };
+}
+
 function writeStatus(statusPath, record) {
   const abs = path.resolve(process.cwd(), statusPath);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -269,7 +305,7 @@ function finalizeMirrorResult(ctx, opts) {
   let finalReport = ctx.report;
   if (!ctx.error && ctx.mergeResult?.merged) {
     try {
-      finalReport = collectReport({ fetchRemotes: true });
+      finalReport = withContentHints(collectReport({ fetchRemotes: true }));
       const after = decideMirrorAction(finalReport);
       finalExit = after.exitCode;
       finalAction = after.action === 'noop_synced' ? 'mirror_merged_synced' : 'mirror_merged_pending';
@@ -306,7 +342,7 @@ function main() {
   }
   let report;
   try {
-    report = collectReport({ fetchRemotes: !opts.noFetch });
+    report = withContentHints(collectReport({ fetchRemotes: !opts.noFetch }));
   } catch (error) {
     emitStatus(buildLastSyncRecord({
       action: 'fail_status',
