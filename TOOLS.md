@@ -54,4 +54,6 @@ Add whatever helps you do your job. This is your cheat sheet.
 - Prefer basing branches on **`origin/main`** when it is current.
 - Push **`origin` first**, then **`github`**.
 - Status: `npm run remotes:sync-status`
+- Mirror agent (GitLab → GitHub): `npm run remotes:mirror` / `remotes:mirror:dry` / `remotes:mirror:merge`
+- Always-on (macOS): `npm run remotes:mirror:install` · `remotes:mirror:status` · `remotes:mirror:uninstall`
 - Runbook: `docs/runbooks/dual-remote-gitlab-primary.md`

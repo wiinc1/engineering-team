@@ -500,7 +500,7 @@
     {
       "name": "task-platform",
       "runtime_patterns": [
-        "^lib/task-platform/(?!pilot-agents\\.js$)",
+        "^lib/task-platform/(?!pilot-agents\\.js$|dual-remote-mirror-core\\.js$)",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^db/migrations/012_projects(\\.down)?\\.sql$",
@@ -771,14 +771,18 @@
         "^scripts/check-browser-source-readability\\.js$",
         "^scripts/(governance-drift|lint-change-ownership-map)\\.js$",
         "^scripts/verify-(standards|pr-body|change-completeness)\\.js$",
-        "^scripts/dual-remote-sync-status\\.js$"
+        "^scripts/dual-remote-sync-status\\.js$",
+        "^scripts/dual-remote-mirror-github\\.js$",
+        "^scripts/dual-remote-mirror-agent\\.js$",
+        "^lib/task-platform/dual-remote-mirror-core\\.js$"
       ],
       "test_requirements": [
         {
           "name": "governance-unit",
           "patterns": [
             "^tests/unit/governance/.+\\.test\\.js$",
-            "^tests/unit/dual-remote-sync-status\\.test\\.js$"
+            "^tests/unit/dual-remote-sync-status\\.test\\.js$",
+            "^tests/unit/dual-remote-mirror-core\\.test\\.js$"
           ]
         }
       ],
@@ -793,7 +797,8 @@
             "^docs/standards/software-development-standards\\.md$",
             "^docs/standards/change-governance-maintenance\\.md$",
             "^docs/standards/ai-implementation-playbook\\.md$",
-            "^docs/runbooks/dual-remote-gitlab-primary\\.md$"
+            "^docs/runbooks/dual-remote-gitlab-primary\\.md$",
+            "^docs/templates/dual-remote-mirror-pr-body\\.md$"
           ]
         }
       ]

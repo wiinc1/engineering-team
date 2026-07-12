@@ -97,42 +97,89 @@ If work landed on GitHub first (emergency CI path):
 
 - **2026-07-10:** GitHub backup re-synced from GitLab primary after readiness assessment !286.
 - **2026-07-11 (#270):** Equalized tips after factory-stack ships (!289/!290) left unique commits on both sides. GitLab primary merged `github/main` history, then GitHub backup mirrored `origin/main`. Confirm with `npm run remotes:sync-status` (`divergence.synced` / tree equality).
+- **2026-07-12:** After #273 / equalize / ownership companions, GitHub PR #303 mirrored GitLab primary. Trees matched (`divergence.synced: true`). MVP mirror agent shipped (`remotes:mirror*`).
 
-## Automation backlog (GitLab → GitHub mirror)
+## Automation: GitLab → GitHub mirror agent (MVP)
 
-Today dual-remote sync is **operator-driven** (`npm run remotes:sync-status` + manual mirror PR). Desired state: after GitLab `main` updates, GitHub backup is content-aligned shortly thereafter without manual steps.
+Desired state: after GitLab `main` updates, GitHub backup is content-aligned shortly thereafter without manual steps.
 
-### Current state
+### Shipped MVP
 
 | Capability | Status |
 | --- | --- |
-| Status evaluator | Shipped: `scripts/dual-remote-sync-status.js` / `npm run remotes:sync-status` (#270 AC1 tree-equality) |
-| Manual equalize/mirror runbook | Shipped (this document) |
-| Auto-mirror on GitLab merge | **Missing** |
-| Auto-open/merge GitHub PR with green CI | **Missing** |
-| Auto-emit Merge readiness status | Partial (script exists; not wired to mirror path) |
+| Status evaluator | `npm run remotes:sync-status` (#270 AC1 tree-equality) |
+| Mirror job | `npm run remotes:mirror` → `scripts/dual-remote-mirror-github.js` |
+| Governance PR body | Auto-built; template `docs/templates/dual-remote-mirror-pr-body.md` |
+| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` + Merge readiness status) |
+| launchd agent (macOS) | `npm run remotes:mirror:install` (default every **15 minutes**) |
+| Observability | `observability/dual-remote/last-sync.json` |
+| Fail-closed equalize | Exit **2** when GitLab is behind GitHub content (no force-overwrite) |
 
-### Recommended automation design
+### Operator commands
 
-1. **GitLab webhook or scheduled poller** (local OrbStack/GitLab or launchd) on `Push Hook` for `refs/heads/main` (or `Merge Request Hook` on merge to main).
-2. **Mirror job** (script `scripts/dual-remote-mirror-github.js` or extend `dual-remote-sync-status.js`):
-   - `git fetch origin github`
-   - If already `divergence.synced` → no-op success
-   - Else push `origin/main` → `github:sync/github-mirror-gitlab` (force-with-lease on mirror branch only)
-   - Open or update GitHub PR head → `main` with **governance-complete PR body template** (required fields for `npm run pr:check`)
-   - Optionally `gh pr merge --auto` once required checks + `Merge readiness` are green
-3. **Secrets**: GitHub `GH_TOKEN`/`gh` auth with PR+merge rights; never use read-only GitLab MCP PAT for merges.
-4. **Equalize path**: if `primaryBehindBackup` (GitHub unique content), fail closed and open/notify GitLab equalize MR instead of force-overwriting primary.
-5. **Observability**: write `observability/dual-remote/last-sync.json` with tips, trees, PR URL, outcome; alert if unsynced > N minutes.
-6. **CI companion**: GitHub Action on `schedule` + `workflow_dispatch` that only runs when `github/main` tree ≠ recorded GitLab tip (defense in depth if webhook missed).
+```bash
+# Status only
+npm run remotes:sync-status
 
-### MVP slice (suggested issue)
+# Dry-run mirror plan (no push/PR)
+npm run remotes:mirror:dry
 
-- Script: push mirror branch + open/update PR with template body
-- launchd or cron every 5–15 minutes calling the script
-- Exit codes aligned with `dual-remote-sync-status.js` (0 synced, 3 backup behind, 2 primary behind, 1 error)
+# Push mirror branch + open/update PR when GitHub is behind
+npm run remotes:mirror
 
-### Non-goals for MVP
+# Same, then merge if checks are already green
+npm run remotes:mirror:merge
+
+# Install / inspect / remove always-on agent (macOS launchd)
+npm run remotes:mirror:install          # every 15m; logs ~/Library/Logs/engineering-team-dual-remote/
+npm run remotes:mirror:status
+npm run remotes:mirror:uninstall
+
+# Custom interval (seconds)
+node scripts/dual-remote-mirror-agent.js install --interval-sec 600
+```
+
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| **0** | Content-synced (noop) or post-merge synced |
+| **2** | Primary (GitLab) behind backup content — **equalize GitLab first** |
+| **3** | Backup (GitHub) behind primary — mirror path taken / PR open until merged |
+| **1** | Error or both sides diverged in content |
+
+### Behavior
+
+1. `git fetch origin` + `git fetch github` (unless `--no-fetch`)
+2. If `divergence.synced` → write status, exit **0**
+3. If `primaryBehindBackup` → **do not** push; write status, exit **2**
+4. If both sides have unique content → exit **1** with equalize remediation
+5. If `backupBehindPrimary`:
+   - `git push --force-with-lease github origin/main:refs/heads/sync/github-mirror-gitlab`
+   - Open/update PR with governance checklist body (evidence paths from the real diff)
+   - With `--merge-when-ready`: if checks complete green, emit **Merge readiness** commit status and `gh pr merge --merge`
+6. Always write `observability/dual-remote/last-sync.json`
+
+### Secrets
+
+- **GitHub**: `gh` auth (or `GH_TOKEN` / `GITHUB_TOKEN`) with PR create/edit/merge + commit status rights
+- **GitLab**: SSH `origin` fetch is enough for the poller; do **not** use read-only MCP PAT for GitHub merges
+- launchd inherits user `PATH` / `HOME` so `gh` and `git` from Homebrew work when installed for that user
+
+### Cron alternative (non-macOS)
+
+```bash
+*/15 * * * * cd /path/to/engineering-team && npm run remotes:mirror:merge >>/var/log/dual-remote-mirror.log 2>&1
+```
+
+### Follow-ups (not MVP)
+
+1. GitLab **Push Hook** on `refs/heads/main` for near-real-time runs (instead of 15m poll)
+2. Auto-open GitLab equalize MR when exit **2** (primary behind)
+3. GitHub Action `schedule` defense-in-depth if the host agent is down
+4. Alerting when `last-sync.json` is stale or exit ≠ 0 for > N minutes
+
+### Non-goals (MVP)
 
 - Rewriting GitHub history / force-push to protected `main`
 - Making GitHub primary
