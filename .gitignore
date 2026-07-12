@@ -37,3 +37,7 @@ observability/*.png
 # Durable factory stack local state/logs
 observability/factory-stack/
 observability/dual-remote/last-sync.json
+
+# Dual-remote mirror agent runtime
+observability/dual-remote/last-sync.json
+observability/dual-remote/mirror.lock

@@ -56,4 +56,6 @@ Add whatever helps you do your job. This is your cheat sheet.
 - Status: `npm run remotes:sync-status`
 - Mirror agent (GitLab → GitHub): `npm run remotes:mirror` / `remotes:mirror:dry` / `remotes:mirror:merge`
 - Always-on (macOS): `npm run remotes:mirror:install` · `remotes:mirror:status` · `remotes:mirror:uninstall`
-- Runbook: `docs/runbooks/dual-remote-gitlab-primary.md`
+- Prefer durable clone: `~/src/engineering-team` + `node scripts/dual-remote-mirror-agent.js install --root …`
+- `remotes:mirror:merge` **waits for CI** (≤25m), posts Merge readiness, merges
+- Runbook: `docs/runbooks/dual-remote-gitlab-primary.md` (E2E definition of done)
