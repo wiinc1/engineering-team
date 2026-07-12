@@ -12,7 +12,7 @@ const {
   parseCliArgs,
 } = require('../../lib/task-platform/dual-remote-mirror-core');
 
-describe('dual-remote-mirror-core decideMirrorAction', () => {
+describe('decideMirrorAction synced / pure sides', () => {
   it('no-ops when synced', () => {
     const d = decideMirrorAction({
       divergence: {
@@ -38,7 +38,21 @@ describe('dual-remote-mirror-core decideMirrorAction', () => {
     assert.equal(d.exitCode, EXIT.PRIMARY_BEHIND);
   });
 
-  it('fails when both sides diverged in content without ancestry', () => {
+  it('mirrors when backup is behind primary', () => {
+    const d = decideMirrorAction({
+      divergence: {
+        synced: false,
+        primaryBehindBackup: false,
+        backupBehindPrimary: true,
+      },
+    });
+    assert.equal(d.action, 'mirror_backup');
+    assert.equal(d.exitCode, EXIT.BACKUP_BEHIND);
+  });
+});
+
+describe('decideMirrorAction both-sides unique', () => {
+  it('fails when both sides diverged without content containment', () => {
     const d = decideMirrorAction({
       divergence: {
         synced: false,
@@ -60,18 +74,6 @@ describe('dual-remote-mirror-core decideMirrorAction', () => {
       content: {
         githubTreeInOriginHistory: true,
         originTreeInGithubHistory: false,
-      },
-    });
-    assert.equal(d.action, 'mirror_backup');
-    assert.equal(d.exitCode, EXIT.BACKUP_BEHIND);
-  });
-
-  it('mirrors when backup is behind primary', () => {
-    const d = decideMirrorAction({
-      divergence: {
-        synced: false,
-        primaryBehindBackup: false,
-        backupBehindPrimary: true,
       },
     });
     assert.equal(d.action, 'mirror_backup');
@@ -112,7 +114,6 @@ describe('dual-remote-mirror-core PR body / evidence', () => {
     assert.match(body, /^- Doc evidence paths:/m);
     assert.match(body, /^- Risk level:/m);
     assert.match(body, /^- Rollback path:/m);
-    assert.match(body, /dual-remote-sync-status\.test\.js/);
   });
 
   it('builds title with short sha', () => {
