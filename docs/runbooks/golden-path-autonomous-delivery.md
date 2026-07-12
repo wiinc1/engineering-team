@@ -73,7 +73,7 @@ Local live C/D commonly sets `STAGING_SKIP_FORGE_SEED/PHASES=true` because forge
 
 | Class | Skip forge seed/phases | Inventory |
 | --- | --- | --- |
-| **Simple** (default local claim) | Allowed | Forge GP steps (`GP-009`…`GP-012`, `GP-014`, `GP-016`, `GP-018`, `GP-020`) go to **`stepsSkipped`** with `forgePolicy.mode=simple_optional_skip` — **not** real forge success |
+| **Simple** (default local claim) | Allowed | **Forgeadapter** GPs only (`GP-009`, `GP-010`, `GP-011`, `GP-016`, `GP-018`, `GP-020`) go to **`stepsSkipped`** with `forgePolicy.mode=simple_optional_skip` — **not** real forge success. Non-forge phase work that still runs (`GP-012` pilot seed, `GP-013` delegation, `GP-014` implement/PR) remains in **`stepsCompleted`**. |
 | **Standard / Complex** or `FACTORY_FORGE_REQUIRED=true` | **Forbidden** (`FORGE_SKIP_FORBIDDEN`) | Fail closed — no false-green forge GP completion |
 | Simple without skip flags | Live forge path | Steps complete only when forgeadapter actually runs |
 

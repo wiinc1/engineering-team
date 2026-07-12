@@ -79,18 +79,34 @@ describe('forge-claim-policy fail-closed (#273)', () => {
 });
 
 describe('forge-claim-policy inventory honesty (#273)', () => {
-  it('partitionForgeSteps does not complete forge GPs when skipped', () => {
-    const skipped = partitionForgeSteps({ skipped: true, includeGp013: true, phase: 'phase2' });
-    assert.deepEqual(skipped.completed, ['GP-013']);
-    for (const step of FORGE_GP_STEPS) {
-      assert.ok(skipped.skipped.includes(step), step);
-    }
+  it('partitionForgeSteps skips only forgeadapter GPs; keeps GP-012/014 under skip', () => {
+    const skipped = partitionForgeSteps({
+      skipped: true,
+      includeGp013: true,
+      includeGp012: true,
+      includeGp014: true,
+      phase: 'phase2',
+    });
+    assert.deepEqual(skipped.completed, ['GP-012', 'GP-013', 'GP-014']);
+    assert.deepEqual(skipped.skipped, [...FORGE_GP_STEPS]);
     assert.ok(!skipped.completed.some((s) => FORGE_GP_STEPS.includes(s)));
+    assert.ok(!skipped.skipped.includes('GP-012'));
+    assert.ok(!skipped.skipped.includes('GP-014'));
+    assert.ok(FORGE_GP_STEPS.includes('GP-009'));
+    assert.ok(FORGE_GP_STEPS.includes('GP-011'));
+    assert.ok(!FORGE_GP_STEPS.includes('GP-012'));
+    assert.ok(!FORGE_GP_STEPS.includes('GP-014'));
   });
 
-  it('partitionForgeSteps phase2 live does not claim later forge GPs', () => {
-    const live = partitionForgeSteps({ skipped: false, includeGp013: false, phase: 'phase2' });
-    assert.deepEqual(live.completed, [...PHASE2_FORGE_GP_STEPS]);
+  it('partitionForgeSteps phase2 live includes forge + non-forge phase2 steps', () => {
+    const live = partitionForgeSteps({
+      skipped: false,
+      includeGp013: false,
+      includeGp012: true,
+      includeGp014: true,
+      phase: 'phase2',
+    });
+    assert.deepEqual(live.completed, [...PHASE2_FORGE_GP_STEPS, 'GP-012', 'GP-014']);
     assert.ok(!live.completed.includes('GP-016'));
     assert.ok(!live.completed.includes('GP-018'));
     assert.ok(!live.completed.includes('GP-020'));
@@ -106,19 +122,23 @@ describe('forge-claim-policy inventory honesty (#273)', () => {
     assert.deepEqual(out.stepsSkipped, ['GP-016']);
   });
 
-  it('applyForgeSkipToStepInventory removes forge steps from completed', () => {
+  it('applyForgeSkipToStepInventory removes only forgeadapter GPs from completed', () => {
     const decision = resolveForgeSkipDecision({ skipForgeSeed: true, templateTier: 'Simple' }, {});
     const evidence = applyForgeSkipToStepInventory({
-      stepsCompleted: ['GP-009', 'GP-010', 'GP-013', 'GP-015', 'GP-016', 'GP-021'],
+      stepsCompleted: ['GP-009', 'GP-010', 'GP-012', 'GP-013', 'GP-014', 'GP-015', 'GP-016', 'GP-021'],
       stepsSkipped: [],
     }, decision.record);
     assert.ok(!evidence.stepsCompleted.includes('GP-009'));
     assert.ok(!evidence.stepsCompleted.includes('GP-016'));
+    assert.ok(evidence.stepsCompleted.includes('GP-012'));
     assert.ok(evidence.stepsCompleted.includes('GP-013'));
+    assert.ok(evidence.stepsCompleted.includes('GP-014'));
     assert.ok(evidence.stepsCompleted.includes('GP-015'));
     assert.ok(evidence.stepsCompleted.includes('GP-021'));
     assert.ok(evidence.stepsSkipped.includes('GP-009'));
     assert.ok(evidence.stepsSkipped.includes('GP-020'));
+    assert.ok(!evidence.stepsSkipped.includes('GP-012'));
+    assert.ok(!evidence.stepsSkipped.includes('GP-014'));
     assert.equal(evidence.forgePolicy.mode, 'simple_optional_skip');
   });
 });

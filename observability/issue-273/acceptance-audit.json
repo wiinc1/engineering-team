@@ -1,15 +1,13 @@
 {
   "issue": 273,
   "title": "Forgeadapter live integration or Simple-class forge-optional policy",
-  "verifiedAt": "2026-07-12T00:13:26.784Z",
+  "verifiedAt": "2026-07-12T00:19:27.677Z",
   "policyVersion": "simple-class-forge-optional.v1",
   "policyName": "simple-class-forge-optional",
   "forgeGpSteps": [
     "GP-009",
     "GP-010",
     "GP-011",
-    "GP-012",
-    "GP-014",
     "GP-016",
     "GP-018",
     "GP-020"
@@ -43,7 +41,7 @@
     {
       "id": "AC1-honest-skip-labeling",
       "ok": true,
-      "detail": "Simple skip mode=simple_optional_skip; forge GPs in stepsSkipped only"
+      "detail": "Simple skip mode=simple_optional_skip; forgeadapter GPs skipped; GP-012/014 still completed"
     },
     {
       "id": "AC1-skip-api-shape",

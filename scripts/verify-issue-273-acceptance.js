@@ -48,28 +48,42 @@ function checkHonestSkipLabeling() {
   const partition = partitionForgeSteps({
     skipped: true,
     includeGp013: true,
+    includeGp012: true,
+    includeGp014: true,
     phase: 'phase2',
   });
   const inventory = applyForgeSkipToStepInventory({
-    stepsCompleted: ['GP-009', 'GP-010', 'GP-013', 'GP-015', 'GP-016', 'GP-021'],
+    stepsCompleted: ['GP-009', 'GP-010', 'GP-012', 'GP-013', 'GP-014', 'GP-015', 'GP-016', 'GP-021'],
   }, simpleDecision.record);
+  const onlyForgeSkipped = FORGE_GP_STEPS.every((s) => partition.skipped.includes(s))
+    && !partition.skipped.includes('GP-012')
+    && !partition.skipped.includes('GP-014')
+    && partition.completed.includes('GP-012')
+    && partition.completed.includes('GP-013')
+    && partition.completed.includes('GP-014')
+    && !FORGE_GP_STEPS.includes('GP-012')
+    && !FORGE_GP_STEPS.includes('GP-014');
+  const inventoryOk = inventory.stepsCompleted.includes('GP-012')
+    && inventory.stepsCompleted.includes('GP-014')
+    && inventory.stepsCompleted.includes('GP-013')
+    && inventory.stepsCompleted.includes('GP-015')
+    && !inventory.stepsCompleted.some((s) => FORGE_GP_STEPS.includes(s))
+    && inventory.stepsSkipped.includes('GP-009')
+    && inventory.forgePolicy?.skipped === true;
   const honestSkip = simpleDecision.skip === true
     && simpleDecision.record.mode === 'simple_optional_skip'
     && simpleDecision.record.policyVersion === POLICY_VERSION
     && simpleDecision.record.policyName === POLICY_NAME
     && /optional|Simple|#273/i.test(simpleDecision.record.rationale)
-    && partition.completed.includes('GP-013')
-    && FORGE_GP_STEPS.every((s) => partition.skipped.includes(s))
-    && !inventory.stepsCompleted.some((s) => FORGE_GP_STEPS.includes(s))
-    && inventory.stepsSkipped.includes('GP-009')
-    && inventory.forgePolicy?.skipped === true;
+    && onlyForgeSkipped
+    && inventoryOk;
   return {
     criterion: criterion(
       'AC1-honest-skip-labeling',
       honestSkip,
       honestSkip
-        ? `Simple skip mode=${simpleDecision.record.mode}; forge GPs in stepsSkipped only`
-        : 'Simple skip does not honestly label forge GP steps',
+        ? `Simple skip mode=${simpleDecision.record.mode}; forgeadapter GPs skipped; GP-012/014 still completed`
+        : 'Simple skip does not honestly label forgeadapter-only GP steps',
     ),
     simpleDecision,
     honestSkip,
