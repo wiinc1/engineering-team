@@ -110,7 +110,8 @@ Desired state: after GitLab `main` updates, GitHub backup is content-aligned sho
 | Status evaluator | `npm run remotes:sync-status` (#270 AC1 tree-equality) |
 | Mirror job | `npm run remotes:mirror` → `scripts/dual-remote-mirror-github.js` |
 | Governance PR body | Auto-built; template `docs/templates/dual-remote-mirror-pr-body.md` |
-| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` + Merge readiness status) |
+| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` wait loop + Merge readiness + merge) |
+| Wait/merge I/O | `lib/task-platform/dual-remote-mirror-ops.js` (split from agent so preflight maintainability stays green) |
 | launchd agent (macOS) | `npm run remotes:mirror:install` (default every **15 minutes**) |
 | Observability | `observability/dual-remote/last-sync.json` |
 | Fail-closed equalize | Exit **2** when GitLab is behind GitHub content (no force-overwrite) |

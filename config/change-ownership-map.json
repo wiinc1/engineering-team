@@ -500,7 +500,7 @@
     {
       "name": "task-platform",
       "runtime_patterns": [
-        "^lib/task-platform/(?!pilot-agents\\.js$|dual-remote-mirror-core\\.js$|dual-remote-mirror-wait\\.js$)",
+        "^lib/task-platform/(?!pilot-agents\\.js$|dual-remote-mirror-core\\.js$|dual-remote-mirror-wait\\.js$|dual-remote-mirror-ops\\.js$)",
         "^db/migrations/006_canonical_task_persistence\\.sql$",
         "^db/migrations/010_merge_readiness_reviews\\.sql$",
         "^db/migrations/012_projects(\\.down)?\\.sql$",
@@ -775,7 +775,8 @@
         "^scripts/dual-remote-mirror-github\\.js$",
         "^scripts/dual-remote-mirror-agent\\.js$",
         "^lib/task-platform/dual-remote-mirror-core\\.js$",
-        "^lib/task-platform/dual-remote-mirror-wait\\.js$"
+        "^lib/task-platform/dual-remote-mirror-wait\\.js$",
+        "^lib/task-platform/dual-remote-mirror-ops\\.js$"
       ],
       "test_requirements": [
         {
@@ -784,7 +785,8 @@
             "^tests/unit/governance/.+\\.test\\.js$",
             "^tests/unit/dual-remote-sync-status\\.test\\.js$",
             "^tests/unit/dual-remote-mirror-core\\.test\\.js$",
-            "^tests/unit/dual-remote-mirror-wait\\.test\\.js$"
+            "^tests/unit/dual-remote-mirror-wait\\.test\\.js$",
+            "^tests/unit/dual-remote-mirror-ops\\.test\\.js$"
           ]
         }
       ],

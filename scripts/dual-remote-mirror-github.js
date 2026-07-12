@@ -13,7 +13,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { spawnSync } = require('node:child_process');
 const { collectReport } = require('./dual-remote-sync-status');
 const {
   EXIT,
@@ -25,39 +25,15 @@ const {
   selectEvidencePaths,
 } = require('../lib/task-platform/dual-remote-mirror-core');
 const {
-  DEFAULT_REQUIRED_CONTEXTS,
-  decideWaitMergeStep,
   isMirrorHeadStale,
   shouldForcePushMirror,
-  isTransientFailureMessage,
 } = require('../lib/task-platform/dual-remote-mirror-wait');
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function runGit(args, opts = {}) {
-  return execFileSync('git', args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    ...opts,
-  }).trim();
-}
-
-function runGh(args, opts = {}) {
-  const result = spawnSync('gh', args, {
-    encoding: 'utf8',
-    env: process.env,
-    ...opts,
-  });
-  if (result.status !== 0) {
-    const err = new Error(
-      `gh ${args.join(' ')} failed: ${(result.stderr || result.stdout || '').trim() || `exit ${result.status}`}`,
-    );
-    err.code = 'GH_FAILED';
-    err.status = result.status;
-    throw err;
-  }
-  return (result.stdout || '').trim();
-}
+const {
+  runGit,
+  runGh,
+  waitAndMerge,
+  snapshotMergeWhenReady,
+} = require('../lib/task-platform/dual-remote-mirror-ops');
 
 function changedFilesBetween(baseRef, headRef) {
   try {
@@ -158,15 +134,6 @@ function findOpenMirrorPr(repo, mirrorBranch) {
   }
 }
 
-function viewPr(repo, prNumber) {
-  const raw = runGh([
-    'pr', 'view', String(prNumber),
-    '--repo', repo,
-    '--json', 'mergeable,mergeStateStatus,state,statusCheckRollup,headRefOid,url,number',
-  ]);
-  return JSON.parse(raw);
-}
-
 function pushMirrorBranch({ mirrorBranch, dryRun }) {
   const args = ['push', '--force-with-lease', 'github', `origin/main:refs/heads/${mirrorBranch}`];
   if (dryRun) return { dryRun: true, args };
@@ -213,102 +180,6 @@ function openOrUpdatePr({ repo, mirrorBranch, body, title, dryRun }) {
   };
 }
 
-function emitMergeReadiness(repo, headSha) {
-  if (!headSha) return { ok: false, error: 'missing head sha' };
-  try {
-    runGh([
-      'api', '-X', 'POST', `repos/${repo}/statuses/${headSha}`,
-      '-f', 'state=success',
-      '-f', 'context=Merge readiness',
-      '-f', 'description=Dual-remote mirror of GitLab primary',
-    ]);
-    return { ok: true, headSha };
-  } catch (error) {
-    return { ok: false, error: error.message };
-  }
-}
-
-function rerunFailedWorkflows(repo, prNumber) {
-  try {
-    const raw = runGh([
-      'pr', 'view', String(prNumber),
-      '--repo', repo,
-      '--json', 'statusCheckRollup,headRefOid',
-    ]);
-    const pr = JSON.parse(raw);
-    const runIds = new Set();
-    for (const c of pr.statusCheckRollup || []) {
-      const url = c.detailsUrl || '';
-      const m = String(url).match(/actions\/runs\/(\d+)/);
-      if (m && c.conclusion === 'FAILURE') runIds.add(m[1]);
-    }
-    if (!runIds.size) {
-      const list = runGh([
-        'run', 'list',
-        '--repo', repo,
-        '--branch', 'sync/github-mirror-gitlab',
-        '--status', 'failure',
-        '--limit', '3',
-        '--json', 'databaseId,headSha',
-      ]);
-      for (const row of JSON.parse(list || '[]')) {
-        if (!pr.headRefOid || row.headSha === pr.headRefOid) runIds.add(String(row.databaseId));
-      }
-    }
-    const reran = [];
-    for (const id of runIds) {
-      try {
-        runGh(['run', 'rerun', String(id), '--repo', repo, '--failed']);
-        reran.push(id);
-      } catch (err) {
-        reran.push({ id, error: err.message });
-      }
-    }
-    return { ok: reran.length > 0, reran };
-  } catch (error) {
-    return { ok: false, error: error.message };
-  }
-}
-
-function mergePr(repo, prNumber, { admin = false } = {}) {
-  const args = ['pr', 'merge', String(prNumber), '--repo', repo, '--merge'];
-  if (admin) args.push('--admin');
-  runGh(args);
-  return { merged: true, admin: admin === true, prNumber };
-}
-
-/** Legacy one-shot merge (no wait loop). */
-function snapshotMergeWhenReady(repo, prNumber) {
-  try {
-    const pr = viewPr(repo, prNumber);
-    const decision = decideWaitMergeStep({
-      prState: pr.state,
-      mergeStateStatus: pr.mergeStateStatus,
-      rollup: pr.statusCheckRollup || [],
-      elapsedMs: 0,
-      timeoutMs: 1,
-      mergeReadinessPosted: false,
-    });
-    if (decision.step === 'already_merged') {
-      return { attempted: true, merged: true, alreadyMerged: true };
-    }
-    if (decision.step === 'post_merge_readiness' || decision.step === 'merge' || decision.step === 'merge_admin') {
-      emitMergeReadiness(repo, pr.headRefOid);
-      const merged = mergePr(repo, prNumber, { admin: decision.step === 'merge_admin' });
-      return { attempted: true, merged: true, snapshot: true, ...merged };
-    }
-    return {
-      attempted: false,
-      ready: false,
-      reason: decision.reason,
-      summary: decision.summary,
-      snapshot: true,
-    };
-  } catch (error) {
-    return { attempted: true, merged: false, error: error.message, snapshot: true };
-  }
-}
-
 function runPreflight(opts) {
   if (opts.skipPreflight || opts.dryRun) return { ok: true, skipped: true };
   const checks = [];
@@ -350,99 +221,6 @@ function runPreflight(opts) {
 
 function ciInProgress(rollup = []) {
   return (rollup || []).some((c) => c.status && c.status !== 'COMPLETED');
-}
-
-async function waitAndMerge(repo, prNumber, opts) {
-  const started = Date.now();
-  let mergeReadinessPosted = false;
-  let flakyRetriesUsed = 0;
-  const steps = [];
-  while (true) {
-    const pr = viewPr(repo, prNumber);
-    const elapsedMs = Date.now() - started;
-    const decision = decideWaitMergeStep({
-      prState: pr.state,
-      mergeStateStatus: pr.mergeStateStatus,
-      rollup: pr.statusCheckRollup || [],
-      elapsedMs,
-      timeoutMs: opts.waitTimeoutMs,
-      requiredContexts: DEFAULT_REQUIRED_CONTEXTS,
-      mergeReadinessPosted,
-      flakyRetriesUsed,
-      maxFlakyRetries: 1,
-    });
-    steps.push({ at: new Date().toISOString(), step: decision.step, reason: decision.reason });
-    if (decision.step === 'already_merged') {
-      return { attempted: true, merged: true, alreadyMerged: true, steps, pr };
-    }
-    if (decision.step === 'timeout' || decision.step === 'failed' || decision.step === 'pr_closed') {
-      return {
-        attempted: true,
-        merged: false,
-        ready: false,
-        steps,
-        reason: decision.reason,
-        summary: decision.summary,
-      };
-    }
-    if (decision.step === 'rerun_failed') {
-      flakyRetriesUsed += 1;
-      const rr = rerunFailedWorkflows(repo, prNumber);
-      steps.push({ step: 'rerun_failed', ok: rr.ok, error: rr.error || null });
-      await sleep(opts.waitIntervalMs);
-      continue;
-    }
-    if (decision.step === 'wait' || decision.step === 'wait_merge_readiness') {
-      await sleep(opts.waitIntervalMs);
-      continue;
-    }
-    if (decision.step === 'post_merge_readiness') {
-      const head = pr.headRefOid;
-      const posted = emitMergeReadiness(repo, head);
-      mergeReadinessPosted = posted.ok === true;
-      steps.push({ step: 'post_merge_readiness', ...posted });
-      await sleep(Math.min(opts.waitIntervalMs, 15000));
-      continue;
-    }
-    if (decision.step === 'merge' || decision.step === 'merge_admin') {
-      const head = pr.headRefOid;
-      emitMergeReadiness(repo, head);
-      try {
-        const merged = mergePr(repo, prNumber, { admin: decision.step === 'merge_admin' });
-        return { attempted: true, merged: true, steps, ...merged, summary: decision.summary };
-      } catch (error) {
-        if (decision.step === 'merge' && /not mergeable|behind|protected/i.test(error.message)) {
-          try {
-            const merged = mergePr(repo, prNumber, { admin: true });
-            return {
-              attempted: true,
-              merged: true,
-              steps,
-              ...merged,
-              adminFallback: true,
-              summary: decision.summary,
-            };
-          } catch (err2) {
-            return {
-              attempted: true,
-              merged: false,
-              steps,
-              error: err2.message,
-              summary: decision.summary,
-            };
-          }
-        }
-        return {
-          attempted: true,
-          merged: false,
-          steps,
-          error: error.message,
-          summary: decision.summary,
-        };
-      }
-    }
-    await sleep(opts.waitIntervalMs);
-  }
 }
 
 function printUsage() {
@@ -504,61 +282,54 @@ function buildMirrorArtifacts(report) {
   };
 }
 
+async function runPushPrMerge(opts, arts, pushGate) {
+  let pushResult;
+  if (pushGate.allow) {
+    pushResult = pushMirrorBranch({ mirrorBranch: opts.mirrorBranch, dryRun: opts.dryRun });
+  } else {
+    pushResult = { dryRun: opts.dryRun, skipped: true, reason: pushGate.reason };
+  }
+  let prResult = null;
+  if (opts.openPr) {
+    prResult = openOrUpdatePr({
+      repo: opts.repo,
+      mirrorBranch: opts.mirrorBranch,
+      body: arts.body,
+      title: arts.title,
+      dryRun: opts.dryRun,
+    });
+  }
+  let mergeResult = null;
+  if (opts.mergeWhenReady && prResult?.prNumber && !opts.dryRun) {
+    mergeResult = opts.noWait
+      ? snapshotMergeWhenReady(opts.repo, prResult.prNumber)
+      : await waitAndMerge(opts.repo, prResult.prNumber, opts);
+  }
+  return { pushResult, prResult, mergeResult };
+}
+
 async function executeMirrorSteps(opts, report, decision) {
   const arts = buildMirrorArtifacts(report);
   const existing = findOpenMirrorPr(opts.repo, opts.mirrorBranch);
-  const headStale = isMirrorHeadStale(arts.originFull, existing?.headRefOid);
   const pushGate = shouldForcePushMirror({
     hasOpenPr: Boolean(existing?.number),
-    headStale,
+    headStale: isMirrorHeadStale(arts.originFull, existing?.headRefOid),
     ciInProgress: ciInProgress(existing?.statusCheckRollup || []),
   });
-
   let pushResult = null;
   let prResult = null;
   let mergeResult = null;
   let preflight = null;
   let error = null;
-
   try {
     preflight = runPreflight(opts);
-    if (!preflight.ok) {
-      throw new Error(`preflight failed: ${preflight.error}`);
-    }
-    if (pushGate.allow) {
-      pushResult = pushMirrorBranch({ mirrorBranch: opts.mirrorBranch, dryRun: opts.dryRun });
-    } else {
-      pushResult = { dryRun: opts.dryRun, skipped: true, reason: pushGate.reason };
-    }
-    if (opts.openPr) {
-      prResult = openOrUpdatePr({
-        repo: opts.repo,
-        mirrorBranch: opts.mirrorBranch,
-        body: arts.body,
-        title: arts.title,
-        dryRun: opts.dryRun,
-      });
-    }
-    if (opts.mergeWhenReady && prResult?.prNumber && !opts.dryRun) {
-      if (opts.noWait) {
-        mergeResult = snapshotMergeWhenReady(opts.repo, prResult.prNumber);
-      } else {
-        mergeResult = await waitAndMerge(opts.repo, prResult.prNumber, opts);
-      }
-    }
+    if (!preflight.ok) throw new Error(`preflight failed: ${preflight.error}`);
+    ({ pushResult, prResult, mergeResult } = await runPushPrMerge(opts, arts, pushGate));
   } catch (err) {
     error = err;
   }
   return {
-    ...arts,
-    pushResult,
-    prResult,
-    mergeResult,
-    preflight,
-    pushGate,
-    error,
-    decision,
-    report,
+    ...arts, pushResult, prResult, mergeResult, preflight, pushGate, error, decision, report,
   };
 }
 
