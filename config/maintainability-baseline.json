@@ -1033,6 +1033,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/factory-delivery-shared.js",
+      "rule": "maintainability:function-lines",
+      "line": 290,
+      "ordinal": 24,
+      "name": "resolveFactoryConfig",
+      "actual": 51,
+      "cap": 50
+    },
+    {
       "path": "lib/task-platform/factory-stack/postgres.js",
       "rule": "maintainability:function-lines",
       "line": 58,
@@ -1047,6 +1056,15 @@
       "line": 38,
       "ordinal": 1,
       "name": "validateTaskCreatePayload",
+      "actual": 51,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/factory-real-delivery-execution.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 59,
+      "ordinal": 3,
+      "name": "realEvidenceConfig",
       "actual": 51,
       "cap": 50
     },
@@ -1245,7 +1263,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 409,
+      "actual": 410,
       "cap": 400
     },
     {
@@ -1255,6 +1273,15 @@
       "ordinal": null,
       "name": null,
       "actual": 405,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/factory-delivery-shared.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 403,
       "cap": 400
     },
     {
