@@ -184,6 +184,7 @@ test(
         return phase6Runner(options);
       },
       skipForgeSeed: true,
+      allowForgeSkip: true, // unit seed stub; Standard production remains forge-required
     });
 
     assert.equal(outcome.action, 'phases_2_6');
