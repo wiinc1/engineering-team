@@ -103,6 +103,7 @@ function realEvidenceConfig(tmp, evidencePath, runPhasesFn) {
     }),
     runPhasesFn,
     skipForgeSeed: true,
+    allowForgeSkip: true,
     outputPath: evidencePath,
   };
 }

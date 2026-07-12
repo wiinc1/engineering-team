@@ -137,6 +137,7 @@ function realEvidenceConfig(tmp, deliveryDir, candidateProofPath, changedFiles, 
     realDeliverySourceIntegrity: () => ({ checkedFiles: 2, nodeCheckedFiles: 1, failures: [] }),
     runPhasesFn,
     skipForgeSeed: true,
+      allowForgeSkip: true, // unit seed stub; Standard production remains forge-required
   };
 }
 
