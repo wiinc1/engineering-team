@@ -67,6 +67,31 @@ node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --
 
 Hosted real-evidence collection remains opt-in via explicit `FF_GOLDEN_PATH_*` / `STAGING_REQUIRE_REAL_EVIDENCE` flags and is not implied by agent-driven phases alone on a local base URL.
 
+### Simple-class forge-optional policy (GitLab #273)
+
+Local live C/D commonly sets `STAGING_SKIP_FORGE_SEED/PHASES=true` because forgeadapter’s full lifecycle needs OpenClaw **child sessions**, and the live gateway on this host does not expose `POST /sessions/:id/children` (spike blocked). Product path:
+
+| Class | Skip forge seed/phases | Inventory |
+| --- | --- | --- |
+| **Simple** (default local claim) | Allowed | **Forgeadapter** GPs only (`GP-009`, `GP-010`, `GP-011`, `GP-016`, `GP-018`, `GP-020`) go to **`stepsSkipped`** with `forgePolicy.mode=simple_optional_skip` — **not** real forge success. Non-forge phase work that still runs (`GP-012` pilot seed, `GP-013` delegation, `GP-014` implement/PR) remains in **`stepsCompleted`**. |
+| **Standard / Complex** or `FACTORY_FORGE_REQUIRED=true` | **Forbidden** (`FORGE_SKIP_FORBIDDEN`) | Fail closed — no false-green forge GP completion |
+| Simple without skip flags | Live forge path | Steps complete only when forgeadapter actually runs |
+
+Policy module: `lib/task-platform/forge-claim-policy.js` (`simple-class-forge-optional.v1`). Wired through `golden-path-forge-skip`, phase 2–5 runners, and factory-delivery seed gates.
+
+```bash
+# Simple session-proof C/D (honest forge skip)
+export FACTORY_TEMPLATE_TIER=Simple
+export STAGING_SKIP_FORGE_SEED=true
+export STAGING_SKIP_FORGE_PHASES=true
+
+# Forge-required classes must not set skip flags (or set FACTORY_ALLOW_FORGE_SKIP only for explicit operator override)
+export FACTORY_TEMPLATE_TIER=Standard
+# unset STAGING_SKIP_FORGE_*  — skip throws FORGE_SKIP_FORBIDDEN
+
+npm run issue-273:verify
+```
+
 ### Trusted Simple close (GitLab #274)
 
 **Session-proof** (default local C/D without real-evidence flags) may use short implementer JSON for session attribution only — that is **not** operator-trusted autonomous delivery.
