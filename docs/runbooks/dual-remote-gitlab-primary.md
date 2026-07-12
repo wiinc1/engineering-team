@@ -110,7 +110,8 @@ Desired state: after GitLab `main` updates, GitHub backup is content-aligned sho
 | Status evaluator | `npm run remotes:sync-status` (#270 AC1 tree-equality) |
 | Mirror job | `npm run remotes:mirror` → `scripts/dual-remote-mirror-github.js` |
 | Governance PR body | Auto-built; template `docs/templates/dual-remote-mirror-pr-body.md` |
-| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` + Merge readiness status) |
+| Optional auto-merge | `npm run remotes:mirror:merge` (`--merge-when-ready` wait loop + Merge readiness + merge) |
+| Wait/merge I/O | `lib/task-platform/dual-remote-mirror-ops.js` (split from agent so preflight maintainability stays green) |
 | launchd agent (macOS) | `npm run remotes:mirror:install` (default every **15 minutes**) |
 | Observability | `observability/dual-remote/last-sync.json` |
 | Fail-closed equalize | Exit **2** when GitLab is behind GitHub content (no force-overwrite) |
@@ -237,6 +238,17 @@ npm run remotes:mirror:merge
 cat observability/dual-remote/last-sync.json
 npm run remotes:sync-status   # divergence.synced true
 ```
+
+**Proven (2026-07-12):** Full CLI `node scripts/dual-remote-mirror-github.js --merge-when-ready` with primary tip ahead of GitHub backup:
+
+1. Preflight maintainability + ownership green (ops split under baseline)  
+2. Waited for required Actions checks  
+3. Posted **Merge readiness** on head (does not require rollup visibility)  
+4. Merged GitHub PR **#306** without a human  
+5. `last-sync` → `action: mirror_merged_synced`, `exitCode: 0`, tip **trees equal**  
+6. Next poll → `noop_synced`  
+
+Ship order stays **GitLab primary first**. If GitHub is ever ahead (emergency path or drill), equalize into GitLab (`sync/gitlab-primary-main` MR) before treating backup as canonical. Never force-push protected `github/main`.
 
 ### Single-flight + locks
 
