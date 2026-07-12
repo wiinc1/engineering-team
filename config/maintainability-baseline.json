@@ -358,12 +358,30 @@
       "cap": 50
     },
     {
+      "path": "scripts/dual-remote-mirror-github.js",
+      "rule": "maintainability:function-lines",
+      "line": 322,
+      "ordinal": 25,
+      "name": "waitAndMerge",
+      "actual": 92,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 829,
       "ordinal": 99,
       "name": "register",
       "actual": 91,
+      "cap": 50
+    },
+    {
+      "path": "tests/unit/dual-remote-mirror-wait.test.js",
+      "rule": "maintainability:function-lines",
+      "line": 43,
+      "ordinal": 6,
+      "name": "<arrow>",
+      "actual": 90,
       "cap": 50
     },
     {
@@ -718,6 +736,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/dual-remote-mirror-wait.js",
+      "rule": "maintainability:function-lines",
+      "line": 107,
+      "ordinal": 9,
+      "name": "decideAfterSummary",
+      "actual": 63,
+      "cap": 50
+    },
+    {
       "path": "tests/unit/dual-remote-sync-status.test.js",
       "rule": "maintainability:function-lines",
       "line": 9,
@@ -876,6 +903,15 @@
       "line": 409,
       "ordinal": 19,
       "name": "startExecutionContractReviewerRouting",
+      "actual": 57,
+      "cap": 50
+    },
+    {
+      "path": "scripts/dual-remote-mirror-github.js",
+      "rule": "maintainability:function-lines",
+      "line": 474,
+      "ordinal": 30,
+      "name": "executeMirrorSteps",
       "actual": 57,
       "cap": 50
     },
@@ -1051,6 +1087,15 @@
       "cap": 50
     },
     {
+      "path": "scripts/dual-remote-mirror-agent.js",
+      "rule": "maintainability:function-lines",
+      "line": 57,
+      "ordinal": 7,
+      "name": "buildPlist",
+      "actual": 51,
+      "cap": 50
+    },
+    {
       "path": "src/features/task-creation/schema.js",
       "rule": "maintainability:function-lines",
       "line": 38,
@@ -1129,6 +1174,15 @@
       "ordinal": null,
       "name": null,
       "actual": 675,
+      "cap": 400
+    },
+    {
+      "path": "scripts/dual-remote-mirror-github.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 635,
       "cap": 400
     },
     {
