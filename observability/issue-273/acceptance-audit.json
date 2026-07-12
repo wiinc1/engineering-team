@@ -1,0 +1,76 @@
+{
+  "issue": 273,
+  "title": "Forgeadapter live integration or Simple-class forge-optional policy",
+  "verifiedAt": "2026-07-12T00:13:26.784Z",
+  "policyVersion": "simple-class-forge-optional.v1",
+  "policyName": "simple-class-forge-optional",
+  "forgeGpSteps": [
+    "GP-009",
+    "GP-010",
+    "GP-011",
+    "GP-012",
+    "GP-014",
+    "GP-016",
+    "GP-018",
+    "GP-020"
+  ],
+  "openClawChildrenSpike": {
+    "status": "blocked",
+    "health": "live (:18789)",
+    "childrenEndpoints": "not exposed (POST /sessions/:id/children and variants 404)",
+    "productPath": "simple-class-forge-optional"
+  },
+  "scope": [
+    {
+      "bullet": "Spike forgeadapter + live OpenClaw children or document Simple forge-optional",
+      "ok": true
+    },
+    {
+      "bullet": "If blocked: document Simple-class skip; evidence does not claim forge GP as real when skipped",
+      "ok": true
+    },
+    {
+      "bullet": "Align milestone verify defaults with policy",
+      "ok": true
+    }
+  ],
+  "criteria": [
+    {
+      "id": "SCOPE-spike-or-optional",
+      "ok": true,
+      "detail": "Policy module documents OpenClaw children spike + Simple forge-optional product path"
+    },
+    {
+      "id": "AC1-honest-skip-labeling",
+      "ok": true,
+      "detail": "Simple skip mode=simple_optional_skip; forge GPs in stepsSkipped only"
+    },
+    {
+      "id": "AC1-skip-api-shape",
+      "ok": true,
+      "detail": "Skipped forge seed API carries policy record"
+    },
+    {
+      "id": "AC2-no-false-green-forge-required",
+      "ok": true,
+      "detail": "Standard/Complex/FACTORY_FORGE_REQUIRED fail closed; unskipped Simple stays live_forge"
+    },
+    {
+      "id": "SCOPE-runbook-policy",
+      "ok": true,
+      "detail": "Runbook documents #273 Simple forge-optional + fail-closed non-Simple"
+    },
+    {
+      "id": "SCOPE-factory-delivery-gate",
+      "ok": true,
+      "detail": "factory-delivery asserts forge skip policy before skip seed"
+    },
+    {
+      "id": "SCOPE-phases-inventory",
+      "ok": true,
+      "detail": "golden-path-phases wires policy decision + stepsSkipped inventory"
+    }
+  ],
+  "ok": true,
+  "failed": []
+}

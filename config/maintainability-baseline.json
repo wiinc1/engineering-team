@@ -36,7 +36,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1370,
+      "line": 1427,
       "ordinal": 75,
       "name": "runGoldenPathPhase6",
       "actual": 278,
@@ -61,6 +61,15 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1706,
+      "ordinal": 76,
+      "name": "runGoldenPathPhase5",
+      "actual": 248,
+      "cap": 50
+    },
+    {
       "path": "lib/auth/registration.js",
       "rule": "maintainability:function-lines",
       "line": 391,
@@ -81,28 +90,28 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1649,
-      "ordinal": 76,
-      "name": "runGoldenPathPhase5",
-      "actual": 234,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/golden-path-phases.js",
-      "rule": "maintainability:function-lines",
-      "line": 806,
+      "line": 813,
       "ordinal": 62,
       "name": "runGoldenPathPhase2",
-      "actual": 200,
+      "actual": 214,
       "cap": 50
     },
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 1884,
+      "line": 1955,
       "ordinal": 77,
       "name": "runGoldenPathPhases",
-      "actual": 187,
+      "actual": 214,
+      "cap": 50
+    },
+    {
+      "path": "scripts/verify-issue-274-acceptance.js",
+      "rule": "maintainability:function-lines",
+      "line": 36,
+      "ordinal": 2,
+      "name": "main",
+      "actual": 204,
       "cap": 50
     },
     {
@@ -124,12 +133,39 @@
       "cap": 50
     },
     {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1028,
+      "ordinal": 63,
+      "name": "runGoldenPathPhase3",
+      "actual": 173,
+      "cap": 50
+    },
+    {
+      "path": "scripts/verify-issue-271-acceptance.js",
+      "rule": "maintainability:function-lines",
+      "line": 45,
+      "ordinal": 3,
+      "name": "main",
+      "actual": 165,
+      "cap": 50
+    },
+    {
       "path": "scripts/advance-tsk-001-closeout.js",
       "rule": "maintainability:function-lines",
       "line": 108,
       "ordinal": 17,
       "name": "main",
       "actual": 163,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/golden-path-phases.js",
+      "rule": "maintainability:function-lines",
+      "line": 1202,
+      "ordinal": 67,
+      "name": "runGoldenPathPhase4",
+      "actual": 160,
       "cap": 50
     },
     {
@@ -142,11 +178,11 @@
       "cap": 50
     },
     {
-      "path": "lib/task-platform/golden-path-phases.js",
+      "path": "tests/unit/trusted-simple-close-evidence.test.js",
       "rule": "maintainability:function-lines",
-      "line": 1007,
-      "ordinal": 63,
-      "name": "runGoldenPathPhase3",
+      "line": 49,
+      "ordinal": 2,
+      "name": "<arrow>",
       "actual": 152,
       "cap": 50
     },
@@ -175,15 +211,6 @@
       "ordinal": 7,
       "name": "StageTransition",
       "actual": 148,
-      "cap": 50
-    },
-    {
-      "path": "lib/task-platform/golden-path-phases.js",
-      "rule": "maintainability:function-lines",
-      "line": 1160,
-      "ordinal": 67,
-      "name": "runGoldenPathPhase4",
-      "actual": 145,
       "cap": 50
     },
     {
@@ -243,7 +270,7 @@
     {
       "path": "lib/task-platform/golden-path-phases.js",
       "rule": "maintainability:function-lines",
-      "line": 619,
+      "line": 626,
       "ordinal": 57,
       "name": "completeContractCoverageAuditGate",
       "actual": 113,
@@ -274,6 +301,15 @@
       "ordinal": 23,
       "name": "recordArchitectEngineerAssignment",
       "actual": 106,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/trusted-simple-close-evidence.js",
+      "rule": "maintainability:function-lines",
+      "line": 144,
+      "ordinal": 16,
+      "name": "assertTrustedSimpleCloseEvidence",
+      "actual": 102,
       "cap": 50
     },
     {
@@ -336,6 +372,15 @@
       "line": 303,
       "ordinal": 20,
       "name": "evaluatePmArchitectHumanReviewGate",
+      "actual": 89,
+      "cap": 50
+    },
+    {
+      "path": "lib/task-platform/trusted-simple-close-evidence.js",
+      "rule": "maintainability:function-lines",
+      "line": 254,
+      "ordinal": 17,
+      "name": "buildTrustedSimpleCloseEvidence",
       "actual": 89,
       "cap": 50
     },
@@ -1002,7 +1047,7 @@
       "line": 1,
       "ordinal": null,
       "name": null,
-      "actual": 2108,
+      "actual": 2206,
       "cap": 400
     },
     {
@@ -1159,12 +1204,39 @@
       "cap": 400
     },
     {
+      "path": "lib/task-platform/factory-proof-profile.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 415,
+      "cap": 400
+    },
+    {
       "path": "lib/task-platform/golden-path-real-evidence.js",
       "rule": "maintainability:source-file-lines",
       "line": 1,
       "ordinal": null,
       "name": null,
       "actual": 413,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/trusted-simple-close-evidence.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 413,
+      "cap": 400
+    },
+    {
+      "path": "lib/task-platform/factory-delivery.js",
+      "rule": "maintainability:source-file-lines",
+      "line": 1,
+      "ordinal": null,
+      "name": null,
+      "actual": 409,
       "cap": 400
     },
     {
