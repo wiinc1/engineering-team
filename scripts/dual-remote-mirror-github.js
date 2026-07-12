@@ -230,8 +230,41 @@ function emitMergeReadiness(repo, headSha) {
 
 function rerunFailedWorkflows(repo, prNumber) {
   try {
-    runGh(['pr', 'checks', String(prNumber), '--repo', repo, '--rerun-failed']);
-    return { ok: true };
+    const raw = runGh([
+      'pr', 'view', String(prNumber),
+      '--repo', repo,
+      '--json', 'statusCheckRollup,headRefOid',
+    ]);
+    const pr = JSON.parse(raw);
+    const runIds = new Set();
+    for (const c of pr.statusCheckRollup || []) {
+      const url = c.detailsUrl || '';
+      const m = String(url).match(/actions\/runs\/(\d+)/);
+      if (m && c.conclusion === 'FAILURE') runIds.add(m[1]);
+    }
+    if (!runIds.size) {
+      const list = runGh([
+        'run', 'list',
+        '--repo', repo,
+        '--branch', 'sync/github-mirror-gitlab',
+        '--status', 'failure',
+        '--limit', '3',
+        '--json', 'databaseId,headSha',
+      ]);
+      for (const row of JSON.parse(list || '[]')) {
+        if (!pr.headRefOid || row.headSha === pr.headRefOid) runIds.add(String(row.databaseId));
+      }
+    }
+    const reran = [];
+    for (const id of runIds) {
+      try {
+        runGh(['run', 'rerun', String(id), '--repo', repo, '--failed']);
+        reran.push(id);
+      } catch (err) {
+        reran.push({ id, error: err.message });
+      }
+    }
+    return { ok: reran.length > 0, reran };
   } catch (error) {
     return { ok: false, error: error.message };
   }
