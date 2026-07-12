@@ -239,6 +239,17 @@ cat observability/dual-remote/last-sync.json
 npm run remotes:sync-status   # divergence.synced true
 ```
 
+**Proven (2026-07-12):** Full CLI `node scripts/dual-remote-mirror-github.js --merge-when-ready` with primary tip ahead of GitHub backup:
+
+1. Preflight maintainability + ownership green (ops split under baseline)  
+2. Waited for required Actions checks  
+3. Posted **Merge readiness** on head (does not require rollup visibility)  
+4. Merged GitHub PR **#306** without a human  
+5. `last-sync` → `action: mirror_merged_synced`, `exitCode: 0`, tip **trees equal**  
+6. Next poll → `noop_synced`  
+
+Ship order stays **GitLab primary first**. If GitHub is ever ahead (emergency path or drill), equalize into GitLab (`sync/gitlab-primary-main` MR) before treating backup as canonical. Never force-push protected `github/main`.
+
 ### Single-flight + locks
 
 - Lock file: `observability/dual-remote/mirror.lock`  
