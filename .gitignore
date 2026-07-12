@@ -36,3 +36,4 @@ observability/*.png
 
 # Durable factory stack local state/logs
 observability/factory-stack/
+observability/dual-remote/last-sync.json
