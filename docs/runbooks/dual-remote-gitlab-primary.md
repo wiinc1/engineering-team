@@ -251,3 +251,7 @@ npm run remotes:sync-status   # divergence.synced true
 - Auto-open GitLab equalize MR on exit 2 (notify only; no auto-merge to primary)  
 - GitHub Actions schedule backup watcher if host agent is down  
 - Alerting when exit ≠ 0 or last-sync older than 2× interval  
+
+## E2E drill marker
+
+Automated dual-remote drill commit 2026-07-12T16:55:06Z — safe to keep; documents live agent cycle.
