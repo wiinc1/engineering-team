@@ -38,7 +38,7 @@ describe('dual-remote-mirror-core decideMirrorAction', () => {
     assert.equal(d.exitCode, EXIT.PRIMARY_BEHIND);
   });
 
-  it('fails when both sides diverged in content', () => {
+  it('fails when both sides diverged in content without ancestry', () => {
     const d = decideMirrorAction({
       divergence: {
         synced: false,
@@ -48,6 +48,22 @@ describe('dual-remote-mirror-core decideMirrorAction', () => {
     });
     assert.equal(d.action, 'fail_diverged');
     assert.equal(d.exitCode, EXIT.ERROR);
+  });
+
+  it('mirrors when GitHub tip tree is already in GitLab history', () => {
+    const d = decideMirrorAction({
+      divergence: {
+        synced: false,
+        primaryBehindBackup: true,
+        backupBehindPrimary: true,
+      },
+      content: {
+        githubTreeInOriginHistory: true,
+        originTreeInGithubHistory: false,
+      },
+    });
+    assert.equal(d.action, 'mirror_backup');
+    assert.equal(d.exitCode, EXIT.BACKUP_BEHIND);
   });
 
   it('mirrors when backup is behind primary', () => {
