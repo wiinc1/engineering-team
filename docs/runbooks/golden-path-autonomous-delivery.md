@@ -103,6 +103,21 @@ npm run issue-273:verify
 - Evidence package must store real PR URL + merge SHA (`lib/task-platform/trusted-simple-close-evidence.js`).
 - Auditor: `npm run issue-274:verify`.
 
+### Human PM + Architect acceptance (Q6 / GitLab #275)
+
+Agent-authored PM/Architect outputs are **proposals**. Before operator approval, Simple auto-approval eligibility, or implementation dispatch:
+
+1. Record human acceptance (product path):
+
+```bash
+# POST /tasks/:taskId/execution-contract:human-pm-architect-review
+# body: { "role": "both", "reason": "…", "actorType": "human" }
+```
+
+2. Or attach `human_reviews.pm` / `human_reviews.architect` with `actorType: human|user|operator` on the Execution Contract.
+
+Agent actors cannot clear the gate. Factory supervised path may pre-record human acceptance under operator supervision; product claims still use the same gate evaluation.
+
 ### Durable factory stack on this host (GitLab #269)
 
 Use **`npm run factory:stack:*`** for the reboot-safe factory of record. One command restores the stack after reboot or a full process kill.

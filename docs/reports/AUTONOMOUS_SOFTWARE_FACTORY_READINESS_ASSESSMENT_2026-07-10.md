@@ -110,7 +110,7 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 | Agent implement / QA / fix loop (GP-014…019) | **Partial** | Session-proof vs **trusted delivery** prompts/enforcement split; trusted path forbids synthetic branch/PR JSON |
 | GP-023 validation in loop | **Works** (with prep) | Full lint/unit/standards when `.artifacts/coverage-summary.json` present |
 | GP-027 closeout report | **Works** | Closeout JSON + classification |
-| Human PM/Architect review as authority | **Partial** | Gate enforces Q6 on agent proposals; factory path records human acceptance; cohort metric still missing |
+| Human PM/Architect review as authority | **Improved (#275)** | Gate blocks approval + dispatch; product API records human PM/Architect acceptance with audit events; cohort metric still missing |
 | Real GitHub PR merge as default GP-022 | **Partial** | Code paths exist; local live proof often has no real PR target |
 | forgeadapter full lifecycle in live proof | **Partial** | Service up; local live path commonly `STAGING_SKIP_FORGE_*` |
 | Hermes real runtime | **De-scoped (#272 / Q7)** | Non-critical for Simple claims; hermes-mock `:14002` opt-in non-claim smoke only |
@@ -266,7 +266,7 @@ This file is the exhaustive readiness assessment requested as item 5. It should 
 
 | Priority | Work | Unblocks |
 | --- | --- | --- |
-| P2.1 | Human PM/Architect review gate product flow + evidence | Decision Q6 compliance |
+| P2.1 | Human PM/Architect review gate product flow + evidence | **Done (#275)** — product API + dispatch gate |
 | P2.2 | Metrics MVP + run **≥10** Simple trusted closes | Near-term bar |
 | P2.3 | Vercel purge verification pass | Topology decision Q3 |
 
