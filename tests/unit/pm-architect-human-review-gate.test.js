@@ -144,6 +144,9 @@ test('wired auto-approval policy is blocked while agent disagreement lacks human
   const blocked = evaluateExecutionContractAutoApprovalPolicy({ contract: disagree });
   assert.equal(blocked.pmArchitectHumanReviewGate.required, true);
   assert.equal(blocked.pmArchitectHumanReviewGate.satisfied, false);
+  // Primary authorization field used by product approve path (#275 skeptic fix).
+  assert.equal(blocked.canAutoApprove, false);
+  assert.equal(blocked.status, 'blocked');
   assert.equal(blocked.eligible === true && blocked.approved === true, false);
   assert.ok(
     (blocked.blocked_reasons || []).includes('pm_architect_agent_disagreement_requires_human_review')
@@ -161,6 +164,8 @@ test('wired auto-approval policy is blocked while agent disagreement lacks human
     },
   });
   assert.equal(cleared.pmArchitectHumanReviewGate.satisfied, true);
+  // After human acceptance, canAutoApprove may be true if other Simple criteria hold.
+  assert.equal(cleared.pmArchitectHumanReviewGate.canAutoApprove, true);
 });
 
 test('no disagreement keeps human gate optional', () => {
