@@ -158,7 +158,10 @@
     "factory:stack:accept": "node scripts/factory-stack.js accept",
     "factory:stack:verify": "node scripts/verify-factory-stack-acceptance.js",
     "issue-274:verify": "node scripts/verify-issue-274-acceptance.js",
-    "issue-273:verify": "node scripts/verify-issue-273-acceptance.js"
+    "issue-273:verify": "node scripts/verify-issue-273-acceptance.js",
+    "issue-277:verify": "node scripts/verify-vercel-factory-purge.js",
+    "cohort:simple-trusted": "node scripts/build-simple-trusted-cohort-report.js",
+    "issue-276:cohort": "node scripts/build-simple-trusted-cohort-report.js"
   },
   "repository": {
     "type": "git",

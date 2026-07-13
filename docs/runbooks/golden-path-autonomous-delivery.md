@@ -103,6 +103,26 @@ npm run issue-273:verify
 - Evidence package must store real PR URL + merge SHA (`lib/task-platform/trusted-simple-close-evidence.js`).
 - Auditor: `npm run issue-274:verify`.
 
+### Simple trusted cohort + metrics MVP (GitLab #276)
+
+Near-term bar (Q1): ≥10 Simple operator-trusted closes with live session evidence and ≥80% autonomous rate.
+
+```bash
+npm run cohort:simple-trusted
+# writes observability/trusted-simple-close/cohort-report.json
+# and docs/reports/SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md
+```
+
+Trusted close definition (evaluator): `phase6_complete` closeout/evidence, zero recorded manual interventions, ≥1 live `specialist-delegation-*` session id.
+
+### Factory host is coordinated stack only (GitLab #277)
+
+Vercel is **not** part of the factory tech stack. Active claim docs are checked by:
+
+```bash
+npm run issue-277:verify
+```
+
 ### Human PM + Architect acceptance (Q6 / GitLab #275)
 
 Agent-authored PM/Architect outputs are **proposals**. Before operator approval, Simple auto-approval eligibility, or implementation dispatch:
@@ -706,7 +726,7 @@ node scripts/seed-golden-path-phase0.js \
   --base-url https://<your-hosted-et-api>
 ```
 
-`replay-golden-path-postgres.js` sets `PGSSLMODE=disable` before forge seed for local Docker Postgres; hosted replay uses Vercel `DATABASE_URL` with verified TLS.
+`replay-golden-path-postgres.js` sets `PGSSLMODE=disable` before forge seed for local Docker Postgres; hosted/operator replay uses coordinated-stack `DATABASE_URL` (TLS when remote Postgres requires it). Vercel is not the factory data host.
 
 Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and completed steps `GP-001`, `GP-002`, `GP-005`.
 
