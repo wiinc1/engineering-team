@@ -145,7 +145,7 @@ Original recommendation was 30 / 90 days; operator directed **half** → **15 / 
 
 ## Open follow-ups (implementation, not re-opened policy)
 
-- [ ] Inventory and remove Vercel-specific runtime/deploy surface (`vercel.json`, API adapter assumptions, runbooks, smoke targets, package scripts).  
+- [x] Inventory and remove Vercel-specific runtime/deploy surface (`vercel.json`, API adapter assumptions, runbooks, smoke targets, package scripts). (#277 verifier: `node scripts/verify-vercel-factory-purge.js`)
 - [x] Productize human PM review + human Architect review as explicit workflow gates (events, UI next-action, metrics classification). (#275 product API + dispatch gate; deeper UI chrome optional follow-up)
 - [ ] Re-baseline milestone verify against live OpenClaw + half-timeline exit criteria.  
 

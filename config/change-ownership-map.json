@@ -516,7 +516,10 @@
         "^scripts/(advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-issue-279-local|reseed-tsk-001-local|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers)\\.js$",
         "^scripts/deploy/audit-workers\\.systemd\\.service$",
         "^src/app/command-center-queue\\.mjs$",
-        "^src/app/shell/.+\\.jsx$"
+        "^src/app/shell/.+\\.jsx$",
+        "^scripts/build-simple-trusted-cohort-report\\.js$",
+        "^scripts/verify-vercel-factory-purge\\.js$",
+        "^lib/task-platform/simple-trusted-cohort\\.js$"
       ],
       "test_requirements": [
         {

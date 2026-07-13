@@ -115,10 +115,10 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 | forgeadapter full lifecycle in live proof | **Partial** | Service up; local live path commonly `STAGING_SKIP_FORGE_*` |
 | Hermes real runtime | **De-scoped (#272 / Q7)** | Non-critical for Simple claims; hermes-mock `:14002` opt-in non-claim smoke only |
 | Always-on host services (API/workers/DB/UI/forge) | **Works** (#269) | Full `factory:stack` launchd set + postgres ensure watcher; OpenClaw separate launchd |
-| ≥10 Simple operator-trusted closes | **Missing** | Single-task proof (e.g. TSK-020), not cohort metric |
-| Metrics MVP (delivery rate / interventions) | **Partial** | Metrics surfaces exist historically; not shown as live cohort dashboard for 10-task bar |
-| Dual-remote primary/backup discipline | **Partial** | Policy + tooling; tips currently diverge |
-| Vercel removed from factory claims | **Partial** | Decision locked; full purge not verified in this assessment pass |
+| ≥10 Simple operator-trusted closes | **Partial (#276 tooling)** | Cohort evaluator + report: see `docs/reports/SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md` (trusted count / bar status in JSON); expand live phase6+session closes until ≥10 |
+| Metrics MVP (delivery rate / interventions) | **Improved (#276)** | `npm run cohort:simple-trusted` builds aggregate metrics + trusted-close cohort from closeouts/live evidence |
+| Dual-remote primary/backup discipline | **Improved (#279 shipped)** | Mirror agent MVP on main; re-equalize tips after each primary ship (`npm run remotes:mirror:merge`) |
+| Vercel removed from factory claims | **Done (#277)** | No `vercel.json`; active claim docs fail closed via `npm run issue-277:verify` (historical reports residual-labeled) |
 | Multi-repo / external product delivery | **Missing** (deferred by Q4) | Explicitly out of near-term scope |
 
 ---
@@ -267,8 +267,8 @@ This file is the exhaustive readiness assessment requested as item 5. It should 
 | Priority | Work | Unblocks |
 | --- | --- | --- |
 | P2.1 | Human PM/Architect review gate product flow + evidence | **Done (#275)** — product API + dispatch gate |
-| P2.2 | Metrics MVP + run **≥10** Simple trusted closes | Near-term bar |
-| P2.3 | Vercel purge verification pass | Topology decision Q3 |
+| P2.2 | Metrics MVP + run **≥10** Simple trusted closes | **Partial** — metrics/cohort tooling shipped; continue live cohort until barMet |
+| P2.3 | Vercel purge verification pass | **Done (#277)** |
 
 ### P3 — Expand class / multi-repo (after P2 green)
 
