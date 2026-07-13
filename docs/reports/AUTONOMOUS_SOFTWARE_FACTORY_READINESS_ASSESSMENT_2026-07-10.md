@@ -10,7 +10,7 @@
 
 - Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process.
 - Evidence expected for this change: live milestone C/D completion artifacts; dual-remote policy and tip status; host runtime snapshot (OpenClaw live vs mocks); factory autonomy decisions and control-plane PRD.
-- Gap observed: success metric cohort (≥10 Simple trusted closes) not run; Hermes remains mock; forge often skipped on local live path. Durable API+workers launchd stack shipped (#269); golden-path defaults live OpenClaw; Q6 human PM/Architect factory wiring landed. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source https://github.com/wiinc1/engineering-team/blob/main/docs/reports/FACTORY_AUTONOMY_DECISIONS.md).
+- Gap observed: success metric cohort (≥10 Simple trusted closes) not run; forge often skipped on local live path. Hermes claim ambiguity closed by #272 / Q7 de-scope. Durable API+workers launchd stack shipped (#269); golden-path defaults live OpenClaw; Q6 human PM/Architect factory wiring landed. Documented rationale: progressive autonomy requires a reboot-safe factory of record and truthful live evidence before delivery-rate claims (source https://github.com/wiinc1/engineering-team/blob/main/docs/reports/FACTORY_AUTONOMY_DECISIONS.md).
 
 ## Required Evidence
 
@@ -32,7 +32,7 @@ It does **not** yet meet the locked success bar for an autonomous software facto
 | Near-term (~15 days) | ≥80% operator-trusted autonomous delivery on **≥10 closed Simple/low-risk tasks**, zero post-approval interventions | **Not met** — loop proven once; not 10 trusted closes |
 | Factory of record | Always-on coordinated stack (Postgres + API + workers + UI + forgeadapter + **real** OpenClaw) | **Met for host stack (#269)** — `factory:stack:*` launchd KeepAlive for postgres-ensure, API, workers, UI, forgeadapter; compose Postgres `restart: unless-stopped` + volume; OpenClaw live launchd |
 | Human gates | Human PM/Architect review before contract authority | **Partial → improved** — Q6 gate blocks agent-authored proposals without human acceptance; factory agent-driven phase1 records supervised human PM/Architect reviews on the contract |
-| Real services | Live OpenClaw/Hermes/forge in the loop (not mocks) | **Partial → improved** — `dev:golden-path:up` defaults to live OpenClaw `:18789` (mock only with `--use-openclaw-mock`); Hermes mock remains; forge often skipped in local live proof |
+| Real services | Live OpenClaw/Hermes/forge in the loop (not mocks) | **Partial → improved** — live OpenClaw default; Hermes **de-scoped (#272 / Q7)** (mock non-claim only); forge often skipped in local live proof |
 
 **Overall readiness (goal attainment, not code maturity): ~45–55%.** (was ~35–45% pre #269 + gap closeout)
 
@@ -113,7 +113,7 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 | Human PM/Architect review as authority | **Partial** | Gate enforces Q6 on agent proposals; factory path records human acceptance; cohort metric still missing |
 | Real GitHub PR merge as default GP-022 | **Partial** | Code paths exist; local live proof often has no real PR target |
 | forgeadapter full lifecycle in live proof | **Partial** | Service up; local live path commonly `STAGING_SKIP_FORGE_*` |
-| Hermes real runtime | **Missing** | Mock only on `:14002` |
+| Hermes real runtime | **De-scoped (#272 / Q7)** | Non-critical for Simple claims; hermes-mock `:14002` opt-in non-claim smoke only |
 | Always-on host services (API/workers/DB/UI/forge) | **Works** (#269) | Full `factory:stack` launchd set + postgres ensure watcher; OpenClaw separate launchd |
 | ≥10 Simple operator-trusted closes | **Missing** | Single-task proof (e.g. TSK-020), not cohort metric |
 | Metrics MVP (delivery rate / interventions) | **Partial** | Metrics surfaces exist historically; not shown as live cohort dashboard for 10-task bar |
@@ -172,10 +172,10 @@ Legend: **Works** = evidenced end-to-end on stack · **Partial** = code + some p
 | Real today | Still mock / skipped |
 | --- | --- |
 | OpenClaw `:18789` **default** for `dev:golden-path:up` and factory stack | OpenClaw mock `:14001` only with `--use-openclaw-mock` |
-| forgeadapter process | Hermes `:14002` mock |
+| forgeadapter process | Hermes **de-scoped** for claims (#272); mock `:14002` non-claim only |
 | Live C/D agent sessions | Full forge seed/start/review often **skipped** for local live proof |
 
-**Risk residual:** Hermes + forge still incomplete for full claim topology; mock path remains for isolated smoke only.
+**Risk residual:** Forge may still be incomplete for full claim topology; Hermes is explicitly non-critical for Simple claims (Q7). Mock paths remain for isolated non-claim smoke only.
 
 ### 6.3 “Autonomous delivery” vs “agent session proof” — improved labeling
 
@@ -215,8 +215,8 @@ Closeout reports **21 automated / 2 still manual / 4 automated-pending**. That i
    - stop treating `:14001` mock as default for factory claims  
    - document/fail closed if live gateway down under `FACTORY_PROOF_PROFILE=live`  
 
-3. **Real Hermes decision**  
-   - wire real Hermes **or** declare Hermes non-critical and remove mock dependency from claim paths  
+3. **Real Hermes decision** — **Done (#272 / Q7)**  
+   - Hermes declared non-critical for Simple factory claims; hermes-mock is opt-in non-claim smoke only  
 
 4. **Forge real-or-redesign**  
    - either live OpenClaw child-session protocol for forgeadapter, **or** factory delivery that does not require forge for Simple class  
@@ -258,7 +258,7 @@ This file is the exhaustive readiness assessment requested as item 5. It should 
 
 | Priority | Work | Unblocks |
 | --- | --- | --- |
-| P1.1 | Hermes real or explicit de-scope | Clean topology |
+| P1.1 | Hermes real or explicit de-scope | **Done (#272 / Q7 de-scope)** |
 | P1.2 | Forge live integration or Simple-class forge-optional policy | Full GP-010… lifecycle honesty |
 | P1.3 | Real PR/merge path for Simple trusted closes (not synthetic JSON) | Success metric validity |
 
@@ -289,7 +289,7 @@ This file is the exhaustive readiness assessment requested as item 5. It should 
 ### Item 4 — Replace proof mocks with real services
 
 **Status: partial (OpenClaw default fixed).**  
-**Real OpenClaw is stack default** (`:18789`). Mock is opt-in only. **Hermes mock remains.** **Forge is real as a process but optional/skipped in local live proof.** Trusted-delivery implementer path forbids synthetic PR evidence.
+**Real OpenClaw is stack default** (`:18789`). Mock is opt-in only. **Hermes is de-scoped for claims (#272 / Q7)**; hermes-mock is non-claim smoke only. **Forge is real as a process but optional/skipped in local live proof.** Trusted-delivery implementer path forbids synthetic PR evidence.
 
 **Why it matters for the goal:** fixture/mock-free claims are a prerequisite for operator-trusted delivery rate; dual mock+live topology was an operator footgun.
 
@@ -304,7 +304,7 @@ Evidence is current as of 2026-07-10 live C/D and host runtime snapshot. Re-scor
 
 1. **Done (partial):** P0.1 API+workers launchd; P0.3 live OpenClaw stack default; Q6 factory human gate wiring; trusted vs session implementer prompts.  
 2. **P0.2** — Keep dual-remote tips equalized (GitLab primary).  
-3. **P1** — Hermes real-or-descope; forge live integration or Simple forge-optional policy.  
+3. **P1** — **Hermes de-scoped (#272 / Q7)**; forge live integration or Simple forge-optional policy.  
 4. **P2** — Run and instrument **≥10 Simple** trusted closes (real PR path + measured human gates).  
 5. **Re-issue this assessment** after the 10-task cohort.
 

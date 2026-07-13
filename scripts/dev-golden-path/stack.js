@@ -237,11 +237,16 @@ async function resolveUpstreamUrls(options) {
     process.stdout.write(`OpenClaw URL: ${openclawUrl}\n`);
   }
 
+  // Hermes is non-critical for factory claims (GitLab #272). hermes-mock is
+  // opt-in non-claim smoke only — never part of required claim topology.
   if (!options.skipMocks && !hermesUrl) {
     const mock = await startHermesMock(DEFAULTS.hermesPort);
     mockServers.push(mock);
     hermesUrl = mock.baseUrl;
-    process.stdout.write(`Hermes mock listening on ${hermesUrl}\n`);
+    process.stdout.write(
+      `Hermes mock listening on ${hermesUrl} `
+      + '(optional non-claim smoke only; not required for factory-of-record claims — GitLab #272)\n',
+    );
   }
   return { openclawUrl, hermesUrl, mockServers };
 }
