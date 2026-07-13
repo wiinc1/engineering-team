@@ -14,6 +14,7 @@ const {
   evaluateExecutionContractApprovalReadiness,
   evaluateExecutionContractAutoApprovalPolicy,
   evaluateExecutionContractDispatchReadiness,
+  buildExecutionContractAutoApprovalRecord,
 } = require('../../lib/audit/execution-contracts');
 
 const {
@@ -100,7 +101,15 @@ describe('product path human PM/Architect gate (GitLab #275)', () => {
   });
 
   it('blocks approval, auto-approval, and dispatch for agent-only proposals', () => {
-    const contract = agentProposalContract();
+    const contract = agentProposalContract({
+      auto_approval_signals: {
+        touchesProductionAuth: false,
+        touchesSecurityPaths: false,
+        touchesDataModel: false,
+        hasUnresolvedDependencies: false,
+        hasClearRollbackPath: true,
+      },
+    });
     const gate = evaluatePmArchitectHumanReviewGate(contract);
     assert.equal(gate.required, true);
     assert.equal(gate.satisfied, false);
@@ -109,9 +118,30 @@ describe('product path human PM/Architect gate (GitLab #275)', () => {
     assert.equal(approval.canApprove, false);
     assert.equal(approval.status, 'blocked_human_review');
 
+    // Primary auto-approval authorization field used by approveLatestExecutionContract.
     const auto = evaluateExecutionContractAutoApprovalPolicy({ contract });
     assert.equal(auto.pmArchitectHumanReviewGate.satisfied, false);
-    assert.notEqual(auto.eligible === true && auto.approved === true, true);
+    assert.equal(auto.canAutoApprove, false);
+    assert.equal(auto.status, 'blocked');
+    assert.equal(auto.eligible, false);
+    assert.equal(auto.approved, false);
+    assert.equal(auto.approved_by_policy, false);
+    assert.ok((auto.blocked_reasons || []).includes('pm_architect_agent_proposals_require_human_review')
+      || (auto.blocked_reasons || []).includes('missing_human_pm_review'));
+
+    // buildExecutionContractAutoApprovalRecord must not claim policy approval when canAutoApprove is false.
+    if (typeof buildExecutionContractAutoApprovalRecord === 'function') {
+      const record = buildExecutionContractAutoApprovalRecord({
+        policy: auto,
+        contract,
+        actorId: 'operator-1',
+      });
+      // Implementations either return null/undefined or a non-approved record.
+      if (record != null) {
+        assert.notEqual(record.approved_by_policy, true);
+        assert.notEqual(record.approved === true && record.approved_by_policy === true, true);
+      }
+    }
 
     const dispatch = evaluateExecutionContractDispatchReadiness({ contract: { ...contract, status: 'approved' } });
     assert.equal(dispatch.canDispatch, false);
