@@ -94,6 +94,12 @@ Original recommendation was 30 / 90 days; operator directed **half** → **15 / 
 
 **Implication for progressive autonomy:** Simple auto-approval policy may still skip *operator* rubber-stamp where eligibility holds, but it must **not** skip required **human PM/Architect review** when those roles are on the route. Autonomy expands *after* those humans have signed the contract quality, not by treating specialist agents as final PM/Architect.
 
+**Product enforcement (GitLab #275):**  
+- Gate module: `lib/audit/pm-architect-human-review-gate.js` (approval, Simple auto-approval, **and** implementation dispatch).  
+- Product record path: `POST /tasks/:taskId/execution-contract:human-pm-architect-review` via `lib/audit/pm-architect-human-review-record.js` (writes contract version + `task.pm_architect_human_review_recorded`; agent actors rejected).  
+- Browser helper: `src/features/task-detail/humanPmArchitectReview.js`.  
+- Agent-only PM/Architect approval cannot clear approval or dispatch when the gate is required.
+
 ---
 
 ### Q7 — Hermes runtime on factory claim path — **Accepted: de-scope (GitLab #272)**
@@ -140,7 +146,7 @@ Original recommendation was 30 / 90 days; operator directed **half** → **15 / 
 ## Open follow-ups (implementation, not re-opened policy)
 
 - [ ] Inventory and remove Vercel-specific runtime/deploy surface (`vercel.json`, API adapter assumptions, runbooks, smoke targets, package scripts).  
-- [ ] Productize human PM review + human Architect review as explicit workflow gates (events, UI next-action, metrics classification).  
+- [x] Productize human PM review + human Architect review as explicit workflow gates (events, UI next-action, metrics classification). (#275 product API + dispatch gate; deeper UI chrome optional follow-up)
 - [ ] Re-baseline milestone verify against live OpenClaw + half-timeline exit criteria.  
 
 ---
