@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { it } = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
@@ -83,7 +83,37 @@ function createMemoryStore(initialHistory = []) {
   };
 }
 
-describe('product path human PM/Architect gate (GitLab #275)', () => {
+function createReviewHistory(contract) {
+  const occurredAt = new Date().toISOString();
+  return [
+    {
+      event_id: 'evt-create',
+      tenant_id: 'engineering-team',
+      task_id: 'TSK-275',
+      event_type: 'task.created',
+      actor_id: 'operator',
+      actor_type: 'user',
+      sequence_number: 1,
+      occurred_at: occurredAt,
+      payload: {
+        title: 'Issue 275 human gate',
+        raw_requirements: 'As an operator I need human PM/Architect acceptance before dispatch.',
+      },
+    },
+    {
+      event_id: 'evt-version',
+      tenant_id: 'engineering-team',
+      task_id: 'TSK-275',
+      event_type: 'task.execution_contract_version_recorded',
+      actor_id: 'pm-agent',
+      actor_type: 'agent',
+      sequence_number: 2,
+      occurred_at: occurredAt,
+      payload: { version: 1, contract },
+    },
+  ];
+}
+
   it('registers durable audit event type', () => {
     assert.equal(isWorkflowAuditEventType(PM_ARCHITECT_HUMAN_REVIEW_EVENT), true);
   });
@@ -191,35 +221,7 @@ describe('product path human PM/Architect gate (GitLab #275)', () => {
 
   it('recordPmArchitectHumanReviews writes contract version + human review audit events', async () => {
     const contract = agentProposalContract();
-    const created = {
-      event_id: 'evt-create',
-      tenant_id: 'engineering-team',
-      task_id: 'TSK-275',
-      event_type: 'task.created',
-      actor_id: 'operator',
-      actor_type: 'user',
-      sequence_number: 1,
-      occurred_at: new Date().toISOString(),
-      payload: {
-        title: 'Issue 275 human gate',
-        raw_requirements: 'As an operator I need human PM/Architect acceptance before dispatch.',
-      },
-    };
-    const version = {
-      event_id: 'evt-version',
-      tenant_id: 'engineering-team',
-      task_id: 'TSK-275',
-      event_type: 'task.execution_contract_version_recorded',
-      actor_id: 'pm-agent',
-      actor_type: 'agent',
-      sequence_number: 2,
-      occurred_at: new Date().toISOString(),
-      payload: {
-        version: 1,
-        contract,
-      },
-    };
-    const store = createMemoryStore([created, version]);
+    const store = createMemoryStore(createReviewHistory(contract));
     assert.equal(canRecordPmArchitectHumanReview({ roles: ['pm'] }), true);
     assert.equal(canRecordPmArchitectHumanReview({ roles: ['reader'] }), false);
 
@@ -264,4 +266,3 @@ describe('product path human PM/Architect gate (GitLab #275)', () => {
       (error) => error.code === 'agent_cannot_record_human_review' || error.statusCode === 403,
     );
   });
-});

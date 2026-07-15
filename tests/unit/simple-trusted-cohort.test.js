@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { it } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -12,7 +12,6 @@ const {
   DEFAULT_BAR,
 } = require('../../lib/task-platform/simple-trusted-cohort');
 
-describe('simple-trusted-cohort (#276)', () => {
   it('extracts live specialist-delegation session ids', () => {
     const sessions = extractLiveSessions({
       a: 'specialist-delegation-6eeeca15-04e1-46ff-bbb2-2e0137035f58',
@@ -94,4 +93,3 @@ describe('simple-trusted-cohort (#276)', () => {
     assert.equal(cohort.summary.barMet, true);
     assert.ok(cohort.summary.autonomous_delivery_rate >= 0.8);
   });
-});

@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const { handleForgeUxDelegationCompletion } = require('../../lib/task-platform/forge-ux-review-automation');
+const { optionalHermesMockNotice } = require('./hermes-notice');
 
 function createJsonResponse(response, statusCode, payload) {
   response.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8' });
@@ -245,4 +246,5 @@ module.exports = {
   spawnSpecialistDelegation,
   startOpenClawMock,
   startHermesMock,
+  optionalHermesMockNotice,
 };

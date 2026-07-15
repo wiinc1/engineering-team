@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
   HERMES_CLAIM_DECISION,
@@ -22,7 +22,6 @@ const {
   DEFAULT_PORTS,
 } = require('../../lib/task-platform/factory-stack/defaults');
 
-describe('factory-hermes-claim-policy (GitLab #272)', () => {
   it('records de-scope decision for Simple / live claim profiles', () => {
     assert.equal(HERMES_CLAIM_DECISION.issue, 272);
     assert.equal(HERMES_CLAIM_DECISION.role, 'non-critical');
@@ -165,4 +164,3 @@ describe('factory-hermes-claim-policy (GitLab #272)', () => {
       else process.env.HERMES_BASE_URL = prev;
     }
   });
-});

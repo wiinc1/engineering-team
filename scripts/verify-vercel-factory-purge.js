@@ -71,8 +71,8 @@ function lineHits(text, pattern) {
   return hits;
 }
 
-function main() {
-  const report = {
+function createReport() {
+  return {
     schemaVersion: 'vercel-factory-purge-verify.v1',
     issue: 277,
     generatedAt: new Date().toISOString(),
@@ -82,7 +82,9 @@ function main() {
     residualHistorical: [],
     ok: true,
   };
+}
 
+function inspectRuntimeArtifacts(report) {
   if (report.vercelJsonPresent) {
     report.ok = false;
     report.activeFindings.push({ file: 'vercel.json', detail: 'vercel.json present — remove for factory purge' });
@@ -91,44 +93,57 @@ function main() {
     report.ok = false;
     report.activeFindings.push({ file: '.vercel', detail: '.vercel directory present' });
   }
+}
 
+function inspectActiveClaims(report) {
   for (const rel of ACTIVE_GLOBS) {
     const text = read(rel);
     if (text == null) continue;
     for (const pattern of FORBIDDEN_CLAIM_PATTERNS) {
-      const hits = lineHits(text, pattern);
-      for (const hit of hits) {
+      for (const hit of lineHits(text, pattern)) {
         report.ok = false;
         report.activeFindings.push({ file: rel, ...hit, pattern: String(pattern) });
       }
     }
   }
+}
 
-  // Historical residual inventory (non-blocking when labeled)
-  const historicalRoots = ['docs/reports', 'docs/design', 'docs/issues'];
-  for (const root of historicalRoots) {
-    const abs = path.join(ROOT, root);
-    if (!fs.existsSync(abs)) continue;
-    const walk = (dir) => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (/\.(md|json)$/.test(entry.name)) {
-          const text = fs.readFileSync(full, 'utf8');
-          if (/vercel/i.test(text)) {
-            report.residualHistorical.push(path.relative(ROOT, full));
-          }
-        }
-      }
-    };
-    walk(abs);
+function collectHistoricalFiles(dir, report) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) collectHistoricalFiles(full, report);
+    else if (/\.(md|json)$/.test(entry.name) && /vercel/i.test(fs.readFileSync(full, 'utf8'))) {
+      report.residualHistorical.push(path.relative(ROOT, full));
+    }
   }
+}
 
+function inspectHistoricalReferences(report) {
+  for (const root of ['docs/reports', 'docs/design', 'docs/issues']) {
+    const absolute = path.join(ROOT, root);
+    if (fs.existsSync(absolute)) collectHistoricalFiles(absolute, report);
+  }
+}
+
+function writeReport(report) {
   const outDir = path.join(ROOT, 'observability', 'factory-closeout');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, 'issue-277-vercel-purge.json');
   fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
-  process.stdout.write(`${JSON.stringify({ ok: report.ok, activeFindings: report.activeFindings.length, residualHistorical: report.residualHistorical.length, outPath }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({
+    ok: report.ok,
+    activeFindings: report.activeFindings.length,
+    residualHistorical: report.residualHistorical.length,
+    outPath,
+  }, null, 2)}\n`);
+}
+
+function main() {
+  const report = createReport();
+  inspectRuntimeArtifacts(report);
+  inspectActiveClaims(report);
+  inspectHistoricalReferences(report);
+  writeReport(report);
   process.exit(report.ok ? 0 : 1);
 }
 
