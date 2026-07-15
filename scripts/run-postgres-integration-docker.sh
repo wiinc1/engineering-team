@@ -17,5 +17,8 @@ cd "$ROOT_DIR"
 
 POSTGRES_HOST_PORT="$POSTGRES_HOST_PORT" ${COMPOSE} up -d postgres
 POSTGRES_HOST_PORT="$POSTGRES_HOST_PORT" ${COMPOSE} exec -T postgres sh -lc 'until pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 1; done'
+POSTGRES_HOST_PORT="$POSTGRES_HOST_PORT" ${COMPOSE} exec -T postgres \
+  psql -v ON_ERROR_STOP=1 -U audit -d engineering_team < "$ROOT_DIR/db/roles/job_runtime_roles.sql"
 PGSSLMODE="$PGSSLMODE" DATABASE_URL="$DATABASE_URL" npm run audit:migrate
+PGSSLMODE="$PGSSLMODE" DATABASE_URL="$DATABASE_URL" npm run job-runtime:setup
 PGSSLMODE="$PGSSLMODE" DATABASE_URL="$DATABASE_URL" npm run test:integration:postgres

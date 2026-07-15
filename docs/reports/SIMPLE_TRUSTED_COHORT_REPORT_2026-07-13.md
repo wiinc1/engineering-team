@@ -4,6 +4,19 @@
 **Policy:** simple-trusted-cohort.v1
 **Issue:** GitLab #276 / factory autonomy Q1 bar
 
+## Standards Alignment
+
+- Applicable standards areas: testing and quality assurance; observability and evidence provenance; deployment and release claims; team and process governance.
+- Evidence expected for this change: deterministic `simple-trusted-cohort.v1` evaluation, versioned closeout and live-session inputs, aggregate metric output, and explicit reporting when the locked cohort size or delivery-rate target is not met.
+- Gap observed: only 6 trusted Simple closes were evidenced and the evaluated cohort delivery rate was 0.6667, below the targets of 10 closes and 0.8. Documented rationale: autonomy claims require live specialist-session evidence and zero post-approval interventions for every trusted close (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/276).
+
+## Required Evidence
+
+- Commands run: `npm run cohort:simple-trusted`; `npm run standards:check`.
+- Tests added or updated: existing evaluator coverage is in `tests/unit/simple-trusted-cohort.test.js`; this generated report adds no runtime test.
+- Rollout or rollback notes: this is an evidence report and performs no rollout; regenerate it from canonical closeout evidence or revert the report and generated JSON together.
+- Docs updated: this cohort report; machine-readable evidence is `observability/trusted-simple-close/cohort-report.json`.
+
 ## Bar
 
 | Metric | Target | Actual |
@@ -74,4 +87,3 @@
 ## Residual
 
 - Bar not met: need 4 more trusted Simple closes with live session evidence.
-

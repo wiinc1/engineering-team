@@ -1,0 +1,28 @@
+erDiagram
+  JOB_DELIVERY_REGISTRY {
+    uuid delivery_id PK
+    varchar tenant_id
+    varchar workload_id
+    varchar semantic_job_key UK
+    varchar task_identifier
+    smallint payload_version
+    text graphile_job_id "opaque reference"
+    varchar named_queue
+    smallint max_attempts
+    varchar canonical_resource_type
+    varchar canonical_resource_id
+    varchar status "delivery only"
+    varchar correlation_id
+    integer payload_size_bytes
+    timestamptz scheduled_for
+    timestamptz updated_at
+  }
+  GRAPHILE_WORKER_SCHEMA {
+    text opaque_objects "adapter-owned; no application joins"
+  }
+  CANONICAL_TASK_AUDIT_STATE {
+    text domain_identity PK
+    text canonical_business_state
+  }
+  JOB_DELIVERY_REGISTRY }o..|| GRAPHILE_WORKER_SCHEMA : "stores opaque job reference only"
+  JOB_DELIVERY_REGISTRY }o..|| CANONICAL_TASK_AUDIT_STATE : "references identity; never defines completion"
