@@ -1,0 +1,55 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: graphile-01-runtime-resilience
+spec:
+  entry: graphile-runtime-chaos
+  templates:
+    - name: graphile-runtime-chaos
+      templateType: Serial
+      children:
+        - worker-pod-kill
+        - postgres-network-loss
+        - postgres-latency
+        - sigterm-deadline
+    - name: worker-pod-kill
+      templateType: PodChaos
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          labelSelectors:
+            app: job-runtime-worker
+    - name: postgres-network-loss
+      templateType: NetworkChaos
+      networkChaos:
+        action: loss
+        mode: all
+        selector:
+          labelSelectors:
+            app: job-runtime-worker
+        loss:
+          loss: '100'
+        duration: 30s
+    - name: postgres-latency
+      templateType: NetworkChaos
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          labelSelectors:
+            app: job-runtime-worker
+        delay:
+          latency: 500ms
+          jitter: 100ms
+        duration: 60s
+    - name: sigterm-deadline
+      templateType: PodChaos
+      podChaos:
+        action: container-kill
+        mode: one
+        containerNames:
+          - job-runtime-worker
+        selector:
+          labelSelectors:
+            app: job-runtime-worker

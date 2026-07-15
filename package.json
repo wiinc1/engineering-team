@@ -62,7 +62,11 @@
     "test:performance": "node --test tests/performance/*.test.js",
     "test:security": "node --test tests/security/*.test.js",
     "test:chaos": "node --test chaos/*.test.js",
-    "test:integration:postgres": "node --test tests/integration/audit-postgres-e2e.test.js tests/integration/registration-auth-migration-postgres.integration.test.js tests/integration/factory-delivery-queue-postgres.integration.test.js",
+    "test:graphile": "node --test tests/unit/job-runtime-*.test.js tests/contract/job-runtime.contract.test.js tests/e2e/job-runtime.e2e.test.js tests/property/job-runtime.property.test.js tests/security/job-runtime.security.test.js chaos/job-runtime-resilience.test.js",
+    "test:graphile:coverage": "node --test --experimental-test-coverage --test-coverage-include='lib/job-runtime/*.js' --test-coverage-lines=95 --test-coverage-functions=95 --test-coverage-branches=90 tests/unit/job-runtime-*.test.js",
+    "test:graphile:load": "bash scripts/run-job-runtime-load-docker.sh",
+    "test:graphile:mutation": "stryker run stryker.graphile-01.conf.json",
+    "test:integration:postgres": "node --test tests/integration/audit-postgres-e2e.test.js tests/integration/registration-auth-migration-postgres.integration.test.js tests/integration/factory-delivery-queue-postgres.integration.test.js tests/integration/job-runtime-postgres.integration.test.js",
     "test:integration:api": "node --test tests/integration/audit-migrations.integration.test.js tests/integration/autonomous-delivery-metrics.integration.test.js tests/integration/live-task-updates.integration.test.js tests/integration/role-inbox-filtering.integration.test.js tests/integration/pm-overview-filtering.integration.test.js tests/integration/task-list-owner-filters.integration.test.js tests/integration/task-assignment-integration.test.js tests/integration/task-detail-next-action.integration.test.js tests/integration/task-platform-source-policy.integration.test.js tests/integration/task-platform-github-check.integration.test.js tests/integration/task-platform-branch-protection.integration.test.js tests/integration/task-platform-pr-summary.integration.test.js tests/integration/lint-repo.integration.test.js tests/integration/specialist-delegation.integration.test.js",
     "test:integration:role-inbox": "node --test tests/integration/role-inbox-filtering.integration.test.js",
     "test:integration:pm-overview": "node --test tests/integration/pm-overview-filtering.integration.test.js",
@@ -77,6 +81,8 @@
     "audit:project": "node scripts/process-audit-projection-queue.js",
     "audit:outbox": "node scripts/process-audit-outbox.js",
     "audit:migrate": "node scripts/migrate-audit-postgres.js",
+    "job-runtime:setup": "node scripts/setup-job-runtime-postgres.js",
+    "job-runtime:worker": "node scripts/run-job-runtime-worker.js",
     "task-platform:backfill": "node scripts/backfill-task-platform.js",
     "task-platform:rollout": "node scripts/rollout-task-platform.js",
     "task-platform:verify": "node scripts/verify-task-platform-rollout.js",
@@ -175,10 +181,12 @@
   },
   "homepage": "https://github.com/wiinc1/engineering-team#readme",
   "dependencies": {
+    "ajv": "8.20.0",
+    "graphile-worker": "0.17.3",
     "pg": "^8.20.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "ws": "^8.20.0"
+    "ws": "8.21.0"
   },
   "devDependencies": {
     "@google/design.md": "0.1.1",
@@ -187,12 +195,12 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@vitejs/plugin-react": "^5.1.0",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "3.2.6",
     "axe-core": "^4.10.3",
-    "esbuild": "^0.27.4",
+    "esbuild": "0.28.1",
     "jsdom": "^26.1.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.3",
-    "vitest": "^3.2.4"
+    "vite": "8.0.16",
+    "vitest": "3.2.6"
   }
 }

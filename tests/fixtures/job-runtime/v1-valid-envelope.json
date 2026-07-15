@@ -1,0 +1,17 @@
+{
+  "catalogVersion": 1,
+  "deliveryId": "00000000-0000-4000-8000-000000000286",
+  "task": "job_runtime.synthetic",
+  "version": 1,
+  "tenantId": "tenant-one",
+  "workloadId": "probe-286",
+  "correlation": {
+    "correlationId": "corr-286",
+    "requestId": "request-286",
+    "traceId": "0123456789abcdef0123456789abcdef"
+  },
+  "data": {
+    "probeId": "probe-286",
+    "expectedOutcome": "acknowledge"
+  }
+}
