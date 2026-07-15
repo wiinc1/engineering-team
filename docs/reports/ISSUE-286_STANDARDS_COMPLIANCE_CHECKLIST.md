@@ -18,7 +18,7 @@
 - Standards baseline reviewed: `docs/standards/software-development-standards.md`.
 - Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring; authentication and secret handling; team and process.
 - Evidence expected for this change: dependency review, ADR, schema/workflow/C4 diagrams, migrations, real-Postgres tests, payload contracts, graceful-shutdown/chaos/load tests, alert fixtures, and exact compliance output.
-- Gap observed: The repository-wide gates include unrelated failures on clean `origin/main`. Documented rationale: issue #286 fixes all findings introduced by its diff and records exact clean-main proof without modifying unrelated audit/reviewer/report code solely to hide upstream failures (source https://gitlab.com/wiinc1/engineering-team/-/issues/286).
+- Gap observed: The repository-wide maintainability gate includes 20 unrelated failures on clean `origin/main`. Documented rationale: issue #286 resolves every actionable test and governed-document failure while preserving the existing maintainability baseline and recording exact clean-main proof instead of weakening the gate (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/286).
 
 ## Architecture and Design
 
@@ -98,9 +98,10 @@
 ### Automated results recorded so far
 
 - Focused unit/contract/E2E/property/security/chaos tests: 72/72 pass.
-- Real-Postgres #286 scenarios: 5/5 pass. The combined integration command passes 11/12 and reports one unrelated audit projection failure (`404 !== 201`); the same assertion fails on clean `origin/main` commit `c59e07b` (6/7 clean-main integration scenarios pass), proving it predates this branch.
+- Real-Postgres integration: 12/12 pass, including all #286 schema/role, migration apply/rollback/apply, registry, LISTEN/NOTIFY, retry/dedupe/concurrency, shutdown, and repaired QA projection scenarios.
 - Coverage: 53/53 tests pass with 100% lines, 98.45% functions, and 91.56% branches across `lib/job-runtime`; configured 95% line/function and 90% branch thresholds pass.
 - Mutation: 90.52% (315 killed, 33 survived, 348 total), above 80% threshold.
+- Merge-repair changed-code coverage: 10/10 tests pass with 100% lines, 100% functions, and 97.30% branches across the reviewer- and PostgreSQL-consistency helpers.
 - Full real-Postgres 2x load: 600,000 ms at 50 QPS; 30,000/30,000 acknowledged; enqueue p95 7.414 ms and p99 16.718 ms; ready-to-start p95 26 ms; pool peak 4/10 and zero ending waiters.
 - Production dependency audit: zero vulnerabilities with `npm audit --omit=dev --json`; full audit has no high/critical findings.
 
@@ -111,14 +112,14 @@
 - `npm run test:graphile`: pass, 72/72.
 - `npm run test:graphile:coverage`: pass, 53/53; 100% lines, 98.45% functions, 91.56% branches.
 - `npm run test:graphile:mutation`: pass, 90.52% mutation score (315 killed, 33 survived, 348 total).
-- `npm test`: exits 1 with 944/947 unit tests passing. The three failures are in pre-existing Execution Contract reviewer/approval assertions (`audit-api.test.js` once and `execution-contracts.test.js` twice); the identical focused failures reproduce on clean `origin/main` commit `c59e07b` (95/98 passing).
-- `npm run test:integration:docker`: exits 1 with 11/12 passing; all 5/5 job-runtime scenarios pass and the single audit projection failure reproduces on clean `origin/main`.
+- `npm test`: pass after refreshing the local install from the pinned lockfile: 947/947 unit tests, 193/193 contract/integration/E2E/property/performance/security/chaos tests, and 199/199 executed browser tests pass; 23 browser cases are intentionally skipped by the configured engine matrix.
+- `npm run test:integration:docker`: pass, 12/12 real-Postgres scenarios.
 - `npm run test:security`: pass, 58/58.
 - `npm run test:performance`: pass, 13/13.
 - `npm run test:graphile:load`: pass at the full 600,000 ms, 50 QPS target with 30,000/30,000 acknowledgments.
-- `npm run standards:check`: exits 1 only because two pre-existing reports lack `Standards Alignment`: `FACTORY_GAP_RESOLUTION_PLAN_2026-07-13.md` and `SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md`. The same two failures reproduce on clean `origin/main`; the branch maintainability scan has exactly the same 20 pre-existing hard findings as clean main and introduces none.
+- `npm run standards:check`: governed-document and secret checks pass; the composite command exits 1 at 20 pre-existing maintainability hard findings that reproduce on clean `origin/main`. The two previously noncompliant reports now contain substantive `Standards Alignment` and `Required Evidence` sections. No baseline or threshold was weakened.
 - `npm run build`: pass.
-- `make verify`: exits 2 at `npm run test:unit` with the same 944/947 result above, after all design/policy gates, lint, typecheck, 100/100 Python tests, and changed-file maintainability pass.
+- `make verify`: all design/policy gates, lint, typecheck, 100/100 Python tests, 947/947 unit tests, UI tests, browser tests, compile checks, and production build pass; exits 2 only when the final composite standards step reaches the same 20 clean-main maintainability findings.
 
 ### Artifacts
 
