@@ -48,6 +48,17 @@ function standardContract() {
   }).contract;
 }
 
+function withReviewerApproval(contract, roles) {
+  const reviewers = { ...contract.reviewer_routing.reviewers };
+  for (const role of roles) {
+    reviewers[role] = { ...reviewers[role], status: 'approved', approved: true };
+  }
+  return {
+    ...contract,
+    reviewer_routing: { ...contract.reviewer_routing, reviewers },
+  };
+}
+
 test('buildExecutionContractReviewerRoutingAction names required reviewers', () => {
   const contract = standardContract();
   const action = buildExecutionContractReviewerRoutingAction(contract);
@@ -58,14 +69,7 @@ test('buildExecutionContractReviewerRoutingAction names required reviewers', () 
 });
 
 test('buildExecutionContractReviewerRoutingAction switches to operator review when approvals are complete', () => {
-  const contract = standardContract();
-  for (const role of ['architect', 'ux', 'qa']) {
-    contract.reviewer_routing.reviewers[role] = {
-      ...contract.reviewer_routing.reviewers[role],
-      status: 'approved',
-      approved: true,
-    };
-  }
+  const contract = withReviewerApproval(standardContract(), ['architect', 'ux', 'qa']);
   assert.equal(buildExecutionContractReviewerRoutingAction(contract), EXECUTION_CONTRACT_REVIEW_ACTION);
 });
 
@@ -115,44 +119,51 @@ test('buildSectionReviewPrompt asks for structured JSON review output', () => {
 });
 
 test('reviewerAlreadyApproved treats approved reviewer statuses as complete', () => {
-  const contract = standardContract();
-  contract.reviewer_routing.reviewers.architect = { status: 'approved', approved: true };
+  const contract = withReviewerApproval(standardContract(), ['architect']);
   assert.equal(reviewerAlreadyApproved(contract, 'architect'), true);
   assert.equal(reviewerAlreadyApproved(contract, 'ux'), false);
 });
 
-test('delegateReviewerSectionReviews reloads latest contract version between reviewers', async () => {
-  const baseContract = standardContract();
-  baseContract.version = 4;
-  baseContract.reviewer_routing.required_role_approvals = ['architect', 'ux', 'qa'];
-  baseContract.reviewer_routing.reviewers.sre = { required: false, status: 'not_required' };
-
-  let latestVersion = 4;
-  const contractsByVersion = new Map([[4, { ...baseContract, version: 4 }]]);
-
-  const loadLatestContract = async () => contractsByVersion.get(latestVersion);
-
+function createReviewerVersionHarness(baseContract) {
+  let latestVersion = baseContract.version;
+  const contractsByVersion = new Map([[latestVersion, baseContract]]);
   const requestedVersions = [];
-  const recordSectionReview = async ({ version, sectionId, body }) => {
-    requestedVersions.push({ version, sectionId, role: body.reviewerRole });
-    latestVersion += 1;
-    const nextContract = {
-      ...contractsByVersion.get(version),
-      version: latestVersion,
-      reviewer_routing: {
-        ...contractsByVersion.get(version).reviewer_routing,
-        reviewers: {
-          ...contractsByVersion.get(version).reviewer_routing.reviewers,
-          [body.reviewerRole]: { status: 'approved', approved: true },
+  return {
+    requestedVersions,
+    loadLatestContract: async () => contractsByVersion.get(latestVersion),
+    recordSectionReview: async ({ version, sectionId, body }) => {
+      requestedVersions.push({ version, sectionId, role: body.reviewerRole });
+      latestVersion += 1;
+      const previous = contractsByVersion.get(version);
+      const nextContract = {
+        ...previous,
+        version: latestVersion,
+        reviewer_routing: {
+          ...previous.reviewer_routing,
+          reviewers: {
+            ...previous.reviewer_routing.reviewers,
+            [body.reviewerRole]: { status: 'approved', approved: true },
+          },
         },
-      },
-    };
-    contractsByVersion.set(latestVersion, nextContract);
-    return {
-      review: { role: body.reviewerRole, sectionId, status: 'approved' },
-      contract: nextContract,
-    };
+      };
+      contractsByVersion.set(latestVersion, nextContract);
+      return { review: { role: body.reviewerRole, sectionId, status: 'approved' }, contract: nextContract };
+    },
   };
+}
+
+test('delegateReviewerSectionReviews reloads latest contract version between reviewers', async () => {
+  const original = standardContract();
+  const baseContract = {
+    ...original,
+    version: 4,
+    reviewer_routing: {
+      ...original.reviewer_routing,
+      required_role_approvals: ['architect', 'ux', 'qa'],
+      reviewers: { ...original.reviewer_routing.reviewers, sre: { required: false, status: 'not_required' } },
+    },
+  };
+  const harness = createReviewerVersionHarness(baseContract);
 
   const result = await delegateReviewerSectionReviews({
     store: {},
@@ -168,16 +179,16 @@ test('delegateReviewerSectionReviews reloads latest contract version between rev
         attribution: { delegated: true },
       }),
     },
-    recordSectionReview,
-    loadLatestContract,
+    recordSectionReview: harness.recordSectionReview,
+    loadLatestContract: harness.loadLatestContract,
     idempotencyKey: 'test-reviewer-routing',
   });
 
   assert.equal(result.failures.length, 0);
   assert.equal(result.reviews.filter((entry) => !entry.skipped).length, 3);
-  assert.deepEqual(requestedVersions.map((entry) => entry.version), [4, 5, 6]);
+  assert.deepEqual(harness.requestedVersions.map((entry) => entry.version), [4, 5, 6]);
   assert.deepEqual(
-    requestedVersions.map((entry) => entry.role),
+    harness.requestedVersions.map((entry) => entry.role),
     ['architect', 'ux', 'qa'],
   );
 });
