@@ -44,7 +44,7 @@
 
 - `npm install`: pass; lockfile installation is current. `npm audit --omit=dev`: pass; zero production vulnerabilities.
 - `npm run lint` and `npm run typecheck`: pass.
-- `npm run test:security`: pass; 59/59. The current `npm run test:performance` gate runs all 17 performance files serially on the shared host and preserves the reviewed p95/p99 budgets.
+- `npm run test:security`: pass; 59/59. The full repository gate runs functional/security/chaos tests first, then runs all 17 performance files serially on the shared host; the reviewed p95/p99 budgets are unchanged.
 - `npm test`: pass, including the repository Node suites and 199/199 executed browser scenarios with 23 intentional visual-platform skips.
 - `npm run coverage`: pass; 928/928 tests and 77.25% repository line coverage; the policy floor is 70%.
 - `npm run standards:check`: pass; secrets, standards, maintainability, and current coverage policy all green.

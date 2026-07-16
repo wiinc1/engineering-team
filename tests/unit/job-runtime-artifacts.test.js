@@ -82,6 +82,8 @@ test('issue 287 workload, compatibility, operations, and compliance artifacts ar
 test('shared-host performance files run serially without weakening their budgets', () => {
   const pkg = JSON.parse(read('package.json'));
   assert.match(pkg.scripts['test:performance'], /--test-concurrency=1/);
+  assert.doesNotMatch(pkg.scripts['test:node:aggregate'], /tests\/performance/);
+  assert.match(pkg.scripts.test, /test:node:aggregate && npm run test:performance && npm run test:browser/);
   assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.95\) < 100/);
   assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.99\) < 250/);
 });
