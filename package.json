@@ -59,7 +59,7 @@
     "pilot:delegation:readiness": "FF_REAL_SPECIALIST_DELEGATION=true SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js' node scripts/verify-pilot-delegation-readiness.js",
     "metrics:delegation:push": "node scripts/push-specialist-delegation-metrics.js",
     "test:property": "node --test tests/property/*.test.js",
-    "test:performance": "node --test tests/performance/*.test.js",
+    "test:performance": "node --test --test-concurrency=1 tests/performance/*.test.js",
     "test:security": "node --test tests/security/*.test.js",
     "test:chaos": "node --test chaos/*.test.js",
     "test:graphile": "npm run job-runtime:inventory && node --test tests/unit/job-runtime-*.test.js tests/contract/job-runtime.contract.test.js tests/e2e/job-runtime*.test.js tests/property/job-runtime.property.test.js tests/security/job-runtime.security.test.js chaos/job-runtime-resilience.test.js",

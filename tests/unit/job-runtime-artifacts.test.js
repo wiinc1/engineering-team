@@ -78,3 +78,10 @@ test('issue 287 workload, compatibility, operations, and compliance artifacts ar
   assert.match(read(artifacts[7]), /Delivery acknowledgment is not business completion/);
   assert.match(read(artifacts[4]), /paths:\s*\{\}/);
 });
+
+test('shared-host performance files run serially without weakening their budgets', () => {
+  const pkg = JSON.parse(read('package.json'));
+  assert.match(pkg.scripts['test:performance'], /--test-concurrency=1/);
+  assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.95\) < 100/);
+  assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.99\) < 250/);
+});
