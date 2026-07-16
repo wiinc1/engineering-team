@@ -27,6 +27,7 @@ variables:
 stages:
   - build
   - test
+  - verify
   - deploy
 
 .node-job:
@@ -81,12 +82,48 @@ graphile-02-verify:
       - playwright-report/
     expire_in: 2 weeks
 
+# Verify LANGGRAPH-01 after the shared-host Graphile workload has completed so
+# its ten-minute latency sample is never distorted by another issue load gate.
+langgraph-01-verify:
+  extends: .node-job
+  stage: verify
+  timeout: 60 minutes
+  variables:
+    NODE_OPTIONS: --max-old-space-size=8192
+  script:
+    - npm run test:langgraph
+    - npm run test:langgraph:coverage
+    - npm run test:langgraph:runtime-coverage
+    - npm run test:langgraph:mutation
+    - npm test
+    - export COMPOSE_PROJECT_NAME="issue280-${CI_PIPELINE_ID}-${CI_JOB_ID}"
+    - export POSTGRES_HOST_PORT="$((46000 + (CI_JOB_ID % 9000)))"
+    - npm run test:integration:docker
+    - npm run test:security
+    - npm run test:performance
+    - LANGGRAPH_LOAD_DURATION_MS=600000 LANGGRAPH_LOAD_CONCURRENCY=4 npm run test:langgraph:load
+    - npm run coverage
+    - npm run standards:check
+    - npm run build
+    - make verify
+    - |
+      base_sha="$(git merge-base "origin/${CI_DEFAULT_BRANCH}" "$CI_COMMIT_SHA")"
+      git diff --check "$base_sha" "$CI_COMMIT_SHA"
+  artifacts:
+    when: always
+    paths:
+      - .artifacts/
+      - test-results/
+      - playwright-report/
+    expire_in: 2 weeks
+
 # Preserve an explicit deploy stage without performing an automatic production mutation.
 deploy-review:
   stage: deploy
   needs:
     - build
     - graphile-02-verify
+    - langgraph-01-verify
   script:
     - echo "All verified artifacts are ready for an operator-owned production review."
   rules:

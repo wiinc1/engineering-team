@@ -1,0 +1,14 @@
+{
+  "title": "LangGraph Runtime",
+  "description": "LANGGRAPH-01 checkpoint health, latency, size, versions, tenant rejection, retention, and pool capacity.",
+  "panels": [
+    { "title": "Checkpoint read/write rate", "metrics": ["langgraph_checkpoint_reads_total", "langgraph_checkpoint_writes_total"] },
+    { "title": "Checkpoint errors by stable code", "metric": "langgraph_checkpoint_errors_total" },
+    { "title": "Checkpoint latency p50/p95/p99", "metrics": ["langgraph_checkpoint_write_latency_ms", "langgraph_checkpoint_read_latency_ms"] },
+    { "title": "Checkpoint serialized size", "metric": "langgraph_checkpoint_size_bytes" },
+    { "title": "Active and stale threads", "metrics": ["langgraph_active_threads", "langgraph_stale_threads"] },
+    { "title": "Pool active/waiting/saturation", "metrics": ["langgraph_pool_active_connections", "langgraph_pool_waiting_requests", "langgraph_pool_saturation_total"] },
+    { "title": "Version mismatch and tenant rejection", "metrics": ["langgraph_version_mismatch_total", "langgraph_tenant_rejections_total"] },
+    { "title": "Retention pruning", "metric": "langgraph_retention_pruned_threads_total" }
+  ]
+}
