@@ -7,6 +7,7 @@ const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { createPgPoolFromEnv, runMigrations } = require('../../lib/audit/postgres');
 const { createJobRuntimeInfrastructure } = require('../../lib/job-runtime');
+const { createEffectGuard, createEffectLedger } = require('../../lib/job-runtime/effect-ledger');
 const { JobRuntimeError } = require('../../lib/job-runtime/errors');
 const { createGraphileAdapter } = require('../../lib/job-runtime/graphile-adapter');
 const { createJobRuntimeLogger, createMetricSink } = require('../../lib/job-runtime/observability');
@@ -88,6 +89,41 @@ function metricValues(snapshot, name) {
   return Object.entries(snapshot.observations).find(([key]) => key.includes(name))?.[1] || [];
 }
 
+async function seedWorkloadMigration(client) {
+  await client.query(`INSERT INTO tasks (tenant_id, task_id, title, status)
+    VALUES ('tenant-workload-migration', 'TSK-GRAPHILE-287', 'Workload migration sentinel', 'TODO')`);
+  await client.query(`INSERT INTO task_sync_checkpoints (
+    tenant_id, task_id, canonical_version, sync_status, last_synced_at
+  ) VALUES ('tenant-workload-migration', 'TSK-GRAPHILE-287', 1, 'active', NOW())`);
+  await client.query(`INSERT INTO audit_events (
+    event_id, tenant_id, task_id, event_type, occurred_at, recorded_at,
+    actor_type, actor_id, sequence_number, idempotency_key, source
+  ) VALUES (
+    '00000000-0000-4000-8000-000000000287', 'tenant-workload-migration', 'TSK-GRAPHILE-287',
+    'task.created', NOW(), NOW(), 'system', 'migration-test', 1, 'graphile-287-migration', 'integration'
+  )`);
+  await client.query(`INSERT INTO audit_projection_queue (event_id, tenant_id, task_id)
+    VALUES ('00000000-0000-4000-8000-000000000287', 'tenant-workload-migration', 'TSK-GRAPHILE-287')`);
+  await client.query(`INSERT INTO audit_outbox (event_id, tenant_id, task_id)
+    VALUES ('00000000-0000-4000-8000-000000000287', 'tenant-workload-migration', 'TSK-GRAPHILE-287')`);
+  await client.query(`INSERT INTO factory_delivery_queue (
+    tenant_id, queue_id, idempotency_key, title, requirements, task_id
+  ) VALUES (
+    'tenant-workload-migration', 'queue-287', 'queue-287-key', 'Factory sentinel', 'Preserve me', 'TSK-GRAPHILE-287'
+  )`);
+}
+
+async function workloadMigrationSnapshot(client) {
+  const result = await client.query(`SELECT
+    (SELECT COUNT(*)::integer FROM tasks WHERE tenant_id = 'tenant-workload-migration') AS tasks,
+    (SELECT COUNT(*)::integer FROM task_sync_checkpoints WHERE tenant_id = 'tenant-workload-migration') AS checkpoints,
+    (SELECT COUNT(*)::integer FROM audit_events WHERE tenant_id = 'tenant-workload-migration') AS audit_events,
+    (SELECT COUNT(*)::integer FROM audit_projection_queue WHERE tenant_id = 'tenant-workload-migration') AS projection_queue,
+    (SELECT COUNT(*)::integer FROM audit_outbox WHERE tenant_id = 'tenant-workload-migration') AS outbox,
+    (SELECT COUNT(*)::integer FROM factory_delivery_queue WHERE tenant_id = 'tenant-workload-migration') AS factory_queue`);
+  return result.rows[0];
+}
+
 pgTest('Graphile and application schemas initialize with least-privilege roles', async () => {
   assert.equal(await createDeliveryRegistry(pool).verifySchema(), true);
   assert.equal(await verifyJobRuntimePrivileges(pool), true);
@@ -112,7 +148,7 @@ pgTest('Graphile and application schemas initialize with least-privilege roles',
 
 pgTest('migration apply rollback apply preserves populated canonical task and audit rows', async () => {
   const client = await pool.connect();
-  const migration = '016_job_runtime_registry.sql';
+  const migrations = ['016_job_runtime_registry.sql', '017_job_runtime_workloads.sql'];
   try {
     await client.query('BEGIN');
     await client.query(`INSERT INTO tasks (tenant_id, task_id, title, status)
@@ -128,8 +164,9 @@ pgTest('migration apply rollback apply preserves populated canonical task and au
       (SELECT COUNT(*)::integer FROM tasks WHERE tenant_id = 'tenant-migration') AS tasks,
       (SELECT COUNT(*)::integer FROM audit_events WHERE tenant_id = 'tenant-migration') AS audit_events`);
     const fingerprint = await setupAdapter.schemaFingerprint();
+    await pool.query(read('db/migrations/017_job_runtime_workloads.down.sql'));
     await pool.query(read('db/migrations/016_job_runtime_registry.down.sql'));
-    await pool.query('DELETE FROM schema_migrations WHERE version = $1', [migration]);
+    await pool.query('DELETE FROM schema_migrations WHERE version = ANY($1)', [migrations]);
     await runMigrations(pool, { baseDir: root });
     await setupAdapter.migrate();
     const after = await client.query(`SELECT
@@ -145,16 +182,63 @@ pgTest('migration apply rollback apply preserves populated canonical task and au
   }
 });
 
+pgTest('workload migration apply rollback apply preserves canonical task audit queue factory and checkpoint data', async () => {
+  const migration = '017_job_runtime_workloads.sql';
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await seedWorkloadMigration(client);
+    const before = await workloadMigrationSnapshot(client);
+    const graphileFingerprint = await setupAdapter.schemaFingerprint();
+    await pool.query(read('db/migrations/017_job_runtime_workloads.down.sql'));
+    await pool.query('DELETE FROM schema_migrations WHERE version = $1', [migration]);
+    await runMigrations(pool, { baseDir: root });
+    assert.deepEqual(await workloadMigrationSnapshot(client), before);
+    assert.deepEqual(before, {
+      tasks: 1, checkpoints: 1, audit_events: 1, projection_queue: 1, outbox: 1, factory_queue: 1,
+    });
+    assert.equal(await setupAdapter.schemaFingerprint(), graphileFingerprint);
+    const schema = await pool.query(`SELECT
+      to_regclass('job_runtime.job_effect_ledger') IS NOT NULL AS effect_ledger,
+      EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'job_runtime' AND table_name = 'job_delivery_registry'
+          AND column_name = 'handler_version'
+      ) AS handler_version`);
+    assert.deepEqual(schema.rows[0], { effect_ledger: true, handler_version: true });
+  } finally {
+    await client.query('ROLLBACK');
+    client.release();
+  }
+});
+
+pgTest('workload rollback refuses to discard populated effect evidence', async () => {
+  await pool.query(`INSERT INTO job_runtime.job_effect_ledger (
+    tenant_id, effect_key, task_identifier, effect_category, canonical_resource_type,
+    canonical_resource_id, effect_version, owner_token, lease_expires_at
+  ) VALUES (
+    'tenant-one', 'effect:v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'maintenance.factory.reconcile.v1', 'factory_queue_recovery', 'factory_tenant', 'tenant-one', 1760000000000,
+    '00000000-0000-4000-8000-000000000287', NOW() + INTERVAL '1 minute'
+  )`);
+  try {
+    await assert.rejects(() => pool.query(read('db/migrations/017_job_runtime_workloads.down.sql')), /not empty/);
+  } finally {
+    await pool.query(`DELETE FROM job_runtime.job_effect_ledger
+      WHERE tenant_id = 'tenant-one' AND canonical_resource_id = 'tenant-one'`);
+  }
+});
+
 pgTest('delivery registry persists retry state with the live database constraints', async () => {
   const deliveryId = '00000000-0000-4000-8000-000000000288';
   await pool.query(`INSERT INTO job_runtime.job_delivery_registry (
     delivery_id, tenant_id, workload_id, semantic_job_key, task_identifier, task_name,
     payload_version, catalog_version, named_queue, max_attempts, priority,
-    canonical_resource_type, canonical_resource_id, correlation_id, payload_size_bytes,
+    canonical_resource_type, canonical_resource_id, ordering_key, correlation_id, payload_size_bytes,
     scheduled_for, status, graphile_job_id, attempt_count
   ) VALUES ($1, 'tenant-one', 'probe-registry-live', 'jr:v1:registry-live',
     'job_runtime.synthetic.v1', 'job_runtime.synthetic', 1, 1, 'job-runtime-synthetic',
-    3, 0, 'synthetic', 'probe-registry-live', 'corr-registry-live', 200, NOW(),
+    3, 0, 'synthetic', 'probe-registry-live', 'tenant-one:synthetic:probe-registry-live', 'corr-registry-live', 200, NOW(),
     'running', '88', 1)`, [deliveryId]);
   try {
     const record = await createDeliveryRegistry(pool).markFailed(deliveryId, {
@@ -186,7 +270,7 @@ pgTest('enqueue claim retry dedupe and named-queue concurrency run through LISTE
   };
   const infrastructure = createJobRuntimeInfrastructure({
     pool, logger, metrics, handlers, events,
-    config: { claimsEnabled: true, concurrency: 4, reservedConnections: 4, shutdownDeadlineMs: 5000 },
+    config: { claimsEnabled: true, concurrency: 4, reservedConnections: 4, pollIntervalMs: 100, shutdownDeadlineMs: 5000 },
     clock: { now: Date.now },
   });
   try {
@@ -212,9 +296,119 @@ pgTest('enqueue claim retry dedupe and named-queue concurrency run through LISTE
     assert.ok(Object.keys(snapshot.counters).some((key) => key.includes('job_runtime_retry_total')));
     const readyMetric = metricValues(snapshot, 'job_runtime_ready_to_start_ms');
     assert.equal(readyMetric.length, 3);
-    assert.ok(Math.max(...readyMetric) < 2_000);
+    assert.ok(Math.max(...readyMetric) < 2_000, `ready-to-start metrics exceeded budget: ${JSON.stringify(readyMetric)}`);
   } finally {
     await infrastructure.runtime.drain('integration complete');
+  }
+});
+
+function fairnessFixture() {
+  const releases = [];
+  let resolveFactoryStarted;
+  const waitForFactory = new Promise((resolve) => { resolveFactoryStarted = resolve; });
+  const canonical = {
+    async lookup(input) {
+      if (input.resourceType === 'factory_run') {
+        return { tenantId: input.tenantId, taskId: `TSK-${input.resourceId}`, threadId: `thread-${input.resourceId}` };
+      }
+      return { tenantId: input.tenantId };
+    },
+    async authorize() { return true; },
+  };
+  const infrastructure = createJobRuntimeInfrastructure({
+    pool, logger, canonical,
+    config: { claimsEnabled: true, concurrency: 4, reservedConnections: 4, shutdownDeadlineMs: 5000 },
+    workloads: {
+      langGraph: {
+        async lookupEffect() { return { completed: false }; },
+        async start() {
+          resolveFactoryStarted();
+          await new Promise((resolve) => releases.push(resolve));
+          return { code: 'started' };
+        },
+      },
+      auditStore: {
+        async processProjectionQueue() { return { processed: 1 }; },
+        async processOutbox() { return { processed: 0 }; },
+        async processExpiredSreMonitoring() { return { processed: 0 }; },
+      },
+      outbox: {
+        async lookupEffect() { return { completed: false }; },
+        async publish() { return { code: 'published' }; },
+      },
+      async factoryRecovery() { return { code: 'recovered' }; },
+    },
+  });
+  return { infrastructure, releases, waitForFactory };
+}
+
+async function enqueueProtectedClasses(infrastructure, context) {
+  const projection = await infrastructure.producers.auditProjection(context('projection'), {
+    occurrenceId: 'fairness-projection:287', batchSize: 100, runAt: new Date(),
+  });
+  const outbox = await infrastructure.producers.auditOutbox(context('outbox'), {
+    occurrenceId: 'fairness-outbox:287', batchSize: 100, runAt: new Date(),
+  });
+  const maintenance = await infrastructure.producers.factoryReconciliation(context('maintenance'), {
+    occurrenceId: 'fairness-maintenance:287', runAt: new Date(),
+  });
+  return [projection, outbox, maintenance];
+}
+
+pgTest('reserved worker classes prevent long factory runs from starving projection outbox or maintenance', { timeout: 30_000 }, async () => {
+  const { infrastructure, releases, waitForFactory } = fairnessFixture();
+  try {
+    await infrastructure.runtime.start();
+    const context = (suffix) => ({ tenantId: 'tenant-one', correlationId: `fairness-${suffix}` });
+    const factory = await infrastructure.producers.factoryStart(context('run-a'), {
+      runId: 'run-a', taskId: 'TSK-run-a', threadId: 'thread-run-a', workflowVersion: 1,
+    });
+    await Promise.race([waitForFactory, new Promise((_, reject) => setTimeout(() => reject(new Error('factory start timeout')), 5000))]);
+    const protectedDeliveries = await enqueueProtectedClasses(infrastructure, context);
+    await Promise.all(protectedDeliveries.map((record) => (
+      waitForStatus(infrastructure.registry, record.deliveryId, 'delivery_acknowledged', 5000)
+    )));
+    assert.equal(releases.length, 1);
+    releases.forEach((release) => release());
+    await waitForStatus(infrastructure.registry, factory.deliveryId, 'delivery_acknowledged', 5000);
+  } finally {
+    releases.forEach((release) => release());
+    await infrastructure.runtime.drain('fairness complete');
+  }
+});
+
+pgTest('real effect ledger reconciles crash-after-effect replay to one canonical effect', async () => {
+  const ledger = createEffectLedger(pool);
+  let effects = 0;
+  const input = {
+    tenantId: 'tenant-one', taskIdentifier: 'factory.langgraph.start.v1', effectCategory: 'github',
+    resourceType: 'factory_run', resourceId: 'run-effect-287', effectVersion: 1,
+  };
+  await pool.query(`DELETE FROM job_runtime.job_effect_ledger
+    WHERE tenant_id = 'tenant-one' AND canonical_resource_id = 'run-effect-287'`);
+  const first = createEffectGuard({
+    ledger, logger, metrics: createMetricSink(),
+    idGenerator: () => '00000000-0000-4000-8000-000000000287',
+    faults: { async afterEffect() { throw new Error('crash after effect'); } },
+  });
+  await assert.rejects(() => first.execute({
+    ...input, async lookup() { return { completed: false }; }, async perform() { effects += 1; },
+  }), /crash after effect/);
+  const retry = createEffectGuard({
+    ledger, logger, metrics: createMetricSink(),
+    idGenerator: () => '00000000-0000-4000-8000-000000000288',
+  });
+  try {
+    const replay = await retry.execute({
+      ...input, async lookup() { return { completed: true, code: 'github_effect_exists' }; },
+      async perform() { effects += 1; },
+    });
+    assert.equal(replay.suppressed, true);
+    assert.equal(effects, 1);
+    assert.equal((await ledger.find(input.tenantId, replay.effectKey)).status, 'completed');
+  } finally {
+    await pool.query(`DELETE FROM job_runtime.job_effect_ledger
+      WHERE tenant_id = 'tenant-one' AND canonical_resource_id = 'run-effect-287'`);
   }
 });
 
@@ -226,7 +420,7 @@ pgTest('SIGTERM-style drain rejects readiness and lets eligible active work fini
   const infrastructure = createJobRuntimeInfrastructure({
     pool, logger,
     handlers: { 'job_runtime.synthetic.v1': async () => { handlerStarted(); await waitForRelease; } },
-    config: { claimsEnabled: true, concurrency: 1, reservedConnections: 4, shutdownDeadlineMs: 5000 },
+    config: { claimsEnabled: true, concurrency: 4, reservedConnections: 4, shutdownDeadlineMs: 5000 },
   });
   await infrastructure.runtime.start();
   const record = await infrastructure.port.enqueue(validContext({ correlationId: 'corr-drain' }), validRequest({

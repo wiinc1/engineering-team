@@ -1,0 +1,26 @@
+erDiagram
+  JOB_DELIVERY_REGISTRY ||--o{ JOB_EFFECT_LEDGER : correlates_without_payload
+  JOB_DELIVERY_REGISTRY {
+    uuid delivery_id PK
+    text tenant_id
+    text task_identifier
+    integer handler_version
+    text ordering_key
+    text canonical_resource_id
+    text delivery_status
+  }
+  JOB_EFFECT_LEDGER {
+    text tenant_id PK
+    text effect_key PK
+    text task_identifier
+    text effect_category
+    text canonical_resource_type
+    text canonical_resource_id
+    bigint effect_version
+    text status
+    text owner_token
+    timestamptz lease_expires_at
+    text result_code
+  }
+  CANONICAL_DOMAIN_STATE ||--o{ JOB_EFFECT_LEDGER : authoritative_effect_lookup
+  GRAPHILE_OPAQUE_STATE ||--o{ JOB_DELIVERY_REGISTRY : opaque_reference_only

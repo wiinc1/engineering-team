@@ -1,37 +1,25 @@
 # Job runtime internal contract v1
 
-This is an in-process application contract. It is not an HTTP endpoint; operational HTTP exposure belongs to issue #288.
+This is an additive in-process contract, not an HTTP endpoint. Issue #287 changes no public API, browser route, status, next-action, audit, or error response. Issue #288 owns operational HTTP exposure; the components-only OpenAPI artifact documents the compatibility boundary without adding paths.
 
 ## Producer contract
 
-`port.enqueue(context, request)` accepts server-derived tenant and correlation context plus an allowlisted request. Version 1 requires:
+`WorkloadProducers` calls only `port.enqueue(serverContext, request)`. Server context supplies tenant, correlation, request, and trace identity. Requests contain an allowlisted task/version, workload identifier, canonical resource identity, immutable versions, and optional bounded schedule. They never contain credentials, database locations, SQL, commands, scripts, prompts, module names, executable content, or mutable business objects. The port reauthorizes canonical ownership, supplies handler/order versions, semantic key, named queue, priority, retry, timeout, and Graphile envelope.
 
-- task `job_runtime.synthetic`, version `1`
-- a safe workload identifier
-- canonical resource `{ type: "synthetic", id: <same workload> }`
-- data matching the catalog schema
-- an optional run time no more than 30 days ahead
+The supported methods are `factoryStart`, `factoryResume`, `auditProjection`, `auditOutbox`, `sreMonitoringExpiry`, `factoryReconciliation`, and `registryRetention`. Their exact payloads and consumers are in `job-runtime-workloads.md` and the signed inventory.
 
-The port creates catalog version, delivery UUID, semantic job key, low-cardinality named queue, retry policy, and the Graphile envelope. Callers cannot supply those policies. The semantic key hashes tenant, task/version, workload, and canonical resource identity. Repeating the same identity and schedule is idempotent; changing the schedule returns `job_schedule_conflict`.
+## Handler and replay contract
 
-## Handler contract
+Handlers receive schema-validated data and immutable delivery/tenant/workload/correlation/attempt/abort context. They resolve and reauthorize the canonical tenant/resource again before any sensitive operation. LangGraph and outbox adapters are typed injected dependencies: each operation accepts deterministic `effectKey`, each external adapter exposes `lookupEffect`, and cancellation uses the supplied abort signal.
 
-Handlers receive only schema-validated task data and an immutable application context containing delivery, tenant, workload, correlation, attempt, and abort signal. They never receive Graphile helpers or database internals. Returning records delivery acknowledgment; it does not complete a canonical task or audit workflow.
+At an effect boundary the handler must observe an already-completed canonical effect and safely acknowledge, perform and record the effect, or throw a classified retryable error. Terminal business errors are sanitized and recorded explicitly. A Graphile callback return is delivery acknowledgment only. Exactly-once describes the canonical effect keyed by tenant/task/category/resource/version, never at-least-once Graphile delivery.
 
-## Prohibited payload content
+## Stable errors and safety
 
-Every payload rejects credentials, passwords, cookies, tokens, authorization material, database locations, connection strings, SQL, commands, scripts, executable content, arbitrary module names, secret-like values, non-finite numbers, cycles, non-plain objects, excessive depth, arrays over 100 elements, and serialized envelopes over 65,536 bytes.
+- `job_runtime_unavailable`: retryable infrastructure/dependency or in-progress effect.
+- `job_task_unknown`: task/handler is not allowlisted.
+- `job_payload_invalid`: identity, tenant, authorization, size, secret, JSON shape, schedule, or schema failure.
+- `job_version_unsupported`: task exists but version is unsupported.
+- `job_schedule_conflict`: incompatible duplicate, transition, or terminal effect.
 
-## Stable errors
-
-- `job_runtime_unavailable` — retryable infrastructure failure.
-- `job_task_unknown` — task is not allowlisted.
-- `job_payload_invalid` — identity, authorization, size, secret, JSON shape, schedule, or schema failure.
-- `job_version_unsupported` — task exists but payload version is unsupported.
-- `job_schedule_conflict` — semantic duplicate has a different delivery schedule or an invalid state transition.
-
-Messages and details are sanitized. Payloads and dependency error messages are never logged.
-
-## Health and readiness
-
-Health exposes only status, lifecycle state, database reachability, exact claims state, catalog version, and sanitized pool counts. Readiness exposes ready/draining state and whether claims are accepted. Neither surface exposes payloads, Graphile table names, database locations, or credentials.
+Messages/details are sanitized. Health/readiness expose lifecycle, database reachability, exact claims state, catalog version, and sanitized pool counts only. Payloads, dependency errors, Graphile tables, database locations, and credentials are never exposed.

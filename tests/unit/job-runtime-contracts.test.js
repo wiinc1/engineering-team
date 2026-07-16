@@ -12,7 +12,7 @@ const {
 } = require('../../lib/job-runtime/errors');
 const { createJobRuntimeLogger, createMetricSink } = require('../../lib/job-runtime/observability');
 const { createPayloadValidator, jsonDepthAndShape } = require('../../lib/job-runtime/payload-schema');
-const { assertConcurrencyPolicy, schedulingPolicy, semanticJobKey } = require('../../lib/job-runtime/policies');
+const { assertConcurrencyPolicy, queueLane, schedulingPolicy, semanticJobKey } = require('../../lib/job-runtime/policies');
 const { findSecretPath, isSecretLikeKey, isSecretLikeValue, redact } = require('../../lib/job-runtime/redaction');
 const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
 
@@ -21,17 +21,65 @@ const definition = catalog.resolve('job_runtime.synthetic', 1);
 
 test('versioned catalog resolves only allowlisted task versions', () => {
   assert.equal(definition.identifier, 'job_runtime.synthetic.v1');
-  assert.deepEqual(catalog.identifiers, ['job_runtime.synthetic.v1']);
+  assert.deepEqual(catalog.identifiers, [
+    'job_runtime.synthetic.v1',
+    'factory.langgraph.start.v1',
+    'factory.langgraph.resume.v1',
+    'audit.projection.catch_up.v1',
+    'audit.outbox.deliver.v1',
+    'maintenance.sre_monitoring.expire.v1',
+    'maintenance.factory.reconcile.v1',
+    'maintenance.job_runtime.prune.v1',
+  ]);
   assert.equal(catalog.resolveIdentifier(definition.identifier).queue, 'job-runtime-synthetic');
   assert.throws(() => catalog.resolve('unknown.task', 1), { code: 'job_task_unknown' });
   assert.throws(() => catalog.resolve('job_runtime.synthetic', 2), { code: 'job_version_unsupported' });
   assert.throws(() => catalog.resolveIdentifier('unknown.v1'), { code: 'job_task_unknown' });
 });
 
+test('every workload has a strict v1 handler contract and complete delivery policy', () => {
+  const validData = {
+    'job_runtime.synthetic.v1': { probeId: 'probe-287', expectedOutcome: 'acknowledge' },
+    'factory.langgraph.start.v1': { runId: 'run-1', taskId: 'TSK-1', threadId: 'thread-1', workflowVersion: 2 },
+    'factory.langgraph.resume.v1': {
+      runId: 'run-1', taskId: 'TSK-1', threadId: 'thread-1', workflowVersion: 2, checkpointVersion: 3,
+    },
+    'audit.projection.catch_up.v1': { occurrenceId: 'projection:1000', batchSize: 100 },
+    'audit.outbox.deliver.v1': { occurrenceId: 'outbox:1000', batchSize: 100 },
+    'maintenance.sre_monitoring.expire.v1': { occurrenceId: 'sre:1000', batchSize: 100 },
+    'maintenance.factory.reconcile.v1': { occurrenceId: 'factory:1000' },
+    'maintenance.job_runtime.prune.v1': { occurrenceId: 'retention:1000' },
+  };
+  const validator = createPayloadValidator();
+  for (const identifier of catalog.identifiers) {
+    const task = catalog.resolveIdentifier(identifier);
+    const envelope = {
+      ...envelopeFixture,
+      task: task.name,
+      workloadId: `contract-${identifier.replace(/[^a-z0-9]+/gi, '-')}`,
+      data: validData[identifier],
+    };
+    assert.equal(validator.validate(envelope, task).envelope, envelope, identifier);
+    assert.throws(() => validator.validate({ ...envelope, data: { ...validData[identifier], token: 'forbidden' } }, task), {
+      code: 'job_payload_invalid',
+    }, identifier);
+    assert.equal(task.handlerVersion, 1);
+    assert.match(task.queue, /^[a-z][a-z0-9-]+$/);
+    assert.ok(task.concurrency.lanes >= 1 && task.concurrency.lanes <= 32);
+    assert.ok(task.timeoutMs >= 30_000);
+    assert.match(task.retry.backoff, /^graphile_/);
+    assert.ok(task.retry.maxAttempts >= 1 && task.retry.maxAttempts <= 10);
+    assert.equal(task.cancellation, 'retry_if_effect_unconfirmed');
+    assert.equal(task.gracefulShutdown, 'finish_until_deadline_then_reconcile');
+  }
+});
+
 test('catalog rejects duplicate names, versions, and identifiers', () => {
   const duplicate = { ...definition };
   assert.throws(() => createTaskCatalog([definition, duplicate]), /Duplicate/);
   assert.throws(() => createTaskCatalog([definition, { ...definition, name: 'different.task' }]), /Duplicate/);
+  assert.throws(() => createTaskCatalog([{ ...definition, schema: null }]), /Incomplete/);
+  assert.throws(() => createTaskCatalog([{ ...definition, timeoutMs: 'forever' }]), /Invalid/);
 });
 
 test('strict payload validator accepts the versioned fixture', () => {
@@ -179,6 +227,20 @@ test('semantic key and scheduling policies are deterministic and bounded', () =>
     { maxAttempts: 1, priority: -11 },
     { maxAttempts: 1, priority: 1.5 },
   ]) assert.throws(() => schedulingPolicy({ ...definition, retry }), { code: 'job_payload_invalid' });
+  const factory = catalog.resolve('factory.langgraph.start', 1);
+  const lane = queueLane(factory, 'tenant-one:factory_run:run-1');
+  assert.equal(lane, 'factory-workflow');
+  assert.equal(queueLane(factory, 'tenant-one:factory_run:run-1'), lane);
+  assert.equal(queueLane(factory), 'factory-workflow');
+  for (const lanes of [0.5, 33]) {
+    assert.throws(() => queueLane({ ...factory, concurrency: { lanes } }, 'ordering'), {
+      safeDetails: { reason: 'queue_policy' },
+    });
+  }
+  assert.equal(queueLane({ queue: 'single-queue' }, null), 'single-queue');
+  assert.throws(() => schedulingPolicy({ ...definition, retry: null }), {
+    safeDetails: { reason: 'retry_policy' },
+  });
 });
 
 test('concurrency and runtime configuration reserve pool capacity and reject percentage flags', () => {
@@ -205,6 +267,12 @@ test('concurrency and runtime configuration reserve pool capacity and reject per
   assert.equal(config.retentionDays, 30);
   assert.equal(config.retentionBatch, 1000);
   assert.equal(config.retentionIntervalMs, 3_600_000);
+  assert.throws(() => runtimeConfig({ claimsEnabled: true, concurrency: 3, poolMax: 10, reservedConnections: 4 }), {
+    code: 'job_runtime_unavailable', safeDetails: { reason: 'fair_concurrency' },
+  });
+  assert.throws(() => runtimeConfig({ claimsEnabled: true, concurrency: 5, poolMax: 12, reservedConnections: 4 }), {
+    code: 'job_runtime_unavailable', safeDetails: { reason: 'fair_concurrency' },
+  });
 });
 
 test('stable errors expose only sanitized codes and safe details', () => {

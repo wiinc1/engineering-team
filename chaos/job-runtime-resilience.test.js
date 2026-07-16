@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { captureLogger, metricRecorder } = require('../tests/fixtures/job-runtime/v1');
+const { createEffectGuard } = require('../lib/job-runtime/effect-ledger');
+const { runWithPolicy } = require('../lib/job-runtime/handlers');
 const { createJobRuntime } = require('../lib/job-runtime/runtime');
 
 function chaosRuntime(overrides = {}) {
@@ -81,4 +83,44 @@ test('shutdown cleanup still redelivers and closes when force-stop fails @regres
   assert.equal(fixture.calls.closed, 1);
   assert.equal((await fixture.runtime.readiness()).state, 'failed');
   assert.equal(JSON.stringify(fixture.logger.entries).includes('token=secret'), false);
+});
+
+test('dependency and network ambiguity leave effects retryable without duplicate execution @regression', async () => {
+  const ledger = {
+    async begin(input) { return { owner: false, record: { ...input, status: 'started', ownerToken: 'other' } }; },
+    async complete() { throw new Error('must not complete'); },
+  };
+  const guard = createEffectGuard({
+    ledger, logger: captureLogger(), metrics: metricRecorder(),
+    idGenerator: () => '00000000-0000-4000-8000-000000000287',
+  });
+  let performed = 0;
+  await assert.rejects(() => guard.execute({
+    tenantId: 'tenant-one', taskIdentifier: 'audit.outbox.deliver.v1', effectCategory: 'deployment',
+    resourceType: 'audit_event', resourceId: 'event-287', effectVersion: 1,
+    async lookup() { throw new Error('network unavailable token=secret'); },
+    async perform() { performed += 1; },
+  }), /network unavailable/);
+  assert.equal(performed, 0);
+});
+
+test('active cancellation interrupts handler waiting without claiming canonical completion @regression', async () => {
+  const controller = new AbortController();
+  const execution = runWithPolicy(() => new Promise(() => {}), {}, { abortSignal: controller.signal },
+    { timeoutMs: 60_000 }, {});
+  controller.abort();
+  await assert.rejects(() => execution, { safeDetails: { reason: 'cancelled' }, retryable: true });
+});
+
+test('pool saturation is observable while reserved capacity keeps readiness bounded @regression', async () => {
+  const fixture = chaosRuntime({ runner: null });
+  fixture.runtime.options.pool.totalCount = 6;
+  fixture.runtime.options.pool.idleCount = 0;
+  fixture.runtime.options.pool.waitingCount = 4;
+  fixture.runtime.options.registry.operationalMetrics = async () => ({
+    queueDepth: 8, oldestAgeSeconds: 3, queues: [{ queue: 'audit-outbox', queueDepth: 3, oldestAgeSeconds: 3 }],
+  });
+  await fixture.runtime.health();
+  assert.ok(fixture.metrics.gauges.some((entry) => entry.name === 'job_runtime_pool_waiting_requests' && entry.value === 4));
+  assert.ok(fixture.metrics.gauges.some((entry) => entry.name === 'job_runtime_queue_starvation_seconds'));
 });

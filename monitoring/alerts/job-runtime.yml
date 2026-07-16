@@ -15,6 +15,20 @@ groups:
           severity: warning
         annotations:
           summary: Job runtime ready-to-start age exceeds two seconds
+      - alert: JobRuntimeQueueBacklog
+        expr: job_runtime_queue_depth > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Job runtime backlog exceeds the bounded operating budget
+      - alert: JobRuntimeNamedQueueStarvation
+        expr: job_runtime_queue_starvation_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: A named job queue is starved beyond the ready-to-start SLO
       - alert: JobRuntimePoolWaiting
         expr: job_runtime_pool_waiting_requests > 0
         for: 5m
@@ -36,6 +50,20 @@ groups:
           severity: warning
         annotations:
           summary: A producer submitted an unsupported job payload version
+      - alert: JobRuntimeUnknownTask
+        expr: increase(job_runtime_unknown_task_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: A producer submitted a task outside the versioned allowlist
+      - alert: JobRuntimeRepeatedTenantRejection
+        expr: increase(job_runtime_tenant_rejection_total[5m]) >= 3
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Repeated canonical tenant authorization failures were rejected
       - alert: JobRuntimeShutdownDeadline
         expr: increase(job_runtime_shutdown_deadline_total[15m]) > 0
         for: 0m

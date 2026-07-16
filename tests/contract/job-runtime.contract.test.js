@@ -2,15 +2,21 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const envelopeFixture = require('../fixtures/job-runtime/v1-valid-envelope.json');
 const { DELIVERY_ID, FIXED_NOW, captureLogger, deliveryRecord, metricRecorder, validContext, validRequest } = require('../fixtures/job-runtime/v1');
 const { buildTaskList } = require('../../lib/job-runtime/handlers');
 const { createPayloadValidator } = require('../../lib/job-runtime/payload-schema');
-const { createJobRuntimePort } = require('../../lib/job-runtime/port');
+const { createEnvelope, createJobRuntimePort } = require('../../lib/job-runtime/port');
 const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
+const { createMigratedWorkloadHandlers } = require('../../lib/job-runtime/workload-handlers');
+const { assertInventoryCompleteness, inventory } = require('../../lib/job-runtime/workload-inventory');
+const { createWorkloadProducers } = require('../../lib/job-runtime/workload-producers');
 
 test('producer and handler share the exact v1 payload and correlation contract', async () => {
-  const catalog = createTaskCatalog();
+  const fullCatalog = createTaskCatalog();
+  const catalog = createTaskCatalog([fullCatalog.resolve('job_runtime.synthetic', 1)]);
   const validator = createPayloadValidator();
   let queuedEnvelope;
   const registry = {
@@ -52,4 +58,42 @@ test('health and readiness contracts expose no payload or Graphile storage detai
   assert.equal(healthKeys.includes('payload'), false);
   assert.equal(healthKeys.some((key) => key.includes('table')), false);
   assert.equal(readinessKeys.includes('graphileJobId'), false);
+});
+
+test('every inventoried producer emits data accepted by its exact versioned handler contract', async () => {
+  const requests = [];
+  const producers = createWorkloadProducers({ async enqueue(context, request) { requests.push({ context, request }); } });
+  const context = validContext();
+  await producers.factoryStart(context, { runId: 'run-1', taskId: 'TSK-1', threadId: 'thread-1', workflowVersion: 1 });
+  await producers.factoryResume(context, {
+    runId: 'run-1', taskId: 'TSK-1', threadId: 'thread-1', workflowVersion: 1, checkpointVersion: 2,
+  });
+  for (const method of ['auditProjection', 'auditOutbox', 'sreMonitoringExpiry']) {
+    await producers[method](context, { occurrenceId: `${method}:1000`, batchSize: 100 });
+  }
+  await producers.factoryReconciliation(context, { occurrenceId: 'factory:1000' });
+  await producers.registryRetention(context, { occurrenceId: 'retention:1000' });
+
+  const catalog = createTaskCatalog();
+  const validator = createPayloadValidator();
+  const handlers = createMigratedWorkloadHandlers();
+  assert.equal(requests.length, inventory.workloads.length);
+  assertInventoryCompleteness(catalog, handlers);
+  for (const [index, item] of requests.entries()) {
+    const definition = catalog.resolve(item.request.task, item.request.version);
+    const envelope = createEnvelope(item.context, item.request, definition, `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`);
+    assert.doesNotThrow(() => validator.validate(envelope, definition), definition.identifier);
+    assert.equal(typeof handlers[definition.identifier], 'function');
+  }
+  assert.deepEqual(requests.map(({ request }) => `${request.task}.v${request.version}`).sort(),
+    inventory.workloads.map(({ taskIdentifier }) => taskIdentifier).sort());
+});
+
+test('issue 287 adds no HTTP path and preserves the stable error vocabulary', () => {
+  const openapi = fs.readFileSync(path.join(__dirname, '../../docs/api/job-runtime-openapi.yml'), 'utf8');
+  assert.match(openapi, /paths:\s*\{\}/);
+  for (const code of [
+    'job_runtime_unavailable', 'job_task_unknown', 'job_payload_invalid',
+    'job_version_unsupported', 'job_schedule_conflict',
+  ]) assert.match(openapi, new RegExp(code));
 });

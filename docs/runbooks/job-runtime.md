@@ -2,63 +2,46 @@
 
 ## Scope and safety
 
-This runbook operates the issue #286 runtime only. It does not migrate workloads (#287), expose operational HTTP routes (#288), or change LangGraph persistence (#280). Keep `FF_GRAPHILE_WORKER_CUTOVER=false` until the coordinated workload cutover is approved. This is a production runtime in standby, not a pilot or shadow worker.
+This runbook covers the #286 runtime plus all seven #287 workloads. Keep `FF_GRAPHILE_WORKER_CUTOVER=false` until #289 removes legacy entrypoints and authorizes coordinated cutover. Do not run legacy and Graphile producers for the same semantic effect. #288 operator routes and #280–#282 LangGraph foundations are outside this change.
 
 ## Provision and migrate
 
-1. Provision the NOLOGIN roles in `db/roles/job_runtime_roles.sql` and attach environment-specific login/group membership outside source control.
-2. Use the approved shared PostgreSQL connection secret and verified TLS posture. Never put a database location in a job payload or log.
-3. Run `npm run job-runtime:setup`. It applies the pinned public Graphile migration, application migration `016`, least-privilege grants, and schema verification.
-4. Run `npm run test:integration:docker` for apply/rollback/apply and real-Postgres behavior before promotion.
-5. Start with `npm run job-runtime:worker`. In standby, health is `ok`, state is `standby`, and `acceptingClaims=false`.
+1. Provision NOLOGIN roles from `db/roles/job_runtime_roles.sql`; attach environment login/group membership outside source control.
+2. Use the approved shared PostgreSQL secret and verified TLS posture. Never put database locations or secrets in payloads/logs.
+3. Run `npm run job-runtime:setup` to apply the pinned public Graphile migration and application migrations `016`/`017`, grants, and verification.
+4. Run `npm run job-runtime:inventory` and `npm run test:integration:docker` before promotion.
+5. Start `npm run job-runtime:worker` in standby. Expected health is `ok`, state `standby`, `acceptingClaims=false`.
+6. At #289 cutover, wire canonical, audit, outbox, factory recovery, and typed LangGraph adapters; each external adapter must honor `effectKey` and implement canonical `lookupEffect`. Enable claims only after dependency and readiness checks pass.
 
-Database roles:
+Migrator owns schema changes; producer can enqueue and register delivery; worker can claim and mutate only delivery/effect metadata. No runtime role receives general canonical task, audit, approval, evidence, closeout, or checkpoint mutation grants.
 
-- migrator: create/use runtime schemas and migrate runtime objects.
-- producer: public Graphile enqueue functions plus select/insert/update on the registry.
-- worker: Graphile delivery operations plus select/update/bounded terminal delete on the registry.
-- no runtime role receives a canonical task or audit mutation grant.
+## Health, alerts, and diagnosis
 
-## Health and readiness
+Rules in `monitoring/alerts/job-runtime.yml` cover unavailable workers, backlog age/depth, per-queue starvation, retry/failure exhaustion, unknown versions/tasks, repeated tenant rejection, pool waiting, and retention. Structured events/metrics correlate only safe tenant/task/workload/delivery/attempt/resource/request/trace identifiers.
 
-- `ready`: database/schema/role checks passed and claims are enabled.
-- `standby`: checks passed but claims are exactly disabled; this is the expected pre-cutover state.
-- `draining`: readiness is false and new claims have stopped.
-- `failed`: startup, database, worker, or shutdown safety failed.
+- Factory-only backlog with healthy protected queues: inspect external dependency latency; do not consume protected slots.
+- Projection/outbox/maintenance starvation: drain and investigate the affected worker class, locks, pool, and dependency health.
+- Repeated tenant rejection: identify the producer/context mismatch or abuse; never relax canonical lookup/authorization.
+- Effect suppression: expected after ambiguous redelivery; verify the canonical system and ledger agree.
+- Retry exhaustion or terminal result: repair the owning dependency/business condition, then replay with the same immutable identity when policy permits.
+- Pool waiting: preserve four reserved connections and the measured six-connection runtime ceiling. The runtime facade may queue an acquisition before the physical pool does; inspect both `job_runtime_pool_waiting_requests` and the load report's base/runtime ending-waiter fields before changing the four-slot default.
+- Unknown version: deploy matching producer/handler/catalog versions; never dynamically resolve modules.
 
-Health and readiness are in-process contracts until #288. Inspect structured `job_runtime` events and exported metrics through the existing observability integration. Never log raw dependency errors or payloads.
+## Drain, replay, and recovery
 
-## Alerts and response
+SIGTERM/SIGINT immediately rejects readiness and stops new claims. Workers finish until `JOB_RUNTIME_SHUTDOWN_MS`; forced stop leaves unconfirmed work for redelivery/reconciliation. For database, network, process, or dependency loss, restore the dependency, verify TLS/schema/roles/readiness, then restart the pinned runtime.
 
-Rules live in `monitoring/alerts/job-runtime.yml` and are contract-tested.
+For ambiguous effects, query the owning canonical system by deterministic effect key. If completed, record/reconcile and acknowledge; if absent, allow the classified retry; if terminal, preserve the sanitized outcome. Delivery acknowledgment is not business completion: Graphile delivery or registry state is never canonical evidence. Restore canonical task/audit/checkpoint data before reconstructable delivery/effect metadata.
 
-- Runtime unavailable while claims enabled: keep claims disabled or drain, check database/TLS/role health, and restart only after readiness passes.
-- Queue age over 2 seconds or depth growth: inspect handler failure/retry rate and pool waiting. Do not increase concurrency beyond the pool budget.
-- Pool waiting: protect API/LangGraph capacity first; verify reservation, leaks, and database saturation.
-- Delivery failure/retry spike: correlate by safe task identifier and correlation/trace id, then repair the application handler or dependency. Graphile acknowledgment is not business completion.
-- Unknown version/validation spike: identify the producer contract mismatch. Do not relax schemas or add dynamic task/module resolution.
-- Shutdown deadline/redelivery: confirm the replacement worker claims the redelivery and that canonical business state remains unchanged.
-- Retention failure: restore the scoped worker DELETE grant or database availability; never run an unbounded delete.
+## Migration rollback
 
-## Drain and shutdown
+1. Set claims false and drain all worker classes.
+2. Keep legacy entrypoints unchanged unless #289 explicitly coordinates the cutover state.
+3. Apply `017_job_runtime_workloads.down.sql`. It refuses rollback while effect evidence exists; archive/retain evidence under approved policy rather than deleting it to force rollback.
+4. The down migration removes only #287 application-owned indexes/columns/table and does not alter canonical task, audit, projection, outbox, factory queue, or checkpoint data.
+5. If fully removing the base runtime, separately require an empty registry before applying migration `016` down.
+6. Reapply `016` then `017`, grants, setup verification, inventory gate, and real-Postgres tests to restore standby.
 
-Send SIGTERM or SIGINT. The runtime immediately enters draining, rejects readiness, stops new claims, and waits up to `JOB_RUNTIME_SHUTDOWN_MS`. At the deadline it force-stops the public runner, marks application `running` deliveries as `redelivery_pending`, closes the adapter/pool utilities, removes signal handlers, and reports failure if cleanup was incomplete.
+## Verification
 
-## Recovery and replay
-
-- Database/network outage: claims stop through worker/database failure; restore connectivity, verify readiness, and restart. Graphile locking/retry plus registry semantic keys prevent a second application schedule.
-- Worker loss: restart the same pinned runtime. Named-queue serialization and Graphile locking control concurrent claims.
-- Ambiguous handler outcome: inspect canonical domain state before replay. A registry acknowledgment is delivery evidence only.
-- Forced redelivery: handlers must be idempotent against canonical state. Never mark canonical completion from the registry.
-
-## Rollback
-
-1. Set `FF_GRAPHILE_WORKER_CUTOVER=false` and drain all workers.
-2. Verify no active or retained registry rows remain. Migration rollback intentionally refuses a populated registry.
-3. Apply `db/migrations/016_job_runtime_registry.down.sql` through the approved migration mechanism.
-4. The rollback removes only the application registry/schema. It does not delete or update canonical task/audit data and does not depend on Graphile internal tables.
-5. Reapply migration `016` and `npm run job-runtime:setup` to restore standby.
-
-## Evidence commands
-
-Run focused tests, coverage, mutation, real-Postgres integration, security, performance, chaos, and the 10-minute load gate listed in `docs/reports/ISSUE-286_STANDARDS_COMPLIANCE_CHECKLIST.md`, then run all repository gates before review.
+Run the exact focused, coverage, mutation, real-Postgres, security, performance, 10-minute 2× load, repository, standards, build, and `make verify` commands recorded in `docs/reports/ISSUE-287_STANDARDS_COMPLIANCE_CHECKLIST.md`. Never enable or merge with a red gate.

@@ -109,7 +109,7 @@ test('AC4 concurrent producers receive one low-cardinality serial named queue po
   }));
   await Promise.all(requests.map((request, index) => harness.port.enqueue(validContext({ correlationId: `corr-${index}` }), request)));
   assert.equal(new Set(harness.jobs.map((job) => job.schedule.queueName)).size, 1);
-  assert.equal(harness.jobs[0].definition.concurrency.serialByNamedQueue, true);
+  assert.equal(harness.jobs[0].definition.concurrency.lanes, 1);
   assert.equal(new Set(harness.jobs.map((job) => job.key)).size, 20);
 });
 

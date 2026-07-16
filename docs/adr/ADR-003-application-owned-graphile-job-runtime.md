@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for issue #286. Workload migration remains blocked on issue #287.
+Accepted for issue #286 and extended by issue #287 for the complete supported workload catalog.
 
 ## Context
 
@@ -17,7 +17,11 @@ Issue #280 establishes the coordinated LangGraph runtime/persistence posture. Th
 - Store no job payload in the application registry. Never accept credentials, cookies, tokens, database locations, SQL, commands, executable content, or arbitrary module names in payloads.
 - Use only supported Graphile public APIs for migrations, enqueue, run, completion compensation, stop, kill, and release.
 - Keep the Graphile schema opaque outside the adapter. The application registry stores only an opaque Graphile job reference and never joins to Graphile tables.
-- Share the existing verified PostgreSQL TLS/pool factory. With the default pool maximum of 10, reserve 4 connections and cap worker concurrency at 4, leaving 6 non-reserved slots.
+- Share the existing verified PostgreSQL TLS/pool factory. With the default pool maximum of 10, reserve 4 connections and cap every job-runtime acquisition through a six-slot facade over the same physical pool. Graphile claims, listener, housekeeping, registry/effect queries, and producers use the facade; API and coordinated LangGraph checkpoint consumers retain the original shared pool. Worker concurrency remains 4 inside that ceiling.
+- Partition claims with public named-queue locks into factory, projection, outbox, and maintenance classes. One four-slot runner and one queue for each class provides 1/1/1/1 capacity without extra listener connections.
+- Register all seven supported migrated workloads in an immutable versioned catalog. Sign and verify the source inventory, and fail static/runtime completeness checks when a supported producer, consumer, loop, cron, recovery job, or catalog handler is missing.
+- Guard each canonical or external effect with a deterministic application-owned effect key and payload-free ledger. The owning adapter must query its canonical effect boundary before replay. Exactly-once applies to that business effect, never to Graphile delivery.
+- Reauthorize tenant and canonical resource ownership in every handler. Payload tenant claims and mutable business objects are prohibited.
 - Default `FF_GRAPHILE_WORKER_CUTOVER=false`. Disabled means production-ready standby, not a pilot, shadow consumer, or percentage rollout.
 - Treat `delivery_acknowledged` as an operational delivery state only. Canonical business completion must be recorded by the owning domain workflow.
 - Retain terminal delivery metadata for 30 days by default, prune at most 1,000 rows per hourly run, and never prune active deliveries.
@@ -26,7 +30,7 @@ Issue #280 establishes the coordinated LangGraph runtime/persistence posture. Th
 
 The application contract remains stable if Graphile internals change. Producers and handlers can be tested without importing the dependency. Database setup requires explicit migrator, producer, and worker roles. The worker role can mutate Graphile-owned delivery state and update/delete only application delivery metadata; it has no canonical task or audit mutation grant.
 
-Operational HTTP routes are intentionally deferred to issue #288. Workload migration and cutover are intentionally deferred to issue #287.
+Operational HTTP routes remain deferred to issue #288. Issue #287 supplies producers, handlers, schedules, typed LangGraph injection contracts, replay guards, and migration `017`; legacy entrypoint removal and production cutover remain issue #289. Issues #280–#282 own the LangGraph runtime and persistence implementation.
 
 ## Alternatives considered
 
@@ -38,13 +42,13 @@ Operational HTTP routes are intentionally deferred to issue #288. Workload migra
 ## Standards Alignment
 
 - Applicable standards areas: architecture and design; coding and code quality; security; testing and quality assurance; deployment and release; observability and monitoring; team and process.
-- Evidence expected for this change: `lib/job-runtime/`, migrations `016`, database roles, contract/security/chaos/load tests, three Mermaid diagrams, dependency review, runbook, and issue checklist.
+- Evidence expected for this change: `lib/job-runtime/`, migrations `016` and `017`, database roles, inventory signature/completeness gates, contract/security/chaos/load tests, Graphile-02 diagrams, dependency review, runbook, and issue checklist.
 - Evidence in this decision: Graphile imports and schema knowledge are isolated to one adapter; domain completion remains canonical and separate from delivery acknowledgment.
 - Gap observed: Graphile Worker is an operational delivery dependency, not a domain model. Documented rationale: the application port and registry prevent business code from depending on worker storage and supported APIs are isolated to one adapter (source https://worker.graphile.org/docs).
 
 ## Required Evidence
 
-- Commands run: `npm run test:graphile`; `npm run test:graphile:coverage`; `npm run test:graphile:mutation`; `npm run test:integration:docker`; `npm run test:graphile:load`; repository gates listed in the issue checklist.
-- Tests added or updated: unit, contract, E2E, property, security, performance/load, chaos, mutation, and real-Postgres integration suites under the issue checklist.
-- Rollout or rollback notes: keep claims disabled, drain the worker, verify the registry is empty, run the scoped down migration, then reapply migration `016` if restoring the runtime. Rollback refuses a populated registry.
+- Commands run: the exact results are recorded in `docs/reports/ISSUE-287_STANDARDS_COMPLIANCE_CHECKLIST.md`.
+- Tests added or updated: inventory, producer/handler, replay/effect, E2E AC1–AC7, property, security, performance/load, fairness, chaos, mutation, and real-Postgres migration suites.
+- Rollout or rollback notes: keep claims disabled, drain, and retain legacy entrypoints until #289. Migration `017` rollback refuses a populated effect ledger and never alters canonical task, audit, queue, or checkpoint data.
 - Docs updated: runtime contract, configuration, dependency review, runbook, diagrams, alert fixtures, ADR, and compliance checklist.

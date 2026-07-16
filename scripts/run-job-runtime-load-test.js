@@ -22,6 +22,60 @@ function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, milliseconds)));
 }
 
+function loadCanonical() {
+  return {
+    async lookup(input) {
+      return input.resourceType === 'factory_run'
+        ? { tenantId: input.tenantId, taskId: 'TSK-LOAD', threadId: 'thread-load' }
+        : { tenantId: input.tenantId };
+    },
+    async authorize() { return true; },
+  };
+}
+
+function loadWorkloads(loadTest) {
+  return {
+    langGraph: {
+      async lookupEffect() { return { completed: false }; },
+      async start() { return { code: 'started' }; },
+      async resume() { return { code: 'resumed' }; },
+    },
+    auditStore: {
+      async processProjectionQueue() { return { processed: 0 }; },
+      async processOutbox(publisher, batchSize, tenantId) {
+        loadTest.outboxSequence += 1;
+        await publisher({
+          tenant_id: tenantId,
+          event_id: `load-event-${loadTest.outboxSequence}`,
+          schema_version: 1,
+        });
+        return { processed: Math.min(1, batchSize) };
+      },
+      async processExpiredSreMonitoring() { return { code: 'expired' }; },
+    },
+    outbox: {
+      effectCategory: 'notification',
+      async lookupEffect() { return { completed: false }; },
+      async publish() { return { code: 'published' }; },
+    },
+    async factoryRecovery() { return { code: 'recovered' }; },
+    async pruneRegistry() { return { code: 'pruned' }; },
+  };
+}
+
+function loadInfrastructure(loadTest) {
+  return createJobRuntimeInfrastructure({
+    pool: loadTest.pool,
+    logger: loadTest.logger,
+    metrics: loadTest.metrics,
+    canonical: loadCanonical(),
+    cronItems: [],
+    scheduler: { async next() { return null; } },
+    config: { claimsEnabled: true, concurrency: 4, reservedConnections: 4, shutdownDeadlineMs: 30_000 },
+    workloads: loadWorkloads(loadTest),
+  });
+}
+
 class JobRuntimeLoadTest {
   constructor(options = {}) {
     this.durationMs = positiveInteger(options.durationMs || process.env.JOB_RUNTIME_LOAD_DURATION_MS, 600_000);
@@ -31,38 +85,54 @@ class JobRuntimeLoadTest {
     this.runId = `load-${Date.now().toString(36)}`;
     this.enqueueLatencies = [];
     this.readyLatencies = [];
-    this.submittedAt = new Map();
+    this.workloadCounts = new Map();
+    this.outboxSequence = 0;
     this.metrics = createMetricSink();
-    this.infrastructure = createJobRuntimeInfrastructure({
-      pool: this.pool,
-      logger: this.logger,
-      metrics: this.metrics,
-      config: { claimsEnabled: true, concurrency: 4, reservedConnections: 4, shutdownDeadlineMs: 30_000 },
-      handlers: { 'job_runtime.synthetic.v1': (data, context) => this.handle(data, context) },
-    });
+    this.poolPeakTotal = this.pool.totalCount;
+    this.recordPoolPeak = () => {
+      this.poolPeakTotal = Math.max(this.poolPeakTotal, this.pool.totalCount);
+    };
+    this.pool.on('connect', this.recordPoolPeak);
+    this.pool.on('acquire', this.recordPoolPeak);
+    this.infrastructure = loadInfrastructure(this);
   }
 
-  handle(data, context) {
-    if (context.attempt === 1) {
-      this.readyLatencies.push(Date.now() - this.submittedAt.get(data.probeId));
-    }
+  workload(index, occurrenceVersion) {
+    const definitions = [
+      ['factory.langgraph.start.v1', 'factoryStart', {
+        runId: `run-start-${index}`, taskId: 'TSK-LOAD', threadId: 'thread-load', workflowVersion: 1,
+      }],
+      ['factory.langgraph.resume.v1', 'factoryResume', {
+        runId: `run-resume-${index}`, taskId: 'TSK-LOAD', threadId: 'thread-load',
+        workflowVersion: 1, checkpointVersion: index + 1,
+      }],
+      ['audit.projection.catch_up.v1', 'auditProjection', {
+        occurrenceId: `projection:${occurrenceVersion}`, batchSize: 100,
+      }],
+      ['audit.outbox.deliver.v1', 'auditOutbox', {
+        occurrenceId: `outbox:${occurrenceVersion}`, batchSize: 100,
+      }],
+      ['maintenance.sre_monitoring.expire.v1', 'sreMonitoringExpiry', {
+        occurrenceId: `expiry:${occurrenceVersion}`, batchSize: 100,
+      }],
+      ['maintenance.factory.reconcile.v1', 'factoryReconciliation', {
+        occurrenceId: `factory:${occurrenceVersion}`,
+      }],
+      ['maintenance.job_runtime.prune.v1', 'registryRetention', {
+        occurrenceId: `retention:${occurrenceVersion}`,
+      }],
+    ];
+    return definitions[index % definitions.length];
   }
 
   async enqueue(index, startedAt) {
     const targetAt = startedAt + (index * 1000) / this.targetQps;
     await delay(targetAt - performance.now());
-    const workloadId = `${this.runId}-${index}`;
     const correlationId = `${this.runId}-corr-${index}`;
-    this.submittedAt.set(workloadId, Date.now());
+    const [task, method, input] = this.workload(index, 1_760_000_000_000 + index);
     const enqueueStarted = performance.now();
-    await this.infrastructure.port.enqueue({ tenantId: 'tenant-load', correlationId }, {
-      task: 'job_runtime.synthetic',
-      version: 1,
-      workloadId,
-      canonicalResource: { type: 'synthetic', id: workloadId },
-      data: { probeId: workloadId, expectedOutcome: 'acknowledge' },
-      runAt: new Date(),
-    });
+    await this.infrastructure.producers[method]({ tenantId: 'tenant-load', correlationId }, input);
+    this.workloadCounts.set(task, (this.workloadCounts.get(task) || 0) + 1);
     this.enqueueLatencies.push(performance.now() - enqueueStarted);
   }
 
@@ -77,6 +147,10 @@ class JobRuntimeLoadTest {
   }
 
   buildReport(submitted, summary) {
+    const observations = this.metrics.snapshot().observations;
+    this.readyLatencies = Object.entries(observations).flatMap(([key, values]) => (
+      JSON.parse(key)[0] === 'job_runtime_ready_to_start_ms' ? values : []
+    ));
     return {
       version: 1,
       duration_ms: this.durationMs,
@@ -84,13 +158,15 @@ class JobRuntimeLoadTest {
       target_qps: this.targetQps,
       load_multiplier: 2,
       submitted,
+      submitted_by_task: Object.fromEntries([...this.workloadCounts.entries()].sort()),
       acknowledged: summary.delivery_acknowledged || 0,
       enqueue_p95_ms: percentile(this.enqueueLatencies, 0.95),
       enqueue_p99_ms: percentile(this.enqueueLatencies, 0.99),
       ready_to_start_p95_ms: percentile(this.readyLatencies, 0.95),
       pool_max: this.pool.options.max,
-      pool_peak_total: this.pool.totalCount,
+      pool_peak_total: this.poolPeakTotal,
       pool_waiting_at_end: this.pool.waitingCount,
+      runtime_pool_waiting_at_end: this.infrastructure.runtimePool.waitingCount,
     };
   }
 
@@ -99,7 +175,11 @@ class JobRuntimeLoadTest {
     if (report.acknowledged !== report.submitted) throw new Error('job_runtime_load_delivery_loss');
     if (report.enqueue_p95_ms >= 100 || report.enqueue_p99_ms >= 250) throw new Error('job_runtime_enqueue_latency_budget_failed');
     if (report.ready_to_start_p95_ms >= 2_000) throw new Error('job_runtime_ready_latency_budget_failed');
-    if (report.pool_peak_total > report.pool_max || report.pool_waiting_at_end !== 0) throw new Error('job_runtime_pool_budget_failed');
+    if (report.pool_peak_total > report.pool_max - 4
+      || report.pool_waiting_at_end !== 0
+      || report.runtime_pool_waiting_at_end !== 0) {
+      throw new Error('job_runtime_pool_budget_failed');
+    }
   }
 
   async run() {
@@ -109,12 +189,15 @@ class JobRuntimeLoadTest {
     for (let index = 0; index < submitted; index += 1) await this.enqueue(index, startedAt);
     const summary = await this.waitForCompletion(submitted);
     const report = this.buildReport(submitted, summary);
+    this.lastReport = report;
     this.assertBudgets(report);
     return report;
   }
 
   async close() {
     await this.infrastructure.runtime.drain('load test complete').catch(() => {});
+    this.pool.off('connect', this.recordPoolPeak);
+    this.pool.off('acquire', this.recordPoolPeak);
     await this.pool.end();
   }
 }
@@ -128,7 +211,8 @@ async function main() {
     fs.writeFileSync(artifactPath, `${JSON.stringify(report, null, 2)}\n`);
     process.stdout.write(`job runtime load test passed: ${JSON.stringify(report)}\n`);
   } catch (error) {
-    process.stderr.write(`job runtime load test failed: ${error.message}\n`);
+    const evidence = testRunner.lastReport ? ` report=${JSON.stringify(testRunner.lastReport)}` : '';
+    process.stderr.write(`job runtime load test failed: ${error.message}${evidence}\n`);
     process.exitCode = 1;
   } finally {
     await testRunner.close();
