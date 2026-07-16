@@ -50,8 +50,26 @@ test('browser quality config covers the required route and viewport matrix', asy
   assert.equal(expectedVisualSnapshotNames().length, 10);
   assert.equal(CORE_WEB_VITALS_BUDGETS.largestContentfulPaintMs, 3000);
   assert.equal(CORE_WEB_VITALS_BUDGETS.cumulativeLayoutShift, 0.1);
+  assert.equal(CORE_WEB_VITALS_BUDGETS.totalBlockingTimeMs, 300);
   assert.equal(VISUAL_MAX_DIFF_PIXEL_RATIO.local, 0.04);
   assert.equal(VISUAL_MAX_DIFF_PIXEL_RATIO.ci, 0.1);
   assert.equal(visualMaxDiffPixelRatio({}), VISUAL_MAX_DIFF_PIXEL_RATIO.local);
   assert.equal(visualMaxDiffPixelRatio({ GITHUB_ACTIONS: 'true' }), VISUAL_MAX_DIFF_PIXEL_RATIO.ci);
+});
+
+test('browser performance evidence runs in a fresh process before the functional matrix', () => {
+  const { scripts } = require('../../package.json');
+
+  assert.equal(
+    scripts['test:browser'],
+    'npm run test:browser:performance && npm run test:browser:functional',
+  );
+  assert.match(
+    scripts['test:browser:performance'],
+    /browser-quality-performance\.browser\.spec\.ts/,
+  );
+  assert.match(
+    scripts['test:browser:functional'],
+    /--grep-invert='browser Core Web Vitals budget gate'/,
+  );
 });
