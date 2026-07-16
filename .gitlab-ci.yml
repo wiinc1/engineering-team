@@ -55,7 +55,11 @@ build:
 performance-evidence:
   extends: .node-job
   stage: performance
-  timeout: 15 minutes
+  timeout: 20 minutes
+  variables:
+    PERFORMANCE_HOST_MAX_CPU_PERCENT: "25"
+    PERFORMANCE_HOST_STABLE_SAMPLES: "5"
+    PERFORMANCE_HOST_WAIT_TIMEOUT_MS: "600000"
   script:
     - npm run test:performance
     - npm run test:browser:performance

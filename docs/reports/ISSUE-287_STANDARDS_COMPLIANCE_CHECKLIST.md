@@ -44,7 +44,7 @@
 
 - `npm install`: pass; lockfile installation is current. `npm audit --omit=dev`: pass; zero production vulnerabilities.
 - `npm run lint` and `npm run typecheck`: pass.
-- `npm run test:security`: pass; 59/59. A dedicated pre-mutation pipeline stage runs all 17 Node performance files serially and runs browser Core Web Vitals in a fresh one-worker process. Downstream functional, mutation, integration, load, and `make verify` gates depend on that stage and do not duplicate its evidence on a thermally loaded shared host. The reviewed Node p95/p99 and browser timing budgets are unchanged.
+- `npm run test:security`: pass; 59/59. A dedicated pre-mutation pipeline stage waits fail-closed for five consecutive host samples below 25% CPU, runs all 17 Node performance files serially, rechecks host quiescence, and runs browser Core Web Vitals in a fresh one-worker process. Downstream functional, mutation, integration, load, and `make verify` gates depend on that stage and do not duplicate its evidence on a loaded shared host. The reviewed Node p95/p99 and browser timing budgets are unchanged.
 - `npm test`: pass, including the repository Node suites and 199/199 executed browser scenarios with 23 intentional visual-platform skips.
 - `npm run coverage`: pass; 928/928 tests and 77.25% repository line coverage; the policy floor is 70%.
 - `npm run standards:check`: pass; secrets, standards, maintainability, and current coverage policy all green.
