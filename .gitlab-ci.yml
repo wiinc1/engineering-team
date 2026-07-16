@@ -52,7 +52,7 @@ build:
 graphile-02-verify:
   extends: .node-job
   stage: test
-  timeout: 45 minutes
+  timeout: 75 minutes
   variables:
     NODE_OPTIONS: --max-old-space-size=8192
   script:
@@ -87,7 +87,7 @@ graphile-02-verify:
 langgraph-01-verify:
   extends: .node-job
   stage: verify
-  timeout: 60 minutes
+  timeout: 90 minutes
   variables:
     NODE_OPTIONS: --max-old-space-size=8192
   script:

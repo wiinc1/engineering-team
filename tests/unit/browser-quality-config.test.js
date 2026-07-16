@@ -6,7 +6,7 @@ async function loadConfig() {
 }
 
 test('browser quality matrix includes WebKit in CI unless explicitly skipped', async () => {
-  const { browserProjectNames, shouldIncludeWebkit } = await loadConfig();
+  const { browserProjectNames, browserWorkerCount, shouldIncludeWebkit } = await loadConfig();
 
   assert.equal(shouldIncludeWebkit({ CI: 'true' }), true);
   assert.equal(shouldIncludeWebkit({ GITHUB_ACTIONS: 'true' }), true);
@@ -24,6 +24,9 @@ test('browser quality matrix includes WebKit in CI unless explicitly skipped', a
     'firefox',
     'mobile-chrome',
   ]);
+  assert.equal(browserWorkerCount({ CI: 'true' }), 1);
+  assert.equal(browserWorkerCount({ GITHUB_ACTIONS: 'true' }), 1);
+  assert.equal(browserWorkerCount({}), undefined);
 });
 
 test('browser quality config covers the required route and viewport matrix', async () => {

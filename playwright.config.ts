@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import {
   SCREENSHOT_SNAPSHOT_TEMPLATE,
+  browserWorkerCount,
   browserProjectNames,
 } from './tests/browser/browser-quality-config.mjs';
 
@@ -23,6 +24,9 @@ Object.assign(process.env, normalizedEnv);
 export default defineConfig({
   testDir: './tests/browser',
   testIgnore: '**/*golden-path*.browser.spec.ts',
+  // Performance budgets are evidence only when browser engines and viewports
+  // do not compete for the shared CI host. Local development remains parallel.
+  workers: browserWorkerCount(normalizedEnv),
   timeout: 30_000,
   outputDir: 'test-results/browser',
   reporter: process.env.CI
