@@ -19,7 +19,7 @@
 
 ## Acceptance and review evidence
 
-- Inventory: seven supported workloads and sixteen classified mechanisms; SHA-256 verified by `npm run job-runtime:inventory`.
+- Inventory: seven supported workloads and eighteen classified mechanisms; SHA-256 verified by `npm run job-runtime:inventory`. LANGGRAPH-01 explicitly classifies its invocation-scoped lease heartbeat and verification-only load sampler as non-semantic exclusions.
 - Catalog/contracts: start/resume, projection, outbox, SRE expiry, factory reconciliation, retention; all v1 producer/handler pairs are statically and dynamically complete.
 - Replay: GitLab, GitHub, deployment, notification, canonical task, audit record/projection, LangGraph checkpoint, evidence, closeout, factory recovery, and retention boundaries are allowlisted and tested for before/after-effect replay.
 - Isolation: enqueue and handler canonical lookups reject tenant mismatch; external effects receive deterministic tenant-scoped keys.
@@ -31,7 +31,7 @@
 
 ### Recorded focused results
 
-- `npm run job-runtime:inventory`: pass; 7 workloads, 16 mechanisms, signed digest verified.
+- `npm run job-runtime:inventory`: pass; 7 workloads, 18 mechanisms, signed digest verified.
 - `npm run test:graphile:workloads`: pass; 52/52 focused tests.
 - `npm run test:graphile`: pass; 122/122 unit, contract, E2E, property, security, and chaos tests.
 - `npm run test:graphile:coverage`: pass; 88/88 tests, 99.87% lines, 97.64% functions, and 95.22% branches across `lib/job-runtime`.
