@@ -41,6 +41,24 @@ test('pinned dependency lock has integrity and the delivery registry stores no p
   const migration = fs.readFileSync(path.join(root, 'db/migrations/016_job_runtime_registry.sql'), 'utf8');
   assert.equal(/\bpayload\s+JSONB/i.test(migration), false);
   assert.match(migration, /delivery acknowledgment is not canonical business completion/i);
+  const workloads = fs.readFileSync(path.join(root, 'db/migrations/017_job_runtime_workloads.sql'), 'utf8');
+  assert.equal(/job_effect_ledger[\s\S]*\bpayload\s+JSONB/i.test(workloads), false);
+  assert.match(workloads, /job_effect_ledger_key_check/);
+  assert.match(workloads, /job_effect_ledger_started_lease_check/);
+  assert.match(workloads, /REVOKE ALL ON TABLE job_runtime\.job_effect_ledger FROM PUBLIC/);
+});
+
+test('inventoried workload payload contracts contain identifiers and immutable versions only', () => {
+  const source = JSON.stringify(createTaskCatalog().identifiers.map((identifier) => (
+    createTaskCatalog().resolveIdentifier(identifier).schema
+  )));
+  for (const forbidden of ['token', 'credential', 'cookie', 'databaseUrl', 'sql', 'command', 'script', 'prompt', 'module']) {
+    assert.equal(new RegExp(`\\b${forbidden}\\b`, 'i').test(source), false, forbidden);
+  }
+  const producer = fs.readFileSync(path.join(root, 'lib/job-runtime/workload-producers.js'), 'utf8');
+  assert.equal(/process\.env|require\([^)]*graphile-worker/.test(producer), false);
+  assert.match(producer, /workflowVersion/);
+  assert.match(producer, /checkpointVersion/);
 });
 
 test('commands SQL credentials cookies tokens modules and executable content are rejected', () => {

@@ -766,9 +766,9 @@
       "name": "job-runtime",
       "runtime_patterns": [
         "^lib/job-runtime/",
-        "^db/migrations/016_job_runtime_registry(\\.down)?\\.sql$",
+        "^db/migrations/01[67]_job_runtime_.+(\\.down)?\\.sql$",
         "^db/roles/job_runtime_roles\\.sql$",
-        "^scripts/(setup-job-runtime-postgres|run-job-runtime-worker|run-job-runtime-load-test)\\.js$",
+        "^scripts/(setup-job-runtime-postgres|run-job-runtime-worker|run-job-runtime-load-test|verify-job-runtime-workloads)\\.js$",
         "^scripts/run-job-runtime-load-docker\\.sh$"
       ],
       "test_requirements": [
@@ -777,7 +777,7 @@
           "patterns": [
             "^tests/unit/job-runtime-.+\\.test\\.js$",
             "^tests/contract/job-runtime\\.contract\\.test\\.js$",
-            "^tests/e2e/job-runtime\\.e2e\\.test\\.js$"
+            "^tests/e2e/job-runtime(?:-workloads)?\\.e2e\\.test\\.js$"
           ]
         },
         {
@@ -802,9 +802,11 @@
           "name": "architecture-operations-compliance",
           "patterns": [
             "^docs/adr/ADR-003-application-owned-graphile-job-runtime\\.md$",
+            "^docs/api/job-runtime-(internal-contract\\.md|openapi\\.yml)$",
+            "^docs/architecture/job-runtime-.+\\.md$",
             "^docs/runbooks/job-runtime\\.md$",
-            "^docs/reports/ISSUE-286_(DEPENDENCY_REVIEW|STANDARDS_COMPLIANCE_CHECKLIST)\\.md$",
-            "^docs/diagrams/(workflow|schema|architecture)-graphile-01\\.mmd$",
+            "^docs/reports/ISSUE-28[67]_(DEPENDENCY_REVIEW|STANDARDS_COMPLIANCE_CHECKLIST)\\.md$",
+            "^docs/diagrams/(workflow|schema|architecture)-graphile-0[12]\\.mmd$",
             "^monitoring/alerts/job-runtime\\.yml$"
           ]
         }

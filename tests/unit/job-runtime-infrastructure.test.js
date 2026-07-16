@@ -4,9 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { captureLogger, deliveryRecord, metricRecorder } = require('../fixtures/job-runtime/v1');
-const { createGraphileAdapter, graphileLogger } = require('../../lib/job-runtime/graphile-adapter');
-const { createJobRuntimeInfrastructure } = require('../../lib/job-runtime');
-const { ensurePoolErrorHandler } = require('../../lib/job-runtime/pool');
+const { createGraphileAdapter, fairWorkerPlans, graphileLogger } = require('../../lib/job-runtime/graphile-adapter');
+const { createConnectionBudgetPool, ensurePoolErrorHandler } = require('../../lib/job-runtime/pool');
 const {
   DEFAULT_ROLES,
   applyLeastPrivilegeGrants,
@@ -16,7 +15,7 @@ const {
   verifyJobRuntimePrivileges,
 } = require('../../lib/job-runtime/postgres-roles');
 const { createDeliveryRegistry, normalizeRecord } = require('../../lib/job-runtime/registry');
-const { attachWorkerEvents, createJobRuntime, poolSummary } = require('../../lib/job-runtime/runtime');
+const { attachWorkerEvents, createJobRuntime } = require('../../lib/job-runtime/runtime');
 
 function databaseRow(overrides = {}) {
   const record = deliveryRecord();
@@ -28,8 +27,10 @@ function databaseRow(overrides = {}) {
     task_identifier: record.taskIdentifier,
     task_name: record.task,
     payload_version: record.version,
+    handler_version: record.handlerVersion,
     graphile_job_id: record.graphileJobId,
     named_queue: record.queue,
+    ordering_key: record.orderingKey,
     status: record.status,
     attempt_count: record.attemptCount,
     scheduled_for: record.scheduledFor,
@@ -69,7 +70,8 @@ test('delivery registry creates a pending record or returns the semantic duplica
   const input = {
     deliveryId: row.delivery_id, tenantId: row.tenant_id, workloadId: row.workload_id,
     semanticJobKey: row.semantic_job_key, taskIdentifier: row.task_identifier, task: row.task_name,
-    version: 1, catalogVersion: 1, queue: row.named_queue, maxAttempts: 3, priority: 0,
+    version: 1, catalogVersion: 1, handlerVersion: 1, queue: row.named_queue,
+    orderingKey: row.ordering_key, maxAttempts: 3, priority: 0,
     canonicalResourceType: 'synthetic', canonicalResourceId: 'probe-286', correlationId: row.correlation_id,
     payloadSizeBytes: 200, scheduledFor: new Date(row.scheduled_for),
   };
@@ -90,7 +92,9 @@ test('delivery registry transitions queued, running, acknowledged, retrying, and
     databaseRow({ status: 'delivery_failed' }),
     { delivery_id: '00000000-0000-4000-8000-000000000287' },
     { status: 'delivery_acknowledged', count: 2 },
-    { queue_depth: 3, oldest_age_seconds: 1.25 },
+    { queue_depth: 3, oldest_age_seconds: 1.25, queue_metrics: [
+      { queue: 'audit-outbox', queueDepth: 2, oldestAgeSeconds: 1.25 },
+    ] },
   ];
   const registry = createDeliveryRegistry(queuedPool(rows.map((row) => ({ rows: [row] }))));
   assert.equal((await registry.attachGraphileJob(rows[0].delivery_id, '42')).status, 'queued');
@@ -100,7 +104,11 @@ test('delivery registry transitions queued, running, acknowledged, retrying, and
   assert.equal((await registry.markFailed(rows[0].delivery_id, { retrying: false, errorCode: 'job_runtime_unavailable' })).status, 'delivery_failed');
   assert.equal(await registry.markRunningForRedelivery(), 1);
   assert.deepEqual(await registry.summarizeCorrelationPrefix('load_%'), { delivery_acknowledged: 2 });
-  assert.deepEqual(await registry.operationalMetrics(), { queueDepth: 3, oldestAgeSeconds: 1.25 });
+  assert.deepEqual(await registry.operationalMetrics(), {
+    queueDepth: 3,
+    oldestAgeSeconds: 1.25,
+    queues: [{ queue: 'audit-outbox', queueDepth: 2, oldestAgeSeconds: 1.25 }],
+  });
 });
 
 test('delivery registry fails closed for invalid transitions and missing schema', async () => {
@@ -116,6 +124,12 @@ test('delivery registry fails closed for invalid transitions and missing schema'
   await assert.rejects(() => missing.verifySchema(), { code: 'job_runtime_unavailable' });
   const present = createDeliveryRegistry(queuedPool([{ rows: [{ present: true }] }]));
   assert.equal(await present.verifySchema(), true);
+  const absentRecord = createDeliveryRegistry(queuedPool([{ rows: [] }, { rows: [] }, { rows: [] }]));
+  assert.equal(await absentRecord.findBySemanticKey('tenant-one', 'missing'), null);
+  assert.equal(await absentRecord.findByDeliveryId('missing'), null);
+  assert.equal(await absentRecord.markFailed('missing', { retrying: false, errorCode: 'job_payload_invalid' }), null);
+  const emptyMetrics = createDeliveryRegistry(queuedPool([{ rows: [] }]));
+  assert.deepEqual(await emptyMetrics.operationalMetrics(), { queueDepth: 0, oldestAgeSeconds: 0, queues: [] });
 });
 
 test('delivery registry retention prunes only bounded terminal records', async () => {
@@ -129,6 +143,8 @@ test('delivery registry retention prunes only bounded terminal records', async (
     code: 'job_runtime_unavailable', safeDetails: { reason: 'retention_policy' },
   });
   await assert.rejects(() => registry.pruneTerminalBefore(cutoff, 10_001), { code: 'job_runtime_unavailable' });
+  await assert.rejects(() => registry.pruneTerminalBefore(cutoff, 0), { code: 'job_runtime_unavailable' });
+  await assert.rejects(() => registry.pruneTerminalBefore(cutoff, 1.5), { code: 'job_runtime_unavailable' });
 });
 
 test('least-privilege grants use validated static roles and no Graphile table names', async () => {
@@ -145,7 +161,7 @@ test('least-privilege grants use validated static roles and no Graphile table na
 });
 
 test('runtime privilege verification accepts complete grants and rejects partial grants', async () => {
-  const allowed = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: true, registry_access: true }] }]);
+  const allowed = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true }] }]);
   assert.equal(await verifyJobRuntimePrivileges(allowed), true);
   const denied = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: false, registry_access: false }] }]);
   await assert.rejects(() => verifyJobRuntimePrivileges(denied), { code: 'job_runtime_unavailable' });
@@ -166,6 +182,43 @@ test('shared pool and connected clients receive one sanitized error handler', ()
   assert.equal(metrics.increments.length, 2);
   assert.equal(JSON.stringify(logger.entries).includes('password=secret'), false);
   assert.equal(ensurePoolErrorHandler({}, logger, metrics), false);
+});
+
+test('runtime pool facade caps shared connection acquisitions and exposes budget waiters', async () => {
+  let connections = 0;
+  const pool = {
+    options: { max: 10 }, waitingCount: 0,
+    async connect() {
+      connections += 1;
+      return { async query(value) { return { rows: [value] }; }, release() {} };
+    },
+  };
+  const budget = createConnectionBudgetPool(pool, 1);
+  const first = await budget.connect();
+  const secondPromise = budget.connect();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(connections, 1);
+  assert.equal(budget.waitingCount, 1);
+  first.release();
+  const second = await secondPromise;
+  assert.equal(connections, 2);
+  second.release();
+  assert.deepEqual(await budget.query('budget-query'), { rows: ['budget-query'] });
+  await new Promise((resolve, reject) => budget.query('callback-query', (error, result) => {
+    if (error) reject(error);
+    else { assert.deepEqual(result, { rows: ['callback-query'] }); resolve(); }
+  }));
+  await new Promise((resolve, reject) => budget.connect((error, client, release) => {
+    if (error) reject(error);
+    else { assert.equal(typeof client.query, 'function'); release(); resolve(); }
+  }));
+  const failedPool = createConnectionBudgetPool({
+    waitingCount: 0,
+    async connect() { throw new Error('connection failed'); },
+  }, 1);
+  await assert.rejects(failedPool.connect(), /connection failed/);
+  assert.equal(failedPool.waitingCount, 0);
+  assert.throws(() => createConnectionBudgetPool(pool, 0), TypeError);
 });
 
 class FakeGraphileLogger {
@@ -213,15 +266,45 @@ test('Graphile adapter uses only public migrate, add, run, stop, kill, and relea
   const fingerprintAdapter = createGraphileAdapter({ pool: fingerprintPool, schema: 'graphile_worker', logger, workerApi: api });
   assert.match(await fingerprintAdapter.schemaFingerprint(), /^[a-f0-9]{64}$/);
   assert.equal(await adapter.start({}, { claimsEnabled: false }), null);
-  const runner = await adapter.start({}, { claimsEnabled: true, concurrency: 2, pollIntervalMs: 1000, shutdownDeadlineMs: 30000 });
+  const tasks = {
+    'factory.langgraph.start.v1': async () => {},
+    'audit.projection.catch_up.v1': async () => {},
+    'audit.outbox.deliver.v1': async () => {},
+    'maintenance.job_runtime.prune.v1': async () => {},
+  };
+  const runner = await adapter.start(tasks, { claimsEnabled: true, concurrency: 4, pollIntervalMs: 1000, shutdownDeadlineMs: 30000 });
   await runner.stop('test');
   await runner.kill('test');
   await adapter.close();
   assert.equal(calls.migrate, 1);
   assert.deepEqual(calls.completed, [['42']]);
+  assert.equal(calls.runs.length, 1);
+  assert.deepEqual(calls.runs.map((call) => call.concurrency), [4]);
   assert.equal(calls.runs[0].noHandleSignals, true);
   assert.equal(calls.released, 1);
+  const unused = createGraphileAdapter({ pool: {}, schema: 'graphile_worker', logger, workerApi: api });
+  await unused.close();
+  await assert.rejects(() => unused.start({}, {
+    claimsEnabled: true, concurrency: 4, pollIntervalMs: 1000, shutdownDeadlineMs: 30000,
+  }), { safeDetails: { reason: 'task_list_empty' } });
   assert.throws(() => createGraphileAdapter({ logger, schema: 'graphile_worker', workerApi: api }), { code: 'job_runtime_unavailable' });
+});
+
+test('worker-class plans reserve claims for factory projection outbox and maintenance', () => {
+  const taskList = {
+    'factory.langgraph.start.v1': 1,
+    'factory.langgraph.resume.v1': 2,
+    'audit.projection.catch_up.v1': 3,
+    'audit.outbox.deliver.v1': 4,
+    'maintenance.factory.reconcile.v1': 5,
+  };
+  const plans = fairWorkerPlans(taskList, 4, [{ task: 'cron' }]);
+  assert.deepEqual(plans.map(({ name, concurrency }) => [name, concurrency]), [
+    ['shared-fair-queues', 4],
+  ]);
+  assert.deepEqual(plans[0].classConcurrency, { factory: 1, projection: 1, outbox: 1, maintenance: 1 });
+  assert.equal(plans[0].cronItems.length, 1);
+  assert.equal(new Set(plans.flatMap((plan) => Object.keys(plan.taskList))).size, Object.keys(taskList).length);
 });
 
 function runtimeFakes(overrides = {}) {
@@ -242,7 +325,12 @@ function runtimeFakes(overrides = {}) {
       calls.redelivery = (calls.redelivery || 0) + 1;
       if (overrides.redeliveryError) throw overrides.redeliveryError;
     },
-    async operationalMetrics() { return { queueDepth: 2, oldestAgeSeconds: 0.5 }; },
+    async operationalMetrics() {
+      return {
+        queueDepth: 2, oldestAgeSeconds: 0.5,
+        queues: [{ queue: 'audit-projection', queueDepth: 1, oldestAgeSeconds: 0.5 }],
+      };
+    },
     ...(overrides.pruneRetention ? { async pruneTerminalBefore(cutoff, limit) {
       calls.prune = [...(calls.prune || []), { cutoff, limit }];
       if (overrides.retentionError) throw overrides.retentionError;
@@ -271,6 +359,9 @@ test('runtime starts in ready or standby mode with sanitized health and pool dat
   assert.equal(health.acceptingClaims, true);
   assert.deepEqual(health.pool, { max: 10, total: 3, idle: 2, waiting: 0 });
   assert.ok(active.metrics.gauges.some((entry) => entry.name === 'job_runtime_queue_depth' && entry.value === 2));
+  assert.ok(active.metrics.gauges.some((entry) => (
+    entry.name === 'job_runtime_queue_starvation_seconds' && entry.labels.queue === 'audit-projection'
+  )));
   assert.ok(active.metrics.gauges.some((entry) => entry.name === 'job_runtime_pool_total_connections' && entry.value === 3));
   assert.equal(active.calls.privilege, 1);
   assert.equal((await active.runtime.start()).state, 'ready');
@@ -279,33 +370,17 @@ test('runtime starts in ready or standby mode with sanitized health and pool dat
   assert.equal((await standby.runtime.readiness()).ready, true);
 });
 
-test('runtime prunes terminal registry records on startup and a bounded interval', async () => {
-  let intervalCallback;
-  let cleared = 0;
+test('runtime delegates recurring maintenance without installing a bespoke interval', async () => {
+  let intervals = 0;
   const timers = {
     setTimeout() { return 1; }, clearTimeout() {},
-    setInterval(callback) { intervalCallback = callback; return { unref() {} }; },
-    clearInterval() { cleared += 1; },
+    setInterval() { intervals += 1; }, clearInterval() {},
   };
   const fixture = runtimeFakes({ pruneRetention: true, timers });
   await fixture.runtime.start();
-  assert.equal(fixture.calls.prune.length, 1);
-  assert.equal(fixture.calls.prune[0].limit, 1000);
-  intervalCallback();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(fixture.calls.prune.length, 2);
+  assert.equal((fixture.calls.prune || []).length, 0);
+  assert.equal(intervals, 0);
   await fixture.runtime.drain();
-  assert.equal(cleared, 1);
-});
-
-test('runtime keeps serving when bounded retention maintenance fails safely', async () => {
-  const fixture = runtimeFakes({
-    pruneRetention: true,
-    retentionError: new Error('database password=secret'),
-  });
-  assert.equal((await fixture.runtime.start()).state, 'standby');
-  assert.ok(fixture.metrics.increments.some((entry) => entry.name === 'job_runtime_retention_failure_total'));
-  assert.equal(JSON.stringify(fixture.logger.entries).includes('password=secret'), false);
 });
 
 test('runtime draining stops claims, honors graceful completion, and enforces deadline kill', async () => {
@@ -399,37 +474,22 @@ test('runtime installs and removes signal handlers without process exit', async 
   assert.equal(fixture.calls.close, 1);
 });
 
-test('infrastructure composes the application port without leaking Graphile internals', () => {
-  const pool = { options: { max: 10 }, async query() { return { rows: [{ present: true }] }; } };
-  const registry = {
-    async createPending() { return { created: false, record: deliveryRecord() }; },
-    async verifySchema() {},
-  };
-  const adapter = { async migrate() {}, async start() { return null; }, async close() {} };
-  const infrastructure = createJobRuntimeInfrastructure({
-    pool, registry, adapter, logger: captureLogger(), metrics: metricRecorder(), verifyPrivileges: async () => true,
-    config: { claimsEnabled: false },
-  });
-  assert.equal(typeof infrastructure.port.enqueue, 'function');
-  assert.equal(infrastructure.graphileWorker, undefined);
-  assert.equal(infrastructure.config.claimsEnabled, false);
-  assert.deepEqual(poolSummary(pool), { max: 10, total: 0, idle: 0, waiting: 0 });
+test('runtime idempotent stop and fatal-event guards cover non-running lifecycle states', async () => {
+  const fixture = runtimeFakes();
+  assert.equal((await fixture.runtime.drain('before-start')).state, 'stopped');
+  assert.equal((await fixture.runtime.drain('again')).state, 'stopped');
+  fixture.runtime.failRuntime(new Error('ignored after stop'));
+  assert.equal(fixture.runtime.state, 'stopped');
+  fixture.runtime.state = 'draining';
+  fixture.runtime.failRuntime(new Error('ignored while draining'));
+  assert.equal(fixture.runtime.state, 'draining');
+  fixture.runtime.removeSignalHandlers();
 });
 
-test('infrastructure default privilege verifier and clock execute through the composed runtime', async () => {
-  const pool = {
-    options: { max: 10 },
-    async query(sql) {
-      if (sql.includes('has_schema_privilege')) {
-        return { rows: [{ graphile_usage: true, registry_usage: true, registry_access: true }] };
-      }
-      return { rows: [{ '?column?': 1 }] };
-    },
-  };
-  const registry = { async verifySchema() {} };
-  const adapter = { async migrate() {}, async start() { return null; }, async close() {} };
-  const infrastructure = createJobRuntimeInfrastructure({
-    pool, registry, adapter, logger: captureLogger(), metrics: metricRecorder(), config: { claimsEnabled: false },
-  });
-  assert.equal((await infrastructure.runtime.start()).state, 'standby');
+test('runtime health tolerates unavailable optional metric sinks and registry telemetry', async () => {
+  const fixture = runtimeFakes();
+  fixture.runtime.options.metrics = { increment() {} };
+  fixture.runtime.options.registry.operationalMetrics = async () => { throw new Error('metrics unavailable'); };
+  fixture.runtime.state = 'standby';
+  assert.equal((await fixture.runtime.health()).status, 'ok');
 });

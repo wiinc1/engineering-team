@@ -38,6 +38,9 @@ test('alert fixtures reference metrics emitted by application-owned runtime code
     'lib/job-runtime/handlers.js',
     'lib/job-runtime/port.js',
     'lib/job-runtime/runtime.js',
+    'lib/job-runtime/index.js',
+    'lib/job-runtime/effect-ledger.js',
+    'lib/job-runtime/workload-handlers.js',
   ].map(read).join('\n');
   const metrics = [...alerts.matchAll(/(?:increase\()?\b(job_runtime_[a-z_]+)\b/g)].map((match) => match[1]);
   assert.ok(metrics.length >= 7);
@@ -48,8 +51,30 @@ test('alert fixtures reference metrics emitted by application-owned runtime code
 });
 
 test('every Given-When-Then acceptance criterion has an automated regression scenario', () => {
-  const e2e = read('tests/e2e/job-runtime.e2e.test.js');
-  for (let criterion = 1; criterion <= 6; criterion += 1) {
+  const e2e = read('tests/e2e/job-runtime-workloads.e2e.test.js');
+  for (let criterion = 1; criterion <= 7; criterion += 1) {
     assert.match(e2e, new RegExp(`test\\('AC${criterion}[^']+@regression'`), `AC${criterion}`);
   }
+});
+
+test('issue 287 workload, compatibility, operations, and compliance artifacts are committed', () => {
+  const artifacts = [
+    'config/job-runtime-workload-inventory.json',
+    'docs/architecture/job-runtime-workloads.md',
+    'docs/architecture/job-runtime-runtime-configuration.md',
+    'docs/api/job-runtime-internal-contract.md',
+    'docs/api/job-runtime-openapi.yml',
+    'docs/reports/ISSUE-287_DEPENDENCY_REVIEW.md',
+    'docs/reports/ISSUE-287_STANDARDS_COMPLIANCE_CHECKLIST.md',
+    'docs/runbooks/job-runtime.md',
+    'docs/diagrams/workflow-graphile-02.mmd',
+    'docs/diagrams/schema-graphile-02.mmd',
+    'docs/diagrams/architecture-graphile-02.mmd',
+  ];
+  for (const artifact of artifacts) assert.match(read(artifact), /Graphile|job.runtime|workload/i, artifact);
+  assert.match(read(artifacts[5]), /Standards Alignment/);
+  assert.match(read(artifacts[6]), /Required Evidence/);
+  assert.match(read(artifacts[1]), /GitLab, GitHub, deployment, notifications/);
+  assert.match(read(artifacts[7]), /Delivery acknowledgment is not business completion/);
+  assert.match(read(artifacts[4]), /paths:\s*\{\}/);
 });

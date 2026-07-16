@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 1,
+  "signedAt": "2026-07-15",
+  "workloads": [
+    {
+      "id": "factory-langgraph-start",
+      "taskIdentifier": "factory.langgraph.start.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "factoryStart",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "langgraph_checkpoint",
+      "legacySources": ["scripts/run-factory-orchestrator.js", "lib/task-platform/factory-delivery.js"]
+    },
+    {
+      "id": "factory-langgraph-resume",
+      "taskIdentifier": "factory.langgraph.resume.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "factoryResume",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "langgraph_checkpoint",
+      "legacySources": ["scripts/run-factory-orchestrator.js", "lib/task-platform/factory-delivery.js"]
+    },
+    {
+      "id": "audit-projection-catch-up",
+      "taskIdentifier": "audit.projection.catch_up.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "auditProjection",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "audit_projection",
+      "legacySources": ["scripts/run-audit-workers.js", "scripts/process-audit-projection-queue.js"]
+    },
+    {
+      "id": "audit-outbox-delivery",
+      "taskIdentifier": "audit.outbox.deliver.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "auditOutbox",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "notification",
+      "legacySources": ["scripts/run-audit-workers.js", "scripts/process-audit-outbox.js"]
+    },
+    {
+      "id": "sre-monitoring-expiry",
+      "taskIdentifier": "maintenance.sre_monitoring.expire.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "sreMonitoringExpiry",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "canonical_task",
+      "legacySources": ["lib/audit/workers.js"]
+    },
+    {
+      "id": "factory-lease-reconciliation",
+      "taskIdentifier": "maintenance.factory.reconcile.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "factoryReconciliation",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "factory_queue_recovery",
+      "legacySources": ["lib/task-platform/factory-delivery-queue-recovery.js"]
+    },
+    {
+      "id": "job-runtime-registry-retention",
+      "taskIdentifier": "maintenance.job_runtime.prune.v1",
+      "producer": "lib/job-runtime/workload-producers.js",
+      "producerMethod": "registryRetention",
+      "consumer": "lib/job-runtime/workload-handlers.js",
+      "effectCategory": "operational_retention",
+      "legacySources": ["lib/job-runtime/index.js"]
+    }
+  ],
+  "mechanisms": [
+    {
+      "source": "scripts/run-factory-orchestrator.js",
+      "kind": "lease_retry_loop",
+      "disposition": "migrated",
+      "workloadIds": ["factory-langgraph-start", "factory-langgraph-resume"]
+    },
+    {
+      "source": "scripts/run-audit-workers.js",
+      "kind": "supervised_poll_loop",
+      "disposition": "migrated",
+      "workloadIds": ["audit-projection-catch-up", "audit-outbox-delivery"]
+    },
+    {
+      "source": "lib/audit/workers.js",
+      "kind": "scheduled_expiry",
+      "disposition": "migrated",
+      "workloadIds": ["sre-monitoring-expiry"]
+    },
+    {
+      "source": "lib/audit/postgres.js",
+      "kind": "ordered_queue_claim_retry",
+      "disposition": "migrated",
+      "workloadIds": ["audit-projection-catch-up", "audit-outbox-delivery"]
+    },
+    {
+      "source": "scripts/process-audit-projection-queue.js",
+      "kind": "one_shot_queue_consumer",
+      "disposition": "migrated",
+      "workloadIds": ["audit-projection-catch-up"]
+    },
+    {
+      "source": "scripts/process-audit-outbox.js",
+      "kind": "one_shot_queue_consumer",
+      "disposition": "migrated",
+      "workloadIds": ["audit-outbox-delivery"]
+    },
+    {
+      "source": "lib/task-platform/factory-delivery-queue-recovery.js",
+      "kind": "lease_recovery",
+      "disposition": "migrated",
+      "workloadIds": ["factory-lease-reconciliation"]
+    },
+    {
+      "source": "lib/task-platform/factory-delivery-queue-postgres.js",
+      "kind": "lease_claim_retry_consumer",
+      "disposition": "migrated",
+      "workloadIds": ["factory-langgraph-start", "factory-langgraph-resume", "factory-lease-reconciliation"]
+    },
+    {
+      "source": "lib/job-runtime/index.js",
+      "kind": "scheduled_retention",
+      "disposition": "migrated",
+      "workloadIds": ["job-runtime-registry-retention"]
+    },
+    {
+      "source": "scripts/command-router.js",
+      "kind": "external_ingress_poll",
+      "disposition": "excluded",
+      "rationale": "Unwired Discord ingress adapter; message polling is external event ingestion, not semantic background execution."
+    },
+    {
+      "source": "scripts/factory-stack-postgres-watch.js",
+      "kind": "database_supervisor",
+      "disposition": "excluded",
+      "rationale": "Out-of-band database recovery must remain available when PostgreSQL and Graphile Worker are unavailable."
+    },
+    {
+      "source": "scripts/dual-remote-mirror-agent.js",
+      "kind": "host_scheduler",
+      "disposition": "excluded",
+      "rationale": "Repository mirror host automation is a deployment tool and is not part of the supported factory runtime deployment."
+    },
+    {
+      "source": "lib/task-platform/dual-remote-mirror-ops.js",
+      "kind": "host_scheduler_support",
+      "disposition": "excluded",
+      "rationale": "Supporting loop for repository mirror host automation; the host scheduler is outside the supported factory runtime deployment."
+    },
+    {
+      "source": "lib/audit/store.js",
+      "kind": "local_file_queue_retry",
+      "disposition": "excluded",
+      "rationale": "File-backed audit queues are explicitly local-development compatibility storage and are not a production background delivery owner."
+    },
+    {
+      "source": "scripts/rebuild-audit-projections.js",
+      "kind": "operator_disaster_recovery",
+      "disposition": "excluded",
+      "rationale": "Destructive full projection rebuild remains an explicit operator-controlled disaster-recovery action, not recurring semantic work."
+    },
+    {
+      "source": "scripts/dev-golden-path/factory-orchestrator.js",
+      "kind": "development_supervisor",
+      "disposition": "excluded",
+      "rationale": "Local development stack supervisor only; it does not own a production semantic workload."
+    }
+  ],
+  "signature": {
+    "algorithm": "sha256",
+    "digest": "82d202f04c0f88b10f84f3960656039e5bd89871846dee6e9356ecd436c3b3ba"
+  }
+}
