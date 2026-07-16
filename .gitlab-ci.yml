@@ -26,6 +26,7 @@ variables:
 
 stages:
   - build
+  - performance
   - test
   - verify
   - deploy
@@ -48,6 +49,23 @@ build:
       - dist/
     expire_in: 1 week
 
+# Timing budgets run before mutation/full-suite/load work can contaminate the
+# shared shell runner. Downstream jobs depend on this stage succeeding and do
+# not repeat the same evidence under a thermally loaded host.
+performance-evidence:
+  extends: .node-job
+  stage: performance
+  timeout: 15 minutes
+  script:
+    - npm run test:performance
+    - npm run test:browser:performance
+  artifacts:
+    when: always
+    paths:
+      - test-results/
+      - playwright-report/
+    expire_in: 2 weeks
+
 # Run every local and issue-specific gate, including real PostgreSQL and the ten-minute 2x workload proof.
 graphile-02-verify:
   extends: .node-job
@@ -60,17 +78,16 @@ graphile-02-verify:
     - npm run test:graphile:workloads
     - npm run test:graphile:coverage
     - npm run test:graphile:mutation
-    - npm test
+    - npm run test:functional
     - export COMPOSE_PROJECT_NAME="issue287-${CI_PIPELINE_ID}-${CI_JOB_ID}"
     - export POSTGRES_HOST_PORT="$((55000 + (CI_JOB_ID % 9000)))"
     - npm run test:integration:docker
     - npm run test:security
-    - npm run test:performance
     - JOB_RUNTIME_LOAD_DURATION_MS=600000 JOB_RUNTIME_LOAD_QPS=50 npm run test:graphile:load
     - npm run coverage
     - npm run standards:check
     - npm run build
-    - make verify
+    - PERFORMANCE_EVIDENCE_COMPLETE=1 make verify
     - |
       base_sha="$(git merge-base "origin/${CI_DEFAULT_BRANCH}" "$CI_COMMIT_SHA")"
       git diff --check "$base_sha" "$CI_COMMIT_SHA"
@@ -95,17 +112,16 @@ langgraph-01-verify:
     - npm run test:langgraph:coverage
     - npm run test:langgraph:runtime-coverage
     - npm run test:langgraph:mutation
-    - npm test
+    - npm run test:functional
     - export COMPOSE_PROJECT_NAME="issue280-${CI_PIPELINE_ID}-${CI_JOB_ID}"
     - export POSTGRES_HOST_PORT="$((46000 + (CI_JOB_ID % 9000)))"
     - npm run test:integration:docker
     - npm run test:security
-    - npm run test:performance
     - LANGGRAPH_LOAD_DURATION_MS=600000 LANGGRAPH_LOAD_CONCURRENCY=4 npm run test:langgraph:load
     - npm run coverage
     - npm run standards:check
     - npm run build
-    - make verify
+    - PERFORMANCE_EVIDENCE_COMPLETE=1 make verify
     - |
       base_sha="$(git merge-base "origin/${CI_DEFAULT_BRANCH}" "$CI_COMMIT_SHA")"
       git diff --check "$base_sha" "$CI_COMMIT_SHA"

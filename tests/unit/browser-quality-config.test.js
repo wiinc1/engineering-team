@@ -59,11 +59,19 @@ test('browser quality config covers the required route and viewport matrix', asy
 
 test('browser performance evidence runs in a fresh process before the functional matrix', () => {
   const { scripts } = require('../../package.json');
+  const { browserGateInvocations } = require('../../scripts/run-browser-gates');
 
-  assert.equal(
-    scripts['test:browser'],
-    'npm run test:browser:performance && npm run test:browser:functional',
-  );
+  assert.equal(scripts['test:browser'], 'node scripts/run-browser-gates.js');
+  assert.deepEqual(browserGateInvocations({}, ['--project=chromium']), [
+    ['tests/browser/browser-quality-performance.browser.spec.ts'],
+    ['--grep-invert=browser Core Web Vitals budget gate', '--project=chromium'],
+  ]);
+  assert.deepEqual(browserGateInvocations(
+    { PERFORMANCE_EVIDENCE_COMPLETE: '1' },
+    ['--grep=protected sign-in recovery'],
+  ), [
+    ['--grep-invert=browser Core Web Vitals budget gate', '--grep=protected sign-in recovery'],
+  ]);
   assert.match(
     scripts['test:browser:performance'],
     /browser-quality-performance\.browser\.spec\.ts/,
