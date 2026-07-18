@@ -9,6 +9,17 @@ export interface FactoryDecision {
   outcome: 'approved' | 'rejected' | 'deferred';
 }
 
+export type FactoryLifecycleStatus =
+  | 'running' | 'retrying' | 'waiting' | 'succeeded' | 'failed' | 'dead_letter' | 'cancelled';
+
+export interface FactoryChildRun {
+  id: string;
+  status: 'blocked' | 'ready' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+  dependencies: string[];
+  attempt: number;
+  namespace: `child:${string}`;
+}
+
 export interface FactoryGraphStateV1 {
   schemaVersion: 1;
   graphVersion: 'factory-v1';
@@ -21,6 +32,12 @@ export interface FactoryGraphStateV1 {
   decisions: FactoryDecision[];
   attempt: number;
   updatedAt: string;
+  lifecycleStatus: FactoryLifecycleStatus;
+  qaOutcome: 'pass' | 'fail' | null;
+  qaAttempts: number;
+  terminalReason: string | null;
+  nodeAttempts: Record<string, number>;
+  childRuns: FactoryChildRun[];
 }
 
 export interface FactoryDomainNode {

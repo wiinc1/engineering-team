@@ -65,3 +65,27 @@ groups:
         annotations:
           summary: Active or paused graph threads have not advanced for 15 minutes
           runbook_url: docs/runbooks/langgraph-checkpoints.md#alerts-and-triage
+      - alert: LangGraphStuckInterrupt
+        expr: langgraph_active_interrupt_age_seconds > 3600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: A durable LangGraph human interrupt has been pending for over one hour
+          runbook_url: docs/runbooks/langgraph-operations.md
+      - alert: LangGraphResumeFailures
+        expr: increase(langgraph_interrupt_decisions_total{outcome="failed"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: A durable interrupt resume failed
+          runbook_url: docs/runbooks/langgraph-operations.md
+      - alert: LangGraphAuthorizationAnomaly
+        expr: increase(langgraph_interrupt_decisions_total{code="langgraph_decision_forbidden"}[5m]) >= 3
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Repeated unauthorized LangGraph decisions detected
+          runbook_url: docs/runbooks/langgraph-operations.md

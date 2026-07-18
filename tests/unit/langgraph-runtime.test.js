@@ -103,8 +103,12 @@ test('production configuration requires database URL only for enabled runtime wi
   assert.throws(() => runtimeConfig({ production: true, enabled: true }, {}), {
     code: 'langgraph_configuration_invalid', safeDetails: { reason: 'database_url_required' },
   });
-  assert.equal(runtimeConfig({ production: true, enabled: true }, { DATABASE_URL: 'postgres://example' }).production, true);
-  assert.equal(runtimeConfig({ enabled: true, pool: {} }, { NODE_ENV: 'production' }).production, true);
+  assert.throws(() => runtimeConfig({ production: true, enabled: true }, { DATABASE_URL: 'postgres://example' }), {
+    code: 'langgraph_configuration_invalid', safeDetails: { reason: 'ownership_epoch_required' },
+  });
+  const ownershipEpoch = '98f48812-7aa6-4ce8-9e88-184ba4bcbb52';
+  assert.equal(runtimeConfig({ production: true, enabled: true, ownershipEpoch }, { DATABASE_URL: 'postgres://example' }).production, true);
+  assert.equal(runtimeConfig({ enabled: true, pool: {}, ownershipEpoch }, { NODE_ENV: 'production' }).production, true);
   assert.equal(runtimeConfig({ production: false, enabled: true }, {}).production, false);
 });
 

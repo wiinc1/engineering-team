@@ -1,0 +1,7 @@
+flowchart LR
+  P[Evidence preflight] --> F[Freeze legacy starts and claims]
+  F --> R{Reconcile every semantic job}
+  R -->|resolved| E[Activate jobs/Graphile epoch]
+  R -->|ambiguous| A[Abort and quarantine]
+  E --> V[Synthetics and legacy-zero checks]
+  V --> O[24h soak then remove executable legacy]

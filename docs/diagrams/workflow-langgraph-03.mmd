@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant User
+  participant API
+  participant Registry as Interrupt registry
+  participant Runtime as LangGraph runtime
+  Runtime->>Registry: persist interrupt + checkpoint + roles
+  User->>API: decision + version + idempotency
+  API->>Registry: tenant/RBAC/freshness claim
+  Registry-->>API: one winning claim
+  API->>Runtime: Command(resume) on exact thread
+  Runtime-->>Registry: checkpoint and terminal resolution
+  API-->>User: sanitized updated status

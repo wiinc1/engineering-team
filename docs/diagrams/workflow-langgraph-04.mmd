@@ -1,0 +1,7 @@
+flowchart LR
+  P[Evidence preflight] --> F[Freeze factory starts]
+  F --> R{Reconcile every legacy run}
+  R -->|resolved| E[Activate factory/LangGraph epoch]
+  R -->|ambiguous| A[Abort and quarantine]
+  E --> V[Full lifecycle synthetics and legacy-zero checks]
+  V --> O[24h soak then remove legacy sequencer]

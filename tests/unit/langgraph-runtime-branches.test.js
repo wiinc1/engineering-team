@@ -86,7 +86,7 @@ test('setup rejects each incomplete schema result and closes an owned pool', asy
 });
 
 test('production runtime rejects an injected unguarded saver', () => {
-  assert.throws(() => runtimeHarness({ config: { production: true } }), {
+  assert.throws(() => runtimeHarness({ config: { production: true, ownershipEpoch: '98f48812-7aa6-4ce8-9e88-184ba4bcbb52' } }), {
     code: 'langgraph_configuration_invalid', safeDetails: { reason: 'unguarded_checkpointer' },
   });
 });

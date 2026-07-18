@@ -21,7 +21,7 @@ test('every LangGraph alert has the reviewed expression threshold severity durat
     assert.equal(rule.expr, expected[rule.alert].expr, `${rule.alert} expression or threshold drifted`);
     assert.equal(rule.for, expected[rule.alert].for, `${rule.alert} duration drifted`);
     assert.equal(rule.labels?.severity, expected[rule.alert].severity, `${rule.alert} severity drifted`);
-    assert.equal(rule.annotations?.runbook_url, 'docs/runbooks/langgraph-checkpoints.md#alerts-and-triage');
+    assert.equal(rule.annotations?.runbook_url, expected[rule.alert].runbook || 'docs/runbooks/langgraph-checkpoints.md#alerts-and-triage');
   }
   assert.match(fs.readFileSync(runbookPath, 'utf8'), /^## Alerts and triage$/m);
 });

@@ -1,0 +1,9 @@
+flowchart LR
+  CI[CI and staging] --> G{Evidence gate}
+  G -->|complete/current/pass| C[Authorize LangGraph cutover]
+  G -->|missing/stale/fail| B[Block LANGGRAPH-04]
+  CI --> L[2x checkpoint and API load]
+  CI --> X[Node DB network and security chaos]
+  CI --> S[24h thread/interrupt soak]
+  CI --> D[Checkpoint restore/reconcile]
+  L & X & S & D --> G

@@ -1,0 +1,17 @@
+erDiagram
+  JOB_DELIVERY_REGISTRY ||--o{ JOB_OPERATOR_ACTIONS : records
+  JOB_DELIVERY_REGISTRY {
+    uuid delivery_id PK
+    string tenant_id
+    string status
+    bigint operator_version
+    string graphile_job_id
+  }
+  JOB_OPERATOR_ACTIONS {
+    uuid action_id PK
+    string tenant_id
+    uuid delivery_id FK
+    string idempotency_key UK
+    string action
+    string outcome
+  }

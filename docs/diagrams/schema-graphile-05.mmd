@@ -1,0 +1,5 @@
+erDiagram
+  JOB_DELIVERY_REGISTRY ||--o{ JOB_EFFECT_LEDGER : guards
+  OWNERSHIP_EPOCHS ||--o{ MIGRATION_RECORDS : proves
+  OWNERSHIP_EPOCHS { string scope uuid epoch string engine string evidence_digest }
+  MIGRATION_RECORDS { string tenant_id string semantic_id string disposition string outcome }

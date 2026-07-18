@@ -38,5 +38,23 @@
     "expr": "langgraph_stale_threads > 0",
     "for": "15m",
     "severity": "warning"
+  },
+  "LangGraphStuckInterrupt": {
+    "expr": "langgraph_active_interrupt_age_seconds > 3600",
+    "for": "5m",
+    "severity": "warning",
+    "runbook": "docs/runbooks/langgraph-operations.md"
+  },
+  "LangGraphResumeFailures": {
+    "expr": "increase(langgraph_interrupt_decisions_total{outcome=\"failed\"}[5m]) > 0",
+    "for": "0m",
+    "severity": "critical",
+    "runbook": "docs/runbooks/langgraph-operations.md"
+  },
+  "LangGraphAuthorizationAnomaly": {
+    "expr": "increase(langgraph_interrupt_decisions_total{code=\"langgraph_decision_forbidden\"}[5m]) >= 3",
+    "for": "0m",
+    "severity": "critical",
+    "runbook": "docs/runbooks/langgraph-operations.md"
   }
 }

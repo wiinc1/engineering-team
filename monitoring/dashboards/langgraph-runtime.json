@@ -1,6 +1,6 @@
 {
   "title": "LangGraph Runtime",
-  "description": "LANGGRAPH-01 checkpoint health, latency, size, versions, tenant rejection, retention, and pool capacity.",
+  "description": "LangGraph checkpoint, lifecycle, interrupt, decision, retry, cancellation, and pool health.",
   "panels": [
     { "title": "Checkpoint read/write rate", "metrics": ["langgraph_checkpoint_reads_total", "langgraph_checkpoint_writes_total"] },
     { "title": "Checkpoint errors by stable code", "metric": "langgraph_checkpoint_errors_total" },
@@ -9,6 +9,9 @@
     { "title": "Active and stale threads", "metrics": ["langgraph_active_threads", "langgraph_stale_threads"] },
     { "title": "Pool active/waiting/saturation", "metrics": ["langgraph_pool_active_connections", "langgraph_pool_waiting_requests", "langgraph_pool_saturation_total"] },
     { "title": "Version mismatch and tenant rejection", "metrics": ["langgraph_version_mismatch_total", "langgraph_tenant_rejections_total"] },
-    { "title": "Retention pruning", "metric": "langgraph_retention_pruned_threads_total" }
+    { "title": "Retention pruning", "metric": "langgraph_retention_pruned_threads_total" },
+    { "title": "Active interrupts and age", "metrics": ["langgraph_active_interrupts", "langgraph_active_interrupt_age_seconds"] },
+    { "title": "Interrupt decisions", "metric": "langgraph_interrupt_decisions_total" },
+    { "title": "Retry and cancellation actions", "metric": "langgraph_operator_actions_total" }
   ]
 }

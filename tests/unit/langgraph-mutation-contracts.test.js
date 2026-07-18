@@ -40,6 +40,11 @@ test('all stable error definitions preserve exact safe messages and retryability
     langgraph_checkpoint_unavailable: ['Checkpoint storage is unavailable.', true],
     langgraph_concurrency_conflict: ['The graph thread is already being resumed.', true],
     langgraph_configuration_invalid: ['LangGraph runtime configuration is invalid.', false],
+    langgraph_decision_conflict: ['The graph decision is stale or conflicts with another decision.', false],
+    langgraph_decision_forbidden: ['The graph decision is not permitted.', false],
+    langgraph_decision_invalid: ['The graph decision was rejected.', false],
+    langgraph_interrupt_not_found: ['The graph interrupt was not found.', false],
+    langgraph_mutations_disabled: ['Graph mutations are disabled.', false],
     langgraph_migration_mismatch: ['LangGraph checkpoint schema is incompatible.', false],
     langgraph_state_invalid: ['Graph state was rejected.', false],
     langgraph_tenant_mismatch: ['Graph thread tenant binding does not match.', false],
@@ -159,6 +164,7 @@ test('annotation defaults and reducer results are exact', () => {
   const expected = {
     schemaVersion: 1, graphVersion: 'factory-v1', tenantId: '', factoryRunId: '', threadId: '', lifecycleNode: null,
     completedNodes: [], artifacts: [], decisions: [], attempt: 0, updatedAt: '1970-01-01T00:00:00.000Z',
+    lifecycleStatus: 'running', qaOutcome: null, qaAttempts: 0, terminalReason: null, nodeAttempts: {}, childRuns: [],
   };
   assert.deepEqual(Object.fromEntries(Object.entries(FactoryStateAnnotation.spec).map(([key, channel]) => [key, channel.initialValueFactory()])), expected);
   assert.deepEqual(uniqueSortedReducer(['b'], ['a']), ['a', 'b']);

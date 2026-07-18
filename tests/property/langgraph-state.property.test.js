@@ -24,7 +24,15 @@ test('arbitrary supported v1 state round-trips through strict validation', () =>
       decisions: random() > 0.5 ? [{ code: `decision_${index}`, outcome: 'approved' }] : [],
     });
     const validated = validateFactoryState(value);
-    assert.deepEqual(JSON.parse(JSON.stringify(validated)), value);
+    assert.deepEqual(JSON.parse(JSON.stringify(validated)), {
+      ...value,
+      lifecycleStatus: 'running',
+      qaOutcome: null,
+      qaAttempts: 0,
+      terminalReason: null,
+      nodeAttempts: {},
+      childRuns: [],
+    });
   }
 });
 

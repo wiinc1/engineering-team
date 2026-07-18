@@ -1,0 +1,9 @@
+C4Container
+  title LangGraph production hardening
+  Container(graph, "LangGraph runtime", "Node/LangGraph", "Durable lifecycle")
+  ContainerDb(pg, "Postgres", "Checkpoints/threads/interrupts", "Execution state")
+  Container(gate, "Release gate", "Node", "Revision-bound evidence")
+  Container(obs, "Observability", "Metrics/logs/alerts", "SLO and paging")
+  Rel(graph, pg, "tenant-bound checkpoints")
+  Rel(graph, obs, "sanitized signals")
+  Rel(gate, obs, "validates alerts and SLOs")

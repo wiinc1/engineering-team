@@ -1,0 +1,9 @@
+C4Container
+  title Graphile production hardening
+  Container(worker, "Graphile runtime", "Node/Graphile", "Delivery and drain")
+  ContainerDb(pg, "Postgres", "Registry/worker/checkpoints", "Durable state")
+  Container(gate, "Release gate", "Node", "Revision-bound evidence")
+  Container(obs, "Observability", "Metrics/logs/alerts", "SLO and paging")
+  Rel(worker, pg, "bounded pool")
+  Rel(worker, obs, "sanitized signals")
+  Rel(gate, obs, "validates alerts and SLOs")

@@ -76,7 +76,7 @@ test('issue 287 workload, compatibility, operations, and compliance artifacts ar
   assert.match(read(artifacts[6]), /Required Evidence/);
   assert.match(read(artifacts[1]), /GitLab, GitHub, deployment, notifications/);
   assert.match(read(artifacts[7]), /Delivery acknowledgment is not business completion/);
-  assert.match(read(artifacts[4]), /paths:\s*\{\}/);
+  assert.match(read(artifacts[4]), /\/api\/v1\/job-runtime\/jobs/);
 });
 
 test('shared-host performance files run serially without weakening their budgets', () => {

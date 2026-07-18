@@ -161,7 +161,7 @@ test('least-privilege grants use validated static roles and no Graphile table na
 });
 
 test('runtime privilege verification accepts complete grants and rejects partial grants', async () => {
-  const allowed = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true }] }]);
+  const allowed = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true, operator_action_access: true, ownership_epoch_access: true }] }]);
   assert.equal(await verifyJobRuntimePrivileges(allowed), true);
   const denied = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: false, registry_access: false }] }]);
   await assert.rejects(() => verifyJobRuntimePrivileges(denied), { code: 'job_runtime_unavailable' });
