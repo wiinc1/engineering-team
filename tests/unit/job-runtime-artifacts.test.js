@@ -95,6 +95,7 @@ test('shared-host performance files run serially without weakening their budgets
   assert.equal((ci.match(/- npm run test:browser:performance/g) || []).length, 1);
   assert.equal((ci.match(/PERFORMANCE_EVIDENCE_COMPLETE=1 make verify/g) || []).length, 2);
   assert.match(ci, /PERFORMANCE_HOST_MAX_CPU_PERCENT: "25"/);
+  assert.match(ci, /PERFORMANCE_HOST_WAIT_TIMEOUT_MS: "1200000"/);
   assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.95\) < 100/);
   assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.99\) < 250/);
 });
