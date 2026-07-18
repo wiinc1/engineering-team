@@ -79,10 +79,18 @@ function loadInfrastructure(loadTest) {
 class JobRuntimeLoadTest {
   constructor(options = {}) {
     this.durationMs = positiveInteger(options.durationMs || process.env.JOB_RUNTIME_LOAD_DURATION_MS, 600_000);
-    this.targetQps = positiveInteger(options.targetQps || process.env.JOB_RUNTIME_LOAD_QPS, 50);
+    this.expectedQps = positiveInteger(options.expectedQps || process.env.JOB_RUNTIME_EXPECTED_QPS, 25);
+    this.requiredLoadMultiplier = positiveInteger(
+      options.requiredLoadMultiplier || process.env.JOB_RUNTIME_REQUIRED_LOAD_MULTIPLIER, 2,
+    );
+    this.targetQps = positiveInteger(
+      options.targetQps || process.env.JOB_RUNTIME_LOAD_QPS,
+      this.expectedQps * this.requiredLoadMultiplier,
+    );
     this.pool = options.pool || createPgPoolFromEnv(options.connectionString);
     this.logger = options.logger || createJobRuntimeLogger({ baseDir: options.baseDir || process.cwd() });
     this.runId = `load-${Date.now().toString(36)}`;
+    this.tenantId = options.tenantId || process.env.JOB_RUNTIME_LOAD_TENANT_ID || `load_${Date.now().toString(36)}`;
     this.enqueueLatencies = [];
     this.readyLatencies = [];
     this.workloadCounts = new Map();
@@ -131,7 +139,7 @@ class JobRuntimeLoadTest {
     const correlationId = `${this.runId}-corr-${index}`;
     const [task, method, input] = this.workload(index, 1_760_000_000_000 + index);
     const enqueueStarted = performance.now();
-    await this.infrastructure.producers[method]({ tenantId: 'tenant-load', correlationId }, input);
+    await this.infrastructure.producers[method]({ tenantId: this.tenantId, correlationId }, input);
     this.workloadCounts.set(task, (this.workloadCounts.get(task) || 0) + 1);
     this.enqueueLatencies.push(performance.now() - enqueueStarted);
   }
@@ -152,11 +160,12 @@ class JobRuntimeLoadTest {
       JSON.parse(key)[0] === 'job_runtime_ready_to_start_ms' ? values : []
     ));
     return {
-      version: 1,
+      version: 1, run_id: this.runId, tenant_id: this.tenantId,
       duration_ms: this.durationMs,
-      expected_qps: 25,
+      expected_qps: this.expectedQps,
       target_qps: this.targetQps,
-      load_multiplier: 2,
+      load_multiplier: this.targetQps / this.expectedQps,
+      required_load_multiplier: this.requiredLoadMultiplier,
       submitted,
       submitted_by_task: Object.fromEntries([...this.workloadCounts.entries()].sort()),
       acknowledged: summary.delivery_acknowledged || 0,
@@ -171,7 +180,7 @@ class JobRuntimeLoadTest {
   }
 
   assertBudgets(report) {
-    if (report.target_qps !== report.expected_qps * 2) throw new Error('job_runtime_load_multiplier_failed');
+    if (report.load_multiplier < report.required_load_multiplier) throw new Error('job_runtime_load_multiplier_failed');
     if (report.acknowledged !== report.submitted) throw new Error('job_runtime_load_delivery_loss');
     if (report.enqueue_p95_ms >= 100 || report.enqueue_p99_ms >= 250) throw new Error('job_runtime_enqueue_latency_budget_failed');
     if (report.ready_to_start_p95_ms >= 2_000) throw new Error('job_runtime_ready_latency_budget_failed');
@@ -196,26 +205,69 @@ class JobRuntimeLoadTest {
 
   async close() {
     await this.infrastructure.runtime.drain('load test complete').catch(() => {});
+    this.cleanupReport = await cleanupLoadData(this.pool, this.tenantId);
     this.pool.off('connect', this.recordPoolPeak);
     this.pool.off('acquire', this.recordPoolPeak);
     await this.pool.end();
   }
 }
 
+async function cleanupLoadData(pool, tenantId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const actions = await client.query(`DELETE FROM job_runtime.job_operator_actions
+      WHERE tenant_id = $1`, [tenantId]);
+    const effects = await client.query(`DELETE FROM job_runtime.job_effect_ledger
+      WHERE tenant_id = $1`, [tenantId]);
+    const deliveries = await client.query(`DELETE FROM job_runtime.job_delivery_registry
+      WHERE tenant_id = $1`, [tenantId]);
+    const residual = await client.query(`SELECT
+      (SELECT COUNT(*)::integer FROM job_runtime.job_operator_actions WHERE tenant_id = $1)
+      + (SELECT COUNT(*)::integer FROM job_runtime.job_effect_ledger WHERE tenant_id = $1)
+      + (SELECT COUNT(*)::integer FROM job_runtime.job_delivery_registry WHERE tenant_id = $1)
+      AS count`, [tenantId]);
+    await client.query('COMMIT');
+    return Object.freeze({
+      actions: actions.rowCount, effects: effects.rowCount, deliveries: deliveries.rowCount,
+      residual: Number(residual.rows[0].count),
+    });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function main() {
   const testRunner = new JobRuntimeLoadTest();
+  let report;
+  let failure;
   try {
-    const report = await testRunner.run();
-    const artifactPath = path.join(process.cwd(), '.artifacts', 'job-runtime-load.json');
+    report = await testRunner.run();
+  } catch (error) {
+    failure = error;
+  }
+  try {
+    await testRunner.close();
+  } catch (error) {
+    failure ||= error;
+  }
+  if (report) {
+    report.cleanup = testRunner.cleanupReport || null;
+    if (report.cleanup?.residual !== 0) failure ||= new Error('job_runtime_load_cleanup_failed');
+    const artifactPath = process.env.JOB_RUNTIME_LOAD_OUTPUT
+      || path.join(process.cwd(), '.artifacts', 'job-runtime-load.json');
     fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
     fs.writeFileSync(artifactPath, `${JSON.stringify(report, null, 2)}\n`);
-    process.stdout.write(`job runtime load test passed: ${JSON.stringify(report)}\n`);
-  } catch (error) {
-    const evidence = testRunner.lastReport ? ` report=${JSON.stringify(testRunner.lastReport)}` : '';
-    process.stderr.write(`job runtime load test failed: ${error.message}${evidence}\n`);
+  }
+  if (failure) {
+    const evidence = report || testRunner.lastReport;
+    process.stderr.write(`job runtime load test failed: ${failure.message}${evidence ? ` report=${JSON.stringify(evidence)}` : ''}\n`);
     process.exitCode = 1;
-  } finally {
-    await testRunner.close();
+  } else {
+    process.stdout.write(`job runtime load test passed: ${JSON.stringify(report)}\n`);
   }
 }
 
@@ -223,6 +275,7 @@ if (require.main === module) main();
 
 module.exports = {
   JobRuntimeLoadTest,
+  cleanupLoadData,
   main,
   percentile,
   positiveInteger,

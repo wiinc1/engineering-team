@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
+const { createPgPoolFromEnv } = require('../lib/audit/postgres');
 const { createLangGraphRuntime } = require('../lib/software-factory/langgraph');
 
 function percentile(values, quantile) {
@@ -13,6 +13,11 @@ function percentile(values, quantile) {
 
 function maximum(values) {
   return values.reduce((current, value) => Math.max(current, value), 0);
+}
+
+function environmentBudget(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 function createLoadRuntime(pool, nodeExecutions) {
@@ -120,21 +125,41 @@ function buildArtifact(input) {
     storageProjection: { threads: 10_000, checkpointsPerThread: 8,
       primaryBytesAtObservedAverage: sizes.average * 80_000,
       provisionedBytesWithMvccAndTwoBackups: sizes.average * 320_000 },
-    localBudgets: { checkpointWriteP95Ms: 100, checkpointReadP95Ms: 150, poolPeak: 2, duplicateSideEffects: 0 },
+    localBudgets: {
+      checkpointWriteP95Ms: environmentBudget('LANGGRAPH_CHECKPOINT_WRITE_P95_BUDGET_MS', 100),
+      checkpointReadP95Ms: environmentBudget('LANGGRAPH_CHECKPOINT_READ_P95_BUDGET_MS', 150),
+      poolPeak: 2,
+      duplicateSideEffects: 0,
+    },
   };
 }
 
 async function cleanupLoad(pool, prefix) {
-  await pool.query("DELETE FROM langgraph_checkpoint.checkpoint_writes WHERE thread_id IN (SELECT thread_id FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1)", [`${prefix}%`]);
-  await pool.query("DELETE FROM langgraph_checkpoint.checkpoint_blobs WHERE thread_id IN (SELECT thread_id FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1)", [`${prefix}%`]);
-  await pool.query("DELETE FROM langgraph_checkpoint.checkpoints WHERE thread_id IN (SELECT thread_id FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1)", [`${prefix}%`]);
-  await pool.query('DELETE FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1', [`${prefix}%`]);
-  const result = await pool.query(`SELECT
-    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1) AS registry,
-    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoints WHERE thread_id LIKE 'lg_%') AS checkpoints,
-    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_blobs WHERE thread_id LIKE 'lg_%') AS blobs,
-    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_writes WHERE thread_id LIKE 'lg_%') AS writes`, [`${prefix}%`]);
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const threads = await client.query(
+      'SELECT thread_id FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1',
+      [`${prefix}%`],
+    );
+    const threadIds = threads.rows.map((row) => row.thread_id);
+    await client.query('DELETE FROM langgraph_checkpoint.checkpoint_writes WHERE thread_id = ANY($1::text[])', [threadIds]);
+    await client.query('DELETE FROM langgraph_checkpoint.checkpoint_blobs WHERE thread_id = ANY($1::text[])', [threadIds]);
+    await client.query('DELETE FROM langgraph_checkpoint.checkpoints WHERE thread_id = ANY($1::text[])', [threadIds]);
+    await client.query('DELETE FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1', [`${prefix}%`]);
+    const result = await client.query(`SELECT
+      (SELECT COUNT(*)::integer FROM langgraph_checkpoint.factory_threads WHERE factory_run_id LIKE $1) AS registry,
+      (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoints WHERE thread_id = ANY($2::text[])) AS checkpoints,
+      (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_blobs WHERE thread_id = ANY($2::text[])) AS blobs,
+      (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_writes WHERE thread_id = ANY($2::text[])) AS writes`, [`${prefix}%`, threadIds]);
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 function evaluateArtifact(artifact) {
@@ -147,15 +172,17 @@ function evaluateArtifact(artifact) {
 }
 
 function writeArtifact(artifact) {
-  fs.mkdirSync(path.join(process.cwd(), '.artifacts'), { recursive: true });
-  fs.writeFileSync(path.join(process.cwd(), '.artifacts', 'langgraph-01-load.json'), `${JSON.stringify(artifact, null, 2)}\n`);
+  const outputPath = process.env.LANGGRAPH_LOAD_OUTPUT
+    || path.join(process.cwd(), '.artifacts', 'langgraph-01-load.json');
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${JSON.stringify(artifact, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(artifact)}\n`);
 }
 
 async function main() {
   const durationMs = Number(process.env.LANGGRAPH_LOAD_DURATION_MS || 600_000);
   const concurrency = Number(process.env.LANGGRAPH_LOAD_CONCURRENCY || 4);
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: false, max: 8 });
+  const pool = createPgPoolFromEnv(process.env.DATABASE_URL);
   const nodeExecutions = new Map();
   const runtime = createLoadRuntime(pool, nodeExecutions);
   const prefix = `load_${Date.now()}`;
@@ -166,14 +193,20 @@ async function main() {
     const storage = await storageEvidence(pool, prefix);
     artifact = buildArtifact({ concurrency, durationMs, nodeExecutions, result, runtime, storage });
   } finally {
-    const cleanupRows = await cleanupLoad(pool, prefix);
-    if (artifact) {
-      artifact.cleanupRows = cleanupRows;
-      artifact.cleanupPassed = Object.values(cleanupRows).every((count) => Number(count) === 0);
-      artifact.passed = evaluateArtifact(artifact);
+    try {
+      const cleanupRows = await cleanupLoad(pool, prefix);
+      if (artifact) {
+        artifact.cleanupRows = cleanupRows;
+        artifact.cleanupPassed = Object.values(cleanupRows).every((count) => Number(count) === 0);
+        artifact.passed = evaluateArtifact(artifact);
+      }
+    } finally {
+      try {
+        await runtime.close();
+      } finally {
+        await pool.end();
+      }
     }
-    await runtime.close();
-    await pool.end();
   }
   writeArtifact(artifact);
   if (!artifact.passed) process.exitCode = 1;
@@ -184,4 +217,4 @@ if (require.main === module) main().catch((error) => {
   process.exit(1);
 });
 
-module.exports = { evaluateArtifact, main, maximum, percentile };
+module.exports = { cleanupLoad, evaluateArtifact, main, maximum, percentile };

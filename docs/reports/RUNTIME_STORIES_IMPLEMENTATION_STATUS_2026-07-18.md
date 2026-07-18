@@ -2,17 +2,17 @@
 
 ## Outcome
 
-All repository-local work identified for issues #280–#290 is implemented and locally verified, except the explicitly excluded 24-hour soak. The release validators still require that soak and therefore correctly block production cutover. No local result is represented as hosted, exact-head, reviewer-approved, or production evidence.
+All repository-local work identified for issues #280–#290 is implemented and locally verified, including an automated composed 24-hour soak runner. The full staging soak has not run yet, so the release validators correctly block production cutover. No local result is represented as hosted, reviewer-approved, or production evidence.
 
 ## Standards Alignment
 
 - Applicable standards areas: architecture and design, coding quality, testing, deployment, observability, security, and team process.
 - Evidence expected for this change: runtime suites, real PostgreSQL recovery, load, coverage, mutation, security, chaos, browser, SBOM, immutable release manifests, hosted promotion, and soak.
-- Gap observed: hosted exact-head, reviewer, staging, alert-delivery, production synthetic, cutover, and 24-hour soak evidence are absent. Documented rationale: those require external authority or the separately excluded soak and cannot be fabricated locally (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/290).
+- Gap observed: final exact-head pipeline, reviewer, staging, alert-delivery, production synthetic, cutover, and full 24-hour soak evidence are pending. These gates require execution against the immutable deployed revision and cannot be satisfied by local smoke evidence (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/290).
 - Architecture and deployment: exclusive runtime ownership, fail-closed composition, reversible expansion, and evidence-gated contraction.
 - Reliability and observability: durable checkpoints/effects, lease fencing, bounded recovery, metrics, alerts, synthetics, and DR proof.
 - Security and quality: tenant binding, RBAC, sanitized state, dependency audit, CycloneDX SBOM, coverage, mutation, contract, chaos, browser, and standards gates.
-- Documented rationale: hosted and production claims require an immutable pushed revision and target-environment execution; the excluded soak remains a mandatory release-gate input.
+- Documented rationale: hosted and production claims require target-environment execution; the full soak remains a mandatory release-gate input.
 
 ## Story traceability
 
@@ -20,11 +20,11 @@ All repository-local work identified for issues #280–#290 is implemented and l
 - #281: the full intake-to-closeout graph, bounded QA/fix path, child DAG, truthful delegation evidence, terminal outcomes, Graphile adapter, every-node process-restart matrix, production service-port contract, taskless-intake lifecycle ledger, canonical PostgreSQL run/task/audit reconciliation, versioned legacy-equivalence inventory, and revision-controlled production handler composition are implemented. The target composition atomically binds intake, delegates specialists, requires real implementation/QA/SRE evidence, collects live Git merge-readiness proof, verifies the exact deployed SHA, and closes canonical task/run state. A placeholder graph cannot process production work.
 - #282: durable interrupts, exact-once decisions, RBAC, optimistic concurrency, retry/cancel, sanitized status, audit history, controls, browser behavior, alerts, and runbook are implemented.
 - #283: reconciliation matrices, exclusive ownership epochs, dry-run preflight, ambiguity quarantine, rollback checks, and legacy-zero verification are implemented. Production inventory/reconciliation and destructive contraction remain operator-owned cutover actions.
-- #284: immutable release validation, threshold enforcement, security/chaos/load/DR/browser gates, SBOM generation, and integrity-checked evidence assembly are implemented. The gate remains blocked without hosted artifacts and the 24-hour soak.
+- #284: immutable release validation, threshold enforcement, security/chaos/load/DR/browser gates, SBOM generation, integrity-checked evidence assembly, and automated 24-hour soak collection are implemented. The gate remains blocked without hosted artifacts and a completed full soak.
 - #286/#287: completed prerequisites remain covered by the composed regression suites.
 - #288: sanitized Graphile status/history, public-API actions, exact-once audit ledger, tenant/RBAC/version/idempotency checks, drain state, alerts/runbook, and responsive controls are implemented.
 - #289: job reconciliation, ownership epochs, dry-run preflight, rollback checks, and legacy-zero verification are implemented. Production backlog/lease reconciliation and destructive contraction remain operator-owned cutover actions.
-- #290: composed-runtime gates, load/chaos/security, drain/kill, exact-effect recovery, full-database restore, SBOM generation, and evidence assembly are implemented. Hosted evidence and the 24-hour soak remain required.
+- #290: composed-runtime gates, load/chaos/security, drain/kill, exact-effect recovery, full-database restore, SBOM generation, evidence assembly, and concurrent Graphile/LangGraph soak automation are implemented. Hosted evidence and a completed full soak remain required.
 
 ## Required Evidence
 
@@ -47,16 +47,17 @@ The following evidence is required for local implementation confidence. Hosted p
 - CycloneDX production-dependency SBOM generation succeeds from the lockfile with 76 components and creates revision-bound Graphile and LangGraph evidence components.
 - Lifecycle equivalence verification maps all 27 legacy golden-path steps exactly once across the graph and covers nine persona roles, ten governance gates, eleven release-evidence classes, and seven success/remediation/failure/cancel/restart branch families.
 - Production lifecycle wiring coverage is 97.71% lines, 97.37% functions, and 85.26% branches after adding lazy canonical-store composition; mutation across equivalence, ports, and canonical lifecycle services is 84.54%, above the 80% break threshold.
+- The composed soak harness passes a real five-second PostgreSQL smoke at 25 Graphile jobs/s plus LangGraph concurrency two with zero violations, zero connection leaks, and transactionally verified run-scoped cleanup. This validates the harness only; it does not satisfy the 86,400-second release threshold.
 
 ## Intentionally not claimed
 
-- The 24-hour soak was excluded by instruction and was not run.
-- The implementation is committed only on the isolated local branch. No push, merge request, exact-head GitLab pipeline, reviewer approval, staging deployment, production mutation, alert delivery, production synthetic, or cutover was performed.
+- The full 24-hour soak has not run.
+- The implementation branch is pushed and merge request !322 is open. A final exact-head GitLab pipeline, human reviewer approval, staging deployment, production mutation, alert delivery, production synthetic, and cutover are not yet complete.
 - Production release remains blocked until every required artifact is collected for one immutable revision. The evidence assembler permits partial output for diagnosis but returns a failing decision and non-zero exit status while any artifact—including soak—is missing.
 
 ## Remaining operator-authorized sequence
 
-1. Push the reviewed immutable revision, then run the exact-head GitLab pipeline.
+1. Push the final soak-automation revision and obtain a passing exact-head GitLab pipeline for merge request !322.
 2. Deploy that revision to staging with the revision-controlled lifecycle handler module and target credentials/evidence configured.
 3. Collect hosted contract, security/DAST, SBOM, load, chaos, DR, synthetic, alert-delivery, kill-switch, rollback, browser/checkpoint-retention, and composed-runtime evidence.
 4. Run the separately scheduled 24-hour soak.

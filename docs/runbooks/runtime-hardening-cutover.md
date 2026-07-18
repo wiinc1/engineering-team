@@ -13,6 +13,22 @@ npm run release:langgraph:verify -- artifacts/langgraph-release-manifest.json
 
 Any nonzero exit blocks cutover. Re-run the failing automation; do not edit or waive the result.
 
+Run the composed staging soak from the exact deployed revision. The command defaults to 86,400 seconds,
+uses five-minute concurrent Graphile/LangGraph windows, isolates Graphile rows by a generated tenant,
+cleans every window, and records connection/thread cleanup without persisting database credentials:
+
+```sh
+DATABASE_URL="$STAGING_DATABASE_URL" \
+SOAK_DEPLOYMENT_ID="$STAGING_DEPLOYMENT_ID" \
+SOAK_REVISION="$(git rev-parse HEAD)" \
+SOAK_ENVIRONMENT=staging \
+npm run test:runtime:soak
+```
+
+The release components are written to `.artifacts/runtime-soak/graphile-soak-24h.json` and
+`.artifacts/runtime-soak/langgraph-soak-24h.json`. A shorter `SOAK_DURATION_SECONDS` is useful only
+for harness smoke testing and cannot pass the 24-hour release threshold.
+
 ## Emergency response
 
 Set `FF_GRAPHILE_WORKER_CUTOVER=false` to stop new claims and drain Graphile. Set `LANGGRAPH_GLOBAL_KILL_SWITCH=true` to stop new graph operations while retaining checkpoints. Page P0 for duplicate/concurrent ownership, cross-tenant access, or data loss; P1 for scheduling/checkpoint outage, severe backlog, stuck run/interrupt, or security anomaly; P2 for capacity, retention, or version drift.
