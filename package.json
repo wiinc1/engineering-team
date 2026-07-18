@@ -102,7 +102,7 @@
     "test:ui:coverage": "vitest run --coverage src/app/*.test.tsx tests/unit/task-creation-*.test.tsx tests/unit/board-owner-card-rendering.test.js tests/unit/role-inbox-routing.test.js tests/unit/pm-overview-routing.test.js tests/integration/board-owner-filtering.integration.test.js",
     "test:ui": "npm run test:ui:vitest && npm run test:integration:role-inbox && npm run test:integration:pm-overview",
     "test:browser": "node scripts/run-browser-gates.js",
-    "test:browser:performance": "node scripts/wait-for-performance-host.js && node scripts/run-playwright.js tests/browser/browser-quality-performance.browser.spec.ts",
+    "test:browser:performance": "node scripts/wait-for-performance-host.js && BROWSER_PERFORMANCE_MODE=production node scripts/run-playwright.js tests/browser/browser-quality-performance.browser.spec.ts",
     "test:browser:functional": "node scripts/run-playwright.js --grep-invert='browser Core Web Vitals budget gate'",
     "test:browser:ci": "PLAYWRIGHT_INCLUDE_WEBKIT=1 npm run test:browser",
     "test:browser:quality": "npm run test:browser:performance && node scripts/run-playwright.js tests/browser/browser-quality-*.browser.spec.ts --grep-invert='browser Core Web Vitals budget gate'",

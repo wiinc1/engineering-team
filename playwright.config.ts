@@ -6,6 +6,7 @@ import {
 } from './tests/browser/browser-quality-config.mjs';
 
 const normalizedEnv = { ...process.env };
+const performanceMode = normalizedEnv.BROWSER_PERFORMANCE_MODE === 'production';
 const projectDevices = {
   chromium: devices['Desktop Chrome'],
   firefox: devices['Desktop Firefox'],
@@ -50,7 +51,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'env -u FORCE_COLOR npm run dev -- --host 127.0.0.1 --port 4174',
+    command: performanceMode
+      ? 'env -u FORCE_COLOR npm run build:browser && npm run preview'
+      : 'env -u FORCE_COLOR npm run dev -- --host 127.0.0.1 --port 4174',
     env: normalizedEnv,
     url: 'http://127.0.0.1:4174',
     reuseExistingServer: true,
