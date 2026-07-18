@@ -6,8 +6,11 @@ const path = require('node:path');
 const { after, before, test } = require('node:test');
 const { Pool } = require('pg');
 const { emptyCheckpoint } = require('@langchain/langgraph');
+const { createPostgresAuditStore } = require('../../lib/audit/postgres');
+const { createCanonicalLifecycleServices } = require('../../lib/task-platform/langgraph-lifecycle-services');
 const {
-  createLangGraphRuntime, createThreadRegistry, deriveThreadId, GuardedPostgresSaver,
+  createLangGraphOperatorService, createLangGraphRuntime, createProductionLifecyclePorts,
+  createThreadRegistry, deriveThreadId, GuardedPostgresSaver,
 } = require('../../lib/software-factory/langgraph');
 const { createLeaseGuard, withTenantBinding } = require('../../lib/software-factory/langgraph/binding');
 const { state } = require('../fixtures/langgraph/v1');
@@ -42,6 +45,8 @@ async function cleanupThread() {
 }
 
 async function cleanupThreadById(targetThreadId) {
+  await pool.query('DELETE FROM langgraph_checkpoint.factory_run_actions WHERE thread_id = $1', [targetThreadId]);
+  await pool.query('DELETE FROM langgraph_checkpoint.factory_interrupts WHERE thread_id = $1', [targetThreadId]);
   await pool.query('DELETE FROM langgraph_checkpoint.checkpoint_writes WHERE thread_id = $1', [targetThreadId]);
   await pool.query('DELETE FROM langgraph_checkpoint.checkpoint_blobs WHERE thread_id = $1', [targetThreadId]);
   await pool.query('DELETE FROM langgraph_checkpoint.checkpoints WHERE thread_id = $1', [targetThreadId]);
@@ -75,6 +80,87 @@ async function physicalCheckpointCount(targetThreadId) {
   return Number(result.rows[0].count);
 }
 
+function lifecyclePortHandlers(identity) {
+  const success = async () => ({ outcome: 'success' });
+  return {
+    intake: { create: async (request) => {
+      assert.equal(request.run.taskId, null);
+      await pool.query(`UPDATE factory_delivery_queue SET task_id = $3, updated_at = NOW()
+        WHERE tenant_id = $1 AND queue_id = $2`, [identity.tenantId, identity.factoryRunId, identity.taskId]);
+      return { outcome: 'success' };
+    } },
+    refinement: { refine: success }, contracts: { createAndApprove: success },
+    architecture: { handoff: success }, children: { plan: async () => [], execute: success },
+    implementation: { execute: success }, quality: { verify: success, fix: success },
+    review: { approve: success }, mergeReadiness: { verify: success },
+    deployment: { deploy: success }, sre: { monitor: success }, closeout: { complete: success },
+  };
+}
+
+async function seedLifecyclePortFixture(identity, stateValue) {
+  await pool.query(`INSERT INTO tasks (tenant_id, task_id, title, status, metadata)
+    VALUES ($1, $2, 'LangGraph port integration', 'TODO', '{"issue":281}')
+    ON CONFLICT (tenant_id, task_id) DO NOTHING`, [identity.tenantId, identity.taskId]);
+  await pool.query(`INSERT INTO factory_delivery_queue (
+      tenant_id, queue_id, idempotency_key, title, requirements, task_id
+    ) VALUES ($1, $2, $3, 'LangGraph port integration', 'Verify canonical lifecycle services', NULL)`, [
+    identity.tenantId, identity.factoryRunId, 'langgraph-ports-integration',
+  ]);
+  await createThreadRegistry(pool).register({
+    ...identity, threadId: stateValue.threadId, namespace: 'factory', graphVersion: 'factory-v1',
+    stateSchemaVersion: 1, retentionExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+  });
+}
+
+async function verifyLifecyclePortEvidence(ports, identity, stateValue) {
+  const context = {
+    tenantId: identity.tenantId, factoryRunId: identity.factoryRunId,
+    threadId: stateValue.threadId, node: 'intake', attempt: 1,
+    idempotencyKey: `${stateValue.threadId}:intake:1`,
+  };
+  const started = {
+    type: 'node_started', node: 'intake', attempt: 1,
+    tenantId: identity.tenantId, factoryRunId: identity.factoryRunId,
+    threadId: stateValue.threadId, idempotencyKey: `${context.idempotencyKey}:started`,
+  };
+  assert.equal((await ports.recordEvent(started)).duplicate, false);
+  assert.equal((await ports.recordEvent(started)).duplicate, true);
+  assert.equal((await pool.query(`SELECT COUNT(*)::integer AS count FROM audit_events
+    WHERE tenant_id = $1 AND idempotency_key = $2`, [identity.tenantId, started.idempotencyKey])).rows[0].count, 0);
+  assert.deepEqual(await ports.intake(stateValue, context), { outcome: 'success' });
+  return { context, started };
+}
+
+async function verifyLifecycleFinish(ports, identity, stateValue, context, started) {
+  const finished = {
+    ...started, type: 'node_finished', outcome: 'success',
+    idempotencyKey: `${context.idempotencyKey}:finished`,
+  };
+  assert.equal((await ports.recordEvent(finished)).duplicate, false);
+  assert.equal((await ports.recordEvent(finished)).duplicate, true);
+  const rows = await pool.query(`SELECT event_type, actor_id, correlation_id, payload FROM audit_events
+    WHERE tenant_id = $1 AND idempotency_key = $2`, [identity.tenantId, finished.idempotencyKey]);
+  assert.deepEqual({
+    count: rows.rowCount, type: rows.rows[0].event_type, actor: rows.rows[0].actor_id,
+    thread: rows.rows[0].correlation_id, node: rows.rows[0].payload.node,
+  }, { count: 1, type: 'task.langgraph_node_finished', actor: 'system:langgraph-runtime',
+    thread: stateValue.threadId, node: 'intake' });
+  const ledger = await pool.query(`SELECT event_type, task_id FROM langgraph_checkpoint.factory_lifecycle_events
+    WHERE tenant_id = $1 AND factory_run_id = $2 ORDER BY occurred_at`, [identity.tenantId, identity.factoryRunId]);
+  assert.deepEqual(ledger.rows, [
+    { event_type: 'node_started', task_id: null },
+    { event_type: 'node_finished', task_id: identity.taskId },
+  ]);
+}
+
+async function cleanupLifecyclePortFixture(identity, threadIdValue) {
+  await pool.query('TRUNCATE langgraph_checkpoint.factory_lifecycle_events');
+  await pool.query('DELETE FROM audit_projection_queue WHERE tenant_id = $1', [identity.tenantId]);
+  await pool.query('DELETE FROM audit_outbox WHERE tenant_id = $1', [identity.tenantId]);
+  await pool.query('DELETE FROM factory_delivery_queue WHERE tenant_id = $1', [identity.tenantId]);
+  await cleanupThreadById(threadIdValue);
+}
+
 before(async () => {
   if (!connectionString) return;
   pool = new Pool({ connectionString, ssl: false, max: 6 });
@@ -97,9 +183,41 @@ integration('setup reuses the existing pool and initializes dedicated saver sche
     SELECT to_regclass('langgraph_checkpoint.factory_threads') AS registry,
            to_regclass('langgraph_checkpoint.checkpoints') AS checkpoints,
            to_regclass('langgraph_checkpoint.checkpoint_writes') AS writes,
-           to_regclass('langgraph_checkpoint.checkpoint_blobs') AS blobs
+           to_regclass('langgraph_checkpoint.checkpoint_blobs') AS blobs,
+           to_regclass('langgraph_checkpoint.factory_lifecycle_events') AS lifecycle_events
   `);
   assert.deepEqual(Object.values(result.rows[0]).every(Boolean), true);
+});
+
+integration('production lifecycle ports resolve canonical PostgreSQL runs and append exact-once audit events', async () => {
+  const identity = {
+    tenantId: 'langgraph_ports_integration',
+    factoryRunId: 'factory:ports:281',
+    taskId: 'TSK-LANGGRAPH-PORTS',
+  };
+  const stateValue = {
+    tenantId: identity.tenantId,
+    factoryRunId: identity.factoryRunId,
+    threadId: deriveThreadId(identity),
+    completedNodes: [],
+    qaAttempts: 0,
+  };
+  await seedLifecyclePortFixture(identity, stateValue);
+  try {
+    const services = createCanonicalLifecycleServices({
+      store: createPostgresAuditStore({ pool, baseDir: path.join(__dirname, '../..') }),
+      handlers: lifecyclePortHandlers(identity),
+    });
+    const ports = createProductionLifecyclePorts(services);
+    const { context, started } = await verifyLifecyclePortEvidence(ports, identity, stateValue);
+    await verifyLifecycleFinish(ports, identity, stateValue, context, started);
+    await assert.rejects(() => pool.query(`UPDATE langgraph_checkpoint.factory_lifecycle_events
+      SET node = 'qa' WHERE tenant_id = $1`, [identity.tenantId]), /append-only/);
+    await assert.rejects(() => pool.query(`DELETE FROM langgraph_checkpoint.factory_lifecycle_events
+      WHERE tenant_id = $1`, [identity.tenantId]), /append-only/);
+  } finally {
+    await cleanupLifecyclePortFixture(identity, stateValue.threadId);
+  }
 });
 
 integration('checkpoint survives worker replacement and resume starts at next eligible node', async () => {
@@ -142,6 +260,53 @@ integration('tenant mismatch and concurrent resume fail closed before graph invo
   await assert.rejects(runtime.resume({ tenantId, threadId }), { code: 'langgraph_concurrency_conflict' });
   await runtime.registry.releaseLease({ tenantId, threadId, owner });
   await runtime.registry.updateStatus(tenantId, threadId, 'completed');
+});
+
+integration('durable interrupt decision replays exactly once after resolution in Postgres', async () => {
+  const identity = { tenantId: 'langgraph_operator_live', factoryRunId: 'run:operator-live:282' };
+  const operatorThreadId = deriveThreadId(identity);
+  const registry = createThreadRegistry(pool);
+  const interruptId = 'interrupt-operator-live';
+  let resumes = 0;
+  await registry.register({
+    ...identity, threadId: operatorThreadId, namespace: 'factory', graphVersion: 'factory-v1',
+    stateSchemaVersion: 1, retentionExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+  });
+  await registry.recordInterrupt({
+    interruptId, ...identity, threadId: operatorThreadId, checkpointId: 'checkpoint-operator-live',
+    type: 'review_gate', version: 1, payload: { node: 'review' }, authorizedRoles: ['pm'],
+    waitReason: 'Review.', nextAction: 'Decide.',
+  });
+  const service = createLangGraphOperatorService({
+    registry,
+    runtime: {
+      registry,
+      async resumeDecision() { resumes += 1; return { lifecycleStatus: 'running' }; },
+      async runStatus(input) { await registry.assertBinding(input.tenantId, input.threadId); return { status: 'paused' }; },
+    },
+    mutationsEnabled: true,
+  });
+  const decision = {
+    ...identity, threadId: operatorThreadId, interruptId, checkpointId: 'checkpoint-operator-live',
+    expectedVersion: 0, action: 'accept', actorId: 'pm-live', roles: ['pm'],
+    idempotencyKey: 'decision-operator-live', requestId: 'req-operator-live',
+  };
+  try {
+    const first = await service.decide(decision);
+    const replay = await service.decide(decision);
+    assert.equal(first.replayed, false);
+    assert.equal(replay.replayed, true);
+    assert.equal(resumes, 1);
+    assert.equal((await registry.interruptById(identity.tenantId, operatorThreadId, interruptId)).state, 'resolved');
+    await assert.rejects(() => service.decide({ ...decision, idempotencyKey: 'different-decision' }), {
+      code: 'langgraph_decision_conflict',
+    });
+    await assert.rejects(() => service.status({ tenantId: 'tenant-attacker', threadId: operatorThreadId }), {
+      code: 'langgraph_tenant_mismatch',
+    });
+  } finally {
+    await cleanupThreadById(operatorThreadId);
+  }
 });
 
 integration('deep health performs synthetic write/read/delete and reports pool/thread gauges', async () => {
@@ -204,8 +369,11 @@ integration('018 applies, rolls back, and reapplies without changing canonical t
     (SELECT COUNT(*)::integer FROM langgraph_checkpoint.factory_threads) AS registry,
     (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoints) AS checkpoints,
     (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_writes) AS writes,
-    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_blobs) AS blobs`);
-  assert.deepEqual(orphanCounts.rows[0], { registry: 0, checkpoints: 0, writes: 0, blobs: 0 });
+    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.checkpoint_blobs) AS blobs,
+    (SELECT COUNT(*)::integer FROM langgraph_checkpoint.factory_lifecycle_events) AS lifecycle_events`);
+  assert.deepEqual(orphanCounts.rows[0], {
+    registry: 0, checkpoints: 0, writes: 0, blobs: 0, lifecycle_events: 0,
+  });
   await pool.query(`INSERT INTO tasks (tenant_id, task_id, title, status, metadata)
     VALUES ('tenant-langgraph-migration', 'TSK-LANGGRAPH-280', 'Canonical preservation sentinel', 'TODO', '{"issue":280}')`);
   await pool.query(`INSERT INTO audit_events (
@@ -231,11 +399,15 @@ integration('018 applies, rolls back, and reapplies without changing canonical t
   }
   const beforeCounts = await counts();
   const migrations = path.join(process.cwd(), 'db', 'migrations');
+  await pool.query(fs.readFileSync(path.join(migrations, '022_langgraph_lifecycle_events.down.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(migrations, '020_langgraph_interrupts.down.sql'), 'utf8'));
   await pool.query(fs.readFileSync(path.join(migrations, '018_langgraph_runtime_persistence.down.sql'), 'utf8'));
   assert.equal((await pool.query("SELECT to_regnamespace('langgraph_checkpoint') AS schema")).rows[0].schema, null);
   await pool.query(fs.readFileSync(path.join(migrations, '018_langgraph_runtime_persistence.sql'), 'utf8'));
   const setupRuntime = buildRuntime();
   await setupRuntime.setup();
   await setupRuntime.close();
+  await pool.query(fs.readFileSync(path.join(migrations, '020_langgraph_interrupts.sql'), 'utf8'));
+  await pool.query(fs.readFileSync(path.join(migrations, '022_langgraph_lifecycle_events.sql'), 'utf8'));
   assert.deepEqual(await counts(), beforeCounts);
 });

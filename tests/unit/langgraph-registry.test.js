@@ -16,6 +16,12 @@ function queuedPool(results) {
   };
 }
 
+function transactionalPool(results) {
+  const pool = queuedPool(results);
+  const client = { ...pool, released: false, release() { this.released = true; } };
+  return { ...pool, client, async connect() { return client; } };
+}
+
 function leaseInput() {
   return { tenantId: 'tenant_alpha', threadId: 'lg_thread', owner: 'worker-a', leaseMs: 1_000 };
 }
@@ -126,4 +132,102 @@ test('registry summary statistics retention and removal queries clamp inputs', a
   assert.deepEqual(pool.calls.slice(4, 7).map((call) => call.values[0]), [100, 1, 1_000]);
   assert.equal(await registry.remove('tenant_alpha', 'one'), true);
   assert.equal(await registry.remove('tenant_alpha', 'missing'), false);
+});
+
+test('registry persists and reads durable interrupt records', async () => {
+  const interrupt = {
+    interrupt_id: 'interrupt-1', thread_id: 'lg_thread', checkpoint_id: 'cp-1',
+    interrupt_type: 'review_gate', interrupt_version: 1, authorized_roles: ['pm'],
+    wait_reason: 'Review.', next_action: 'Decide.', state: 'pending', version: 0,
+  };
+  const pool = queuedPool([{ rows: [interrupt] }, { rows: [interrupt] }, { rows: [interrupt] }, { rows: [interrupt] }]);
+  const registry = createThreadRegistry(pool);
+  assert.equal((await registry.recordInterrupt({
+    interruptId: 'interrupt-1', tenantId: 'tenant_alpha', threadId: 'lg_thread',
+    checkpointId: 'cp-1', type: 'review_gate', version: 1, payload: { node: 'review' },
+    authorizedRoles: ['pm'], waitReason: 'Review.', nextAction: 'Decide.',
+  })).interrupt_id, 'interrupt-1');
+  assert.equal((await registry.pendingInterrupt('tenant_alpha', 'lg_thread')).state, 'pending');
+  assert.equal((await registry.interruptById('tenant_alpha', 'lg_thread', 'interrupt-1')).state, 'pending');
+  assert.equal((await registry.interruptHistory('tenant_alpha', 'lg_thread', 500)).length, 1);
+  assert.deepEqual(pool.calls[3].values, ['tenant_alpha', 'lg_thread', 100]);
+  assert.deepEqual(await createThreadRegistry(queuedPool([{ rows: [] }])).interruptHistory('tenant_alpha', 'lg_thread'), []);
+  await assert.rejects(createThreadRegistry(queuedPool([{ rows: [] }])).recordInterrupt({
+    interruptId: 'interrupt-1', tenantId: 'tenant_alpha', threadId: 'lg_thread',
+    checkpointId: 'cp-1', type: 'review_gate', version: 1, payload: {},
+    authorizedRoles: ['pm'], waitReason: 'Review.', nextAction: 'Decide.',
+  }), { code: 'langgraph_decision_conflict' });
+  assert.equal(await createThreadRegistry(queuedPool([{ rows: [] }])).pendingInterrupt('tenant_alpha', 'lg_thread'), null);
+  assert.equal(await createThreadRegistry(queuedPool([{ rows: [] }])).interruptById('tenant_alpha', 'lg_thread', 'missing'), null);
+});
+
+test('interrupt decisions claim once and distinguish replay conflict and absence', async () => {
+  const interrupt = { interrupt_id: 'interrupt-1', state: 'resolving' };
+  const input = {
+    tenantId: 'tenant_alpha', threadId: 'lg_thread', interruptId: 'interrupt-1', checkpointId: 'cp-1',
+    action: 'accept', edits: null, actorId: 'pm-1', idempotencyKey: 'decision-1', expectedVersion: 0,
+  };
+  const successPool = transactionalPool([
+    { rows: [] }, { rows: [] }, { rows: [interrupt] }, { rows: [] },
+  ]);
+  assert.equal((await createThreadRegistry(successPool).claimInterruptDecision(input)).replay, false);
+  assert.equal(successPool.client.released, true);
+
+  const replayPool = transactionalPool([{ rows: [] }, { rows: [interrupt] }, { rows: [] }]);
+  assert.equal((await createThreadRegistry(replayPool).claimInterruptDecision(input)).replay, true);
+
+  const conflictPool = transactionalPool([
+    { rows: [] }, { rows: [] }, { rows: [] }, { rows: [{ exists: 1 }] }, { rows: [] },
+  ]);
+  await assert.rejects(() => createThreadRegistry(conflictPool).claimInterruptDecision(input), {
+    code: 'langgraph_decision_conflict',
+  });
+  const missingPool = transactionalPool([
+    { rows: [] }, { rows: [] }, { rows: [] }, { rows: [] }, { rows: [] },
+  ]);
+  await assert.rejects(() => createThreadRegistry(missingPool).claimInterruptDecision(input), {
+    code: 'langgraph_interrupt_not_found',
+  });
+});
+
+test('interrupt decision completion and release are state guarded', async () => {
+  const resolved = { interrupt_id: 'interrupt-1', state: 'resolved' };
+  const cancelled = { interrupt_id: 'interrupt-1', state: 'cancelled' };
+  const pool = queuedPool([{ rows: [resolved] }, { rows: [cancelled] }, { rows: [] }, { rows: [] }]);
+  const registry = createThreadRegistry(pool);
+  const input = {
+    tenantId: 'tenant_alpha', threadId: 'lg_thread', interruptId: 'interrupt-1', idempotencyKey: 'decision-1',
+  };
+  assert.equal((await registry.completeInterruptDecision(input)).state, 'resolved');
+  assert.equal((await registry.completeInterruptDecision({ ...input, cancelled: true })).state, 'cancelled');
+  await assert.rejects(() => registry.completeInterruptDecision(input), { code: 'langgraph_decision_conflict' });
+  await registry.releaseInterruptDecision(input);
+  assert.match(pool.calls.at(-1).sql, /state = 'pending'/);
+});
+
+test('run actions persist idempotently and record terminal outcomes', async () => {
+  const action = { action_id: 'action-1', action: 'retry', outcome: 'pending' };
+  const input = {
+    actionId: 'action-1', tenantId: 'tenant_alpha', threadId: 'lg_thread',
+    idempotencyKey: 'retry-1', action: 'retry', node: 'qa', actorId: 'sre-1', reason: 'recover',
+  };
+  const pool = queuedPool([
+    { rows: [action] }, { rows: [] }, { rows: [action] }, { rows: [action] },
+    { rows: [] }, { rows: [] }, { rows: [] }, { rows: [] },
+  ]);
+  const registry = createThreadRegistry(pool);
+  assert.equal((await registry.claimRunAction(input)).replay, false);
+  assert.equal((await registry.claimRunAction(input)).replay, true);
+  assert.equal((await registry.completeRunAction('action-1')).outcome, 'pending');
+  await assert.rejects(() => registry.completeRunAction('action-1'), { code: 'langgraph_decision_conflict' });
+  await registry.failRunAction('action-1', 'langgraph_checkpoint_unavailable');
+
+  const missing = queuedPool([{ rows: [] }, { rows: [] }, { rows: [] }, { rows: [] }]);
+  await assert.rejects(() => createThreadRegistry(missing).claimRunAction(input), {
+    code: 'langgraph_checkpoint_unavailable', safeDetails: { reason: 'thread_not_found' },
+  });
+  const boundButMissing = queuedPool([{ rows: [] }, { rows: [] }, { rows: [{ thread_id: 'lg_thread' }] }]);
+  await assert.rejects(() => createThreadRegistry(boundButMissing).claimRunAction(input), {
+    code: 'langgraph_checkpoint_unavailable',
+  });
 });

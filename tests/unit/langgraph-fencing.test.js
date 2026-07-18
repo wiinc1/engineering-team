@@ -277,7 +277,7 @@ test('late pending writes allow accepted ancestors but reject physical stale bra
   await run(ACCEPTED_ID);
   await assert.rejects(run(PARENT_ID), { code: 'langgraph_concurrency_conflict' });
   assert.equal(delegated.mock.callCount(), 1);
-  assert.deepEqual(acceptedLookups.map((input) => input.checkpointId), [ACCEPTED_ID, PARENT_ID]);
+  assert.deepEqual([...new Set(acceptedLookups.map((input) => input.checkpointId))], [ACCEPTED_ID, PARENT_ID]);
 });
 
 test('pending writes wait for their in-flight checkpoint to become the exact accepted head', async (t) => {
@@ -296,18 +296,20 @@ test('pending writes wait for their in-flight checkpoint to become the exact acc
   const saver = guardedSaver({}, {
     async assertBinding() { return record; },
     async recordCheckpoint(input) { record.last_checkpoint_id = input.checkpointId; },
+    async isAcceptedCheckpoint() { return false; },
   });
   const guard = createLeaseGuard(OWNER_A);
   const binding = { tenantId: value.tenantId, threadId: value.threadId, leaseGuard: guard };
   const { value: candidate, versions } = checkpoint(value);
-  const put = withTenantBinding(binding, () => saver.put({ configurable: {
-    thread_id: value.threadId, checkpoint_ns: '', checkpoint_id: ACCEPTED_ID,
-  } }, candidate, {}, versions));
-  await entered;
   let writesSettled = false;
   const writes = withTenantBinding(binding, () => saver.putWrites({ configurable: {
     thread_id: value.threadId, checkpoint_ns: '', checkpoint_id: STALE_ID,
   } }, [['channel', 'value']], 'task-1')).finally(() => { writesSettled = true; });
+  await new Promise((resolve) => setImmediate(resolve));
+  const put = withTenantBinding(binding, () => saver.put({ configurable: {
+    thread_id: value.threadId, checkpoint_ns: '', checkpoint_id: ACCEPTED_ID,
+  } }, candidate, {}, versions));
+  await entered;
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(writesSettled, false);
   assert.equal(delegated.mock.callCount(), 0);

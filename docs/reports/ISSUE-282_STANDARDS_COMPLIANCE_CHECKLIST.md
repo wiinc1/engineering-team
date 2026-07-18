@@ -4,7 +4,7 @@
 
 - Applicable standards areas: architecture and design, coding quality, testing, deployment, observability, security, and team process.
 - Evidence expected for this change: durable interrupt schema, RBAC/API/UI tests, operator audit history, alerts, diagrams, runbook, and hosted concurrency/restart proof.
-- Gap observed: hosted PostgreSQL and visual evidence is pending. Documented rationale: production controls cannot be promoted before the #284 evidence gate and exact-head deployment (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/282).
+- Gap observed: hosted exact-head evidence is pending. Documented rationale: real PostgreSQL restart/concurrency and local responsive browser/accessibility coverage now pass, but production promotion requires the immutable #284 evidence gate (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/282).
 
 - [x] Human gate schema and action vocabulary are versioned and allowlisted.
 - [x] Interrupts, authorized roles, waits, next actions, resolutions, retry, and cancellation evidence are durable.
@@ -25,4 +25,4 @@
 - Focused service/policy/route tests: `tests/unit/langgraph-operator.test.js`.
 - UI and accessibility smoke: `src/app/LangGraphRunPanel.test.tsx`.
 - Full local runtime suite: `npm run test:langgraph`.
-- Real PostgreSQL restart/concurrent-resolution tests, all-breakpoint visual evidence, performance/mutation gates, exact-head CI, and reviewer approval remain promotion gates.
+- Real PostgreSQL restart/concurrent-resolution, browser, performance, and mutation gates pass locally. Exact-head CI, hosted visual evidence, the excluded soak, and reviewer approval remain promotion gates.

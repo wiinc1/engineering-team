@@ -141,5 +141,5 @@ test('migration contract is dedicated, tenant-bound, indexed, expand-only, and g
   assert.match(up, /retention_idx/);
   assert.doesNotMatch(up, /DROP|TRUNCATE|audit_events|\btasks\b/);
   assert.match(down, /rollback refused/);
-  assert.match(down, /registry_rows \+ checkpoint_rows \+ blob_rows \+ write_rows > 0/);
+  assert.match(down, /registry_rows \+ checkpoint_rows \+ blob_rows \+ write_rows \+ lifecycle_event_rows > 0/);
 });

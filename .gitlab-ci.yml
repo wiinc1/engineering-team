@@ -41,12 +41,14 @@ build:
   stage: build
   script:
     - npm audit --omit=dev
+    - npm run security:sbom
     - npm run lint
     - npm run typecheck
     - npm run build
   artifacts:
     paths:
       - dist/
+      - .artifacts/security/
     expire_in: 1 week
 
 # Timing budgets run before mutation/full-suite/load work can contaminate the
@@ -81,7 +83,10 @@ graphile-02-verify:
     - npm run job-runtime:inventory
     - npm run test:graphile:workloads
     - npm run test:graphile:coverage
+    - npm run test:graphile:operator:coverage
     - npm run test:graphile:mutation
+    - npm run test:graphile:operator:mutation
+    - npm run test:runtime-gates:mutation
     - npm run test:functional
     - export COMPOSE_PROJECT_NAME="issue287-${CI_PIPELINE_ID}-${CI_JOB_ID}"
     - export POSTGRES_HOST_PORT="$((55000 + (CI_JOB_ID % 9000)))"
@@ -112,10 +117,17 @@ langgraph-01-verify:
   variables:
     NODE_OPTIONS: --max-old-space-size=8192
   script:
+    - npm run langgraph:lifecycle:equivalence
     - npm run test:langgraph
     - npm run test:langgraph:coverage
     - npm run test:langgraph:runtime-coverage
+    - npm run test:langgraph:lifecycle:coverage
+    - npm run test:langgraph:lifecycle:wiring:coverage
+    - npm run test:langgraph:operator:coverage
     - npm run test:langgraph:mutation
+    - npm run test:langgraph:lifecycle:mutation
+    - npm run test:langgraph:lifecycle:wiring:mutation
+    - npm run test:langgraph:operator:mutation
     - npm run test:functional
     - export COMPOSE_PROJECT_NAME="issue280-${CI_PIPELINE_ID}-${CI_JOB_ID}"
     - export POSTGRES_HOST_PORT="$((46000 + (CI_JOB_ID % 9000)))"

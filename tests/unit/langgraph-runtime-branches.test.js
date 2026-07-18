@@ -213,3 +213,89 @@ test('summary history and retention methods expose only sanitized bounded result
   assert.deepEqual(await harness.runtime.pruneExpired({ limit: 10 }), { pruned: 1 });
   assert.deepEqual(removed, ['one', 'two']);
 });
+
+function operatorRuntimeHarness(mode) {
+  const value = state({
+    lifecycleNode: 'qa', lifecycleStatus: mode === 'retry' ? 'failed' : 'running',
+    nodeAttempts: { qa: 1 }, terminalReason: mode === 'retry' ? 'qa_failed' : null,
+  });
+  const record = {
+    tenant_id: value.tenantId, thread_id: value.threadId, factory_run_id: value.factoryRunId,
+    graph_version: 'factory-v1', state_schema_version: 1, status: 'paused', latest_node: 'qa',
+    last_checkpoint_id: 'cp-1', checkpointed_at: new Date().toISOString(),
+  };
+  const updates = [];
+  const registry = {
+    async register() { return record; },
+    async assertBinding() { return record; },
+    async pendingInterrupt() { return null; },
+    async acquireLease(input) { record.lease_owner = input.owner; return record; },
+    async renewLease() { return record; },
+    async releaseLease() { record.lease_owner = null; },
+    async updateStatusWithLease(input) { record.status = input.status; return record; },
+  };
+  const graph = {
+    async getState() {
+      if (mode === 'missing-interrupt-checkpoint') return {
+        next: ['later'], values: value,
+        tasks: [{ interrupts: [{ id: 'interrupt-1', value: {
+          type: 'review_gate', version: 1, node: 'qa', factoryRunId: value.factoryRunId,
+          threadId: value.threadId, authorizedRoles: ['pm'], waitReason: 'Review.', nextAction: 'Decide.',
+        } }] }],
+      };
+      return { next: [], values: value };
+    },
+    async updateState(_config, update, node) { updates.push({ update, node }); },
+    async invoke() { return value; },
+  };
+  const pool = { async query() { return { rows: [{ registry: 'threads', checkpoints: 'checkpoints', saver_version: 1 }] }; } };
+  const runtime = createLangGraphRuntime({
+    pool, runtimePool: pool, registry, graph,
+    checkpointer: { async setup() {}, async getTuple() { return null; } }, ownsPool: false,
+    logger: { info() {}, error() {} }, metrics: createMetricSink(),
+    config: { enabled: true, operationTimeoutMs: 500, resumeLeaseMs: 1_000, poolBudget: 1 },
+  });
+  return { record, runtime, updates, value };
+}
+
+test('runtime operator entry points expose status and execute decision retry and cancellation', async () => {
+  const statusHarness = operatorRuntimeHarness('status');
+  await statusHarness.runtime.setup();
+  const status = await statusHarness.runtime.runStatus({
+    tenantId: statusHarness.value.tenantId, threadId: statusHarness.value.threadId,
+  });
+  assert.equal(status.currentNode, 'qa');
+
+  const decisionHarness = operatorRuntimeHarness('decision');
+  await decisionHarness.runtime.setup();
+  assert.equal((await decisionHarness.runtime.resumeDecision({
+    tenantId: decisionHarness.value.tenantId, threadId: decisionHarness.value.threadId,
+    checkpointId: 'cp-1', action: 'accept',
+  })).lifecycleNode, 'qa');
+
+  const retryHarness = operatorRuntimeHarness('retry');
+  await retryHarness.runtime.setup();
+  await retryHarness.runtime.retryNode({
+    tenantId: retryHarness.value.tenantId, threadId: retryHarness.value.threadId,
+    node: 'qa', maxAttempts: 3,
+  });
+  assert.deepEqual(retryHarness.updates[0], {
+    update: { lifecycleStatus: 'retrying', terminalReason: null }, node: 'qa',
+  });
+
+  const cancelHarness = operatorRuntimeHarness('cancel');
+  await cancelHarness.runtime.setup();
+  await cancelHarness.runtime.cancel({
+    tenantId: cancelHarness.value.tenantId, threadId: cancelHarness.value.threadId,
+    reasonCode: 'operator_cancelled',
+  });
+  assert.deepEqual(cancelHarness.updates[0], {
+    update: { lifecycleStatus: 'cancelled', terminalReason: 'operator_cancelled' }, node: 'qa',
+  });
+
+  const missingCheckpoint = operatorRuntimeHarness('missing-interrupt-checkpoint');
+  await missingCheckpoint.runtime.setup();
+  await assert.rejects(() => missingCheckpoint.runtime.invoke({
+    tenantId: missingCheckpoint.value.tenantId, factoryRunId: missingCheckpoint.value.factoryRunId,
+  }), { code: 'langgraph_checkpoint_unavailable', safeDetails: { reason: 'interrupt_checkpoint' } });
+});

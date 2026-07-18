@@ -47,7 +47,11 @@ test('workload adapter composes start resume and canonical effect lookup with ru
   assert.deepEqual(await adapter.lookupEffect({ ...input, effectKey: 'opaque' }), {
     completed: true, code: 'lifecycle_completed',
   });
-  assert.equal(calls.length, 3);
+  assert.deepEqual(calls, [
+    ['invoke', { tenantId: input.tenantId, factoryRunId: input.runId }],
+    ['resume', { tenantId: input.tenantId, factoryRunId: input.runId, threadId: input.threadId }],
+    ['get', input.tenantId, input.threadId],
+  ]);
 });
 
 test('workload adapter fails closed on forged thread identity and unsupported workflow version', async () => {
@@ -58,8 +62,28 @@ test('workload adapter fails closed on forged thread identity and unsupported wo
     code: 'langgraph_tenant_mismatch',
   });
   await assert.rejects(() => adapter.start(workload({ workflowVersion: 2 })), {
-    code: 'langgraph_version_unsupported',
+    code: 'langgraph_version_unsupported', safeDetails: { kind: 'workflow' },
   });
+});
+
+test('workload adapter covers pending failed and active effect states and validates construction', async () => {
+  assert.throws(() => createLangGraphWorkloadAdapter({}), /runtime with invoke and resume/);
+  assert.throws(() => createLangGraphWorkloadAdapter({ runtime: { invoke() {} } }), /runtime with invoke and resume/);
+  const records = [null, { status: 'failed' }, { status: 'paused' }];
+  const runtime = {
+    registry: { async get() { return records.shift(); } },
+    async invoke() { return { lifecycleStatus: 'running', lifecycleNode: 'intake' }; },
+    async resume() { return { lifecycleStatus: 'succeeded', lifecycleNode: 'closeout' }; },
+  };
+  const adapter = createLangGraphWorkloadAdapter({ runtime });
+  const input = workload();
+  assert.equal((await adapter.start(input)).code, 'lifecycle_started');
+  assert.equal((await adapter.resume(input)).code, 'lifecycle_completed');
+  assert.deepEqual(await adapter.lookupEffect(input), { completed: false });
+  assert.deepEqual(await adapter.lookupEffect(input), { completed: true, code: 'lifecycle_failed' });
+  assert.deepEqual(await adapter.lookupEffect(input), { completed: false, code: 'lifecycle_paused' });
+  await assert.rejects(() => createLangGraphWorkloadAdapter({ runtime }).start(null), { code: 'langgraph_state_invalid' });
+  await assert.rejects(() => createLangGraphWorkloadAdapter({ runtime }).start('invalid'), { code: 'langgraph_state_invalid' });
 });
 
 test('lifecycle runtime composes the complete graph definition into the durable runtime', () => {
