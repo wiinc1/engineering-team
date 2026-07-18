@@ -8,11 +8,10 @@ All repository-local work identified for issues #280–#290 is implemented and l
 
 - Applicable standards areas: architecture and design, coding quality, testing, deployment, observability, security, and team process.
 - Evidence expected for this change: runtime suites, real PostgreSQL recovery, load, coverage, mutation, security, chaos, browser, SBOM, immutable release manifests, hosted promotion, and soak.
-- Gap observed: final exact-head pipeline, reviewer, staging, alert-delivery, production synthetic, cutover, and full 24-hour soak evidence are pending. These gates require execution against the immutable deployed revision and cannot be satisfied by local smoke evidence (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/290).
+- Gap observed: final exact-head pipeline, reviewer, staging, alert-delivery, production synthetic, cutover, and full 24-hour soak evidence are pending. Documented rationale: these gates require execution against the immutable deployed revision and cannot be satisfied by local smoke evidence (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/290).
 - Architecture and deployment: exclusive runtime ownership, fail-closed composition, reversible expansion, and evidence-gated contraction.
 - Reliability and observability: durable checkpoints/effects, lease fencing, bounded recovery, metrics, alerts, synthetics, and DR proof.
 - Security and quality: tenant binding, RBAC, sanitized state, dependency audit, CycloneDX SBOM, coverage, mutation, contract, chaos, browser, and standards gates.
-- Documented rationale: hosted and production claims require target-environment execution; the full soak remains a mandatory release-gate input.
 
 ## Story traceability
 
