@@ -83,7 +83,10 @@ test('shared-host performance files run serially without weakening their budgets
   const pkg = JSON.parse(read('package.json'));
   const ci = read('.gitlab-ci.yml');
   assert.match(pkg.scripts['test:performance'], /wait-for-performance-host\.js && node --test --test-concurrency=1/);
-  assert.match(pkg.scripts['test:browser:performance'], /wait-for-performance-host\.js && node scripts\/run-playwright\.js/);
+  assert.match(
+    pkg.scripts['test:browser:performance'],
+    /wait-for-performance-host\.js && BROWSER_PERFORMANCE_MODE=production node scripts\/run-playwright\.js/,
+  );
   assert.doesNotMatch(pkg.scripts['test:node:aggregate'], /tests\/performance/);
   assert.equal(pkg.scripts.test, 'npm run test:performance && npm run test:browser:performance && npm run test:functional');
   assert.match(pkg.scripts['test:functional'], /test:node:aggregate && npm run test:browser:functional/);
