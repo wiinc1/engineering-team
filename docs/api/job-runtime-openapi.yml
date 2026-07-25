@@ -1,20 +1,152 @@
 openapi: 3.1.0
 info:
-  title: Job runtime compatibility components
-  version: 1.0.0
-  description: Components-only contract. Issue 287 adds no HTTP paths; issue 288 owns operational APIs.
-paths: {}
+  title: Job runtime operator API
+  version: 1.1.0
+  description: Tenant-scoped operational visibility and guarded recovery actions. Job payloads are never returned.
+paths:
+  /api/v1/job-runtime/jobs/{deliveryId}:
+    get:
+      summary: Read sanitized job status and operator history
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: Job detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JobDetailResponse' }
+        '404': { $ref: '#/components/responses/JobNotFound' }
+  /api/v1/job-runtime/jobs/{deliveryId}/{action}:
+    post:
+      summary: Retry, requeue, or cancel a job
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+        - name: action
+          in: path
+          required: true
+          schema: { type: string, enum: [retry, requeue, cancel] }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+        - name: If-Match
+          in: header
+          required: true
+          description: Current operatorVersion, used for optimistic concurrency.
+          schema: { type: integer, minimum: 0 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200': { description: Action completed }
+        '403': { $ref: '#/components/responses/JobActionForbidden' }
+        '404': { $ref: '#/components/responses/JobNotFound' }
+        '409': { $ref: '#/components/responses/JobActionConflict' }
+        '503': { $ref: '#/components/responses/JobRuntimeUnavailable' }
+  /api/v1/job-runtime/drain:
+    post:
+      summary: Stop accepting new claims and drain active workers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '202': { description: Drain accepted }
+        '403': { $ref: '#/components/responses/JobActionForbidden' }
+        '503': { $ref: '#/components/responses/JobRuntimeUnavailable' }
 components:
+  parameters:
+    DeliveryId:
+      name: deliveryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    JobNotFound:
+      description: No delivery exists in the authenticated tenant
+      content: { application/json: { schema: { $ref: '#/components/schemas/JobRuntimeErrorResponse' } } }
+    JobActionForbidden:
+      description: The principal cannot perform operator actions
+      content: { application/json: { schema: { $ref: '#/components/schemas/JobRuntimeErrorResponse' } } }
+    JobActionConflict:
+      description: Stale version, invalid state, or duplicate action still in progress
+      content: { application/json: { schema: { $ref: '#/components/schemas/JobRuntimeErrorResponse' } } }
+    JobRuntimeUnavailable:
+      description: Runtime or durable store unavailable
+      content: { application/json: { schema: { $ref: '#/components/schemas/JobRuntimeErrorResponse' } } }
   schemas:
     JobRuntimeStableError:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required: [code, message, retryable]
       properties:
         code:
           type: string
-          enum: [job_runtime_unavailable, job_task_unknown, job_payload_invalid, job_version_unsupported, job_schedule_conflict]
+          enum: [job_runtime_unavailable, job_task_unknown, job_payload_invalid, job_version_unsupported, job_schedule_conflict, job_not_found, job_action_forbidden, job_action_conflict]
         message: { type: string, maxLength: 160 }
+        retryable: { type: boolean }
+        details: { type: object }
+        requestId: { type: string }
+        request_id: { type: string }
+    JobRuntimeErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { $ref: '#/components/schemas/JobRuntimeStableError' }
+    JobDetailResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { const: true }
+        data:
+          type: object
+          required: [job, history]
+          properties:
+            job: { $ref: '#/components/schemas/JobDelivery' }
+            history: { type: array, items: { $ref: '#/components/schemas/JobOperatorAction' } }
+    JobDelivery:
+      type: object
+      description: Sanitized application-owned delivery metadata; payload and Graphile storage internals are excluded.
+      required: [deliveryId, tenantId, task, status, operatorVersion]
+      properties:
+        deliveryId: { type: string, format: uuid }
+        tenantId: { type: string }
+        workloadId: { type: string }
+        task: { type: string }
+        status: { type: string }
+        attemptCount: { type: integer }
+        maxAttempts: { type: integer }
+        scheduledFor: { type: string, format: date-time }
+        lastErrorCode: { type: [string, 'null'] }
+        operatorVersion: { type: integer, minimum: 0 }
+        correlationId: { type: string }
+    JobOperatorAction:
+      type: object
+      required: [actionId, deliveryId, action, actorId, reason, expectedVersion, outcome, createdAt]
+      properties:
+        actionId: { type: string, format: uuid }
+        deliveryId: { type: string, format: uuid }
+        action: { type: string, enum: [retry, requeue, cancel] }
+        actorId: { type: string }
+        reason: { type: string }
+        expectedVersion: { type: integer }
+        resultingVersion: { type: [integer, 'null'] }
+        outcome: { type: string, enum: [pending, succeeded, failed] }
+        errorCode: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
     JobRuntimeHealth:
       type: object
       additionalProperties: false

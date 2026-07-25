@@ -1,0 +1,94 @@
+openapi: 3.1.0
+info:
+  title: LangGraph orchestration operations
+  version: 1.0.0
+  description: Sanitized durable run status and guarded human/operator mutations. Raw checkpoint state is never exposed.
+paths:
+  /api/v1/langgraph/runs/{threadId}:
+    get:
+      summary: Read the tenant-scoped durable graph run model
+      parameters: [{ $ref: '#/components/parameters/ThreadId' }]
+      responses:
+        '200': { description: Sanitized graph status }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/langgraph/runs/{threadId}/interrupts/{interruptId}/decision:
+    post:
+      summary: Resolve one durable human interrupt exactly once
+      parameters:
+        - { $ref: '#/components/parameters/ThreadId' }
+        - { name: interruptId, in: path, required: true, schema: { type: string, maxLength: 128 } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 128 } }
+        - { name: If-Match, in: header, required: true, schema: { type: integer, minimum: 0 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [checkpointId, action]
+              properties:
+                checkpointId: { type: string, maxLength: 128 }
+                action: { type: string, enum: [accept, reject, edit] }
+                edits:
+                  type: object
+                  additionalProperties: { type: string, maxLength: 1000 }
+      responses:
+        '200': { description: Decision accepted or idempotently replayed }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/InterruptNotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Invalid' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/v1/langgraph/runs/{threadId}/retry:
+    post:
+      summary: Retry only the eligible failed node under its budget
+      parameters:
+        - { $ref: '#/components/parameters/ThreadId' }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 128 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [node, reason]
+              properties:
+                node: { type: string, pattern: '^[a-z][a-z0-9_]{1,63}$' }
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200': { description: Retry accepted }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/langgraph/runs/{threadId}/cancel:
+    post:
+      summary: Stop new node dispatch and preserve terminal history
+      parameters:
+        - { $ref: '#/components/parameters/ThreadId' }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 128 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties: { reason: { type: string, minLength: 1, maxLength: 500 } }
+      responses:
+        '200': { description: Cancellation accepted }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  parameters:
+    ThreadId: { name: threadId, in: path, required: true, schema: { type: string, pattern: '^lg_[a-f0-9]{48}$' } }
+  responses:
+    Forbidden: { description: Tenant or interrupt-role authorization failed }
+    InterruptNotFound: { description: Interrupt does not exist in this tenant/thread }
+    Conflict: { description: Decision is stale, duplicate in progress, or action is ineligible }
+    Invalid: { description: Decision payload is malformed or unsupported }
+    Unavailable: { description: Runtime unavailable or mutations disabled }
+  schemas:
+    LangGraphStableError:
+      type: string
+      enum: [langgraph_checkpoint_unavailable, langgraph_concurrency_conflict, langgraph_configuration_invalid, langgraph_decision_conflict, langgraph_decision_forbidden, langgraph_decision_invalid, langgraph_interrupt_not_found, langgraph_migration_mismatch, langgraph_mutations_disabled, langgraph_state_invalid, langgraph_tenant_mismatch, langgraph_version_unsupported]

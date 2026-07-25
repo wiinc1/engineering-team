@@ -1,5 +1,4 @@
 'use strict';
-
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
@@ -16,7 +15,6 @@ const {
 } = require('../../lib/job-runtime/postgres-roles');
 const { createDeliveryRegistry, normalizeRecord } = require('../../lib/job-runtime/registry');
 const { attachWorkerEvents, createJobRuntime } = require('../../lib/job-runtime/runtime');
-
 function databaseRow(overrides = {}) {
   const record = deliveryRecord();
   return {
@@ -39,7 +37,6 @@ function databaseRow(overrides = {}) {
     ...overrides,
   };
 }
-
 function queuedPool(responses) {
   const queries = [];
   return {
@@ -52,7 +49,6 @@ function queuedPool(responses) {
     },
   };
 }
-
 test('delivery registry normalizes and finds an application-owned record', async () => {
   assert.equal(normalizeRecord(null), null);
   const row = databaseRow();
@@ -64,7 +60,6 @@ test('delivery registry normalizes and finds an application-owned record', async
   const byId = createDeliveryRegistry(queuedPool([{ rows: [row] }]));
   assert.deepEqual(await byId.findByDeliveryId(row.delivery_id), deliveryRecord());
 });
-
 test('delivery registry creates a pending record or returns the semantic duplicate', async () => {
   const row = databaseRow({ graphile_job_id: null, status: 'pending_enqueue' });
   const input = {
@@ -82,7 +77,6 @@ test('delivery registry creates a pending record or returns the semantic duplica
   assert.equal(duplicateResult.created, false);
   assert.equal(duplicateResult.record.status, 'pending_enqueue');
 });
-
 test('delivery registry transitions queued, running, acknowledged, retrying, and failed states', async () => {
   const rows = [
     databaseRow({ status: 'queued' }),
@@ -161,7 +155,7 @@ test('least-privilege grants use validated static roles and no Graphile table na
 });
 
 test('runtime privilege verification accepts complete grants and rejects partial grants', async () => {
-  const allowed = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true }] }]);
+  const allowed = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true, operator_action_access: true, ownership_epoch_access: true }] }]);
   assert.equal(await verifyJobRuntimePrivileges(allowed), true);
   const denied = queuedPool([{ rows: [{ graphile_usage: true, registry_usage: false, registry_access: false }] }]);
   await assert.rejects(() => verifyJobRuntimePrivileges(denied), { code: 'job_runtime_unavailable' });
@@ -230,17 +224,20 @@ test('Graphile logger drops raw library messages and preserves safe scope fields
   const graphile = graphileLogger(logger, FakeGraphileLogger);
   graphile.factory({ label: 'Worker', workerId: 'worker-1', taskIdentifier: 'synthetic.v1', jobId: '42' })('warning', 'token=secret');
   graphile.factory({ label: 'Worker' })('info', 'database URL here');
+  graphile.factory({})('debug', 'ignored raw detail');
   assert.equal(logger.entries[0].fields.worker_id, 'worker-1');
   assert.equal(JSON.stringify(logger.entries).includes('token=secret'), false);
   assert.equal(logger.entries[1].level, 'info');
+  assert.equal(logger.entries[2].fields.scope, 'graphile_worker');
 });
 
 function fakeWorkerApi() {
-  const calls = { migrate: 0, added: [], completed: [], released: 0, runs: [] };
+  const calls = { migrate: 0, added: [], completed: [], rescheduled: [], released: 0, runs: [] };
   const utils = {
     async migrate() { calls.migrate += 1; },
     async addJob(...args) { calls.added.push(args); return { id: '42' }; },
-    async completeJobs(ids) { calls.completed.push(ids); },
+    async completeJobs(ids) { calls.completed.push(ids); return ids.map((id) => ({ id })); },
+    async rescheduleJobs(ids, options) { calls.rescheduled.push([ids, options]); return ids.map((id) => ({ id })); },
     async release() { calls.released += 1; },
   };
   const api = {
@@ -262,6 +259,8 @@ test('Graphile adapter uses only public migrate, add, run, stop, kill, and relea
   const definition = { identifier: 'synthetic.v1' };
   assert.equal((await adapter.addJob(definition, { safe: true }, { queueName: 'safe-queue' }, 'jr:v1:key')).id, '42');
   await adapter.compensate('42');
+  assert.equal((await adapter.retry('42', { runAt: new Date('2026-07-18T12:00:00.000Z') })).id, '42');
+  assert.equal((await adapter.cancel('42')).id, '42');
   const fingerprintPool = { async query() { return { rows: [{ relkind: 'r', relname: 'opaque' }] }; } };
   const fingerprintAdapter = createGraphileAdapter({ pool: fingerprintPool, schema: 'graphile_worker', logger, workerApi: api });
   assert.match(await fingerprintAdapter.schemaFingerprint(), /^[a-f0-9]{64}$/);
@@ -277,7 +276,8 @@ test('Graphile adapter uses only public migrate, add, run, stop, kill, and relea
   await runner.kill('test');
   await adapter.close();
   assert.equal(calls.migrate, 1);
-  assert.deepEqual(calls.completed, [['42']]);
+  assert.deepEqual(calls.completed, [['42'], ['42']]);
+  assert.equal(calls.rescheduled.length, 1);
   assert.equal(calls.runs.length, 1);
   assert.deepEqual(calls.runs.map((call) => call.concurrency), [4]);
   assert.equal(calls.runs[0].noHandleSignals, true);
@@ -288,6 +288,16 @@ test('Graphile adapter uses only public migrate, add, run, stop, kill, and relea
     claimsEnabled: true, concurrency: 4, pollIntervalMs: 1000, shutdownDeadlineMs: 30000,
   }), { safeDetails: { reason: 'task_list_empty' } });
   assert.throws(() => createGraphileAdapter({ logger, schema: 'graphile_worker', workerApi: api }), { code: 'job_runtime_unavailable' });
+
+  const missingApi = {
+    ...api,
+    async makeWorkerUtils() {
+      return { async rescheduleJobs() { return []; }, async completeJobs() { return []; } };
+    },
+  };
+  const missing = createGraphileAdapter({ pool: {}, schema: 'graphile_worker', logger, workerApi: missingApi });
+  await assert.rejects(() => missing.retry('404'), { code: 'job_action_conflict' });
+  await assert.rejects(() => missing.cancel('404'), { code: 'job_action_conflict' });
 });
 
 test('worker-class plans reserve claims for factory projection outbox and maintenance', () => {
@@ -432,11 +442,9 @@ test('runtime fails closed on startup or database loss and reacts to public work
   const failed = runtimeFakes({ migrateError: new Error('database password=secret') });
   await assert.rejects(() => failed.runtime.start(), { code: 'job_runtime_unavailable' });
   assert.equal((await failed.runtime.health()).state, 'failed');
-  const unavailable = runtimeFakes({ databaseError: new Error('network') });
-  assert.equal((await unavailable.runtime.health()).database, false);
+  assert.equal((await runtimeFakes({ databaseError: new Error('network') }).runtime.health()).database, false);
   const events = new EventEmitter();
-  const logger = captureLogger();
-  const metrics = metricRecorder();
+  const logger = captureLogger(); const metrics = metricRecorder();
   attachWorkerEvents(events, { logger, metrics });
   events.emit('pool:listen:error');
   events.emit('pool:fatalError');
@@ -450,8 +458,7 @@ test('runtime records an unexpected runner rejection as a fatal degraded state',
   let rejectRunner;
   const runner = {
     promise: new Promise((resolve, reject) => { rejectRunner = reject; }),
-    async stop() {},
-    async kill() {},
+    async stop() {}, async kill() {},
   };
   const fixture = runtimeFakes({ runner });
   await fixture.runtime.start();
@@ -465,8 +472,7 @@ test('runtime installs and removes signal handlers without process exit', async 
   const target = new EventEmitter();
   const fixture = runtimeFakes();
   await fixture.runtime.start();
-  fixture.runtime.installSignalHandlers(target);
-  fixture.runtime.installSignalHandlers(target);
+  fixture.runtime.installSignalHandlers(target); fixture.runtime.installSignalHandlers(target);
   assert.equal(target.listenerCount('SIGTERM'), 1);
   target.emit('SIGTERM');
   await new Promise((resolve) => setImmediate(resolve));
@@ -480,8 +486,7 @@ test('runtime idempotent stop and fatal-event guards cover non-running lifecycle
   assert.equal((await fixture.runtime.drain('again')).state, 'stopped');
   fixture.runtime.failRuntime(new Error('ignored after stop'));
   assert.equal(fixture.runtime.state, 'stopped');
-  fixture.runtime.state = 'draining';
-  fixture.runtime.failRuntime(new Error('ignored while draining'));
+  fixture.runtime.state = 'draining'; fixture.runtime.failRuntime(new Error('ignored while draining'));
   assert.equal(fixture.runtime.state, 'draining');
   fixture.runtime.removeSignalHandlers();
 });

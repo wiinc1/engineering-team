@@ -1,0 +1,7 @@
+flowchart LR
+  UI[Operator dashboard] -->|tenant auth + RBAC| API[Job runtime API]
+  API --> Registry[(Application delivery registry)]
+  API --> Ledger[(Operator action ledger)]
+  API --> Adapter[Graphile adapter]
+  Adapter -->|public utilities only| GW[Graphile Worker]
+  API --> Runtime[Graceful runtime drain]

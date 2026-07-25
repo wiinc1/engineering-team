@@ -6,7 +6,7 @@ async function loadConfig() {
 }
 
 test('browser quality matrix includes WebKit in CI unless explicitly skipped', async () => {
-  const { browserProjectNames, shouldIncludeWebkit } = await loadConfig();
+  const { browserProjectNames, browserWorkerCount, shouldIncludeWebkit } = await loadConfig();
 
   assert.equal(shouldIncludeWebkit({ CI: 'true' }), true);
   assert.equal(shouldIncludeWebkit({ GITHUB_ACTIONS: 'true' }), true);
@@ -24,6 +24,9 @@ test('browser quality matrix includes WebKit in CI unless explicitly skipped', a
     'firefox',
     'mobile-chrome',
   ]);
+  assert.equal(browserWorkerCount({ CI: 'true' }), 1);
+  assert.equal(browserWorkerCount({ GITHUB_ACTIONS: 'true' }), 1);
+  assert.equal(browserWorkerCount({}), undefined);
 });
 
 test('browser quality config covers the required route and viewport matrix', async () => {
@@ -47,8 +50,34 @@ test('browser quality config covers the required route and viewport matrix', asy
   assert.equal(expectedVisualSnapshotNames().length, 10);
   assert.equal(CORE_WEB_VITALS_BUDGETS.largestContentfulPaintMs, 3000);
   assert.equal(CORE_WEB_VITALS_BUDGETS.cumulativeLayoutShift, 0.1);
+  assert.equal(CORE_WEB_VITALS_BUDGETS.totalBlockingTimeMs, 300);
   assert.equal(VISUAL_MAX_DIFF_PIXEL_RATIO.local, 0.04);
   assert.equal(VISUAL_MAX_DIFF_PIXEL_RATIO.ci, 0.1);
   assert.equal(visualMaxDiffPixelRatio({}), VISUAL_MAX_DIFF_PIXEL_RATIO.local);
   assert.equal(visualMaxDiffPixelRatio({ GITHUB_ACTIONS: 'true' }), VISUAL_MAX_DIFF_PIXEL_RATIO.ci);
+});
+
+test('browser performance evidence runs in a fresh process before the functional matrix', () => {
+  const { scripts } = require('../../package.json');
+  const { browserGateInvocations } = require('../../scripts/run-browser-gates');
+
+  assert.equal(scripts['test:browser'], 'node scripts/run-browser-gates.js');
+  assert.deepEqual(browserGateInvocations({}, ['--project=chromium']), [
+    ['tests/browser/browser-quality-performance.browser.spec.ts'],
+    ['--grep-invert=browser Core Web Vitals budget gate', '--project=chromium'],
+  ]);
+  assert.deepEqual(browserGateInvocations(
+    { PERFORMANCE_EVIDENCE_COMPLETE: '1' },
+    ['--grep=protected sign-in recovery'],
+  ), [
+    ['--grep-invert=browser Core Web Vitals budget gate', '--grep=protected sign-in recovery'],
+  ]);
+  assert.match(
+    scripts['test:browser:performance'],
+    /browser-quality-performance\.browser\.spec\.ts/,
+  );
+  assert.match(
+    scripts['test:browser:functional'],
+    /--grep-invert='browser Core Web Vitals budget gate'/,
+  );
 });

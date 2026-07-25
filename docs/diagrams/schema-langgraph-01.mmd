@@ -1,0 +1,37 @@
+erDiagram
+  FACTORY_THREADS ||--o{ CHECKPOINTS : binds_tenant_thread
+  CHECKPOINTS ||--o{ CHECKPOINT_BLOBS : references_channel_versions
+  CHECKPOINTS ||--o{ CHECKPOINT_WRITES : records_pending_writes
+  FACTORY_THREADS {
+    text tenant_id
+    text factory_run_id
+    text thread_id PK
+    text checkpoint_namespace
+    text graph_version
+    smallint state_schema_version
+    text status
+    text latest_node
+    integer checkpoint_size_bytes
+    uuid lease_owner
+    timestamptz lease_expires_at
+    timestamptz retention_expires_at
+    timestamptz checkpointed_at
+  }
+  CHECKPOINTS {
+    text thread_id PK
+    text checkpoint_ns PK
+    text checkpoint_id PK
+    jsonb checkpoint
+    jsonb metadata
+  }
+  CHECKPOINT_BLOBS {
+    text thread_id
+    text channel
+    bytea blob
+  }
+  CHECKPOINT_WRITES {
+    text thread_id
+    text task_id
+    text channel
+    bytea blob
+  }

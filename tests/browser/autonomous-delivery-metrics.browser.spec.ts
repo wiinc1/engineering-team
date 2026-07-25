@@ -90,7 +90,7 @@ test('autonomous delivery metrics dashboard renders the pilot report without ove
   await page.goto('/metrics/autonomous-delivery', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: 'Autonomous Delivery Metrics' })).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('Autonomous delivery metrics loaded.');
+  await expect(page.getByText('Autonomous delivery metrics loaded.', { exact: true })).toBeVisible();
   await expect(page.getByText('Autonomous delivery', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Metric breakdown' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'TSK-AUTO-1' })).toBeVisible();

@@ -70,6 +70,19 @@ test('secret scan CLI passes on the current repository fixtures', () => {
   assert.equal(result.findingCount, 0);
 });
 
+test('secret scan skips tracked files deleted from the working tree', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'secret-scan-deleted-'));
+  spawnSync('git', ['init', '-q'], { cwd: root });
+  writeFile(root, 'src/removed.js', 'const token = process.env.GITHUB_TOKEN;\n');
+  spawnSync('git', ['add', 'src/removed.js'], { cwd: root });
+  fs.unlinkSync(path.join(root, 'src/removed.js'));
+
+  const result = scanSecrets({ root });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.scannedFiles, 0);
+});
+
 test('package exposes the release secret scan command', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../..', 'package.json'), 'utf8'));
 

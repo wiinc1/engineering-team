@@ -267,6 +267,10 @@ test('concurrency and runtime configuration reserve pool capacity and reject per
   assert.equal(config.retentionDays, 30);
   assert.equal(config.retentionBatch, 1000);
   assert.equal(config.retentionIntervalMs, 3_600_000);
+  assert.throws(() => runtimeConfig({ production: true, claimsEnabled: true, concurrency: 4, poolMax: 10, reservedConnections: 4 }, {}), {
+    code: 'job_runtime_unavailable', safeDetails: { reason: 'ownership_epoch_required' },
+  });
+  assert.equal(runtimeConfig({ production: true, claimsEnabled: true, concurrency: 4, poolMax: 10, reservedConnections: 4, ownershipEpoch: '98f48812-7aa6-4ce8-9e88-184ba4bcbb52' }, {}).claimsEnabled, true);
   assert.throws(() => runtimeConfig({ claimsEnabled: true, concurrency: 3, poolMax: 10, reservedConnections: 4 }), {
     code: 'job_runtime_unavailable', safeDetails: { reason: 'fair_concurrency' },
   });
@@ -292,6 +296,9 @@ test('stable errors expose only sanitized codes and safe details', () => {
 
 test('stable error catalog preserves exact public message and retry semantics', () => {
   const expected = {
+    job_action_conflict: ['Job action conflicts with the current delivery state.', false],
+    job_action_forbidden: ['Job action is not permitted.', false],
+    job_not_found: ['Job delivery was not found.', false],
     job_payload_invalid: ['Job payload was rejected.', false],
     job_runtime_unavailable: ['Job runtime is unavailable.', true],
     job_schedule_conflict: ['Job schedule conflicts with an existing delivery.', false],

@@ -89,11 +89,14 @@ test('every inventoried producer emits data accepted by its exact versioned hand
     inventory.workloads.map(({ taskIdentifier }) => taskIdentifier).sort());
 });
 
-test('issue 287 adds no HTTP path and preserves the stable error vocabulary', () => {
+test('operator API declares tenant-scoped detail and guarded actions with stable errors', () => {
   const openapi = fs.readFileSync(path.join(__dirname, '../../docs/api/job-runtime-openapi.yml'), 'utf8');
-  assert.match(openapi, /paths:\s*\{\}/);
+  assert.match(openapi, /\/api\/v1\/job-runtime\/jobs\/\{deliveryId\}/);
+  assert.match(openapi, /Idempotency-Key/);
+  assert.match(openapi, /If-Match/);
   for (const code of [
     'job_runtime_unavailable', 'job_task_unknown', 'job_payload_invalid',
-    'job_version_unsupported', 'job_schedule_conflict',
+    'job_version_unsupported', 'job_schedule_conflict', 'job_not_found',
+    'job_action_forbidden', 'job_action_conflict',
   ]) assert.match(openapi, new RegExp(code));
 });

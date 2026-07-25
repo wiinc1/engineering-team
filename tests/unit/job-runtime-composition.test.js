@@ -61,7 +61,7 @@ test('infrastructure default privilege verifier and clock execute through the co
     options: { max: 10 },
     async query(sql) {
       if (sql.includes('has_schema_privilege')) {
-        return { rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true }] };
+        return { rows: [{ graphile_usage: true, registry_usage: true, registry_access: true, effect_access: true, operator_action_access: true, ownership_epoch_access: true }] };
       }
       return { rows: [{ '?column?': 1 }] };
     },

@@ -163,10 +163,22 @@
       "kind": "development_supervisor",
       "disposition": "excluded",
       "rationale": "Local development stack supervisor only; it does not own a production semantic workload."
+    },
+    {
+      "source": "lib/software-factory/langgraph/runtime.js",
+      "kind": "invocation_lease_heartbeat",
+      "disposition": "excluded",
+      "rationale": "The renewable lease heartbeat is scoped to one active LangGraph invocation and must remain co-located with that single-writer execution rather than becoming an independently scheduled Graphile workload."
+    },
+    {
+      "source": "scripts/run-langgraph-load.js",
+      "kind": "verification_sampler",
+      "disposition": "excluded",
+      "rationale": "The interval samples pool usage only during the local LANGGRAPH-01 load gate and is not shipped as a production background execution owner."
     }
   ],
   "signature": {
     "algorithm": "sha256",
-    "digest": "82d202f04c0f88b10f84f3960656039e5bd89871846dee6e9356ecd436c3b3ba"
+    "digest": "684043fb2d81c6cd8a263c9cf3b3bd10a4ac509e215ac7c305ba6f6d0ff470aa"
   }
 }

@@ -139,7 +139,13 @@ function scanText(relativePath, text) {
 
 function readTextIfSafe(root, relativePath) {
   const absolute = path.resolve(root, relativePath);
-  const stats = fs.statSync(absolute);
+  let stats;
+  try {
+    stats = fs.statSync(absolute);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null;
+    throw error;
+  }
   if (stats.size > MAX_FILE_BYTES) return null;
   const buffer = fs.readFileSync(absolute);
   if (buffer.includes(0)) return null;

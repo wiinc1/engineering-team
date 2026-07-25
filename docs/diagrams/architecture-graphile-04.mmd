@@ -1,0 +1,9 @@
+C4Container
+  title Exclusive Graphile cutover
+  Container(producers, "Supported producers", "Application", "Graphile port only")
+  Container(worker, "Graphile Worker", "Job runtime", "Sole job owner")
+  ContainerDb(epoch, "Ownership epoch", "Postgres", "Fences stale processes")
+  Container(langgraph, "LangGraph", "Factory runtime", "Factory workflow")
+  Rel(producers, epoch, "assert jobs epoch")
+  Rel(producers, worker, "enqueue")
+  Rel(worker, langgraph, "release factory work")

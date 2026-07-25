@@ -76,5 +76,26 @@ test('issue 287 workload, compatibility, operations, and compliance artifacts ar
   assert.match(read(artifacts[6]), /Required Evidence/);
   assert.match(read(artifacts[1]), /GitLab, GitHub, deployment, notifications/);
   assert.match(read(artifacts[7]), /Delivery acknowledgment is not business completion/);
-  assert.match(read(artifacts[4]), /paths:\s*\{\}/);
+  assert.match(read(artifacts[4]), /\/api\/v1\/job-runtime\/jobs/);
+});
+
+test('shared-host performance files run serially without weakening their budgets', () => {
+  const pkg = JSON.parse(read('package.json'));
+  const ci = read('.gitlab-ci.yml');
+  assert.match(pkg.scripts['test:performance'], /wait-for-performance-host\.js && node --test --test-concurrency=1/);
+  assert.match(
+    pkg.scripts['test:browser:performance'],
+    /wait-for-performance-host\.js && BROWSER_PERFORMANCE_MODE=production node scripts\/run-playwright\.js/,
+  );
+  assert.doesNotMatch(pkg.scripts['test:node:aggregate'], /tests\/performance/);
+  assert.equal(pkg.scripts.test, 'npm run test:performance && npm run test:browser:performance && npm run test:functional');
+  assert.match(pkg.scripts['test:functional'], /test:node:aggregate && npm run test:browser:functional/);
+  assert.match(ci, /performance-evidence:\n[\s\S]*?stage: performance[\s\S]*?- npm run test:performance[\s\S]*?- npm run test:browser:performance/);
+  assert.equal((ci.match(/- npm run test:performance/g) || []).length, 1);
+  assert.equal((ci.match(/- npm run test:browser:performance/g) || []).length, 1);
+  assert.equal((ci.match(/PERFORMANCE_EVIDENCE_COMPLETE=1 make verify/g) || []).length, 2);
+  assert.match(ci, /PERFORMANCE_HOST_MAX_CPU_PERCENT: "25"/);
+  assert.match(ci, /PERFORMANCE_HOST_WAIT_TIMEOUT_MS: "1200000"/);
+  assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.95\) < 100/);
+  assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.99\) < 250/);
 });

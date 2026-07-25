@@ -19,7 +19,7 @@
 
 ## Acceptance and review evidence
 
-- Inventory: seven supported workloads and sixteen classified mechanisms; SHA-256 verified by `npm run job-runtime:inventory`.
+- Inventory: seven supported workloads and eighteen classified mechanisms; SHA-256 verified by `npm run job-runtime:inventory`. LANGGRAPH-01 explicitly classifies its invocation-scoped lease heartbeat and verification-only load sampler as non-semantic exclusions.
 - Catalog/contracts: start/resume, projection, outbox, SRE expiry, factory reconciliation, retention; all v1 producer/handler pairs are statically and dynamically complete.
 - Replay: GitLab, GitHub, deployment, notification, canonical task, audit record/projection, LangGraph checkpoint, evidence, closeout, factory recovery, and retention boundaries are allowlisted and tested for before/after-effect replay.
 - Isolation: enqueue and handler canonical lookups reject tenant mismatch; external effects receive deterministic tenant-scoped keys.
@@ -31,7 +31,7 @@
 
 ### Recorded focused results
 
-- `npm run job-runtime:inventory`: pass; 7 workloads, 16 mechanisms, signed digest verified.
+- `npm run job-runtime:inventory`: pass; 7 workloads, 18 mechanisms, signed digest verified.
 - `npm run test:graphile:workloads`: pass; 52/52 focused tests.
 - `npm run test:graphile`: pass; 122/122 unit, contract, E2E, property, security, and chaos tests.
 - `npm run test:graphile:coverage`: pass; 88/88 tests, 99.87% lines, 97.64% functions, and 95.22% branches across `lib/job-runtime`.
@@ -44,7 +44,7 @@
 
 - `npm install`: pass; lockfile installation is current. `npm audit --omit=dev`: pass; zero production vulnerabilities.
 - `npm run lint` and `npm run typecheck`: pass.
-- `npm run test:security`: pass; 59/59. `npm run test:performance`: pass; 13/13 under an idle-host measurement.
+- `npm run test:security`: pass; 59/59. A dedicated pre-mutation pipeline stage waits fail-closed for five consecutive host samples below 25% CPU, runs all 17 Node performance files serially, rechecks host quiescence, and runs browser Core Web Vitals in a fresh one-worker process. Downstream functional, mutation, integration, load, and `make verify` gates depend on that stage and do not duplicate its evidence on a loaded shared host. The reviewed Node p95/p99 and browser timing budgets are unchanged.
 - `npm test`: pass, including the repository Node suites and 199/199 executed browser scenarios with 23 intentional visual-platform skips.
 - `npm run coverage`: pass; 928/928 tests and 77.25% repository line coverage; the policy floor is 70%.
 - `npm run standards:check`: pass; secrets, standards, maintainability, and current coverage policy all green.

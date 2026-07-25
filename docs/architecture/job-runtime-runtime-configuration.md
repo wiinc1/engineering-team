@@ -9,6 +9,7 @@
 | Variable | Default | Bounds and meaning |
 | --- | ---: | --- |
 | `FF_GRAPHILE_WORKER_CUTOVER` | `false` | Exact boolean; false is production standby, not shadow or percentage delivery. |
+| `JOB_RUNTIME_OWNERSHIP_EPOCH` | empty | Required UUID when production claims are enabled; every enqueue, claim, and readiness check must match the active `jobs/graphile` epoch. |
 | `PGPOOL_MAX` / `PG_POOL_MAX` | `10` | Existing verified TLS pool, 3–100 connections. |
 | `JOB_RUNTIME_CONCURRENCY` | `4` | Exactly 4 when claims are enabled; other values fail closed. |
 | `JOB_RUNTIME_RESERVED_CONNECTIONS` | `4` | 2–64; protects API and coordinated LangGraph checkpoint capacity. |

@@ -1,0 +1,9 @@
+flowchart TB
+  G[Graphile Worker] --> L[LangGraph lifecycle runtime]
+  L --> N[Domain lifecycle ports]
+  N --> T[Canonical task and audit services]
+  N --> X[Forge, specialist, CI, deploy adapters]
+  L --> P[(Postgres checkpoints)]
+  L --> E[Canonical node evidence]
+  E --> O[Metrics, traces, alerts]
+  U[Task detail/API] -. read models only .-> T

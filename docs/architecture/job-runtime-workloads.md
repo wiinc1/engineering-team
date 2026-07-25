@@ -2,7 +2,7 @@
 
 ## Signed inventory
 
-`config/job-runtime-workload-inventory.json` is the machine-readable authority: schema/catalog version 1, seven migrated workloads, sixteen discovered mechanisms, and a SHA-256 signature over canonical inventory content. `npm run job-runtime:inventory` verifies the signature, scans runtime sources for supported loops/schedules, and proves every migrated entry has a catalog definition, producer, and handler. An unclassified mechanism or missing component fails the gate. Exclusions are explicit: external ingress, database/host recovery, local-only storage, destructive operator recovery, and development supervisors are not semantic production background workloads.
+`config/job-runtime-workload-inventory.json` is the machine-readable authority: schema/catalog version 1, seven migrated workloads, eighteen discovered mechanisms, and a SHA-256 signature over canonical inventory content. `npm run job-runtime:inventory` verifies the signature, scans runtime sources for supported loops/schedules, and proves every migrated entry has a catalog definition, producer, and handler. An unclassified mechanism or missing component fails the gate. Exclusions are explicit: external ingress, database/host recovery, local-only storage, destructive operator recovery, development supervisors, invocation-scoped lease heartbeats, and verification-only samplers are not semantic production background workloads.
 
 ## Producer/consumer and effect matrix
 

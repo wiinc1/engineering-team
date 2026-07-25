@@ -26,7 +26,9 @@ variables:
 
 stages:
   - build
+  - performance
   - test
+  - verify
   - deploy
 
 .node-job:
@@ -39,37 +41,103 @@ build:
   stage: build
   script:
     - npm audit --omit=dev
+    - npm run security:sbom
     - npm run lint
     - npm run typecheck
     - npm run build
   artifacts:
     paths:
       - dist/
+      - .artifacts/security/
     expire_in: 1 week
+
+# Timing budgets run before mutation/full-suite/load work can contaminate the
+# shared shell runner. Downstream jobs depend on this stage succeeding and do
+# not repeat the same evidence under a thermally loaded host.
+performance-evidence:
+  extends: .node-job
+  stage: performance
+  timeout: 50 minutes
+  variables:
+    PERFORMANCE_HOST_MAX_CPU_PERCENT: "25"
+    PERFORMANCE_HOST_STABLE_SAMPLES: "5"
+    PERFORMANCE_HOST_WAIT_TIMEOUT_MS: "1200000"
+  script:
+    - npm run test:performance
+    - npm run test:browser:performance
+  artifacts:
+    when: always
+    paths:
+      - test-results/
+      - playwright-report/
+    expire_in: 2 weeks
 
 # Run every local and issue-specific gate, including real PostgreSQL and the ten-minute 2x workload proof.
 graphile-02-verify:
   extends: .node-job
   stage: test
-  timeout: 45 minutes
+  timeout: 75 minutes
   variables:
     NODE_OPTIONS: --max-old-space-size=8192
   script:
     - npm run job-runtime:inventory
     - npm run test:graphile:workloads
     - npm run test:graphile:coverage
+    - npm run test:graphile:operator:coverage
     - npm run test:graphile:mutation
-    - npm test
+    - npm run test:graphile:operator:mutation
+    - npm run test:runtime-gates:mutation
+    - npm run test:functional
     - export COMPOSE_PROJECT_NAME="issue287-${CI_PIPELINE_ID}-${CI_JOB_ID}"
     - export POSTGRES_HOST_PORT="$((55000 + (CI_JOB_ID % 9000)))"
     - npm run test:integration:docker
     - npm run test:security
-    - npm run test:performance
     - JOB_RUNTIME_LOAD_DURATION_MS=600000 JOB_RUNTIME_LOAD_QPS=50 npm run test:graphile:load
     - npm run coverage
     - npm run standards:check
     - npm run build
-    - make verify
+    - PERFORMANCE_EVIDENCE_COMPLETE=1 make verify
+    - |
+      base_sha="$(git merge-base "origin/${CI_DEFAULT_BRANCH}" "$CI_COMMIT_SHA")"
+      git diff --check "$base_sha" "$CI_COMMIT_SHA"
+  artifacts:
+    when: always
+    paths:
+      - .artifacts/
+      - test-results/
+      - playwright-report/
+    expire_in: 2 weeks
+
+# Verify LANGGRAPH-01 after the shared-host Graphile workload has completed so
+# its ten-minute latency sample is never distorted by another issue load gate.
+langgraph-01-verify:
+  extends: .node-job
+  stage: verify
+  timeout: 90 minutes
+  variables:
+    NODE_OPTIONS: --max-old-space-size=8192
+  script:
+    - npm run langgraph:lifecycle:equivalence
+    - npm run test:langgraph
+    - npm run test:langgraph:coverage
+    - npm run test:langgraph:runtime-coverage
+    - npm run test:langgraph:lifecycle:coverage
+    - npm run test:langgraph:lifecycle:wiring:coverage
+    - npm run test:langgraph:operator:coverage
+    - npm run test:langgraph:mutation
+    - npm run test:langgraph:lifecycle:mutation
+    - npm run test:langgraph:lifecycle:wiring:mutation
+    - npm run test:langgraph:operator:mutation
+    - npm run test:functional
+    - export COMPOSE_PROJECT_NAME="issue280-${CI_PIPELINE_ID}-${CI_JOB_ID}"
+    - export POSTGRES_HOST_PORT="$((46000 + (CI_JOB_ID % 9000)))"
+    - npm run test:integration:docker
+    - npm run test:security
+    - LANGGRAPH_LOAD_DURATION_MS=600000 LANGGRAPH_LOAD_CONCURRENCY=4 npm run test:langgraph:load
+    - npm run coverage
+    - npm run standards:check
+    - npm run build
+    - PERFORMANCE_EVIDENCE_COMPLETE=1 make verify
     - |
       base_sha="$(git merge-base "origin/${CI_DEFAULT_BRANCH}" "$CI_COMMIT_SHA")"
       git diff --check "$base_sha" "$CI_COMMIT_SHA"
@@ -87,6 +155,7 @@ deploy-review:
   needs:
     - build
     - graphile-02-verify
+    - langgraph-01-verify
   script:
     - echo "All verified artifacts are ready for an operator-owned production review."
   rules:

@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 
 const API_ENTRYPOINTS = [
@@ -52,6 +54,34 @@ function createResponseRecorder() {
     },
   };
 }
+
+function apiEntrypoints(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return apiEntrypoints(entryPath);
+    return entry.isFile() && entry.name.endsWith('.js') ? [entryPath] : [];
+  });
+}
+
+function vercelRouteShape(file) {
+  return path.relative(path.join(__dirname, '../../api'), file)
+    .replace(/\.js$/, '')
+    .split(path.sep)
+    .map((segment) => {
+      if (/^\[\.\.\..+\]$/.test(segment)) return '[...param]';
+      if (/^\[.+\]$/.test(segment)) return '[param]';
+      return segment;
+    })
+    .join('/');
+}
+
+test('Vercel API entrypoints have unique dynamic route shapes', () => {
+  const routes = apiEntrypoints(path.join(__dirname, '../../api'))
+    .filter((file) => path.basename(file) !== '_server.js');
+  const shapes = routes.map(vercelRouteShape);
+
+  assert.equal(new Set(shapes).size, shapes.length, `conflicting route shapes: ${shapes.join(', ')}`);
+});
 
 test('operator-hosted API entrypoints return the request handler promise', () => {
   for (const entrypoint of API_ENTRYPOINTS) {

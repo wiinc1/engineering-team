@@ -11,6 +11,7 @@ const { createEffectGuard, createEffectLedger } = require('../../lib/job-runtime
 const { JobRuntimeError } = require('../../lib/job-runtime/errors');
 const { createGraphileAdapter } = require('../../lib/job-runtime/graphile-adapter');
 const { createJobRuntimeLogger, createMetricSink } = require('../../lib/job-runtime/observability');
+const { createJobOperatorService } = require('../../lib/job-runtime/operator-service');
 const { applyLeastPrivilegeGrants, verifyJobRuntimePrivileges } = require('../../lib/job-runtime/postgres-roles');
 const { createDeliveryRegistry } = require('../../lib/job-runtime/registry');
 const { FIXED_NOW, validContext, validRequest } = require('../fixtures/job-runtime/v1');
@@ -89,6 +90,10 @@ function metricValues(snapshot, name) {
   return Object.entries(snapshot.observations).find(([key]) => key.includes(name))?.[1] || [];
 }
 
+function hasCounter(metrics, name) {
+  return Object.keys(metrics.snapshot().counters).some((key) => key.includes(name));
+}
+
 async function seedWorkloadMigration(client) {
   await client.query(`INSERT INTO tasks (tenant_id, task_id, title, status)
     VALUES ('tenant-workload-migration', 'TSK-GRAPHILE-287', 'Workload migration sentinel', 'TODO')`);
@@ -148,7 +153,11 @@ pgTest('Graphile and application schemas initialize with least-privilege roles',
 
 pgTest('migration apply rollback apply preserves populated canonical task and audit rows', async () => {
   const client = await pool.connect();
-  const migrations = ['016_job_runtime_registry.sql', '017_job_runtime_workloads.sql'];
+  const migrations = [
+    '016_job_runtime_registry.sql',
+    '017_job_runtime_workloads.sql',
+    '019_job_runtime_operations.sql',
+  ];
   try {
     await client.query('BEGIN');
     await client.query(`INSERT INTO tasks (tenant_id, task_id, title, status)
@@ -164,6 +173,9 @@ pgTest('migration apply rollback apply preserves populated canonical task and au
       (SELECT COUNT(*)::integer FROM tasks WHERE tenant_id = 'tenant-migration') AS tasks,
       (SELECT COUNT(*)::integer FROM audit_events WHERE tenant_id = 'tenant-migration') AS audit_events`);
     const fingerprint = await setupAdapter.schemaFingerprint();
+    // Roll back dependent application-owned tables before their registry base.
+    // This mirrors the supported reverse migration order after GRAPHILE-03.
+    await pool.query(read('db/migrations/019_job_runtime_operations.down.sql'));
     await pool.query(read('db/migrations/017_job_runtime_workloads.down.sql'));
     await pool.query(read('db/migrations/016_job_runtime_registry.down.sql'));
     await pool.query('DELETE FROM schema_migrations WHERE version = ANY($1)', [migrations]);
@@ -251,6 +263,50 @@ pgTest('delivery registry persists retry state with the live database constraint
   }
 });
 
+pgTest('operator retry is tenant-bound, audited, versioned, and exactly-once in Postgres', async () => {
+  const deliveryId = '00000000-0000-4000-8000-000000000389';
+  const actionId = '00000000-0000-4000-8000-000000000390';
+  await pool.query(`INSERT INTO job_runtime.job_delivery_registry (
+    delivery_id, tenant_id, workload_id, semantic_job_key, task_identifier, task_name,
+    payload_version, catalog_version, named_queue, max_attempts, priority,
+    canonical_resource_type, canonical_resource_id, ordering_key, correlation_id, payload_size_bytes,
+    scheduled_for, status, graphile_job_id, attempt_count
+  ) VALUES ($1, 'tenant-operator-live', 'probe-operator-live', 'jr:v1:operator-live',
+    'job_runtime.synthetic.v1', 'job_runtime.synthetic', 1, 1, 'job-runtime-synthetic',
+    3, 0, 'synthetic', 'probe-operator-live', 'tenant-operator-live:synthetic:probe-operator-live',
+    'corr-operator-live', 200, NOW(), 'delivery_failed', '389', 1)`, [deliveryId]);
+  const adapterCalls = [];
+  const registry = createDeliveryRegistry(pool);
+  const service = createJobOperatorService({
+    registry,
+    adapter: { async retry(...args) { adapterCalls.push(args); }, async cancel() {} },
+    idGenerator: () => actionId,
+  });
+  const input = {
+    tenantId: 'tenant-operator-live', deliveryId, actorId: 'sre-live', requestId: 'req-live',
+    action: 'retry', reason: 'recover live job', expectedVersion: 0, idempotencyKey: 'retry-live-1',
+  };
+  try {
+    const first = await service.act(input);
+    const replay = await service.act(input);
+    assert.equal(first.replayed, false);
+    assert.equal(first.resultingVersion, 1);
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.resultingVersion, 1);
+    assert.equal(adapterCalls.length, 1);
+    assert.equal((await service.get('tenant-operator-live', deliveryId)).history.length, 1);
+    await assert.rejects(() => service.get('tenant-attacker', deliveryId), { code: 'job_not_found' });
+    const stored = await pool.query(`SELECT outcome, expected_version, resulting_version, actor_id
+      FROM job_runtime.job_operator_actions WHERE action_id = $1`, [actionId]);
+    assert.deepEqual(stored.rows[0], {
+      outcome: 'succeeded', expected_version: '0', resulting_version: '1', actor_id: 'sre-live',
+    });
+  } finally {
+    await pool.query('DELETE FROM job_runtime.job_operator_actions WHERE delivery_id = $1', [deliveryId]);
+    await pool.query('DELETE FROM job_runtime.job_delivery_registry WHERE delivery_id = $1', [deliveryId]);
+  }
+});
+
 pgTest('enqueue claim retry dedupe and named-queue concurrency run through LISTEN/NOTIFY', { timeout: 40_000 }, async () => {
   const events = new EventEmitter();
   const listening = new Promise((resolve) => events.once('pool:listen:success', resolve));
@@ -292,8 +348,8 @@ pgTest('enqueue claim retry dedupe and named-queue concurrency run through LISTE
     }));
     assert.equal(duplicate.deliveryId, second.deliveryId);
     assert.equal(pool.waitingCount === 0 && pool.totalCount <= pool.options.max, true);
+    await waitUntil(() => hasCounter(metrics, 'job_runtime_retry_total'), 2_000);
     const snapshot = metrics.snapshot();
-    assert.ok(Object.keys(snapshot.counters).some((key) => key.includes('job_runtime_retry_total')));
     const readyMetric = metricValues(snapshot, 'job_runtime_ready_to_start_ms');
     assert.equal(readyMetric.length, 3);
     assert.ok(Math.max(...readyMetric) < 2_000, `ready-to-start metrics exceeded budget: ${JSON.stringify(readyMetric)}`);

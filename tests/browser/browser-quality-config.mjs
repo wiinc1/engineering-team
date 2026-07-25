@@ -107,6 +107,10 @@ export function browserProjectNames(env = process.env) {
     .map((project) => project.name);
 }
 
+export function browserWorkerCount(env = process.env) {
+  return isCi(env) ? 1 : undefined;
+}
+
 export function expectedVisualSnapshotNames() {
   return CRITICAL_ROUTE_STATES.flatMap((route) =>
     SCREENSHOT_VIEWPORTS.map((viewport) => `${route.slug}-${viewport.name}.png`),
