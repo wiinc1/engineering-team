@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "kind": "et-forge-bridge-smoke",
-  "generatedAt": "2026-07-07T21:03:15.851Z",
+  "generatedAt": "2026-07-10T15:33:03.780Z",
   "summary": {
     "passed": true,
     "checks": [

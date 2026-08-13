@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mqsfj33r",
+      "title": "Milestone A staging factory smoke 2026-06-24T18:51:28.503Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "githubIssueUrl": null,
+      "stage": "phase1_complete",
+      "taskId": "TSK-016",
+      "projectId": "PRJ-845A06D5",
+      "evidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/factory-delivery-mqsfj33r/factory-staging-mqsfj33r.json",
+      "persistDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/factory-delivery-mqsfj33r/stack/factory-staging-mqsfj33r",
+      "forgeTaskId": "TSK-GOLDENSFJ33R",
+      "createdAt": "2026-06-24T18:51:28.503Z",
+      "updatedAt": "2026-06-24T18:51:43.522Z",
+      "lastAction": "phase1",
+      "lastError": null,
+      "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-24T18:51:28.503Z [factory-staging-mqsfj33r]",
+      "evidenceStatus": "phase1_complete"
+    }
+  ]
+}

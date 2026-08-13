@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-a-staging-verify",
+  "generatedAt": "2026-06-28T02:05:30.857Z",
+  "profile": "hosted-staging",
+  "baseUrl": "https://staging.example",
+  "outputDir": "observability/milestone-a-staging-test-debug",
+  "summary": {
+    "passed": false,
+    "checks": [
+      {
+        "name": "gp_007_workers",
+        "ok": true,
+        "lagSeconds": 0
+      },
+      {
+        "name": "et_forge_bridge",
+        "ok": true
+      },
+      {
+        "name": "gp_002_intake",
+        "ok": true
+      },
+      {
+        "name": "factory_staging_orchestrator",
+        "ok": false,
+        "stage": "failed"
+      }
+    ]
+  },
+  "artifacts": {
+    "workers": "observability/milestone-a-staging-test-debug/audit-workers-production-smoke.json",
+    "bridge": "observability/milestone-a-staging-test-debug/et-forge-bridge-smoke.json",
+    "intake": "observability/milestone-a-staging-test-debug/gp-002-github-intake-smoke.json",
+    "factory": "observability/milestone-a-staging-test-debug/factory-staging-smoke.json"
+  }
+}
