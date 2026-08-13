@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mqshpf1x",
+      "title": "Milestone A staging factory smoke 2026-06-24T19:52:23.157Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "githubIssueUrl": null,
+      "stage": "failed",
+      "taskId": "TSK-FACTORY1",
+      "projectId": "PRJ-STAGING1",
+      "evidencePath": "observability/milestone-a-staging-test/factory-delivery-mqshpf1x/factory-staging-mqshpf1x.json",
+      "persistDir": "observability/milestone-a-staging-test/factory-delivery-mqshpf1x/stack/factory-staging-mqshpf1x",
+      "forgeTaskId": "TSK-GOLDENSHPF1X",
+      "createdAt": "2026-06-24T19:52:23.157Z",
+      "updatedAt": "2026-06-24T19:52:23.354Z",
+      "lastAction": "error",
+      "lastError": "File audit backend requires an explicit local/test fallback opt-in. Set ALLOW_FILE_AUDIT_BACKEND=true only for isolated development or test harnesses.",
+      "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-24T19:52:23.157Z [factory-staging-mqshpf1x]"
+    }
+  ]
+}

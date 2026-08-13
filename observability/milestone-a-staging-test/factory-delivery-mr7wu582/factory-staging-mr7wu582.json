@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase1_complete",
+  "factoryQueueId": "factory-staging-mr7wu582",
+  "githubIssueUrl": null,
+  "engineeringTeam": {
+    "projectId": "PRJ-STAGING1",
+    "taskId": "TSK-FACTORY1",
+    "projectName": "Factory delivery — Milestone A staging factory smoke 2026-07-05T14:52:30.578Z [factory-staging-mr7wu582]",
+    "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+    "templateTier": "Simple",
+    "changeKind": null,
+    "changedFiles": [],
+    "contractVersion": 1,
+    "contractValidationStatus": "valid",
+    "approvalMode": "policy",
+    "forgeDispatch": {
+      "targetRepo": "wiinc1/engineering-team",
+      "projectId": "engineering-team",
+      "domain": "workflow",
+      "affectsUi": false
+    },
+    "forgeExecutionReadiness": null
+  },
+  "change": {
+    "kind": null,
+    "changedFiles": []
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDEN7WU582",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "stepsCompleted": [
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008",
+    "GP-012"
+  ],
+  "startedAt": "2026-07-05T14:52:30.580Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "https://staging.example",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "observability/milestone-a-staging-test/factory-delivery-mr7wu582/stack/factory-staging-mr7wu582"
+  },
+  "phase1": {
+    "completedAt": "2026-07-05T14:52:30.588Z",
+    "baseUrl": "https://staging.example",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": null,
+    "bootstrappedPhase0": false,
+    "projectionRuns": [
+      {
+        "label": "pre-contract-record",
+        "skipped": true,
+        "reason": "no_database_url",
+        "processed": 0,
+        "failed": 0
+      },
+      {
+        "label": "execution-contract-recorded",
+        "skipped": true,
+        "reason": "no_database_url",
+        "processed": 0,
+        "failed": 0
+      },
+      {
+        "label": "execution-contract-approved",
+        "skipped": true,
+        "reason": "no_database_url",
+        "processed": 0,
+        "failed": 0
+      }
+    ],
+    "api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": 1,
+      "pmRefinementDelegated": false,
+      "pmRefinementSessionId": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectDelegated": false,
+      "architectSessionId": null,
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    },
+    "contract": {
+      "version": 1,
+      "templateTier": "Simple",
+      "factoryTemplateTier": "Simple",
+      "validationStatus": "valid",
+      "autoApprovalPolicy": "execution-contract-low-risk-simple-auto-approval.v1",
+      "autoApprovalApproved": true
+    },
+    "architectSpec": {
+      "mode": "embedded_in_execution_contract",
+      "engineerTier": "Jr",
+      "monitoringRunbook": "docs/runbooks/golden-path-autonomous-delivery.md"
+    },
+    "forgeReadinessNote": "Forge execution readiness remains GP-009; intake-draft DRAFT stage blocks readiness until workflow advances post-approval."
+  }
+}

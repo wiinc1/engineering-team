@@ -1,0 +1,41 @@
+{
+  "phase1": {
+    "api": {
+      "pmRefinementSessionId": "sess-pm",
+      "architectSessionId": "sess-arch"
+    }
+  },
+  "phase2": {
+    "api": {
+      "implementerAgent": {
+        "sessionId": "sess-impl",
+        "delegated": true
+      }
+    }
+  },
+  "phase3": {
+    "api": {
+      "qaAgent": {
+        "sessionId": "sess-qa",
+        "delegated": true
+      }
+    }
+  },
+  "phase4": {
+    "api": {
+      "readmeFix": {
+        "changed": true
+      },
+      "engineerSubmission": {
+        "ok": true
+      }
+    }
+  },
+  "phase6": {
+    "api": {
+      "ciValidation": {
+        "workflowFile": ".github/workflows/validation.yml"
+      }
+    }
+  }
+}
