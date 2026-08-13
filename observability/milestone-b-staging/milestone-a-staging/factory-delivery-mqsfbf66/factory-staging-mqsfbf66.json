@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "factory-autonomous-delivery",
+  "status": "phase0_started",
+  "factoryQueueId": "factory-staging-mqsfbf66",
+  "githubIssueUrl": null,
+  "engineeringTeam": {
+    "projectId": "PRJ-C2A7DBA8",
+    "taskId": "TSK-011",
+    "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-24T18:45:30.894Z [factory-staging-mqsfbf66]",
+    "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+    "templateTier": "Simple"
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDENSFBF66",
+    "startJobId": null,
+    "completeJobId": null
+  },
+  "stepsCompleted": [
+    "GP-001",
+    "GP-002",
+    "GP-005",
+    "GP-012"
+  ],
+  "startedAt": "2026-06-24T18:45:30.894Z",
+  "completedAt": null,
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/factory-delivery-mqsfbf66/stack/factory-staging-mqsfbf66"
+  }
+}

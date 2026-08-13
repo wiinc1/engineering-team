@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mqx5cyx7",
+      "title": "Milestone A staging factory smoke 2026-06-28T02:05:37.867Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271",
+      "stage": "failed",
+      "taskId": null,
+      "projectId": null,
+      "evidencePath": "observability/milestone-a-staging-test-debug/factory-delivery-mqx5cyx7/factory-staging-mqx5cyx7.json",
+      "persistDir": null,
+      "forgeTaskId": "TSK-GOLDENX5CYX7",
+      "createdAt": "2026-06-28T02:05:37.867Z",
+      "updatedAt": "2026-06-28T02:05:37.869Z",
+      "lastAction": "error",
+      "lastError": "Task create succeeded but taskId is missing"
+    }
+  ]
+}

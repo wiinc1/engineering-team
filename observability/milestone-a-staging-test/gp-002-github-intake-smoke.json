@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-002-staging-smoke",
+  "generatedAt": "2026-07-10T15:33:11.244Z",
+  "baseUrl": "https://staging.example",
+  "intakeProvider": "gitlab",
+  "issueNumber": 901131,
+  "status": 201,
+  "ok": true,
+  "body": {
+    "taskId": "TSK-INTAKE1"
+  },
+  "summary": {
+    "passed": true,
+    "taskId": "TSK-INTAKE1"
+  }
+}

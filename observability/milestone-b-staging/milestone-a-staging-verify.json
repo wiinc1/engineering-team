@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-a-staging-verify",
+  "generatedAt": "2026-06-24T18:51:19.141Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "gp_007_workers",
+        "ok": true,
+        "lagSeconds": 0
+      },
+      {
+        "name": "et_forge_bridge",
+        "ok": true
+      },
+      {
+        "name": "gp_002_intake",
+        "ok": true
+      },
+      {
+        "name": "factory_staging_orchestrator",
+        "ok": true,
+        "stage": "phase1_complete"
+      }
+    ]
+  },
+  "artifacts": {
+    "workers": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/audit-workers-production-smoke.json",
+    "bridge": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/et-forge-bridge-smoke.json",
+    "intake": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/gp-002-github-intake-smoke.json",
+    "factory": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/factory-staging-smoke.json"
+  }
+}

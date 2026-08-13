@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mqshqiya",
+      "title": "Milestone A staging factory smoke 2026-06-24T19:53:14.866Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "githubIssueUrl": null,
+      "stage": "failed",
+      "taskId": "TSK-FACTORY1",
+      "projectId": "PRJ-STAGING1",
+      "evidencePath": "observability/milestone-a-staging-test/factory-delivery-mqshqiya/factory-staging-mqshqiya.json",
+      "persistDir": "observability/milestone-a-staging-test/factory-delivery-mqshqiya/stack/factory-staging-mqshqiya",
+      "forgeTaskId": "TSK-GOLDENSHQIYA",
+      "createdAt": "2026-06-24T19:53:14.866Z",
+      "updatedAt": "2026-06-24T19:53:15.424Z",
+      "lastAction": "error",
+      "lastError": "DATABASE_URL is required when AUDIT_STORE_BACKEND=postgres. Use the Supabase Postgres connection string in production.",
+      "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-24T19:53:14.866Z [factory-staging-mqshqiya]"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "gp-002-staging-smoke",
+  "generatedAt": "2026-06-24T18:51:28.503Z",
+  "baseUrl": "http://127.0.0.1:13000",
+  "issueNumber": 992766,
+  "status": 201,
+  "ok": true,
+  "body": {
+    "received": true,
+    "created": true,
+    "deliveryId": "milestone-a-gp-002-992766",
+    "taskId": "TSK-015",
+    "tenantId": "engineering-team",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/992766",
+    "githubIssueNumber": 992766,
+    "intakeDraft": true,
+    "nextRequiredAction": "PM refinement required",
+    "pmRefinement": {
+      "status": "failed"
+    },
+    "duplicate": false
+  },
+  "summary": {
+    "passed": true,
+    "taskId": "TSK-015"
+  }
+}

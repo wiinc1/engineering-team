@@ -33,3 +33,7 @@ observability/milestone-*-staging/factory-delivery/stack/
 observability/workflow-audit.log
 observability/specialist-delegation.jsonl
 observability/*.png
+
+# Nested local checkouts / drafts (not part of repo)
+_checkouts/
+_workspace-drafts/
