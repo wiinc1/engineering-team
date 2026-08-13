@@ -56,3 +56,16 @@ All significant decisions are documented in Architecture Decision Records (ADRs)
 ## Related Decisions
 
 - [None yet — this is the foundational decision]
+
+## Standards Alignment
+
+- Applicable standards areas: architecture and design, testing and quality assurance, documentation, and team process.
+- Evidence in this decision: the role hierarchy, review requirements, and ADR expectations are recorded as repository-controlled policy and validated by the standards checker.
+- Gap observed: The original decision predates the repository's machine-enforced standards sections. Documented rationale: this reconciliation adds the required governance evidence without changing the accepted team model (source https://github.com/wiinc1/engineering-team/pull/310).
+
+## Required Evidence
+
+- Commands run: `npm run test:ui:vitest`; `npx playwright test tests/browser/live-task-freshness.browser.spec.ts --project=firefox --grep 'Projects refreshes planning containers from live project updates'`; `npm run standards:check`; `npm run lint`.
+- Tests added or updated: `vitest.config.ts` excludes nested local workspaces from canonical test discovery.
+- Rollout or rollback notes: revert commits `860eb1f` and `ca053c9` to restore the prior test-discovery and documentation state.
+- Docs updated: `WORKSPACE-LAYOUT.md`, this ADR, `docs/architecture/openclaw-forge-delivery-architecture.md`, and `docs/product/car-search-discord-digest-prd.md`.
