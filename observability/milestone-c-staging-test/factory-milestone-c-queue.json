@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-milestone-c-mqsf4zq7",
+      "title": "Milestone C agent autonomy verify",
+      "requirements": "Prove GP-003/004/014/017/019/020-021/023 agent-driven factory delivery on coordinated stack.",
+      "templateTier": "Simple",
+      "githubIssueUrl": null,
+      "stage": "failed",
+      "taskId": null,
+      "projectId": null,
+      "evidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-c-staging-test/factory-delivery/factory-milestone-c-mqsf4zq7.json",
+      "persistDir": null,
+      "forgeTaskId": "TSK-GOLDENSF4ZQ7",
+      "createdAt": "2026-06-24T18:40:30.944Z",
+      "updatedAt": "2026-06-24T18:40:30.945Z",
+      "lastAction": "error",
+      "lastError": "Project create succeeded but projectId is missing"
+    }
+  ]
+}

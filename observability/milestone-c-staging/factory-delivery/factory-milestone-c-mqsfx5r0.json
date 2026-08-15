@@ -1,0 +1,584 @@
+{
+  "schemaVersion": "1.0",
+  "epic": "golden-path-autonomous-delivery",
+  "status": "phase6_complete",
+  "factoryQueueId": "factory-milestone-c-mqsfx5r0",
+  "githubIssueUrl": null,
+  "engineeringTeam": {
+    "projectId": "PRJ-AD04050A",
+    "taskId": "TSK-020",
+    "projectName": "Factory delivery — Milestone C agent autonomy verify [factory-milestone-c-mqsfx5r0]",
+    "requirements": "Prove GP-003/004/014/017/019/020-021/023 agent-driven factory delivery on coordinated stack.",
+    "templateTier": "Simple",
+    "contractVersion": 1,
+    "contractValidationStatus": "valid",
+    "approvalMode": "policy",
+    "forgeDispatch": {
+      "targetRepo": "wiinc1/engineering-team",
+      "projectId": "engineering-team",
+      "domain": "workflow",
+      "affectsUi": false
+    },
+    "forgeExecutionReadiness": null,
+    "auditStage": null,
+    "workflow": {
+      "nextRequiredAction": null,
+      "waitingState": null
+    }
+  },
+  "forgeadapter": {
+    "taskId": "TSK-GOLDENSFX5R0",
+    "startJobId": "job_0150",
+    "completeJobId": "job_0171",
+    "forgeAuditDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-c-staging/factory-delivery/stack/factory-milestone-c-mqsfx5r0/forge-seed",
+    "runtimeExecutionState": "running"
+  },
+  "stepsCompleted": [
+    "GP-001",
+    "GP-002",
+    "GP-003",
+    "GP-004",
+    "GP-005",
+    "GP-006",
+    "GP-007",
+    "GP-008",
+    "GP-009",
+    "GP-010",
+    "GP-011",
+    "GP-012",
+    "GP-013",
+    "GP-014",
+    "GP-015",
+    "GP-016",
+    "GP-017",
+    "GP-018",
+    "GP-019",
+    "GP-020",
+    "GP-021",
+    "GP-022",
+    "GP-023",
+    "GP-024",
+    "GP-025",
+    "GP-026",
+    "GP-027"
+  ],
+  "startedAt": "2026-06-24T19:02:25.116Z",
+  "completedAt": "2026-06-24T19:06:48.919Z",
+  "phase0": {
+    "mode": "factory_intake",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-c-staging/factory-delivery/stack/factory-milestone-c-mqsfx5r0"
+  },
+  "phase1": {
+    "completedAt": "2026-06-24T19:02:37.945Z",
+    "baseUrl": "http://127.0.0.1:13000",
+    "tenantId": "engineering-team",
+    "actorId": "factory-orchestrator",
+    "persistDir": null,
+    "bootstrappedPhase0": false,
+    "projectionRuns": [
+      {
+        "label": "pre-contract-record",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      },
+      {
+        "label": "execution-contract-recorded",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      },
+      {
+        "label": "execution-contract-approved",
+        "skipped": true,
+        "reason": "worker_caught_up_after_wait",
+        "mode": "always_on_worker",
+        "projectionLagSeconds": 0,
+        "processed": 0,
+        "failed": 0,
+        "retries": 0
+      }
+    ],
+    "api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": null,
+      "pmRefinementDelegated": false,
+      "pmRefinementSessionId": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectDelegated": false,
+      "architectSessionId": null,
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    },
+    "contract": {
+      "version": 1,
+      "templateTier": "Simple",
+      "factoryTemplateTier": "Simple",
+      "validationStatus": "valid",
+      "autoApprovalPolicy": {
+        "policy_version": "execution-contract-low-risk-simple-auto-approval.v1",
+        "status": "ready",
+        "canAutoApprove": true,
+        "operatorApprovalRequired": false,
+        "rationale": "Low-risk Simple Execution Contract meets all policy criteria: complete acceptance criteria, no risk flags, no unresolved dependencies, no production auth/security/data-model paths, and a clear rollback path.",
+        "criteria": {
+          "templateTier": "Simple",
+          "riskFlags": [],
+          "acceptanceCriteriaComplete": true,
+          "acceptanceCriteriaCount": 1,
+          "unresolvedDependencies": [],
+          "productionSensitivePaths": [],
+          "rollbackPathClear": true,
+          "rollbackPath": "Rollback by reverting the pilot PR and removing the README golden-path marker.",
+          "reviewerApprovalReady": true
+        },
+        "blockingReasons": [],
+        "metricsPolicy": {
+          "measuredBy": [
+            "feature_operator_trusted_autonomous_delivery_rate",
+            "feature_execution_contract_auto_approvals_total",
+            "feature_operator_trusted_autonomous_deliveries_total"
+          ],
+          "reason": "Autonomous delivery is trusted only when low-risk policy approval later closes successfully."
+        }
+      },
+      "autoApprovalApproved": true
+    },
+    "architectSpec": {
+      "mode": "embedded_in_execution_contract",
+      "engineerTier": "Jr",
+      "monitoringRunbook": "docs/runbooks/golden-path-autonomous-delivery.md"
+    },
+    "forgeReadinessNote": "Forge execution readiness remains GP-009; intake-draft DRAFT stage blocks readiness until workflow advances post-approval."
+  },
+  "github": {
+    "prUrl": "https://github.com/wiinc1/engineering-team/pull/271",
+    "mergeCommitSha": "db9e34ee37b77bf02f8a5d1bd56536b869f9fc14"
+  },
+  "phase2": {
+    "completedAt": "2026-06-24T19:03:06.730Z",
+    "personaRouting": {
+      "seededAgents": [
+        "engineer-jr",
+        "engineer-sr",
+        "engineer-principal"
+      ],
+      "runtimeAgents": {
+        "jr-engineer": "jr-engineer",
+        "sr-engineer": "sr-engineer",
+        "principal": "principal",
+        "ux": "ux-designer"
+      },
+      "assignees": {
+        "Jr": "engineer-jr",
+        "Sr": "engineer-sr",
+        "Principal": "engineer-principal"
+      },
+      "assignedTier": "Jr",
+      "assignedOwner": "engineer-jr",
+      "engineerPersonas": {
+        "jr": "engineer-jr",
+        "sr": "engineer-sr",
+        "principal": "engineer-principal"
+      }
+    },
+    "personas": {
+      "engineer": "engineer-jr",
+      "engineerPersonas": {
+        "jr": "engineer-jr",
+        "sr": "engineer-sr",
+        "principal": "engineer-principal"
+      },
+      "personaRouting": {
+        "seededAgents": [
+          "engineer-jr",
+          "engineer-sr",
+          "engineer-principal"
+        ],
+        "runtimeAgents": {
+          "jr-engineer": "jr-engineer",
+          "sr-engineer": "sr-engineer",
+          "principal": "principal",
+          "ux": "ux-designer"
+        },
+        "assignees": {
+          "Jr": "engineer-jr",
+          "Sr": "engineer-sr",
+          "Principal": "engineer-principal"
+        },
+        "assignedTier": "Jr",
+        "assignedOwner": "engineer-jr",
+        "engineerPersonas": {
+          "jr": "engineer-jr",
+          "sr": "engineer-sr",
+          "principal": "engineer-principal"
+        }
+      },
+      "ux": "ux",
+      "delegation": "delegated",
+      "forge": "main"
+    },
+    "api": {
+      "seed": {
+        "ok": true,
+        "taskId": "TSK-GOLDENSFX5R0",
+        "tenantId": "engineering-team",
+        "skipped": false,
+        "task": {
+          "taskId": "TSK-GOLDENSFX5R0",
+          "taskVersion": "1",
+          "projectId": "engineering-team",
+          "domain": "workflow",
+          "targetRepo": "wiinc1/engineering-team",
+          "taskType": "feature",
+          "priority": "medium",
+          "acceptanceCriteria": [
+            "POST /tasks/:id/start returns 202",
+            "Forge lifecycle reaches completed after gate approvals",
+            "QA fail/resume/retest loop recorded in pilot evidence"
+          ],
+          "summary": "Golden path forge execution for TSK-GOLDENSFX5R0",
+          "affectsUi": false,
+          "requestedOwner": "engineer-jr"
+        }
+      },
+      "readiness": {
+        "status": 200,
+        "ready": {
+          "taskId": "TSK-GOLDENSFX5R0",
+          "taskVersion": "1",
+          "projectId": "engineering-team",
+          "domain": "workflow",
+          "targetRepo": "wiinc1/engineering-team",
+          "taskType": "feature",
+          "priority": "medium",
+          "acceptanceCriteria": [
+            "POST /tasks/:id/start returns 202",
+            "Forge lifecycle reaches completed after gate approvals",
+            "QA fail/resume/retest loop recorded in pilot evidence"
+          ],
+          "summary": "Golden path forge execution for TSK-GOLDENSFX5R0",
+          "affectsUi": false,
+          "requestedOwner": "pm"
+        }
+      },
+      "startJobId": "job_0150",
+      "runtimeExecutionState": "running",
+      "pilotAgentsSeed": {
+        "ok": true,
+        "status": 0
+      },
+      "personaRouting": {
+        "seededAgents": [
+          "engineer-jr",
+          "engineer-sr",
+          "engineer-principal"
+        ],
+        "runtimeAgents": {
+          "jr-engineer": "jr-engineer",
+          "sr-engineer": "sr-engineer",
+          "principal": "principal",
+          "ux": "ux-designer"
+        },
+        "assignees": {
+          "Jr": "engineer-jr",
+          "Sr": "engineer-sr",
+          "Principal": "engineer-principal"
+        },
+        "assignedTier": "Jr",
+        "assignedOwner": "engineer-jr",
+        "engineerPersonas": {
+          "jr": "engineer-jr",
+          "sr": "engineer-sr",
+          "principal": "engineer-principal"
+        }
+      },
+      "implementerAgent": {
+        "delegated": false,
+        "sessionId": null,
+        "agentId": "factory-orchestrator",
+        "commitSha": "5f2dae0464fddb7d0c6bed76f15ea8a4dc6886f5",
+        "prUrl": "https://github.com/wiinc1/engineering-team/pull/271"
+      },
+      "delegationSmoke": {
+        "ok": true,
+        "skipped": false,
+        "sessionId": null
+      },
+      "engineerSubmission": {
+        "status": 200,
+        "ok": true,
+        "markerPresentAtSubmission": true
+      },
+      "implementation": {
+        "commitSha": "5f2dae0464fddb7d0c6bed76f15ea8a4dc6886f5",
+        "prUrl": "https://github.com/wiinc1/engineering-team/pull/271"
+      }
+    }
+  },
+  "phase3": {
+    "completedAt": "2026-06-24T19:04:44.652Z",
+    "personas": {
+      "qa": "qa",
+      "qaOutcome": "fail_intentional",
+      "engineer": "engineer-jr"
+    },
+    "api": {
+      "qaFail": {
+        "status": 201,
+        "ok": true,
+        "runId": "qa-638ae0d6"
+      },
+      "qaAgent": {
+        "delegated": false,
+        "sessionId": null,
+        "agentId": "factory-orchestrator",
+        "outcome": "fail"
+      },
+      "forgeRejectJobId": "job_0154",
+      "executionState": "revision_required",
+      "workflowState": "active"
+    }
+  },
+  "phase4": {
+    "completedAt": "2026-06-24T19:06:26.748Z",
+    "personas": {
+      "engineer": "engineer-sr",
+      "qa": "qa",
+      "qaOutcome": "pass"
+    },
+    "api": {
+      "readmeFix": {
+        "changed": false,
+        "path": "/Users/wiinc2/.openclaw/workspace/engineering-team/README.md"
+      },
+      "engineerSubmission": {
+        "status": 200,
+        "ok": true
+      },
+      "forgeResumeJobId": "job_0157",
+      "runtimeExecutionState": "running",
+      "qaPass": {
+        "status": 201,
+        "ok": true
+      },
+      "fixCommitSha": "db9e34ee37b77bf02f8a5d1bd56536b869f9fc14"
+    }
+  },
+  "phase5": {
+    "completedAt": "2026-06-24T19:06:44.710Z",
+    "personas": {
+      "sre": "sre",
+      "pm": "pm",
+      "architect": "architect",
+      "qa": "qa",
+      "qaVerification": "pass"
+    },
+    "api": {
+      "stageAdvanceForSre": {
+        "currentStage": "SRE_MONITORING",
+        "transitions": [
+          {
+            "from": "QA_TESTING",
+            "to": "SRE_MONITORING",
+            "status": 202
+          }
+        ]
+      },
+      "sreMonitoring": {
+        "start": {
+          "status": 201,
+          "ok": true
+        },
+        "approve": {
+          "status": 201,
+          "ok": true
+        }
+      },
+      "stageAdvanceForCloseReview": {
+        "currentStage": "PM_CLOSE_REVIEW",
+        "transitions": [
+          {
+            "from": "SRE_MONITORING",
+            "to": "PM_CLOSE_REVIEW",
+            "status": 202
+          }
+        ]
+      },
+      "forgeCompleteJobId": "job_0171",
+      "executionState": "running",
+      "workflowState": "active",
+      "reviewGates": [
+        {
+          "gate": "qa",
+          "status": "rejected",
+          "required": true,
+          "source": "canonical_task",
+          "reason": "Quality review is required for task acceptance.",
+          "materializedAt": "2026-06-24T19:02:40.822Z",
+          "latestReviewAt": "2026-06-24T19:04:44.587Z",
+          "latestSessionId": "child_local_qa_1",
+          "amendmentRequired": false,
+          "history": [
+            {
+              "status": "pending",
+              "recordedAt": "2026-06-24T19:04:44.490Z",
+              "sessionId": "child_local_qa_1"
+            },
+            {
+              "status": "rejected",
+              "recordedAt": "2026-06-24T19:04:44.587Z",
+              "sessionId": "child_local_qa_1",
+              "returnRoute": {
+                "routeType": "review_return",
+                "gate": "qa",
+                "status": "rejected",
+                "sourceOwner": "qa",
+                "targetOwner": "main",
+                "targetExecutionState": "revision_required",
+                "targetWorkflowState": "active",
+                "parentSessionId": "sess_local_main",
+                "sessionId": "child_local_qa_1",
+                "reason": "Review gate qa returned rejected.",
+                "nextAction": "Revise the contract and reopen UX review with the missing runtime projection details.",
+                "routedAt": "2026-06-24T19:04:44.587Z"
+              }
+            }
+          ]
+        },
+        {
+          "gate": "architect",
+          "status": "required",
+          "required": true,
+          "source": "canonical_task",
+          "reason": "Architecture review is required for runtime contract and integration changes.",
+          "materializedAt": "2026-06-24T19:02:40.822Z",
+          "latestReviewAt": null,
+          "latestSessionId": null,
+          "amendmentRequired": false,
+          "history": []
+        },
+        {
+          "gate": "pm",
+          "status": "required",
+          "required": true,
+          "source": "canonical_task",
+          "reason": "Product review is required for acceptance criteria and operator workflow fit.",
+          "materializedAt": "2026-06-24T19:02:40.822Z",
+          "latestReviewAt": null,
+          "latestSessionId": null,
+          "amendmentRequired": false,
+          "history": []
+        }
+      ],
+      "pmCloseReview": {
+        "status": 201,
+        "ok": true
+      },
+      "architectCloseReview": {
+        "status": 201,
+        "ok": true
+      }
+    }
+  },
+  "manualInterventions": [],
+  "deploy": {
+    "operatorUrl": "http://127.0.0.1:13000",
+    "validation": {
+      "skipped": true,
+      "reason": "skip_validation_flag"
+    },
+    "ciValidation": {
+      "mode": "local_and_ci",
+      "workflowFile": ".github/workflows/validation.yml",
+      "repository": "wiinc1/engineering-team",
+      "ciUrl": "https://github.com/wiinc1/engineering-team/actions/workflows/validation.yml",
+      "local": {
+        "skipped": true,
+        "reason": "skip_validation_flag"
+      },
+      "recordedAt": "2026-06-24T19:06:44.716Z"
+    }
+  },
+  "phase6": {
+    "completedAt": "2026-06-24T19:06:48.919Z",
+    "personas": {
+      "sre": "sre",
+      "pm": "pm",
+      "architect": "architect",
+      "human": "admin"
+    },
+    "api": {
+      "prSync": {
+        "status": 202,
+        "ok": true
+      },
+      "mergeCommitSha": "db9e34ee37b77bf02f8a5d1bd56536b869f9fc14",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/271",
+      "validation": {
+        "skipped": true,
+        "reason": "skip_validation_flag"
+      },
+      "deploy": {
+        "operatorUrl": "http://127.0.0.1:13000",
+        "validation": {
+          "skipped": true,
+          "reason": "skip_validation_flag"
+        },
+        "ciValidation": {
+          "mode": "local_and_ci",
+          "workflowFile": ".github/workflows/validation.yml",
+          "repository": "wiinc1/engineering-team",
+          "ciUrl": "https://github.com/wiinc1/engineering-team/actions/workflows/validation.yml",
+          "local": {
+            "skipped": true,
+            "reason": "skip_validation_flag"
+          },
+          "recordedAt": "2026-06-24T19:06:44.716Z"
+        }
+      },
+      "supabase": {
+        "skipped": true,
+        "reason": "docs_only_pilot_platform_already_on_supabase"
+      },
+      "redis": {
+        "skipped": true,
+        "reason": "out_of_scope_per_runbook"
+      },
+      "sreMonitoring": {
+        "skipped": true,
+        "reason": "completed_in_phase5",
+        "stage": "PM_CLOSE_REVIEW"
+      },
+      "humanClose": {
+        "status": 201,
+        "ok": true
+      },
+      "taskClosed": {
+        "status": 202,
+        "ok": true
+      },
+      "closeoutArtifacts": [
+        "docs/reports/GOLDEN_PATH_PILOT_EVIDENCE.md",
+        "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-c-staging/factory-delivery/factory-milestone-c-mqsfx5r0.json",
+        "observability/golden-path-manual-steps.json"
+      ]
+    }
+  }
+}

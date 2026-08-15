@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- refreshed the required visual-identity review after validating DESIGN.md, generated token drift, token usage, and the design adoption audit
 - split Node coverage into unit and contract/integration/e2e batches while excluding property/security instrumentation to keep repo validation stable on GitHub Actions runners
 - fixed Command Center queue inspector so Return to queue clears `selectedTask` without auto-reselecting on mobile, and restored primary-button contrast for Open full task detail
 - added an operator `emit-merge-readiness-check` workflow and script to publish the branch-protection `Merge readiness` context when autonomous review emission has not run yet
