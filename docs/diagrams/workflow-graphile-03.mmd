@@ -1,0 +1,12 @@
+sequenceDiagram
+  participant Operator
+  participant API as Operator API
+  participant Registry as Application Registry
+  participant Graphile as Graphile Worker public utilities
+  Operator->>API: action + reason + idempotency key + version
+  API->>Registry: tenant-scoped claim
+  Registry-->>API: delivery + pending audit action
+  API->>Graphile: rescheduleJobs or completeJobs
+  Graphile-->>API: public result
+  API->>Registry: terminal action outcome + version increment
+  API-->>Operator: sanitized result

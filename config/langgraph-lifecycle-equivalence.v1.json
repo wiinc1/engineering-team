@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "langgraph-lifecycle-equivalence.v1",
+  "graphVersion": "factory-v1",
+  "nodes": {
+    "intake": ["GP-001", "GP-002", "GP-005"],
+    "pm_refinement": ["GP-003"],
+    "execution_contract": ["GP-006", "GP-007", "GP-008"],
+    "architect_handoff": ["GP-004"],
+    "child_execution": ["GP-012", "GP-013"],
+    "implementation": ["GP-009", "GP-010", "GP-011", "GP-014"],
+    "qa": ["GP-015", "GP-016"],
+    "fix": ["GP-017", "GP-018"],
+    "review": ["GP-019", "GP-020", "GP-021"],
+    "merge_readiness": ["GP-022"],
+    "deployment": ["GP-023", "GP-024", "GP-025"],
+    "sre": ["GP-026"],
+    "closeout": ["GP-027"],
+    "terminal": []
+  },
+  "personas": {
+    "pm": ["pm_refinement", "review", "closeout"],
+    "architect": ["architect_handoff", "review", "closeout"],
+    "engineer": ["implementation", "fix"],
+    "engineer-jr": ["child_execution", "implementation", "fix"],
+    "engineer-sr": ["child_execution", "implementation", "fix"],
+    "engineer-principal": ["child_execution", "implementation", "fix"],
+    "qa": ["qa", "review"],
+    "sre": ["sre"],
+    "ux": ["child_execution", "review"]
+  },
+  "governance": {
+    "tenant_authorization": ["intake", "pm_refinement", "execution_contract", "architect_handoff", "child_execution", "implementation", "qa", "fix", "review", "merge_readiness", "deployment", "sre", "closeout"],
+    "execution_contract_approval": ["execution_contract"],
+    "architect_handoff": ["architect_handoff"],
+    "qa_approval": ["qa", "review"],
+    "pm_architect_close_review": ["review"],
+    "merge_readiness": ["merge_readiness"],
+    "deployment_health": ["deployment"],
+    "sre_approval": ["sre"],
+    "human_closeout": ["closeout"],
+    "release_evidence": ["deployment", "sre", "closeout"]
+  },
+  "releaseEvidence": {
+    "issue_intake": ["intake"],
+    "execution_contract": ["execution_contract"],
+    "implementation_commit": ["implementation", "fix"],
+    "pull_request": ["implementation", "merge_readiness"],
+    "qa_evidence": ["qa", "review"],
+    "merge_commit": ["merge_readiness"],
+    "ci_validation": ["deployment"],
+    "deployment_proof": ["deployment"],
+    "rollback_proof": ["deployment"],
+    "monitoring_approval": ["sre"],
+    "closeout_report": ["closeout"]
+  },
+  "branches": ["success", "qa_fix_pass", "qa_exhausted", "retry_exhausted", "policy_failure", "cancelled", "worker_restart"]
+}

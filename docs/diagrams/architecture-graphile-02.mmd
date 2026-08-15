@@ -1,0 +1,18 @@
+C4Container
+  title Graphile-02 application-owned workload migration
+  Person(operator, "Operator", "Coordinates cutover in issue 289")
+  System_Boundary(app, "Engineering Team") {
+    Container(producers, "Typed workload producers", "Node", "IDs and immutable versions only")
+    Container(runtime, "Application job runtime", "Node", "Catalog, port, handlers, scheduler, effect guard")
+    Container(adapter, "Graphile adapter", "Node", "Only Graphile dependency boundary")
+    ContainerDb(pg, "PostgreSQL", "TLS shared pool", "Graphile opaque state plus payload-free delivery/effect metadata")
+  }
+  System_Ext(canonical, "Canonical domain systems", "Tasks, audit, evidence, closeout, checkpoints")
+  System_Ext(external, "External effects", "GitLab, GitHub, deployment, notifications")
+  Rel(producers, runtime, "Enqueues through application port")
+  Rel(runtime, adapter, "Supported delivery contract")
+  Rel(adapter, pg, "Public Graphile APIs")
+  Rel(runtime, pg, "Registry/effect ledger via least-privilege roles")
+  Rel(runtime, canonical, "Lookup, authorize, reconcile")
+  Rel(runtime, external, "Idempotent effectKey adapters")
+  Rel(operator, runtime, "Disabled standby until coordinated cutover")

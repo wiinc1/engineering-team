@@ -1,0 +1,5 @@
+erDiagram
+  OWNERSHIP_EPOCHS ||--o{ MIGRATION_RECORDS : records
+  FACTORY_THREADS ||--o{ FACTORY_INTERRUPTS : retains
+  OWNERSHIP_EPOCHS { string scope uuid epoch string engine string revision string state }
+  MIGRATION_RECORDS { string tenant_id string semantic_id string source_state string disposition string outcome }

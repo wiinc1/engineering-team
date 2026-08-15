@@ -1,0 +1,9 @@
+C4Container
+  title Exclusive LangGraph cutover
+  Container(graphile, "Graphile Worker", "Job runtime", "Sole outer delivery")
+  Container(graph, "LangGraph", "Factory runtime", "Sole workflow owner")
+  ContainerDb(epoch, "Ownership epoch", "Postgres", "Fences stale processes")
+  Container(domain, "Domain services", "Application", "Canonical state/effects")
+  Rel(graphile, graph, "start/resume typed workflow")
+  Rel(graph, epoch, "assert factory epoch")
+  Rel(graph, domain, "invoke guarded ports")

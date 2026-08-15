@@ -516,7 +516,10 @@
         "^scripts/(advance-tsk-001-closeout|advance-tsk-001-qa-loop|reconcile-product-delivery|reseed-issue-279-local|reseed-tsk-001-local|verify-gp-002-github-intake|verify-gp-005-github-intake-project|verify-gp-007-projection-workers)\\.js$",
         "^scripts/deploy/audit-workers\\.systemd\\.service$",
         "^src/app/command-center-queue\\.mjs$",
-        "^src/app/shell/.+\\.jsx$"
+        "^src/app/shell/.+\\.jsx$",
+        "^scripts/build-simple-trusted-cohort-report\\.js$",
+        "^scripts/verify-vercel-factory-purge\\.js$",
+        "^lib/task-platform/simple-trusted-cohort\\.js$"
       ],
       "test_requirements": [
         {
@@ -755,6 +758,56 @@
             "^docs/design/DESIGN_MD_ADOPTION_AUDIT\\.md$",
             "^docs/adr/ADD-2026-03-30-button-component\\.md$",
             "^tasks/TASK-001-button-component\\.md$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "job-runtime",
+      "runtime_patterns": [
+        "^lib/job-runtime/",
+        "^db/migrations/01[67]_job_runtime_.+(\\.down)?\\.sql$",
+        "^db/roles/job_runtime_roles\\.sql$",
+        "^scripts/(setup-job-runtime-postgres|run-job-runtime-worker|run-job-runtime-load-test|verify-job-runtime-workloads)\\.js$",
+        "^scripts/run-job-runtime-load-docker\\.sh$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit-contract-e2e",
+          "patterns": [
+            "^tests/unit/job-runtime-.+\\.test\\.js$",
+            "^tests/contract/job-runtime\\.contract\\.test\\.js$",
+            "^tests/e2e/job-runtime(?:-workloads)?\\.e2e\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "integration-property",
+          "patterns": [
+            "^tests/integration/job-runtime-postgres\\.integration\\.test\\.js$",
+            "^tests/property/job-runtime\\.property\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "security-performance-chaos",
+          "patterns": [
+            "^tests/security/job-runtime\\.security\\.test\\.js$",
+            "^tests/performance/job-runtime\\.performance\\.test\\.js$",
+            "^chaos/job-runtime-resilience\\.test\\.js$",
+            "^chaos/resilience-graphile-01\\.yml$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "architecture-operations-compliance",
+          "patterns": [
+            "^docs/adr/ADR-003-application-owned-graphile-job-runtime\\.md$",
+            "^docs/api/job-runtime-(internal-contract\\.md|openapi\\.yml)$",
+            "^docs/architecture/job-runtime-.+\\.md$",
+            "^docs/runbooks/job-runtime\\.md$",
+            "^docs/reports/ISSUE-28[67]_(DEPENDENCY_REVIEW|STANDARDS_COMPLIANCE_CHECKLIST)\\.md$",
+            "^docs/diagrams/(workflow|schema|architecture)-graphile-0[12]\\.mmd$",
+            "^monitoring/alerts/job-runtime\\.yml$"
           ]
         }
       ]

@@ -14,10 +14,13 @@ production-affecting internal application that combines:
 - repo-governance and software-development standards under `dev-standards/`
 
 The factory runtime of record is the **operator-hosted coordinated stack**
-(Dockerized Postgres, audit API, audit workers, UI, forgeadapter, OpenClaw).
-Vercel and cloud Supabase are **not** part of the factory tech stack. Local
-development uses Vite for the browser and Docker Compose for PostgreSQL,
-Pushgateway, audit API, and audit workers.
+(Dockerized Postgres, audit API, audit workers, UI, forgeadapter, live OpenClaw).
+**Hermes is non-critical** for Simple factory claims and live factory-of-record
+proof (GitLab #272 / factory autonomy decision Q7): hermes-mock (`:14002`) is
+opt-in non-claim smoke only and is not part of required claim topology. Vercel
+and cloud Supabase are **not** part of the factory tech stack. Local development
+uses Vite for the browser and Docker Compose for PostgreSQL, Pushgateway, audit
+API, and audit workers.
 
 ## Runtime Model
 

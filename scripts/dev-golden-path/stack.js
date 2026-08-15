@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { ROOT, STATE_DIR, STATE_FILE, DEFAULTS } = require('./constants');
-const { startOpenClawMock, startHermesMock } = require('./mocks');
+const { startOpenClawMock, startHermesMock, optionalHermesMockNotice } = require('./mocks');
 const { buildOpenClawPmRefinementEnv } = require('../../lib/audit/pm-refinement-delegate-config');
 const {
   pollReady,
@@ -241,7 +241,7 @@ async function resolveUpstreamUrls(options) {
     const mock = await startHermesMock(DEFAULTS.hermesPort);
     mockServers.push(mock);
     hermesUrl = mock.baseUrl;
-    process.stdout.write(`Hermes mock listening on ${hermesUrl}\n`);
+    process.stdout.write(optionalHermesMockNotice(hermesUrl));
   }
   return { openclawUrl, hermesUrl, mockServers };
 }

@@ -773,6 +773,17 @@ Moving JSX, route ownership, adapters, or app-shell helpers without changing ren
 - Issue #252 canonical task workspace list reads preserve the existing task workspace, Kanban, role inbox, and task-detail visual contract while changing only the list-read API source from the legacy projection path to the canonical task-platform path.
 - Source-only UI refactors should update README, diagrams, or standards evidence to explain ownership changes, and should update this file only when the reusable visual contract changes.
 
+## Durable Runtime Operator Controls
+
+Graphile job and LangGraph run controls extend the existing dense operational-panel pattern without adding visual tokens.
+
+- Job inspection belongs beside autonomous-delivery metrics and requires an explicit delivery ID before any runtime detail or action is shown.
+- Durable graph status belongs on task detail only when a server-provided thread reference exists; the panel must never expose raw checkpoint state.
+- Status, current node, checkpoint freshness, completed work, retry state, and interrupt history remain readable when mutations are disabled.
+- Retry, requeue, cancel, accept, reject, and edit controls must reflect server-authorized state, stay disabled while a request is in progress, and require reason or edit input where the runtime contract requires it.
+- Loading and success updates use polite status announcements; failures use alerts with stable, actionable messages. Multiple operational panels may each own a live region, so browser assertions must target the panel message instead of assuming a page has only one status region.
+- Operator panels reuse existing detail cards, metric grids, labels, textareas, secondary buttons, focus treatment, and responsive wrapping. No new palette, spacing, typography, or motion token is introduced.
+
 ## Delegated AI-Agent Activation Preview
 
 Issue #239 adds a compact admin-only AI-agent activation surface. It follows the existing operational form pattern: dense labels, plain status text, no decorative imagery, no nested cards, and explicit disabled-state copy before live save. The preview result exposes permission impact alongside routing, fallback, and dry-run state so operators can confirm why delegation-enabled activation remains blocked.

@@ -1,0 +1,24 @@
+erDiagram
+  FACTORY_THREAD ||--o{ CHECKPOINT : owns
+  FACTORY_THREAD {
+    string tenant_id
+    string factory_run_id
+    string thread_id
+    string graph_version
+    string lifecycle_status
+  }
+  CHECKPOINT {
+    string lifecycle_node
+    json node_attempts
+    string qa_outcome
+    int qa_attempts
+    json child_runs
+    string terminal_reason
+  }
+  CANONICAL_AUDIT_EVENT {
+    string tenant_id
+    string factory_run_id
+    string node
+    string outcome
+  }
+  FACTORY_THREAD ||--o{ CANONICAL_AUDIT_EVENT : emits

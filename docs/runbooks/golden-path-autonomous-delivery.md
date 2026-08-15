@@ -103,6 +103,41 @@ npm run issue-273:verify
 - Evidence package must store real PR URL + merge SHA (`lib/task-platform/trusted-simple-close-evidence.js`).
 - Auditor: `npm run issue-274:verify`.
 
+### Simple trusted cohort + metrics MVP (GitLab #276)
+
+Near-term bar (Q1): ≥10 Simple operator-trusted closes with live session evidence and ≥80% autonomous rate.
+
+```bash
+npm run cohort:simple-trusted
+# writes observability/trusted-simple-close/cohort-report.json
+# and docs/reports/SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md
+```
+
+Trusted close definition (evaluator): `phase6_complete` closeout/evidence, zero recorded manual interventions, ≥1 live `specialist-delegation-*` session id.
+
+### Factory host is coordinated stack only (GitLab #277)
+
+Vercel is **not** part of the factory tech stack. Active claim docs are checked by:
+
+```bash
+npm run issue-277:verify
+```
+
+### Human PM + Architect acceptance (Q6 / GitLab #275)
+
+Agent-authored PM/Architect outputs are **proposals**. Before operator approval, Simple auto-approval eligibility, or implementation dispatch:
+
+1. Record human acceptance (product path):
+
+```bash
+# POST /tasks/:taskId/execution-contract:human-pm-architect-review
+# body: { "role": "both", "reason": "…", "actorType": "human" }
+```
+
+2. Or attach `human_reviews.pm` / `human_reviews.architect` with `actorType: human|user|operator` on the Execution Contract.
+
+Agent actors cannot clear the gate. Factory supervised path may pre-record human acceptance under operator supervision; product claims still use the same gate evaluation.
+
 ### Durable factory stack on this host (GitLab #269)
 
 Use **`npm run factory:stack:*`** for the reboot-safe factory of record. One command restores the stack after reboot or a full process kill.
@@ -128,6 +163,12 @@ npm run factory:stack:uninstall       # remove plists permanently
 | Postgres data | Docker compose `restart: unless-stopped` + volume `factory_pgdata` | `:15432` |
 | OpenClaw (live) | `ai.openclaw.gateway` (pre-existing host unit) | `:18789` |
 
+**Not required for factory claims (GitLab #272):**
+
+| Component | Default local URL | Claim role |
+| --- | --- | --- |
+| hermes-mock | `http://127.0.0.1:14002` | **Non-claim / opt-in smoke only** — Hermes is de-scoped for Simple factory claims and live factory-of-record proof. Claim success must not depend on hermes-mock. Pass `--hermes-url` only when deliberately exercising a Hermes endpoint; never treat mock as claim topology. |
+
 **Omit claim-topology units when needed:**
 
 ```bash
@@ -138,20 +179,18 @@ Logs: `~/Library/Logs/engineering-team-factory/`. Env example: `deploy/launchd/f
 
 **Postgres durability:** compose uses `restart: unless-stopped` and a named volume (`factory_pgdata`). `factory:stack:up` starts compose when nothing listens on `:15432` and Docker/OrbStack is available. The `factory-postgres-ensure` KeepAlive watcher re-ensures Postgres after reboot. If Docker is missing and nothing listens, up fails with remediation steps.
 
-**Recovery drill (AC1):** kill API/workers/UI/forge processes (or `factory:stack:down` then reboot). Run `npm run factory:stack:up` once — required health (postgres, API, workers heartbeat, live OpenClaw, UI, forgeadapter when present) should return ok without tribal manual steps.
+**Recovery drill (AC1):** kill API/workers/UI/forge processes (or `factory:stack:down` then reboot). Run `npm run factory:stack:up` once — required health (postgres, API, workers heartbeat, live OpenClaw, UI, forgeadapter when present) should return ok without tribal manual steps. Hermes is not part of required recovery health (Q7 / #272).
 
 **Workers (AC2):** workers are a launchd KeepAlive unit. Live milestone C must not invent a one-off `audit:workers` process when `factory:stack:up` has been run.
 
 **Docs (AC3):** this section + `docs/runbooks/audit-foundation.md` + readiness assessment appendix (`docs/reports/AUTONOMOUS_SOFTWARE_FACTORY_READINESS_ASSESSMENT_2026-07-10.md`).
 
-**OpenClaw mock (optional smoke only):**
+**OpenClaw mock (optional smoke only — not for operator-trusted claims):**
 
 ```bash
 npm run dev:golden-path:up -- --use-openclaw-mock
 # or GOLDEN_PATH_USE_OPENCLAW_MOCK=true
 ```
-
-| Hermes | `http://127.0.0.1:14002` | **Mock** unless `--hermes-url` points at a real runtime |
 
 **Browser sign-in** (seeded on stack startup):
 
@@ -309,7 +348,7 @@ Add a single visible marker proving the loop completed, e.g.:
 - [ ] `npm run dev:golden-path:up` reaches green (audit API `/metrics`, UI, forgeadapter `/health`)
 - [ ] `forgeadapter` checkout at `../forgeadapter` (or `FORGEADAPTER_DIR`) on `main` with lifecycle e2e green
 - [ ] `engineering-team` on branch with golden-path scripts + `lib/forge-local-smoke/seed-task.js`
-- [ ] OpenClaw + Hermes running locally **or** accept dev mocks for GP-013 (record which in evidence)
+- [ ] Live OpenClaw running locally for claim paths (or explicit non-claim mock via `--use-openclaw-mock`). Hermes is **not** required for factory claims (GitLab #272 / Q7); hermes-mock is opt-in non-claim smoke only
 - [ ] GitHub token for PR/checks (`GITHUB_TOKEN` / `gh` auth)
 
 ### Hosted deployment replay (optional)
@@ -687,7 +726,7 @@ node scripts/seed-golden-path-phase0.js \
   --base-url https://<your-hosted-et-api>
 ```
 
-`replay-golden-path-postgres.js` sets `PGSSLMODE=disable` before forge seed for local Docker Postgres; hosted replay uses Vercel `DATABASE_URL` with verified TLS.
+`replay-golden-path-postgres.js` sets `PGSSLMODE=disable` before forge seed for local Docker Postgres; hosted/operator replay uses coordinated-stack `DATABASE_URL` (TLS when remote Postgres requires it). Vercel is not the factory data host.
 
 Writes `observability/golden-path-pilot.json` with `projectId`, `taskId`, and completed steps `GP-001`, `GP-002`, `GP-005`.
 

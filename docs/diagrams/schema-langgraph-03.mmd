@@ -1,0 +1,19 @@
+erDiagram
+  FACTORY_THREADS ||--o{ FACTORY_INTERRUPTS : waits
+  FACTORY_THREADS ||--o{ FACTORY_RUN_ACTIONS : controls
+  FACTORY_INTERRUPTS {
+    string interrupt_id PK
+    string tenant_id
+    string thread_id FK
+    string checkpoint_id
+    string state
+    bigint version
+  }
+  FACTORY_RUN_ACTIONS {
+    uuid action_id PK
+    string tenant_id
+    string thread_id FK
+    string idempotency_key UK
+    string action
+    string outcome
+  }

@@ -1,0 +1,9 @@
+flowchart LR
+  S([START]) --> I[intake] --> P[pm_refinement] --> C[execution_contract]
+  C --> A[architect_handoff] --> CH[child_execution] --> IM[implementation] --> Q[qa]
+  Q -->|pass| R[review]
+  Q -->|fail, budget remains| F[fix] --> Q
+  Q -->|exhausted| T[terminal]
+  R --> M[merge_readiness] --> D[deployment] --> SR[sre] --> CL[closeout] --> E([END])
+  I & P & C & A & CH & IM & F & R & M & D & SR & CL -->|failure or cancellation| T
+  T --> E

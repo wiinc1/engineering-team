@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { createAuditApiServer, assertAuditBackendConfiguration, logAuditBackendSelection } = require('../lib/audit');
 const { resolvePmRefinementDelegateWork } = require('../lib/audit/pm-refinement-delegate-config');
+const { loadProductionLifecycleHandlerFactory } = require('../lib/software-factory/langgraph/production-service-loader');
 
 const port = Number(process.env.PORT || 3000);
 const backendConfig = assertAuditBackendConfiguration();
@@ -14,6 +15,10 @@ const serverOptions = {
   allowLegacyHeaders: process.env.ALLOW_LEGACY_HEADERS === 'true',
   pmRefinementDelegateWork: pmRefinement.delegateWork,
 };
+serverOptions.lifecycleHandlerFactory = loadProductionLifecycleHandlerFactory({
+  baseDir: serverOptions.baseDir,
+  enabled: process.env.FF_LANGGRAPH_RUNTIME,
+});
 
 const { server } = createAuditApiServer(serverOptions);
 
