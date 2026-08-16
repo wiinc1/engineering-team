@@ -176,6 +176,88 @@ function FactoryQueuePanel({ queueState }) {
   ] });
 }
 
+function actionAvailable(job, action) {
+  const allowed = {
+    retry: ["redelivery_pending", "delivery_failed"],
+    requeue: ["redelivery_pending", "delivery_failed", "queued"],
+    cancel: ["pending_enqueue", "queued", "redelivery_pending", "delivery_failed"],
+  };
+  return allowed[action]?.includes(job?.status) || false;
+}
+
+function useJobRuntimeOperations(ctx = {}) {
+  const session = ctx.u || readBrowserSessionConfig();
+  const baseUrl = ctx.D || resolveApiBaseUrl(session, ctx.At || "");
+  const [deliveryId, setDeliveryId] = c.useState("");
+  const [reason, setReason] = c.useState("");
+  const [state, setState] = c.useState({ kind: "idle", data: null, message: "Enter a delivery ID to inspect runtime status." });
+  const load = c.useCallback(async () => {
+    const id = deliveryId.trim();
+    if (!id) return setState({ kind: "error", data: null, message: "Delivery ID is required." });
+    setState((current) => ({ ...current, kind: "loading", message: "Loading job runtime status." }));
+    try {
+      const data = await fetchAutonomyJson(`${baseUrl}/v1/job-runtime/jobs/${encodeURIComponent(id)}`, {
+        credentials: "same-origin", headers: buildAuthHeaders(session),
+      }, "Job runtime status is unavailable.");
+      setState({ kind: "ready", data, message: "Job runtime status loaded." });
+    } catch (error) {
+      setState({ kind: "error", data: null, message: error?.message || "Job runtime status is unavailable." });
+    }
+  }, [baseUrl, deliveryId, session]);
+  const act = c.useCallback(async (action) => {
+    const job = state.data?.job;
+    if (!job || !reason.trim()) return setState((current) => ({ ...current, kind: "error", message: "A recovery reason is required." }));
+    setState((current) => ({ ...current, kind: "loading", message: `${action} is in progress.` }));
+    try {
+      const idempotencyKey = `${action}:${job.deliveryId}:${job.operatorVersion}:${Date.now()}`;
+      const data = await fetchAutonomyJson(`${baseUrl}/v1/job-runtime/jobs/${encodeURIComponent(job.deliveryId)}/${action}`, {
+        method: "POST", credentials: "same-origin",
+        headers: { ...buildAuthHeaders(session), "content-type": "application/json", "idempotency-key": idempotencyKey, "if-match": String(job.operatorVersion) },
+        body: JSON.stringify({ reason: reason.trim() }),
+      }, `Job ${action} failed.`);
+      setState({ kind: "ready", data: { ...state.data, job: data.job || state.data.job }, message: `Job ${action} completed.` });
+      setReason("");
+    } catch (error) {
+      setState((current) => ({ ...current, kind: "error", message: error?.message || `Job ${action} failed.` }));
+    }
+  }, [baseUrl, reason, session, state.data]);
+  return { act, deliveryId, load, reason, setDeliveryId, setReason, state };
+}
+
+function JobRuntimeDetails({ job, history, state, reason, setReason, act }) {
+  return a("div", { children: [
+    a("dl", { className: "autonomy-metrics__signal-facts", children: [
+      e("dt", { children: "Status" }), e("dd", { children: job.status }),
+      e("dt", { children: "Task" }), e("dd", { children: job.task }),
+      e("dt", { children: "Attempts" }), e("dd", { children: `${formatNumber(job.attemptCount)} / ${formatNumber(job.maxAttempts)}` }),
+      e("dt", { children: "Last error" }), e("dd", { children: job.lastErrorCode || "None" }),
+    ] }),
+    e("label", { htmlFor: "job-runtime-reason", children: "Recovery reason" }),
+    e("textarea", { id: "job-runtime-reason", value: reason, maxLength: 500, onChange: (event) => setReason(event.target.value) }),
+    e("div", { className: "autonomy-metrics__toolbar", children: ["retry", "requeue", "cancel"].map((action) => e("button", {
+      type: "button", disabled: state.kind === "loading" || !actionAvailable(job, action), onClick: () => act(action), children: action[0].toUpperCase() + action.slice(1),
+    }, action)) }),
+    a("p", { children: ["Operator history entries: ", e("strong", { children: formatNumber(history.length) })] }),
+  ] });
+}
+
+function JobRuntimePanel({ ctx = {} }) {
+  const operations = useJobRuntimeOperations(ctx);
+  const { deliveryId, setDeliveryId, load, state, reason, setReason, act } = operations;
+  const job = state.data?.job || null;
+  const history = state.data?.history || [];
+  return a("section", { className: "autonomy-metrics__panel", "aria-labelledby": "job-runtime-heading", children: [
+    e("h2", { id: "job-runtime-heading", children: "Job runtime operations" }),
+    a("form", { onSubmit: (event) => { event.preventDefault(); load(); }, children: [
+      e("label", { htmlFor: "job-runtime-delivery-id", children: "Delivery ID" }),
+      e("input", { id: "job-runtime-delivery-id", value: deliveryId, onChange: (event) => setDeliveryId(event.target.value), placeholder: "00000000-0000-4000-8000-000000000000" }),
+      e("button", { type: "submit", disabled: state.kind === "loading", children: "Inspect job" }),
+    ] }),
+    e("p", { role: state.kind === "error" ? "alert" : "status", children: state.message }),
+    job ? e(JobRuntimeDetails, { job, history, state, reason, setReason, act }) : null,
+  ] });
+}
+
 async function fetchAutonomyJson(url, options, fallbackMessage) {
   const response = await window.fetch(url, options);
   const payload = await response.json().catch(() => ({}));
@@ -252,9 +334,11 @@ function AutonomyMetricsRoute({ ctx = {} }) {
     ] }) : null,
     data ? e(RetrospectivePanel, { signal: inspectedSignal, unknownSignals: summary.unknown_signals }) : null,
     e(FactoryQueuePanel, { queueState }),
+    e(JobRuntimePanel, { ctx }),
   ] });
 }
 
 export {
   AutonomyMetricsRoute,
+  JobRuntimePanel,
 };

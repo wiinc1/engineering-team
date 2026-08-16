@@ -8,14 +8,14 @@
 
 - Applicable standards areas: architecture and design; testing and quality assurance; deployment and release; team and process; authentication and secret handling.
 - Evidence expected for this change: progressive autonomy product decisions in this report and the PRD; coordinated-stack runtime topology in architecture and runbooks; human PM/Architect review gate unit tests; removal of Vercel/cloud Supabase factory platform claims.
-- Gap observed: Milestone and golden-path verify still default to fixture specialist runners for many claim paths. Documented rationale: progressive autonomy requires truthful live session evidence before operator-trusted delivery rate is claimed; fixture attribution is not acceptable under production-like proof profiles (source https://github.com/wiinc1/engineering-team/pull/296).
+- Gap observed: Milestone and golden-path verify still default to fixture specialist runners for many claim paths. Documented rationale: progressive autonomy requires truthful live session evidence before operator-trusted delivery rate is claimed; fixture attribution is not acceptable under production-like proof profiles (source https://github.com/wiinc1/engineering-team/pull/296). Hermes claim ambiguity closed by Q7 / GitLab #272 de-scope (hermes-mock is non-claim only).
 
 ## Required Evidence
 
-- Commands run: `node --test tests/unit/pm-architect-human-review-gate.test.js`; targeted auth/forge residual unit tests; `node scripts/lint-change-ownership-map.js`; `node scripts/verify-standards.js`; `npm run design:change-guard`.
-- Tests added or updated: `tests/unit/pm-architect-human-review-gate.test.js`; auth config residual cleanup tests; release-artifact CLI CI env isolation.
-- Docs updated: this report; `docs/product/software-factory-control-plane-prd.md`; `docs/architecture.md`; `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
-- Rollout or rollback notes: factory claims use coordinated stack only; rollback by reverting the PR merge on `main`.
+- Commands run: `node --test tests/unit/pm-architect-human-review-gate.test.js`; `node --test tests/unit/factory-hermes-claim-policy.test.js`; targeted auth/forge residual unit tests; `node scripts/lint-change-ownership-map.js`; `node scripts/verify-standards.js`; `npm run design:change-guard`.
+- Tests added or updated: `tests/unit/pm-architect-human-review-gate.test.js`; `tests/unit/factory-hermes-claim-policy.test.js`; auth config residual cleanup tests; release-artifact CLI CI env isolation.
+- Docs updated: this report (incl. Q7 Hermes); `docs/product/software-factory-control-plane-prd.md`; `docs/architecture.md`; `docs/runbooks/golden-path-autonomous-delivery.md`; `docs/refinement/REQ-live-factory-proof-default-openclaw.md`.
+- Rollout or rollback notes: factory claims use coordinated stack only; Hermes non-critical by default (`lib/task-platform/factory-hermes-claim-policy.js`); rollback by reverting the PR merge on `main`.
 
 These answers lock sequencing for the autonomous software factory work. They supersede open clarifying questions in the gap analysis for planning purposes.
 
@@ -94,6 +94,28 @@ Original recommendation was 30 / 90 days; operator directed **half** → **15 / 
 
 **Implication for progressive autonomy:** Simple auto-approval policy may still skip *operator* rubber-stamp where eligibility holds, but it must **not** skip required **human PM/Architect review** when those roles are on the route. Autonomy expands *after* those humans have signed the contract quality, not by treating specialist agents as final PM/Architect.
 
+**Product enforcement (GitLab #275):**  
+- Gate module: `lib/audit/pm-architect-human-review-gate.js` (approval, Simple auto-approval, **and** implementation dispatch).  
+- Product record path: `POST /tasks/:taskId/execution-contract:human-pm-architect-review` via `lib/audit/pm-architect-human-review-record.js` (writes contract version + `task.pm_architect_human_review_recorded`; agent actors rejected).  
+- Browser helper: `src/features/task-detail/humanPmArchitectReview.js`.  
+- Agent-only PM/Architect approval cannot clear approval or dispatch when the gate is required.
+
+---
+
+### Q7 — Hermes runtime on factory claim path — **Accepted: de-scope (GitLab #272)**
+
+| Decision | Detail |
+| --- | --- |
+| Role | **Non-critical / out of scope** for Simple factory claims and live factory-of-record proof profiles (`live`, `production-like`, `fail-closed`) |
+| hermes-mock (`:14002`) | **Opt-in non-claim smoke only** — never required topology; claim success must not depend on it |
+| Real Hermes | Deferred until a productized runtime is available; not required for operator-trusted Simple delivery rate |
+| Fail-closed override | Operators may force `FACTORY_HERMES_CLAIM_ROLE=required` or `HERMES_REQUIRED_FOR_FACTORY_CLAIM=true`; then live proof fails closed if Hermes is unset or mock |
+| Implementation | `lib/task-platform/factory-hermes-claim-policy.js` + stack health / live proof wiring |
+
+**Rationale:** Assessment P1.1 and issue #272 allow explicit de-scope when no real Hermes is available. Silent dependence on hermes-mock produced false topology confidence. OpenClaw remains the required live agent runtime for claim paths.
+
+**Non-goals for this decision:** Hermes/Citadel refinement provenance product work (separate discovery issues); building Hermes from scratch on the operator host.
+
 ---
 
 ## Sequencing implications (compressed)
@@ -123,8 +145,8 @@ Original recommendation was 30 / 90 days; operator directed **half** → **15 / 
 
 ## Open follow-ups (implementation, not re-opened policy)
 
-- [ ] Inventory and remove Vercel-specific runtime/deploy surface (`vercel.json`, API adapter assumptions, runbooks, smoke targets, package scripts).  
-- [ ] Productize human PM review + human Architect review as explicit workflow gates (events, UI next-action, metrics classification).  
+- [x] Inventory and remove Vercel-specific runtime/deploy surface (`vercel.json`, API adapter assumptions, runbooks, smoke targets, package scripts). (#277 verifier: `node scripts/verify-vercel-factory-purge.js`)
+- [x] Productize human PM review + human Architect review as explicit workflow gates (events, UI next-action, metrics classification). (#275 product API + dispatch gate; deeper UI chrome optional follow-up)
 - [ ] Re-baseline milestone verify against live OpenClaw + half-timeline exit criteria.  
 
 ---

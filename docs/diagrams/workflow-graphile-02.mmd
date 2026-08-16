@@ -1,0 +1,13 @@
+flowchart LR
+  P[Typed producer] -->|server tenant + IDs/versions| V[Port authorization and strict catalog]
+  V -->|semantic key + named queue| G[Graphile public adapter]
+  G --> C{Protected worker class}
+  C --> H[Versioned handler]
+  H --> A[Canonical tenant reauthorization]
+  A --> E[Effect guard and payload-free ledger]
+  E --> L{Canonical lookupEffect}
+  L -->|already completed| S[Suppress duplicate and acknowledge delivery]
+  L -->|absent| X[Perform with deterministic effectKey]
+  X --> R[Record canonical effect result]
+  R --> D[Acknowledge delivery only]
+  X -->|ambiguous/retryable| G

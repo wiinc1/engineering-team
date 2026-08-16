@@ -1,0 +1,9 @@
+flowchart LR
+  CI[CI and staging] --> G{Evidence gate}
+  G -->|complete/current/pass| C[Authorize Graphile cutover]
+  G -->|missing/stale/fail| B[Block GRAPHILE-04]
+  CI --> L[2x load]
+  CI --> X[Chaos and security]
+  CI --> S[24h soak]
+  CI --> D[Restore and reconcile]
+  L & X & S & D --> G

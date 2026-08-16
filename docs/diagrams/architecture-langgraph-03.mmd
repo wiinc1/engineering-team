@@ -1,0 +1,8 @@
+flowchart LR
+  Detail[Task detail] --> API[Versioned orchestration API]
+  API --> Auth[Auth tenant RBAC CSRF]
+  API --> Service[Operator service]
+  Service --> Registry[(Interrupt/action registry)]
+  Service --> Runtime[LangGraph runtime]
+  Runtime --> Saver[(Guarded Postgres saver)]
+  Runtime --> Audit[Sanitized metrics and audit]

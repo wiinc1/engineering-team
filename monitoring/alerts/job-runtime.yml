@@ -1,0 +1,80 @@
+groups:
+  - name: job-runtime
+    rules:
+      - alert: JobRuntimeNotAcceptingClaims
+        expr: job_runtime_claims_enabled == 1 and job_runtime_accepting_claims == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Job runtime is enabled but is not accepting claims
+      - alert: JobRuntimeQueueAgeSlo
+        expr: job_runtime_queue_oldest_age_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Job runtime ready-to-start age exceeds two seconds
+      - alert: JobRuntimeQueueBacklog
+        expr: job_runtime_queue_depth > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Job runtime backlog exceeds the bounded operating budget
+      - alert: JobRuntimeNamedQueueStarvation
+        expr: job_runtime_queue_starvation_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: A named job queue is starved beyond the ready-to-start SLO
+      - alert: JobRuntimePoolWaiting
+        expr: job_runtime_pool_waiting_requests > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Job runtime is waiting for shared PostgreSQL connections
+      - alert: JobRuntimeDeliveryFailures
+        expr: increase(job_runtime_fail_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Job deliveries exhausted their bounded retry policy
+      - alert: JobRuntimeUnknownVersion
+        expr: increase(job_runtime_unknown_version_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: A producer submitted an unsupported job payload version
+      - alert: JobRuntimeUnknownTask
+        expr: increase(job_runtime_unknown_task_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: A producer submitted a task outside the versioned allowlist
+      - alert: JobRuntimeRepeatedTenantRejection
+        expr: increase(job_runtime_tenant_rejection_total[5m]) >= 3
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Repeated canonical tenant authorization failures were rejected
+      - alert: JobRuntimeShutdownDeadline
+        expr: increase(job_runtime_shutdown_deadline_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Job runtime exceeded its graceful shutdown deadline
+      - alert: JobRuntimeRetentionFailure
+        expr: increase(job_runtime_retention_failure_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: Job delivery registry retention failed

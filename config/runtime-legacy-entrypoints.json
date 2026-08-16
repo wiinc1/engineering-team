@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "jobs": [
+    "lib/task-platform/factory-delivery-file-queue.js",
+    "lib/task-platform/factory-delivery-queue-postgres.js",
+    "lib/task-platform/factory-delivery-queue-recovery.js",
+    "scripts/migrate-factory-queue-postgres.js",
+    "scripts/process-audit-outbox.js",
+    "scripts/process-audit-projection-queue.js",
+    "scripts/run-audit-workers.js",
+    "scripts/run-factory-orchestrator.js"
+  ],
+  "factory": [
+    "lib/task-platform/factory-orchestration.js",
+    "lib/task-platform/golden-path-phase1.js",
+    "lib/task-platform/golden-path-phases.js",
+    "scripts/run-factory-orchestrator.js",
+    "scripts/run-golden-path-phase1.js",
+    "scripts/run-golden-path-phases.js"
+  ]
+}

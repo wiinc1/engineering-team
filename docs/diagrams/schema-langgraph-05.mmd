@@ -1,0 +1,5 @@
+erDiagram
+  FACTORY_THREADS ||--o{ FACTORY_INTERRUPTS : pauses
+  FACTORY_THREADS ||--o{ FACTORY_RUN_ACTIONS : audits
+  OWNERSHIP_EPOCHS ||--o{ MIGRATION_RECORDS : proves
+  OWNERSHIP_EPOCHS { string scope uuid epoch string engine string evidence_digest }

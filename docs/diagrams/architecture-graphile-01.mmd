@@ -1,0 +1,21 @@
+C4Context
+  title Issue 286 production job runtime boundary
+  Person(platform, "Platform producer", "Schedules typed application work")
+  System_Boundary(app, "Engineering Team application") {
+    Container(domain, "Domain modules", "Node.js", "Own canonical business state; no Graphile imports")
+    Container(port, "JobRuntimePort and catalog", "Node.js", "Authorization, schema, keys, queues, retries")
+    Container(registry, "Delivery registry adapter", "Node.js", "Application delivery metadata and retention")
+    Container(adapter, "Graphile adapter", "Node.js", "Only supported Graphile API and schema boundary")
+    Container(worker, "Application handlers", "Node.js", "Validated app context; delivery acknowledgment only")
+  }
+  SystemDb(pg, "Shared PostgreSQL", "Verified TLS and bounded pool; Graphile schema plus application registry")
+  System_Ext(langgraph, "LangGraph issue #280", "Coordinated pool capacity; no implementation in #286")
+  Rel(platform, port, "enqueue v1 contract")
+  Rel(domain, port, "uses application-owned interface")
+  Rel(port, registry, "persists semantic delivery")
+  Rel(port, adapter, "enqueue through public API")
+  Rel(adapter, pg, "migrate, LISTEN/NOTIFY, claim", "TLS")
+  Rel(registry, pg, "application SQL only", "TLS")
+  Rel(adapter, worker, "dispatch allowlisted task")
+  Rel(worker, domain, "domain operation records canonical state")
+  Rel(langgraph, pg, "reserved shared capacity")

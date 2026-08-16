@@ -1,0 +1,25 @@
+flowchart TD
+  P[Application producer] --> PORT[Application JobRuntimePort]
+  PORT --> AUTH{Tenant and canonical reference authorized?}
+  AUTH -- no --> REJECT[Sanitized stable rejection]
+  AUTH -- yes --> CATALOG{Allowlisted task and version?}
+  CATALOG -- no --> REJECT
+  CATALOG -- yes --> SCHEMA{Strict schema, JSON shape, secret and 64 KiB checks?}
+  SCHEMA -- no --> REJECT
+  SCHEMA -- yes --> KEY[Semantic job key and fixed queue/retry policy]
+  KEY --> REG[(Application delivery registry: pending)]
+  REG --> ENQUEUE[Graphile public addJob]
+  ENQUEUE -- DB outage or pool exhaustion --> COMP[Compensate and mark delivery failed]
+  ENQUEUE --> QUEUED[Registry queued with opaque job id]
+  QUEUED --> LOCK[Graphile lock and named-queue serialization]
+  LOCK --> EXEC[Validate again and invoke application handler]
+  EXEC -- retryable failure --> RETRY[Registry redelivery pending]
+  RETRY --> LOCK
+  EXEC -- terminal failure --> FAILED[Registry delivery failed]
+  EXEC -- return --> ACK[Registry delivery acknowledged]
+  ACK --> CANON[Canonical domain workflow records business completion separately]
+  SIG[SIGTERM or SIGINT] --> DRAIN[Readiness false; stop new claims]
+  DRAIN --> DONE{Active work stops before deadline?}
+  DONE -- yes --> STOP[Close runtime]
+  DONE -- no --> FORCE[Force stop and mark running deliveries for redelivery]
+  FORCE --> STOP

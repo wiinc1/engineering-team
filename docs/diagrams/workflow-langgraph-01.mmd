@@ -1,0 +1,12 @@
+flowchart LR
+  Q[Queue claim] --> F[Runtime factory]
+  F --> V[Strict state identity size secret and version validation]
+  V --> T[Server-derived tenant/run thread]
+  T --> L{Single-resumer lease}
+  L --> G[Deterministic LangGraph node]
+  G --> C[Guarded Postgres checkpoint]
+  C --> A[Registry audit metrics]
+  C -->|worker dies| R[Replacement worker resume]
+  R --> V
+  V -->|invalid or cross-tenant| X[Stable fail-closed error]
+  K[Global kill switch] -->|blocks new invocation only| F

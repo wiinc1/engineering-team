@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axe from 'axe-core';
 
-import { AutonomyMetricsRoute } from './routes/AutonomyMetricsRoute.jsx';
+import { AutonomyMetricsRoute, JobRuntimePanel } from './routes/AutonomyMetricsRoute.jsx';
 import { clearBrowserSessionConfig, writeBrowserSessionConfig } from './session.browser';
 
 function response(payload: unknown, status = 200) {
@@ -200,6 +200,30 @@ function registerRebuildFailureTest() {
   });
 }
 
+function registerJobRuntimeOperationsTest() {
+  it('inspects a sanitized job and submits a versioned idempotent retry', async () => {
+    const job = {
+      deliveryId: '00000000-0000-4000-8000-000000000288', task: 'factory.start',
+      status: 'delivery_failed', attemptCount: 2, maxAttempts: 5, lastErrorCode: 'dependency_timeout', operatorVersion: 3,
+    };
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return response({ success: true, data: { job: { ...job, status: 'redelivery_pending', operatorVersion: 4 } } });
+      return response({ success: true, data: { job, history: [{ action: 'cancel' }] } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<JobRuntimePanel ctx={{ D: '', u: { bearerToken: 'header.payload.signature' } }} />);
+    fireEvent.change(screen.getByLabelText('Delivery ID'), { target: { value: job.deliveryId } });
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect job' }));
+    expect(await screen.findByText('dependency_timeout')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Recovery reason'), { target: { value: 'recover dependency' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByText('Job retry completed.');
+    const [, actionInit] = fetchMock.mock.calls.at(-1)!;
+    expect(actionInit?.headers).toMatchObject({ 'if-match': '3' });
+    expect(actionInit?.headers).toHaveProperty('idempotency-key');
+  });
+}
+
 describe('AutonomyMetricsRoute', () => {
   beforeEach(() => {
     writeBrowserSessionConfig({
@@ -222,4 +246,5 @@ describe('AutonomyMetricsRoute', () => {
   registerQueuePreflightFailureTest();
   registerAxeTest();
   registerRebuildFailureTest();
+  registerJobRuntimeOperationsTest();
 });

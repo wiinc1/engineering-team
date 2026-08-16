@@ -1,7 +1,7 @@
 import { Fragment as q, jsx as e, jsxs as a } from "react/jsx-runtime";
 import { LiveTaskFreshnessIndicator, useLiveTaskFreshnessPolling } from "../live-task-freshness";
 import { TaskDetailNextActionPanel } from "../../features/task-detail/TaskDetailNextActionPanel";
-
+import { LangGraphRunPanel } from "./LangGraphRunPanel";
 function TaskDetailRoute({ ctx }) {
   const {
     _a, _n, _s, _t, $, $a, $e, $s,
@@ -59,7 +59,7 @@ adge routing-badge--intake", children: "Intake Draft" }) : null, Qs ? e("div", {
   label || "No linked PRs" })] }), a("article", { children: [e("span", { children: "Child tasks" }), e("strong", { children: s.detail?.summary?.childStatus?.label ||
   "No child tasks" })] }), a("article", { children: [e("span", { children: "Deferred considerations" }), a("strong", { children: [xe.summary?.unresolved_count ||
   0, " unresolved"] }), a("small", { children: [xe.summary?.total || 0, " total"] })] }), a("article", { children: [e("span", { children: "Timers and freshness" }),
-  e("strong", { children: s.detail?.summary?.timers?.queueAgeLabel || io(s.summary) })] })] })] }), s.detail?.meta?.permissions?.canViewOrchestration === false ?
+  e("strong", { children: s.detail?.summary?.timers?.queueAgeLabel || io(s.summary) })] })] })] }), e(LangGraphRunPanel, { runRef: s.detail?.context?.langGraph || s.detail?.orchestration?.run?.langGraph || null, ctx: { u, D: s.detail?.meta?.apiBaseUrl || "", At } }), s.detail?.meta?.permissions?.canViewOrchestration === false ?
   a("section", { className: "detail-card detail-card--full", "aria-label": "Orchestration visibility", children: [e("h2", { children: "Orchestration visibility" }),
   e("p", { className: "empty-copy", children: "Dependency planning and orchestration details are hidden for this session." })] }) : s.detail?.orchestration ? a(
   "section", { className: "detail-card detail-card--full", "aria-label": "Orchestration visibility", children: [e("div", { className: "detail-card__header", children: a(

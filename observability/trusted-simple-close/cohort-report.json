@@ -1,0 +1,488 @@
+{
+  "policy_version": "simple-trusted-cohort.v1",
+  "bar": {
+    "minTrustedCloses": 10,
+    "minAutonomousRate": 0.8,
+    "taskClass": "Simple"
+  },
+  "generatedAt": "2026-07-13T15:33:44.198Z",
+  "summary": {
+    "closeouts": 10,
+    "factoryEvidenceFiles": 24,
+    "closedTasks": 9,
+    "trustedCloses": 6,
+    "autonomous_delivery_rate": 0.6667,
+    "barMet": false,
+    "minTrustedCloses": 10,
+    "minAutonomousRate": 0.8
+  },
+  "rows": [
+    {
+      "taskId": "TSK-007",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 0,
+      "liveSessions": [],
+      "trusted": false,
+      "trustedReason": [
+        "missing_live_session_evidence"
+      ],
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-007.json",
+      "factoryEvidencePath": null,
+      "generatedAt": "2026-06-24T20:51:25.048Z"
+    },
+    {
+      "taskId": "TSK-008",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 0,
+      "liveSessions": [],
+      "trusted": false,
+      "trustedReason": [
+        "missing_live_session_evidence"
+      ],
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-008.json",
+      "factoryEvidencePath": null,
+      "generatedAt": "2026-06-24T21:11:28.044Z"
+    },
+    {
+      "taskId": "TSK-010",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 0,
+      "liveSessions": [],
+      "trusted": false,
+      "trustedReason": [
+        "missing_live_session_evidence"
+      ],
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-010.json",
+      "factoryEvidencePath": null,
+      "generatedAt": "2026-06-24T21:18:34.133Z"
+    },
+    {
+      "taskId": "TSK-013",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 4,
+      "liveSessions": [
+        "specialist-delegation-fb50f5f2-d33b-4588-9823-68caba141cb1",
+        "specialist-delegation-f3f63e45-2776-4fce-950d-d1a7a7501ba1",
+        "specialist-delegation-adae12cf-4165-4037-a238-a9d9f770d7a5",
+        "specialist-delegation-4db88656-5ff0-4477-bee9-c5565cbf67e8"
+      ],
+      "trusted": true,
+      "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-013.json",
+      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf3vuuv.json",
+      "generatedAt": "2026-06-24T21:46:08.809Z"
+    },
+    {
+      "taskId": "TSK-014",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 4,
+      "liveSessions": [
+        "specialist-delegation-dbf52cb2-4b1b-4e7b-b24f-f9f0c668ed7b",
+        "specialist-delegation-ab6211d3-afe7-4cf7-beda-80b2bf486937",
+        "specialist-delegation-02212961-a48d-4a27-8716-7510b0826cfa",
+        "specialist-delegation-6d73cce2-fef5-4df5-bff4-fa39d0971b2b"
+      ],
+      "trusted": true,
+      "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-014.json",
+      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf42j01.json",
+      "generatedAt": "2026-07-10T15:53:02.747Z"
+    },
+    {
+      "taskId": "TSK-015",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 4,
+      "liveSessions": [
+        "specialist-delegation-91938d40-189f-42f7-a47c-3d996d462e18",
+        "specialist-delegation-11c2e54c-7290-4115-b179-f7ba8c73f5b6",
+        "specialist-delegation-8dea4afc-6e94-4c3c-9030-e6e14dbe20de",
+        "specialist-delegation-1f8392f9-b612-4a3c-815b-a5a4b8f0835a"
+      ],
+      "trusted": true,
+      "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-015.json",
+      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf47hdy.json",
+      "generatedAt": "2026-06-24T22:06:38.937Z"
+    },
+    {
+      "taskId": "TSK-016",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 4,
+      "liveSessions": [
+        "specialist-delegation-050e28bd-8a1e-4eed-84da-182d8129a551",
+        "specialist-delegation-27005ade-1ef9-4585-a292-78c9cd3149d3",
+        "specialist-delegation-91cbec67-2c50-4af0-b182-0a9b754840b3",
+        "specialist-delegation-566954a4-a61c-48f2-8efb-08e16e01fa8e"
+      ],
+      "trusted": true,
+      "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-016.json",
+      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf4ch3t.json",
+      "generatedAt": "2026-07-10T16:00:52.855Z"
+    },
+    {
+      "taskId": "TSK-019",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 4,
+      "liveSessions": [
+        "specialist-delegation-263e3dde-a0cd-4c83-adf3-581c8362461c",
+        "specialist-delegation-df933f07-7440-4093-84b0-c8f8ff1d01f1",
+        "specialist-delegation-3b7e204f-d55e-474e-8336-f1336ee92dba",
+        "specialist-delegation-c82e14fd-8f29-4462-8d83-498b7b8f6cc6"
+      ],
+      "trusted": true,
+      "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-019.json",
+      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf6azte.json",
+      "generatedAt": "2026-07-10T16:56:47.932Z"
+    },
+    {
+      "taskId": "TSK-020",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": true,
+      "deliveryStatus": "phase6_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 4,
+      "liveSessions": [
+        "specialist-delegation-6c1aecdf-6689-4128-b46d-e3f053df6c5f",
+        "specialist-delegation-6eeeca15-04e1-46ff-bbb2-2e0137035f58",
+        "specialist-delegation-3d83f334-177e-4d16-a5e5-faf8730b7f6d",
+        "specialist-delegation-484dad86-6cae-45c7-926c-477379edf568"
+      ],
+      "trusted": true,
+      "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-020.json",
+      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf6h8wv.json",
+      "generatedAt": "2026-07-10T17:01:46.599Z"
+    },
+    {
+      "taskId": "TSK-022",
+      "task_class": "Simple",
+      "template_tier": "Simple",
+      "closed": false,
+      "deliveryStatus": "phase5_complete",
+      "interventionCount": 0,
+      "liveSessionCount": 0,
+      "liveSessions": [],
+      "trusted": false,
+      "trustedReason": [
+        "not_phase6_complete",
+        "missing_live_session_evidence"
+      ],
+      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-022.json",
+      "factoryEvidencePath": null,
+      "generatedAt": "2026-06-24T19:45:15.386Z"
+    }
+  ],
+  "trustedTaskIds": [
+    "TSK-013",
+    "TSK-014",
+    "TSK-015",
+    "TSK-016",
+    "TSK-019",
+    "TSK-020"
+  ],
+  "metrics": {
+    "schema_version": "autonomous-delivery-metrics-mvp.v1",
+    "policy_version": "autonomous-delivery-metrics-policy.v1",
+    "generated_at": "2026-07-13T15:33:44.197Z",
+    "filters": {
+      "tenantId": null,
+      "dateFrom": null,
+      "dateTo": null,
+      "taskClass": "Simple",
+      "tier": null,
+      "agent": null,
+      "includeUnknown": false
+    },
+    "summary": {
+      "total_signals": 6,
+      "included_signals": 6,
+      "known_signals": 6,
+      "unknown_signals": 0,
+      "closed_signals": 6,
+      "autonomous_deliveries": 6,
+      "autonomous_delivery_rate": 1,
+      "operator_interventions_total": 0,
+      "operator_intervention_rate": 0,
+      "qa_sre_rework_total": 0,
+      "qa_sre_rework_rate": 0,
+      "rollback_total": 0,
+      "rollback_rate": 0,
+      "escaped_defects_total": 0,
+      "escaped_defect_rate": 0,
+      "policy_auto_approved_total": 0,
+      "policy_auto_approval_rate": 0
+    },
+    "breakdowns": {
+      "by_task_class": [
+        {
+          "key": "Simple",
+          "total": 6,
+          "included": 6,
+          "autonomous": 6,
+          "intervention_count": 0,
+          "rework_count": 0,
+          "unknown": 0,
+          "autonomous_delivery_rate": 1,
+          "operator_intervention_rate": 0,
+          "rework_rate": 0
+        }
+      ],
+      "by_template_tier": [
+        {
+          "key": "Simple",
+          "total": 6,
+          "included": 6,
+          "autonomous": 6,
+          "intervention_count": 0,
+          "rework_count": 0,
+          "unknown": 0,
+          "autonomous_delivery_rate": 1,
+          "operator_intervention_rate": 0,
+          "rework_rate": 0
+        }
+      ],
+      "by_implementation_agent": [
+        {
+          "key": "openclaw-live",
+          "total": 6,
+          "included": 6,
+          "autonomous": 6,
+          "intervention_count": 0,
+          "rework_count": 0,
+          "unknown": 0,
+          "autonomous_delivery_rate": 1,
+          "operator_intervention_rate": 0,
+          "rework_rate": 0
+        }
+      ]
+    },
+    "threshold_evaluations": [
+      {
+        "task_class": "Simple",
+        "evaluation": {
+          "policy_version": "autonomy-confidence-thresholds.v1",
+          "evaluated_at": "2026-07-13T15:33:44.198Z",
+          "task_class": "Simple",
+          "status": "eligible",
+          "can_expand": true,
+          "thresholds": {
+            "min_clean_closed_tasks": 3,
+            "min_success_rate": 0.85,
+            "min_first_pass_rate": 0.7,
+            "max_operator_intervention_rate": 0.1,
+            "max_escaped_defects": 0
+          },
+          "evidence": {
+            "total_closed_tasks": 6,
+            "clean_closed_tasks": 6,
+            "success_rate": 1,
+            "first_pass_rate": 1,
+            "operator_intervention_rate": 0,
+            "escaped_defects": 0
+          },
+          "blockers": []
+        }
+      }
+    ],
+    "signals": [
+      {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-013",
+        "task_class": "Simple",
+        "template_tier": "Simple",
+        "implementation_agent": "openclaw-live",
+        "generated_at": "2026-06-24T21:46:08.809Z",
+        "excluded_from_thresholds": false,
+        "approval_mode": "explicit",
+        "operator_interventions": {
+          "count": 0
+        },
+        "qa_sre_rework": {
+          "rework_count": 0
+        },
+        "rollback": {
+          "recorded": false
+        },
+        "escaped_defects": {
+          "count": 0
+        },
+        "final_outcome": {
+          "closed": true,
+          "closed_at": "2026-06-24T21:46:08.809Z"
+        },
+        "live_session_count": 4
+      },
+      {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-014",
+        "task_class": "Simple",
+        "template_tier": "Simple",
+        "implementation_agent": "openclaw-live",
+        "generated_at": "2026-07-10T15:53:02.747Z",
+        "excluded_from_thresholds": false,
+        "approval_mode": "explicit",
+        "operator_interventions": {
+          "count": 0
+        },
+        "qa_sre_rework": {
+          "rework_count": 0
+        },
+        "rollback": {
+          "recorded": false
+        },
+        "escaped_defects": {
+          "count": 0
+        },
+        "final_outcome": {
+          "closed": true,
+          "closed_at": "2026-07-10T15:53:02.747Z"
+        },
+        "live_session_count": 4
+      },
+      {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-015",
+        "task_class": "Simple",
+        "template_tier": "Simple",
+        "implementation_agent": "openclaw-live",
+        "generated_at": "2026-06-24T22:06:38.937Z",
+        "excluded_from_thresholds": false,
+        "approval_mode": "explicit",
+        "operator_interventions": {
+          "count": 0
+        },
+        "qa_sre_rework": {
+          "rework_count": 0
+        },
+        "rollback": {
+          "recorded": false
+        },
+        "escaped_defects": {
+          "count": 0
+        },
+        "final_outcome": {
+          "closed": true,
+          "closed_at": "2026-06-24T22:06:38.937Z"
+        },
+        "live_session_count": 4
+      },
+      {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-016",
+        "task_class": "Simple",
+        "template_tier": "Simple",
+        "implementation_agent": "openclaw-live",
+        "generated_at": "2026-07-10T16:00:52.855Z",
+        "excluded_from_thresholds": false,
+        "approval_mode": "explicit",
+        "operator_interventions": {
+          "count": 0
+        },
+        "qa_sre_rework": {
+          "rework_count": 0
+        },
+        "rollback": {
+          "recorded": false
+        },
+        "escaped_defects": {
+          "count": 0
+        },
+        "final_outcome": {
+          "closed": true,
+          "closed_at": "2026-07-10T16:00:52.855Z"
+        },
+        "live_session_count": 4
+      },
+      {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-019",
+        "task_class": "Simple",
+        "template_tier": "Simple",
+        "implementation_agent": "openclaw-live",
+        "generated_at": "2026-07-10T16:56:47.932Z",
+        "excluded_from_thresholds": false,
+        "approval_mode": "explicit",
+        "operator_interventions": {
+          "count": 0
+        },
+        "qa_sre_rework": {
+          "rework_count": 0
+        },
+        "rollback": {
+          "recorded": false
+        },
+        "escaped_defects": {
+          "count": 0
+        },
+        "final_outcome": {
+          "closed": true,
+          "closed_at": "2026-07-10T16:56:47.932Z"
+        },
+        "live_session_count": 4
+      },
+      {
+        "tenant_id": "engineering-team",
+        "task_id": "TSK-020",
+        "task_class": "Simple",
+        "template_tier": "Simple",
+        "implementation_agent": "openclaw-live",
+        "generated_at": "2026-07-10T17:01:46.599Z",
+        "excluded_from_thresholds": false,
+        "approval_mode": "explicit",
+        "operator_interventions": {
+          "count": 0
+        },
+        "qa_sre_rework": {
+          "rework_count": 0
+        },
+        "rollback": {
+          "recorded": false
+        },
+        "escaped_defects": {
+          "count": 0
+        },
+        "final_outcome": {
+          "closed": true,
+          "closed_at": "2026-07-10T17:01:46.599Z"
+        },
+        "live_session_count": 4
+      }
+    ],
+    "excluded_signals": []
+  }
+}

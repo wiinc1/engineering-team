@@ -62,3 +62,19 @@ test('factory delivery queue migration defines durable leases and idempotent sub
   assert.match(migration, /idx_factory_delivery_queue_claim/);
   assert.match(rollback, /DROP TABLE IF EXISTS factory_delivery_queue/);
 });
+
+test('LangGraph lifecycle event migration is append-only, taskless-intake safe, and rollback guarded', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '../../db/migrations/022_langgraph_lifecycle_events.sql'), 'utf8');
+  const rollback = fs.readFileSync(path.join(__dirname, '../../db/migrations/022_langgraph_lifecycle_events.down.sql'), 'utf8');
+  const runtimeRollback = fs.readFileSync(path.join(__dirname, '../../db/migrations/018_langgraph_runtime_persistence.down.sql'), 'utf8');
+
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS langgraph_checkpoint\.factory_lifecycle_events/);
+  assert.match(migration, /task_id TEXT,/);
+  assert.match(migration, /UNIQUE \(tenant_id, idempotency_key\)/);
+  assert.match(migration, /event_type IN \('node_started','node_finished'\)/);
+  assert.match(migration, /factory_lifecycle_events is append-only/);
+  assert.match(migration, /BEFORE UPDATE/);
+  assert.match(migration, /BEFORE DELETE/);
+  assert.match(rollback, /rollback refused/);
+  assert.match(runtimeRollback, /lifecycle_event_rows/);
+});

@@ -1,0 +1,17 @@
+C4Container
+  title LANGGRAPH-01 tenant-bound runtime and Postgres persistence
+  Person(worker, "Factory worker", "Starts or resumes application lifecycle nodes")
+  Person(operator, "Operator", "Verifies dormant runtime health and rollback")
+  System_Boundary(app, "Engineering Team") {
+    Container(nodes, "Domain node interfaces", "Node", "No LangGraph types or persistence side effects")
+    Container(runtime, "LangGraph runtime adapter", "Node", "Validation, graph, tenant binding, leases, health")
+    Container(api, "Internal v1 API", "Node HTTP", "Authenticated health and sanitized summaries")
+    ContainerDb(pg, "PostgreSQL", "Existing TLS/shared pool", "Dedicated opaque checkpoints and application thread registry")
+  }
+  System_Ext(canonical, "Canonical task and audit stores", "Business source of truth")
+  Rel(worker, runtime, "Tenant/run context")
+  Rel(runtime, nodes, "Immutable typed state")
+  Rel(runtime, pg, "Guarded PostgresSaver through two-slot budget")
+  Rel(api, runtime, "Health and tenant-filtered summaries")
+  Rel(operator, api, "Authenticated checks")
+  Rel(runtime, canonical, "References only; never replaces")
