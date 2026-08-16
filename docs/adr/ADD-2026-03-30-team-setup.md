@@ -1,7 +1,7 @@
 # Architecture Decision Record: Team Engineering Setup
 
-**Date:** 2026-03-30  
-**Status:** Accepted  
+**Date:** 2026-03-30
+**Status:** Accepted
 **Deciders:** Human (wiinc1), Architect (Bran)
 
 ## Context
@@ -46,11 +46,11 @@ All significant decisions are documented in Architecture Decision Records (ADRs)
 ## Alternatives Considered
 
 ### Alternative 1: Flat team, all PRs reviewed by all
-**Decision:** Rejected  
+**Decision:** Rejected
 **Trade-offs:** Too chaotic, no clear ownership, decision fatigue
 
 ### Alternative 2: Only human review required
-**Decision:** Rejected  
+**Decision:** Rejected
 **Trade-offs:** Bottlenecks on human time, agents can't self-govern
 
 ## Related Decisions
