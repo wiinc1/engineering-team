@@ -24,7 +24,7 @@ Require this job if governance drift is treated as blocking in your environment:
 - Restrict direct pushes to the protected branch.
 
 ## Mapping To Workflow Files
-- `Pull request metadata` in `.github/workflows/validation.yml` runs `npm run pr:check`, `npm run change:check`, and `npm run ownership:lint`.
+- `Pull request metadata` in `.github/workflows/validation.yml` runs `npm run pr:check`, `npm run change:check`, and `npm run ownership:lint`. The job has read-only pull-request permission and exports its ephemeral `GITHUB_TOKEN` so `verify-pr-body.js` can live-fetch the current body when the event payload is stale or empty.
 - `Repo validation` in `.github/workflows/validation.yml` runs `npm run coverage`, `npm run standards:check`, `npm run ownership:lint`, `npm run test:unit`, and the non-browser Node suites.
 - `Browser validation` in `.github/workflows/validation.yml` runs `npm run test:browser`.
 - `verify` in `.github/workflows/verify.yml` runs `make verify`, which aggregates DESIGN.md gates, standards policy validators, `npm run lint`, `npm run typecheck`, `npm run test:unit`, `npm run test:browser`, `npm run build`, `npm run standards:check`, and artifact validators.

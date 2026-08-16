@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "audit-workers-production-smoke",
+  "generatedAt": "2026-06-28T02:05:30.858Z",
+  "baseUrl": "https://staging.example",
+  "tenantId": "engineering-team",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "append_event",
+        "ok": true,
+        "status": 202
+      },
+      {
+        "name": "projection_lag_under_threshold",
+        "ok": true,
+        "thresholdSeconds": 5,
+        "lagSeconds": 0
+      },
+      {
+        "name": "projected_state_visible",
+        "ok": true,
+        "status": 200
+      },
+      {
+        "name": "projection_events_processed_increased",
+        "ok": true,
+        "delta": 0
+      },
+      {
+        "name": "outbox_events_published_increased",
+        "ok": true,
+        "delta": 0
+      },
+      {
+        "name": "intake_next_required_action_projected",
+        "ok": true,
+        "taskId": "TSK-INTAKE-SMOKE"
+      }
+    ]
+  },
+  "metrics": {
+    "before": {
+      "projectionLagSeconds": 0,
+      "projectionEventsProcessedTotal": 12,
+      "outboxEventsPublishedTotal": 8
+    },
+    "projectionLagSecondsBefore": 0,
+    "projectionLagSecondsAfter": 0,
+    "after": {
+      "projectionLagSeconds": 0,
+      "projectionEventsProcessedTotal": 12,
+      "outboxEventsPublishedTotal": 8
+    },
+    "projectionEventsProcessedDelta": 0,
+    "outboxEventsPublishedDelta": 0
+  },
+  "task": {
+    "createStatus": 202,
+    "stateStatus": 200,
+    "state": {
+      "task_id": "TSK-STAGING1",
+      "title": "smoke",
+      "next_required_action": "PM refinement required",
+      "waiting_state": "task_refinement"
+    }
+  },
+  "workflow": {
+    "schemaVersion": "1.0",
+    "kind": "audit-workers-workflow-smoke",
+    "generatedAt": "2026-06-28T02:05:37.862Z",
+    "baseUrl": "https://staging.example",
+    "summary": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "intake_draft_created",
+          "ok": true,
+          "status": 201,
+          "taskId": "TSK-INTAKE-SMOKE"
+        },
+        {
+          "name": "intake_next_required_action_projected",
+          "ok": true,
+          "nextRequiredAction": "PM refinement required",
+          "waitingState": "task_refinement",
+          "attempts": 0
+        }
+      ]
+    },
+    "intake": {
+      "createStatus": 201,
+      "taskId": "TSK-INTAKE-SMOKE",
+      "projected": {
+        "task_id": "TSK-INTAKE-SMOKE",
+        "title": "smoke",
+        "next_required_action": "PM refinement required",
+        "waiting_state": "task_refinement"
+      },
+      "ok": true,
+      "attempts": 0
+    }
+  }
+}

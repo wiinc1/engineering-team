@@ -103,7 +103,9 @@
             "^tests/contract/audit-openapi\\.contract\\.test\\.js$",
             "^tests/contract/audit-api-deploy-wrapper\\.contract\\.test\\.js$",
             "^tests/contract/execution-contract-refinement\\.contract\\.test\\.js$",
-            "^tests/contract/projects-openapi\\.contract\\.test\\.js$"
+            "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
+            "^tests/contract/job-runtime\\.contract\\.test\\.js$",
+            "^tests/contract/langgraph-runtime\\.contract\\.test\\.js$"
           ]
         },
         {
@@ -113,7 +115,9 @@
             "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/security/audit-api-deploy-wrapper\\.security\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
-            "^tests/security/projects-security\\.test\\.js$"
+            "^tests/security/projects-security\\.test\\.js$",
+            "^tests/security/job-runtime\\.security\\.test\\.js$",
+            "^tests/security/langgraph-runtime\\.security\\.test\\.js$"
           ]
         }
       ],
@@ -127,7 +131,9 @@
             "^docs/api/task-platform-openapi\\.yml$",
             "^docs/api/task-assignment-openapi\\.yml$",
             "^docs/api/task-detail-history-telemetry-openapi\\.yml$",
-            "^docs/api/task-owner-surfaces-openapi\\.yml$"
+            "^docs/api/task-owner-surfaces-openapi\\.yml$",
+            "^docs/api/job-runtime-openapi\\.yml$",
+            "^docs/api/langgraph-orchestration-openapi\\.yml$"
           ]
         },
         {
@@ -137,7 +143,10 @@
             "^docs/runbooks/execution-contract-refinement\\.md$",
             "^docs/runbooks/production-identity-provider\\.md$",
             "^docs/runbooks/task-assignment\\.md$",
-            "^docs/runbooks/task-platform-rollout\\.md$"
+            "^docs/runbooks/task-platform-rollout\\.md$",
+            "^docs/runbooks/job-runtime(?:-operations)?\\.md$",
+            "^docs/runbooks/langgraph-(?:checkpoints|lifecycle|operations)\\.md$",
+            "^docs/runbooks/runtime-hardening-cutover\\.md$"
           ]
         }
       ]
@@ -198,7 +207,11 @@
             "^tests/security/projects-security\\.test\\.js$",
             "^tests/security/autonomous-delivery-metrics\\.security\\.test\\.js$",
             "^tests/performance/autonomous-delivery-metrics\\.performance\\.test\\.js$",
-            "^tests/performance/audit-foundation\\.performance\\.test\\.js$"
+            "^tests/performance/audit-foundation\\.performance\\.test\\.js$",
+            "^tests/security/job-runtime\\.security\\.test\\.js$",
+            "^tests/performance/job-runtime\\.performance\\.test\\.js$",
+            "^tests/security/langgraph-runtime\\.security\\.test\\.js$",
+            "^tests/performance/langgraph-runtime\\.performance\\.test\\.js$"
           ]
         }
       ],
@@ -211,7 +224,9 @@
             "^docs/api/live-task-freshness-updates-openapi\\.yml$",
             "^docs/api/execution-contract-refinement-openapi\\.yml$",
             "^docs/api/task-platform-openapi\\.yml$",
-            "^docs/api/task-detail-history-telemetry-openapi\\.yml$"
+            "^docs/api/task-detail-history-telemetry-openapi\\.yml$",
+            "^docs/api/job-runtime-openapi\\.yml$",
+            "^docs/api/langgraph-orchestration-openapi\\.yml$"
           ]
         },
         {
@@ -220,7 +235,10 @@
             "^docs/runbooks/audit-foundation\\.md$",
             "^docs/runbooks/autonomous-delivery-metrics\\.md$",
             "^docs/runbooks/live-task-freshness\\.md$",
-            "^docs/runbooks/task-platform-rollout\\.md$"
+            "^docs/runbooks/task-platform-rollout\\.md$",
+            "^docs/runbooks/job-runtime(?:-operations)?\\.md$",
+            "^docs/runbooks/langgraph-(?:checkpoints|lifecycle|operations)\\.md$",
+            "^docs/runbooks/runtime-hardening-cutover\\.md$"
           ]
         }
       ]
@@ -362,7 +380,8 @@
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/unit/governance/browser-source-readability\\.test\\.js$",
             "^tests/unit/task-detail-.+\\.test\\.js$",
-            "^tests/unit/task-detail-route\\.test\\.js$"
+            "^tests/unit/task-detail-route\\.test\\.js$",
+            "^src/app/LangGraphRunPanel\\.test\\.tsx$"
           ]
         },
         {
@@ -371,7 +390,8 @@
             "^tests/browser/design-token-operationalization\\.browser\\.spec\\.ts$",
             "^tests/browser/task-detail-next-action\\.browser\\.spec\\.ts$",
             "^src/app/AppRouteModel\\.test\\.tsx$",
-            "^tests/browser/task-detail\\.browser\\.spec\\.ts$"
+            "^tests/browser/task-detail\\.browser\\.spec\\.ts$",
+            "^src/app/LangGraphRunPanel\\.test\\.tsx$"
           ]
         }
       ],
@@ -395,7 +415,9 @@
             "^docs/reports/ISSUE-203_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/reports/ISSUE-154_STANDARDS_COMPLIANCE_CHECKLIST\\.md$",
             "^docs/runbooks/audit-foundation\\.md$",
-            "^docs/reports/ISSUE_7_COMPLETION_AUDIT\\.md$"
+            "^docs/reports/ISSUE_7_COMPLETION_AUDIT\\.md$",
+            "^docs/reports/FACTORY_AUTONOMY_DECISIONS\\.md$",
+            "^docs/reports/ISSUE-282_STANDARDS_COMPLIANCE_CHECKLIST\\.md$"
           ]
         }
       ]
@@ -567,7 +589,10 @@
             "^tests/integration/task-platform-branch-protection\\.integration\\.test\\.js$",
             "^tests/integration/task-platform-pr-summary\\.integration\\.test\\.js$",
             "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
-            "^tests/integration/factory-delivery-queue-postgres\\.integration\\.test\\.js$"
+            "^tests/integration/factory-delivery-queue-postgres\\.integration\\.test\\.js$",
+            "^tests/integration/job-runtime-postgres\\.integration\\.test\\.js$",
+            "^tests/integration/langgraph-(?:postgres|process-recovery-postgres)\\.integration\\.test\\.js$",
+            "^tests/contract/langgraph-runtime\\.contract\\.test\\.js$"
           ]
         }
       ],
@@ -808,6 +833,58 @@
             "^docs/reports/ISSUE-28[67]_(DEPENDENCY_REVIEW|STANDARDS_COMPLIANCE_CHECKLIST)\\.md$",
             "^docs/diagrams/(workflow|schema|architecture)-graphile-0[12]\\.mmd$",
             "^monitoring/alerts/job-runtime\\.yml$"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "langgraph-runtime",
+      "runtime_patterns": [
+        "^lib/software-factory/langgraph/",
+        "^lib/task-platform/langgraph-",
+        "^lib/release-gates/(?:evidence-collector|runtime-evidence)\\.js$",
+        "^lib/runtime-cutover/",
+        "^db/migrations/(?:018_langgraph_runtime_persistence|019_job_runtime_operations|020_langgraph_interrupts|021_runtime_cutover_ownership|022_langgraph_lifecycle_events)(?:\\.down)?\\.sql$",
+        "^scripts/(?:collect-runtime-release-evidence|generate-runtime-sbom|run-browser-gates|run-langgraph-load|run-runtime-soak|setup-langgraph-postgres|verify-langgraph-lifecycle-equivalence|verify-legacy-runtime-removal|verify-runtime-cutover|verify-runtime-release-evidence|wait-for-performance-host)\\.js$",
+        "^scripts/run-langgraph-load-docker\\.sh$"
+      ],
+      "test_requirements": [
+        {
+          "name": "unit-contract-e2e",
+          "patterns": [
+            "^tests/unit/langgraph-.+\\.test\\.js$",
+            "^tests/contract/langgraph-(?:runtime|alerts)\\.contract\\.test\\.js$",
+            "^tests/e2e/langgraph-runtime\\.e2e\\.test\\.js$",
+            "^src/app/LangGraphRunPanel\\.test\\.tsx$"
+          ]
+        },
+        {
+          "name": "integration-property",
+          "patterns": [
+            "^tests/integration/langgraph-(?:postgres|process-recovery-postgres)\\.integration\\.test\\.js$",
+            "^tests/property/langgraph-state\\.property\\.test\\.js$"
+          ]
+        },
+        {
+          "name": "security-performance-chaos",
+          "patterns": [
+            "^tests/security/langgraph-runtime\\.security\\.test\\.js$",
+            "^tests/performance/langgraph-runtime\\.performance\\.test\\.js$",
+            "^chaos/langgraph-resilience\\.test\\.js$"
+          ]
+        }
+      ],
+      "doc_requirements": [
+        {
+          "name": "architecture-api-operations",
+          "patterns": [
+            "^docs/adr/ADR-00[45]-.+\\.md$",
+            "^docs/api/langgraph-.+",
+            "^docs/architecture/(?:exclusive-runtime-cutover|langgraph-.+|runtime-production-gates)\\.md$",
+            "^docs/runbooks/(?:langgraph-.+|runtime-hardening-cutover)\\.md$",
+            "^docs/reports/(?:ISSUE-28[0-9]_.+|RUNTIME_STORIES_IMPLEMENTATION_STATUS_2026-07-18)\\.md$",
+            "^docs/diagrams/(?:workflow|schema|architecture)-langgraph-0[1-5]\\.mmd$",
+            "^monitoring/(?:alerts|dashboards)/langgraph-runtime\\.(?:yml|json)$"
           ]
         }
       ]

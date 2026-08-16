@@ -39,5 +39,8 @@ observability/factory-stack/
 observability/dual-remote/last-sync.json
 
 # Dual-remote mirror agent runtime
-observability/dual-remote/last-sync.json
 observability/dual-remote/mirror.lock
+
+# Nested local checkouts / drafts (not part of repo)
+_checkouts/
+_workspace-drafts/

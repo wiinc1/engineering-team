@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-staging-smoke",
+  "generatedAt": "2026-06-28T02:05:37.869Z",
+  "baseUrl": "https://staging.example",
+  "queuePath": "observability/milestone-a-staging-test-debug/factory-staging-queue-mqx5cyx7.json",
+  "deliveryDir": "observability/milestone-a-staging-test-debug/factory-delivery-mqx5cyx7",
+  "requirement": {
+    "id": "factory-staging-mqx5cyx7",
+    "title": "Milestone A staging factory smoke 2026-06-28T02:05:37.867Z",
+    "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+    "templateTier": "Simple",
+    "githubIssueUrl": "https://github.com/wiinc1/engineering-team/issues/271"
+  },
+  "ticks": [
+    {
+      "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-a-staging-test-debug/factory-staging-queue-mqx5cyx7.json",
+      "processed": 1,
+      "results": [
+        {
+          "id": "factory-staging-mqx5cyx7",
+          "action": "error",
+          "stage": "failed",
+          "taskId": null,
+          "error": "Task create succeeded but taskId is missing"
+        }
+      ],
+      "pendingCount": 0
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "stage": "failed",
+    "taskId": null,
+    "projectId": null,
+    "note": "Staging smoke stops after phase1 when STAGING_SKIP_FORGE_PHASES=true (default)."
+  }
+}

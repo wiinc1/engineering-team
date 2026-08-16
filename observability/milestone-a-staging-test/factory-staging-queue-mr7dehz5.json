@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mr7dehz5",
+      "title": "Milestone A staging factory smoke 2026-07-05T05:48:27.905Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "changeKind": null,
+      "changedFiles": null,
+      "githubIssueUrl": null,
+      "stage": "phase1_complete",
+      "taskId": "TSK-FACTORY1",
+      "projectId": "PRJ-STAGING1",
+      "evidencePath": "observability/milestone-a-staging-test/factory-delivery-mr7dehz5/factory-staging-mr7dehz5.json",
+      "persistDir": "observability/milestone-a-staging-test/factory-delivery-mr7dehz5/stack/factory-staging-mr7dehz5",
+      "forgeTaskId": "TSK-GOLDEN7DEHZ5",
+      "createdAt": "2026-07-05T05:48:27.906Z",
+      "updatedAt": "2026-07-05T05:48:27.915Z",
+      "lastAction": "phase1",
+      "lastError": null,
+      "projectName": "Factory delivery — Milestone A staging factory smoke 2026-07-05T05:48:27.905Z [factory-staging-mr7dehz5]",
+      "evidenceStatus": "phase1_complete"
+    }
+  ]
+}

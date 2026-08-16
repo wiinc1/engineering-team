@@ -141,6 +141,11 @@ make verify
 | `make verify` | `verify` in `.github/workflows/verify.yml` |
 | `npm run governance:drift:check` | `Governance drift report` in `.github/workflows/governance-drift.yml` |
 
+The pull-request metadata job has read-only pull-request permission and exports
+the ephemeral GitHub Actions token to `scripts/verify-pr-body.js`. This lets the
+validator fetch the current pull-request body when a rerun receives a stale or
+empty event payload, without granting write access.
+
 Read `DESIGN.md` before UI changes, change reusable visual semantics there
 first, and avoid hard-coded visual values in migrated CSS. A rare one-off must
 use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`.

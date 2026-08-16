@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-staging-mqsfbf66",
+      "title": "Milestone A staging factory smoke 2026-06-24T18:45:30.894Z",
+      "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+      "templateTier": "Simple",
+      "githubIssueUrl": null,
+      "stage": "failed",
+      "taskId": "TSK-011",
+      "projectId": "PRJ-C2A7DBA8",
+      "evidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/factory-delivery-mqsfbf66/factory-staging-mqsfbf66.json",
+      "persistDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/milestone-a-staging/factory-delivery-mqsfbf66/stack/factory-staging-mqsfbf66",
+      "forgeTaskId": "TSK-GOLDENSFBF66",
+      "createdAt": "2026-06-24T18:45:30.894Z",
+      "updatedAt": "2026-06-24T18:45:31.465Z",
+      "lastAction": "error",
+      "lastError": "Execution contract approval failed (404): {\"error\":{\"code\":\"execution_contract_not_found\",\"message\":\"No Execution Contract version exists for this task.\",\"details\":{\"task_id\":\"TSK-011\"},\"request_id\":\"ef16702c-1431-48c5-8078-c64f02175828\",\"requestId\":\"ef16702c-1431-48c5-8078-c64f02175828\"}}",
+      "projectName": "Factory delivery — Milestone A staging factory smoke 2026-06-24T18:45:30.894Z [factory-staging-mqsfbf66]"
+    }
+  ]
+}

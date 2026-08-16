@@ -12,6 +12,8 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '_checkouts/**',
+      '_workspace-drafts/**',
       'observability/**',
     ],
     coverage: {

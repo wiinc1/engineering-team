@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-staging-smoke",
+  "generatedAt": "2026-06-24T16:12:52.415Z",
+  "baseUrl": "https://staging.example",
+  "queuePath": "observability/milestone-a-staging-test/factory-staging-queue.json",
+  "deliveryDir": "observability/milestone-a-staging-test/factory-delivery",
+  "requirement": {
+    "id": "factory-staging-mqs9v4fv",
+    "title": "Milestone A staging factory smoke 2026-06-24T16:12:52.411Z",
+    "requirements": "Docs-only Simple tier staging smoke for factory orchestrator intake + phase1.",
+    "templateTier": "Simple"
+  },
+  "ticks": [
+    {
+      "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-a-staging-test/factory-staging-queue.json",
+      "processed": 1,
+      "results": [
+        {
+          "id": "factory-staging-mqs9smwz",
+          "action": "error",
+          "stage": "failed",
+          "taskId": "TSK-FACTORY1",
+          "error": "File audit backend requires an explicit local/test fallback opt-in. Set ALLOW_FILE_AUDIT_BACKEND=true only for isolated development or test harnesses."
+        }
+      ],
+      "pendingCount": 7
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "stage": "failed",
+    "taskId": "TSK-FACTORY1",
+    "projectId": null,
+    "note": "Staging smoke stops after phase1 when STAGING_SKIP_FORGE_PHASES=true (default)."
+  }
+}

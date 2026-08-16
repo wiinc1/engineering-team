@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "factory-delivery-queue",
+  "items": [
+    {
+      "id": "factory-milestone-b-mqsfjeoy",
+      "title": "Milestone B orchestration verify",
+      "requirements": "Prove GP-009/012/013 and agent-driven phase1 contract generation on coordinated stack.",
+      "templateTier": "Simple",
+      "githubIssueUrl": null,
+      "stage": "phase6_complete",
+      "taskId": "TSK-017",
+      "projectId": "PRJ-E19D0A03",
+      "evidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-delivery/factory-milestone-b-mqsfjeoy.json",
+      "persistDir": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-delivery/stack/factory-milestone-b-mqsfjeoy",
+      "forgeTaskId": "TSK-GOLDENSFJEOY",
+      "createdAt": "2026-06-24T18:51:43.522Z",
+      "updatedAt": "2026-06-24T18:56:07.477Z",
+      "lastAction": "phases_2_6",
+      "lastError": null,
+      "projectName": "Factory delivery — Milestone B orchestration verify [factory-milestone-b-mqsfjeoy]",
+      "evidenceStatus": "phase6_complete",
+      "completedAt": "2026-06-24T18:56:07.477Z"
+    }
+  ]
+}

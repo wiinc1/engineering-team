@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-b-orchestration-verify",
+  "generatedAt": "2026-06-24T18:51:19.141Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "observability/milestone-b-staging",
+  "summary": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "milestone_a_baseline",
+        "ok": true
+      },
+      {
+        "name": "factory_phase6_complete",
+        "ok": true,
+        "stage": "phase6_complete",
+        "error": null
+      },
+      {
+        "name": "gp012_intake_agents_seeded",
+        "ok": true
+      },
+      {
+        "name": "gp009_forge_seed_on_phase1",
+        "ok": true
+      },
+      {
+        "name": "gp013_delegation_smoke",
+        "ok": true
+      },
+      {
+        "name": "agent_driven_phase1_contract",
+        "ok": true
+      },
+      {
+        "name": "projection_worker_preference",
+        "ok": true,
+        "workerModes": 3,
+        "manualModes": 0
+      }
+    ]
+  },
+  "artifacts": {
+    "milestoneA": "observability/milestone-b-staging/milestone-a-staging-verify.json",
+    "factoryQueue": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-milestone-b-queue-mqsfjeoy.json",
+    "factoryEvidence": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-delivery/factory-milestone-b-mqsfjeoy.json"
+  },
+  "factory": {
+    "ticks": [
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-milestone-b-queue-mqsfjeoy.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-b-mqsfjeoy",
+            "action": "intake",
+            "stage": "intake_complete",
+            "taskId": "TSK-017",
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      },
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-milestone-b-queue-mqsfjeoy.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-b-mqsfjeoy",
+            "action": "phase1",
+            "stage": "phase1_complete",
+            "taskId": "TSK-017",
+            "error": null
+          }
+        ],
+        "pendingCount": 1
+      },
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-milestone-b-queue-mqsfjeoy.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-b-mqsfjeoy",
+            "action": "phases_2_6",
+            "stage": "phase6_complete",
+            "taskId": "TSK-017",
+            "error": null
+          }
+        ],
+        "pendingCount": 0
+      }
+    ],
+    "queueId": "factory-milestone-b-mqsfjeoy",
+    "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-b-staging/factory-delivery/factory-milestone-b-mqsfjeoy.json",
+    "phase1Api": {
+      "pmRefinementMode": "refinement_start",
+      "pmRefinementStatus": 202,
+      "pmRefinementContractVersion": null,
+      "pmRefinementDelegated": false,
+      "pmRefinementSessionId": null,
+      "architectHandoffMode": "embedded_in_execution_contract",
+      "architectDelegated": false,
+      "architectSessionId": null,
+      "architectHandoffStatus": 200,
+      "recordContractStatus": 201,
+      "approveContractStatus": 201,
+      "forgeReadinessStatus": 422,
+      "taskDetailBeforeStatus": 200,
+      "taskDetailAfterStatus": 200
+    }
+  }
+}

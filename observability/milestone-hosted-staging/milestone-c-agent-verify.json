@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "milestone-c-agent-verify",
+  "generatedAt": "2026-06-24T21:22:57.910Z",
+  "profile": "coordinated-stack",
+  "baseUrl": "http://127.0.0.1:13000",
+  "outputDir": "observability/milestone-hosted-staging",
+  "summary": {
+    "passed": false,
+    "checks": [
+      {
+        "name": "factory_phase6_complete",
+        "ok": false,
+        "stage": "failed",
+        "error": "Project create failed (500): {\"error\":{\"code\":\"internal_error\",\"message\":\"invalid jwt signature\",\"request_id\":\"a12b181a-fb50-4484-a12a-7bf509d4d894\",\"requestId\":\"a12b181a-fb50-4484-a12a-7bf509d4d894\"}}"
+      },
+      {
+        "name": "gp014_implementer_agent",
+        "ok": false
+      },
+      {
+        "name": "gp019_qa_agent",
+        "ok": false
+      },
+      {
+        "name": "gp017_fix_loop",
+        "ok": false
+      },
+      {
+        "name": "gp023_ci_validation_evidence",
+        "ok": false
+      },
+      {
+        "name": "agent_session_evidence",
+        "ok": false
+      }
+    ]
+  },
+  "artifacts": {
+    "factoryQueue": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-hosted-staging/factory-milestone-c-queue-mqskxwja.json",
+    "factoryEvidence": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-hosted-staging/factory-delivery/factory-milestone-c-mqskxwja.json"
+  },
+  "factory": {
+    "ticks": [
+      {
+        "queuePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-hosted-staging/factory-milestone-c-queue-mqskxwja.json",
+        "processed": 1,
+        "results": [
+          {
+            "id": "factory-milestone-c-mqskxwja",
+            "action": "error",
+            "stage": "failed",
+            "taskId": null,
+            "error": "Project create failed (500): {\"error\":{\"code\":\"internal_error\",\"message\":\"invalid jwt signature\",\"request_id\":\"a12b181a-fb50-4484-a12a-7bf509d4d894\",\"requestId\":\"a12b181a-fb50-4484-a12a-7bf509d4d894\"}}"
+          }
+        ],
+        "pendingCount": 0
+      }
+    ],
+    "queueId": "factory-milestone-c-mqskxwja",
+    "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/milestone-hosted-staging/factory-delivery/factory-milestone-c-mqskxwja.json"
+  }
+}
