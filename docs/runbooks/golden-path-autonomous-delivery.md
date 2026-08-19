@@ -1150,3 +1150,6 @@ For closeouts generated on or after 2026-08-19, write the validated trusted-clos
 ### Audit human authority and intervention timing
 
 Before counting a prospective trusted close, confirm its closeout contains PM and Architect records sourced from `task.pm_architect_human_review_recorded`, plus the event id and timestamp for `task.execution_contract_approved`. Every intervention must have a parseable `recordedAt`. The cohort fails closed for missing provenance or timestamps and rejects any intervention at or after approval; repair the source audit trail instead of editing the report.
+### Interpret the cohort residual
+
+Use `summary.residual.additionalTrustedClosesRequired`, not only the distance to ten. The residual satisfies both the minimum count and delivery-rate bar and assumes every added Simple close will be trusted. Review the projected trusted/closed totals and projected rate before scheduling the cohort; `null` with `achievableWithAdditionalTrustedCloses=false` means additions alone cannot satisfy the configured target.

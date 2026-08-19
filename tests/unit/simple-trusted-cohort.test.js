@@ -12,6 +12,7 @@ const {
   buildSimpleTrustedCohortFromRepo,
   DEFAULT_BAR,
   COHORT_POLICY_VERSION,
+  calculateCohortResidual,
 } = require('../../lib/task-platform/simple-trusted-cohort');
 const { buildTrustedSimpleCloseEvidence } = require('../../lib/task-platform/trusted-simple-close-evidence');
 
@@ -111,6 +112,27 @@ function prospectiveProvenance() {
     assert.equal(cohort.summary.trustedCloses, 10);
     assert.equal(cohort.summary.barMet, true);
     assert.ok(cohort.summary.autonomous_delivery_rate >= 0.8);
+  });
+
+  it('calculates additions needed for both the count and rate bars', () => {
+    const residual = calculateCohortResidual({
+      trustedCloses: 6, closedTasks: 9, bar: DEFAULT_BAR,
+    });
+    assert.equal(residual.trustedCloseShortfall, 4);
+    assert.equal(residual.additionalTrustedClosesForRate, 6);
+    assert.equal(residual.additionalTrustedClosesRequired, 6);
+    assert.equal(residual.projectedTrustedCloses, 12);
+    assert.equal(residual.projectedClosedTasks, 15);
+    assert.equal(residual.projectedAutonomousDeliveryRate, 0.8);
+  });
+
+  it('reports an imperfect cohort cannot reach a 100 percent target by addition', () => {
+    const residual = calculateCohortResidual({
+      trustedCloses: 9, closedTasks: 10,
+      bar: { minTrustedCloses: 10, minAutonomousRate: 1 },
+    });
+    assert.equal(residual.achievableWithAdditionalTrustedCloses, false);
+    assert.equal(residual.additionalTrustedClosesRequired, null);
   });
 
   it('requires immutable real PR evidence only for prospective v2 closeouts', () => {

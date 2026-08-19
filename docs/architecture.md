@@ -198,3 +198,6 @@ Use `docs/runbook.md` for exact operator commands. At the architecture level:
 ### Trusted-close authority timeline
 
 Prospective cohort rows retain the authoritative `task.pm_architect_human_review_recorded` and `task.execution_contract_approved` event identities, actor provenance, roles, and timestamps from task history. The closeout classifies intervention events against the approval timestamp. Missing human role provenance, missing approval identity, ambiguous intervention time, or any post-approval intervention makes a v2 row untrusted.
+### Cohort residual arithmetic
+
+The trusted Simple residual solves both thresholds under an explicit all-future-closes-are-trusted assumption. It reports the larger of the count shortfall and `ceil((targetRate × closed - trusted) / (1 - targetRate))`, plus projected totals and rate. A 100% target is reported as unreachable by adding closes when any existing close is untrusted.
