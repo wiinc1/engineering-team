@@ -186,16 +186,7 @@ class JobRuntimeLoadTest {
   }
 
   assertBudgets(report) {
-    if (report.load_multiplier < report.required_load_multiplier) throw new Error('job_runtime_load_multiplier_failed');
-    if (report.acknowledged !== report.submitted) throw new Error('job_runtime_load_delivery_loss');
-    if (report.enqueue_p95_ms >= 100 || report.enqueue_p99_ms >= 250) throw new Error('job_runtime_enqueue_latency_budget_failed');
-    if (report.operational_read_p95_ms >= 250) throw new Error('job_runtime_operational_read_latency_budget_failed');
-    if (report.ready_to_start_p95_ms >= 2_000) throw new Error('job_runtime_ready_latency_budget_failed');
-    if (report.pool_peak_total > report.pool_max - 4
-      || report.pool_waiting_at_end !== 0
-      || report.runtime_pool_waiting_at_end !== 0) {
-      throw new Error('job_runtime_pool_budget_failed');
-    }
+    assertJobRuntimeLoadBudgets(report);
   }
 
   async run() {
@@ -216,6 +207,19 @@ class JobRuntimeLoadTest {
     this.pool.off('connect', this.recordPoolPeak);
     this.pool.off('acquire', this.recordPoolPeak);
     await this.pool.end();
+  }
+}
+
+function assertJobRuntimeLoadBudgets(report) {
+  if (report.load_multiplier < report.required_load_multiplier) throw new Error('job_runtime_load_multiplier_failed');
+  if (report.acknowledged !== report.submitted) throw new Error('job_runtime_load_delivery_loss');
+  if (report.enqueue_p95_ms >= 100 || report.enqueue_p99_ms >= 250) throw new Error('job_runtime_enqueue_latency_budget_failed');
+  if (report.operational_read_p95_ms >= 250) throw new Error('job_runtime_operational_read_latency_budget_failed');
+  if (report.ready_to_start_p95_ms >= 2_000) throw new Error('job_runtime_ready_latency_budget_failed');
+  if (report.pool_peak_total > report.pool_max - 4
+    || report.pool_waiting_at_end !== 0
+    || report.runtime_pool_waiting_at_end !== 0) {
+    throw new Error('job_runtime_pool_budget_failed');
   }
 }
 
@@ -282,6 +286,7 @@ if (require.main === module) main();
 
 module.exports = {
   JobRuntimeLoadTest,
+  assertJobRuntimeLoadBudgets,
   cleanupLoadData,
   main,
   percentile,

@@ -13,6 +13,29 @@ const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
 const { createMigratedWorkloadHandlers } = require('../../lib/job-runtime/workload-handlers');
 const { assertInventoryCompleteness, inventory } = require('../../lib/job-runtime/workload-inventory');
 const { createWorkloadProducers } = require('../../lib/job-runtime/workload-producers');
+const { assertJobRuntimeLoadBudgets } = require('../../scripts/run-job-runtime-load-test');
+
+function passingLoadReport(overrides = {}) {
+  return {
+    load_multiplier: 2, required_load_multiplier: 2,
+    submitted: 100, acknowledged: 100, enqueue_p95_ms: 20, enqueue_p99_ms: 40,
+    operational_read_p95_ms: 30, ready_to_start_p95_ms: 100,
+    pool_peak_total: 6, pool_max: 10, pool_waiting_at_end: 0,
+    runtime_pool_waiting_at_end: 0, ...overrides,
+  };
+}
+
+test('hosted load evidence enforces the operational read and pool contract', () => {
+  assert.doesNotThrow(() => assertJobRuntimeLoadBudgets(passingLoadReport()));
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ operational_read_p95_ms: 250 })),
+    /operational_read_latency_budget_failed/,
+  );
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ runtime_pool_waiting_at_end: 1 })),
+    /pool_budget_failed/,
+  );
+});
 
 test('producer and handler share the exact v1 payload and correlation contract', async () => {
   const fullCatalog = createTaskCatalog();
