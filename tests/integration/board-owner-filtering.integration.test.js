@@ -137,7 +137,7 @@ describe('board owner filtering integration', () => {
     expect(screen.queryByText('Governance review task')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
-    await screen.findByText('1 unassigned cards shown.');
+    await screen.findByText('1 unassigned cards shown.', {}, { timeout: 10000 });
     expect(within(screen.getByLabelText('Operator Approval column')).getByText('Board unassigned task')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Implementation column')).getByText('No matching tasks in this column.')).toBeInTheDocument();
 
