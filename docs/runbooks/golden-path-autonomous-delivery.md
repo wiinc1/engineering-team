@@ -110,7 +110,7 @@ Near-term bar (Q1): ≥10 Simple operator-trusted closes with live session evide
 ```bash
 npm run cohort:simple-trusted
 # writes observability/trusted-simple-close/cohort-report.json
-# and docs/reports/SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md
+# and docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.md
 ```
 
 Trusted close definition (evaluator): `phase6_complete` closeout/evidence, zero recorded manual interventions, ≥1 live `specialist-delegation-*` session id.

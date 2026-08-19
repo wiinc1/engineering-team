@@ -201,3 +201,6 @@ Prospective cohort rows retain the authoritative `task.pm_architect_human_review
 ### Cohort residual arithmetic
 
 The trusted Simple residual solves both thresholds under an explicit all-future-closes-are-trusted assumption. It reports the larger of the count shortfall and `ceil((targetRate × closed - trusted) / (1 - targetRate))`, plus projected totals and rate. A 100% target is reported as unreachable by adding closes when any existing close is untrusted.
+### Stable cohort report provenance
+
+The canonical cohort report lives at `docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.md`. Its JSON and Markdown carry the exact Git revision, policy and generator identity, a sorted source inventory with per-file SHA-256 and byte size, and an aggregate source-set digest. A caller-supplied generation timestamp supports deterministic rebuilds; dated legacy reports remain immutable historical snapshots.
