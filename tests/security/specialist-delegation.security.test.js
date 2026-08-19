@@ -82,3 +82,9 @@ test('default OpenClaw specialist map covers all assignable pilot roles', () => 
     assert.notEqual(DEFAULT_SPECIALIST_MAP[role].trim(), '');
   }
 });
+
+test('PM delegation cannot fall through to the retired runtime identifier', () => {
+  assert.equal(DEFAULT_SPECIALIST_MAP.pm, 'product-manager');
+  assert.equal(DEFAULT_SPECIALIST_MAP['product-manager'], 'product-manager');
+  assert.notEqual(DEFAULT_SPECIALIST_MAP.pm, 'pm');
+});
