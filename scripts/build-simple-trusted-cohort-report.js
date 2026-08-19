@@ -7,10 +7,24 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const {
   buildSimpleTrustedCohortFromRepo,
   DEFAULT_BAR,
 } = require('../lib/task-platform/simple-trusted-cohort');
+const { buildReportProvenance } = require('../lib/task-platform/simple-trusted-cohort-report');
+
+const STABLE_REPORT_PATH = 'docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.md';
+
+function revisionFor(root) {
+  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+}
+
+function writeJsonAtomic(filePath, value) {
+  const temporary = `${filePath}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`);
+  fs.renameSync(temporary, filePath);
+}
 
 function cohortRow(row) {
   const reasons = Array.isArray(row.trustedReason)
@@ -23,6 +37,8 @@ function buildCohortMarkdown(cohort, jsonRelativePath) {
   return [
     '# Simple Operator-Trusted Cohort Report', '',
     `**Generated:** ${cohort.generatedAt}`, `**Policy:** ${cohort.policy_version}`,
+    `**Revision:** \`${cohort.provenance.revision}\``,
+    `**Source set:** \`${cohort.provenance.sourceSetSha256}\``,
     '**Issue:** GitLab #276 / factory autonomy Q1 bar', '', '## Bar', '',
     '| Metric | Target | Actual |', '| --- | --- | --- |',
     `| Trusted Simple closes | ≥ ${cohort.bar.minTrustedCloses} | **${cohort.summary.trustedCloses}** |`,
@@ -42,20 +58,31 @@ function buildCohortMarkdown(cohort, jsonRelativePath) {
     '## Artifacts', '', `- JSON: \`${jsonRelativePath}\``, '', '## Residual', '',
     cohort.summary.barMet
       ? '- Q1 near-term bar is met for this evidence snapshot.'
-      : `- Bar not met: need ${Math.max(0, cohort.bar.minTrustedCloses - cohort.summary.trustedCloses)} more trusted Simple closes with live session evidence.`,
+      : `- Bar not met: need ${cohort.summary.residual.additionalTrustedClosesRequired} additional trusted Simple closes to satisfy both count and rate, assuming every added close is trusted.`,
+    '', '## Provenance', '',
+    `- Generator: \`${cohort.provenance.generator}\``,
+    `- Inputs: ${cohort.provenance.inputCount}`,
+    `- Source-set SHA-256: \`${cohort.provenance.sourceSetSha256}\``,
+    '', '| Input | SHA-256 | Bytes |', '| --- | --- | --- |',
+    ...cohort.provenance.inputs.map((input) => `| \`${input.path}\` | \`${input.sha256}\` | ${input.bytes} |`),
     '',
   ];
 }
 
-function main() {
-  const root = process.cwd();
+function main(options = {}) {
+  const root = options.root || process.cwd();
+  const generatedAt = options.generatedAt || process.env.COHORT_REPORT_GENERATED_AT || new Date().toISOString();
   const cohort = buildSimpleTrustedCohortFromRepo(root, { bar: DEFAULT_BAR });
+  cohort.generatedAt = generatedAt;
+  cohort.provenance = buildReportProvenance(cohort, {
+    root, generatedAt, revision: options.revision || revisionFor(root),
+  });
   const outDir = path.join(root, 'observability', 'trusted-simple-close');
   fs.mkdirSync(outDir, { recursive: true });
   const jsonPath = path.join(outDir, 'cohort-report.json');
-  fs.writeFileSync(jsonPath, `${JSON.stringify(cohort, null, 2)}\n`);
+  writeJsonAtomic(jsonPath, cohort);
 
-  const mdPath = path.join(root, 'docs', 'reports', 'SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md');
+  const mdPath = path.join(root, STABLE_REPORT_PATH);
   const lines = buildCohortMarkdown(cohort, path.relative(root, jsonPath));
   fs.writeFileSync(mdPath, `${lines.join('\n')}\n`);
 
@@ -67,7 +94,10 @@ function main() {
     jsonPath,
     mdPath,
   }, null, 2)}\n`);
-  process.exit(cohort.summary.barMet ? 0 : 2);
+  if (options.setExitCode !== false) process.exitCode = cohort.summary.barMet ? 0 : 2;
+  return { cohort, jsonPath, mdPath };
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { STABLE_REPORT_PATH, buildCohortMarkdown, main, revisionFor, writeJsonAtomic };

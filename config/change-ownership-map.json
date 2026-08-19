@@ -575,6 +575,7 @@
             "^tests/unit/governance/(check-secrets|source-integrity)\\.test\\.js$",
             "^tests/unit/trusted-simple-close-evidence\\.test\\.js$",
             "^tests/unit/simple-trusted-cohort\\.test\\.js$",
+            "^tests/unit/simple-trusted-cohort-report\\.test\\.js$",
             "^tests/unit/forge-claim-policy\\.test\\.js$"
           ]
         },
