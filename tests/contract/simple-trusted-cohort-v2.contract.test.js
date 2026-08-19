@@ -61,8 +61,10 @@ it('joins immutable task-bound PR evidence and rejects a changed package', () =>
 
   let cohort = buildSimpleTrustedCohortFromRepo(root, { closeoutDir });
   assert.equal(cohort.rows[0].trusted, true);
+  assert.equal(cohort.summary.residual.additionalTrustedClosesRequired, 9);
   fs.appendFileSync(evidencePath, ' ');
   cohort = buildSimpleTrustedCohortFromRepo(root, { closeoutDir });
   assert.equal(cohort.rows[0].trusted, false);
+  assert.equal(cohort.summary.residual.additionalTrustedClosesRequired, 10);
   assert.ok(cohort.rows[0].trustedReason.includes('trusted_close_evidence_digest_mismatch'));
 });
