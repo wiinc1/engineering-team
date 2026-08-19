@@ -2,6 +2,25 @@
 
 ## Evidence collection
 
+### Exact-revision isolated staging
+
+The default factory stack and staging are separate launchd profiles. Staging uses independent labels,
+ports, logs, state, and root binding, so an approved release cannot rebind or interrupt the host's
+factory of record. Configure protected CI variables `STAGING_BASE_URL`, `STAGING_DATABASE_URL`, and
+`STAGING_RELEASE_ROOT`; the base URL must be non-local HTTPS and the release root must be an absolute,
+persistent path outside temporary and `_checkouts` directories.
+
+On protected `main`, `deploy-runtime-staging` clones the exact `CI_COMMIT_SHA` into
+`$STAGING_RELEASE_ROOT/releases/<sha>`, removes the credential-bearing remote, installs from the lockfile,
+starts only the `staging` launchd profile, and verifies local plus hosted `/health`. It emits revision-bound
+Graphile and LangGraph `staging_deploy` components. An existing release directory with another revision,
+an unhealthy local stack, a redirect, or unhealthy hosted endpoint blocks deployment.
+
+The staging and soak jobs share the `runtime-staging` resource group and are non-interruptible. This
+prevents concurrent releases from sharing the dedicated staging database or contaminating the 24-hour
+window. Their artifacts and deployment dotenv are retained for two weeks. Production remains a separate
+manual review; the pipeline never applies a runtime cutover.
+
 Collect immutable artifacts from the same revision and staging deployment. Run focused Graphile/LangGraph tests, Docker integration, contracts, security/SBOM/secrets, 2× load for ten minutes, deterministic chaos, browser/accessibility, rollback, three lifecycle synthetics, 24-hour soak, and disposable backup/restore/reconcile. Exercise alert delivery and both kill switches. Do not copy raw jobs, checkpoints, tokens, database URLs, or task content into evidence.
 
 Validate with:

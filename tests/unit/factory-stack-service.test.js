@@ -41,6 +41,7 @@ describe('factory-stack defaults', () => {
     assert.equal(LABELS.forgeadapter, 'com.engineering-team.factory-forgeadapter');
     assert.equal(LABELS.postgresEnsure, 'com.engineering-team.factory-postgres-ensure');
   });
+
 });
 
 describe('factory-stack persistent root binding', () => {

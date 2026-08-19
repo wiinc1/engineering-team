@@ -207,3 +207,11 @@ The canonical cohort report lives at `docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.
 ### Dependency installation boundary
 
 The repository commits `package.json` and `package-lock.json`, not `node_modules/`. Persistent launchd and staging deployments install dependencies with `npm ci` at the exact revision. This prevents stale native binaries or package metadata from silently changing startup behavior while preserving reproducible dependency resolution.
+
+### Isolated staging factory profile
+
+The hosted staging release uses `FACTORY_STACK_PROFILE=staging`. That profile has independent launchd
+labels, ports, root binding, state, logs, and database configuration; it cannot replace the default
+factory-of-record binding. The deployer accepts only an exact commit SHA in a persistent release root,
+then requires both local topology health and a non-local HTTPS `/health` response before it emits
+revision-bound staging evidence.

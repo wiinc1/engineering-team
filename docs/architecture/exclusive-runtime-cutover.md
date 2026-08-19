@@ -4,6 +4,11 @@ Issues #283 and #289 use the same ownership primitive from migration `021_runtim
 
 This is one full switch: no pilot, percentage rollout, shadow side effect, or permanent fallback is permitted.
 
+Staging is a distinct launchd profile, not a second binding of the default factory services. The release
+checkout, root binding, labels, state, logs, ports, database, and hosted health proof are isolated and tied
+to one exact 40-character revision plus deployment ID. The cutover gate rejects staging evidence unless
+both local and hosted health passed from this isolated profile.
+
 ## Reconciliation matrices
 
 | Scope | Legacy state | Disposition |

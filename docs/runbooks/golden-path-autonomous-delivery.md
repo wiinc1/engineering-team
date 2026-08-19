@@ -1156,3 +1156,11 @@ Use `summary.residual.additionalTrustedClosesRequired`, not only the distance to
 ### Reproduce dependencies for persistent services
 
 `node_modules/` is intentionally untracked. A clean checkout or exact-revision staging release must run `npm ci` from the committed `package-lock.json` before installing or restarting launchd services. Never copy an installed dependency tree between revisions; native binaries and Vite/Rolldown package metadata must come from the lockfile on the target host.
+
+### Keep staging separate from the factory of record
+
+Configure staging through the protected `STAGING_BASE_URL`, `STAGING_DATABASE_URL`, and
+`STAGING_RELEASE_ROOT` variables. `release:staging:deploy` installs the exact revision beneath the
+persistent release root and starts only the `staging` launchd profile. Do not point these variables at
+the default ports, database, state directory, or root binding. A missing HTTPS host or unhealthy local
+or hosted probe blocks evidence creation and the 24-hour soak.
