@@ -2,7 +2,7 @@
 
 The trusted Simple path previously required strict PR evidence before the live implementer ran, while its prompt also prohibited tools and file edits. That made a zero-intervention real PR impossible.
 
-The repaired path gives the live OpenClaw implementer an isolated-worktree workflow, accepts only real branch/SHA/PR output, performs clean QA without an invented failure, verifies protected checks, emits `Merge readiness`, confirms the merge, and writes a task-bound close package whose SHA-256 is embedded in the closeout. Hosted release evidence remains an independent staging gate.
+The repaired path gives the live OpenClaw implementer an isolated-worktree workflow, accepts only real branch/SHA/PR output, performs clean QA without an invented failure, verifies protected checks, emits `Merge readiness`, confirms the merge, and writes a task-bound close package whose SHA-256 is embedded in the closeout. Readiness emission first uses the Checks API and automatically dispatches the repository's permissioned readiness workflow when the operator token cannot create check runs directly. Hosted release evidence remains an independent staging gate.
 
 Rollback is a normal revert of the issue-339 commit. No schema migration or destructive data operation is involved.
 

@@ -100,7 +100,7 @@ npm run issue-273:verify
 
 - After execution-contract approval, the live OpenClaw implementer creates an isolated worktree, implements the requirement, pushes a unique branch, opens a schema-compliant PR, and waits for all protected checks except factory-owned `Merge readiness`.
 - A clean live QA approval proceeds without the historical synthetic fail/fix loop. A genuine QA rejection reuses the existing branch and PR.
-- The factory verifies every protected pre-merge check, emits `Merge readiness` for the exact head, confirms the GitHub merge, and only then begins SRE monitoring and close review.
+- The factory verifies every protected pre-merge check, emits `Merge readiness` for the exact head, confirms the GitHub merge, and only then begins SRE monitoring and close review. It attempts direct Checks API emission first and automatically dispatches `emit-merge-readiness-check.yml` when the operator token lacks check-run write permission; both paths are polled for the same exact-head result.
 - GP-022 proof requires real merge confirmation + `mergeCommitSha` + `mergedAt` (no simulation / no missing-token skip). A later phase may observe `already_merged` only when GitHub still confirms those immutable fields.
 - Before writing closeout, the factory stores the real PR/check/merge package and embeds its repository-relative path plus SHA-256 in the closeout (`lib/task-platform/trusted-simple-close-evidence.js`).
 - Auditor: `npm run issue-274:verify`.
