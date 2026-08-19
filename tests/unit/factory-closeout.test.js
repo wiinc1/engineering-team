@@ -7,6 +7,7 @@ const {
   buildFactoryCloseoutReport,
   writeFactoryCloseoutReport,
   classifyStepStatus,
+  buildInterventionAudit,
 } = require('../../lib/task-platform/factory-closeout');
 
 test('classifyStepStatus marks completed automated steps', () => {
@@ -46,4 +47,13 @@ test('writeFactoryCloseoutReport writes JSON artifact', () => {
   }, { outputDir: dir });
   assert.equal(fs.existsSync(outputPath), true);
   assert.equal(report.kind, 'factory-closeout-report');
+});
+
+test('closeout preserves approval provenance and classifies later interventions', () => {
+  const audit = buildInterventionAudit([
+    { recordedAt: '2026-08-19T17:59:00.000Z' },
+    { recordedAt: '2026-08-19T18:01:00.000Z' },
+  ], '2026-08-19T18:00:00.000Z');
+  assert.equal(audit.classificationComplete, true);
+  assert.equal(audit.postApprovalCount, 1);
 });

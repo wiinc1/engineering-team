@@ -18,6 +18,17 @@ function writeProspectiveCohort(root, expectedDigest) {
     trustedSimpleCloseEvidence: {
       path: 'observability/trusted-simple-close/TSK-319.json', sha256: expectedDigest,
     },
+    humanReviewProvenance: {
+      eventId: 'review-319', eventType: 'task.pm_architect_human_review_recorded',
+      roles: {
+        pm: { actorId: 'operator-1', actorType: 'human', reviewedAt: '2026-08-19T17:58:00.000Z', eventId: 'review-319' },
+        architect: { actorId: 'operator-1', actorType: 'human', reviewedAt: '2026-08-19T17:58:00.000Z', eventId: 'review-319' },
+      },
+    },
+    approvalProvenance: {
+      eventId: 'approval-319', eventType: 'task.execution_contract_approved',
+      approvedAt: '2026-08-19T17:59:00.000Z', approvalMode: 'policy',
+    },
   }));
   fs.writeFileSync(path.join(root, 'observability', 'factory-milestone-c-319.json'), JSON.stringify({
     taskId: 'TSK-319', status: 'phase6_complete',

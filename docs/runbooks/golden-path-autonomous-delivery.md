@@ -1147,3 +1147,6 @@ Operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
 ### Record a prospective v2 trusted close
 
 For closeouts generated on or after 2026-08-19, write the validated trusted-close package beneath `observability/trusted-simple-close/`, calculate its SHA-256, and record both as `trustedSimpleCloseEvidence.path` and `trustedSimpleCloseEvidence.sha256` in the task closeout. The path must stay inside the repository and the evidence package `taskId` must match the closeout. Missing, changed, invalid, or cross-task evidence is reported as untrusted; do not edit the effective date or grandfather a new task.
+### Audit human authority and intervention timing
+
+Before counting a prospective trusted close, confirm its closeout contains PM and Architect records sourced from `task.pm_architect_human_review_recorded`, plus the event id and timestamp for `task.execution_contract_approved`. Every intervention must have a parseable `recordedAt`. The cohort fails closed for missing provenance or timestamps and rejects any intervention at or after approval; repair the source audit trail instead of editing the report.

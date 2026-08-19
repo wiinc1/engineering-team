@@ -195,3 +195,6 @@ Use `docs/runbook.md` for exact operator commands. At the architecture level:
 ### Prospective trusted Simple cohort policy
 
 `simple-trusted-cohort.v2` applies to closeouts generated on or after 2026-08-19. Earlier evidence keeps its v1 evaluation. A v2 closeout is trusted only when it points to a repository-contained `trusted-simple-close-evidence.v1` package by relative path and SHA-256; the package must validate as a real merged PR and carry the same task id. This makes the cohort reproducible without rewriting historical decisions.
+### Trusted-close authority timeline
+
+Prospective cohort rows retain the authoritative `task.pm_architect_human_review_recorded` and `task.execution_contract_approved` event identities, actor provenance, roles, and timestamps from task history. The closeout classifies intervention events against the approval timestamp. Missing human role provenance, missing approval identity, ambiguous intervention time, or any post-approval intervention makes a v2 row untrusted.
