@@ -5,12 +5,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const {
   extractLiveSessions,
   buildSimpleTrustedCohort,
   buildSimpleTrustedCohortFromRepo,
   DEFAULT_BAR,
+  COHORT_POLICY_VERSION,
 } = require('../../lib/task-platform/simple-trusted-cohort');
+const { buildTrustedSimpleCloseEvidence } = require('../../lib/task-platform/trusted-simple-close-evidence');
 
   it('extracts live specialist-delegation session ids', () => {
     const sessions = extractLiveSessions({
@@ -92,4 +95,62 @@ const {
     assert.equal(cohort.summary.trustedCloses, 10);
     assert.equal(cohort.summary.barMet, true);
     assert.ok(cohort.summary.autonomous_delivery_rate >= 0.8);
+  });
+
+  it('requires immutable real PR evidence only for prospective v2 closeouts', () => {
+    const cohort = buildSimpleTrustedCohort({
+      closeouts: [{
+        filePath: '/repo/observability/factory-closeout/TSK-321.json',
+        taskId: 'TSK-321', deliveryStatus: 'phase6_complete',
+        generatedAt: '2026-08-19T18:00:00.000Z', manualInterventions: [], liveSessions: [],
+        trustedEvidence: { provided: false, valid: false, reasons: ['missing_trusted_close_evidence_reference'] },
+      }],
+      factoryEvidence: [{
+        filePath: '/repo/observability/factory-milestone-c-321.json', taskId: 'TSK-321',
+        status: 'phase6_complete',
+        liveSessions: ['specialist-delegation-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee21'], liveSessionCount: 1,
+      }],
+    });
+    assert.equal(cohort.rows[0].policyVersion, COHORT_POLICY_VERSION);
+    assert.equal(cohort.rows[0].trusted, false);
+    assert.ok(cohort.rows[0].trustedReason.includes('missing_trusted_close_evidence_reference'));
+  });
+
+  it('loads a task-bound evidence package by repository path and SHA-256', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cohort-v2-'));
+    const closeoutDir = path.join(root, 'observability', 'factory-closeout');
+    const evidenceDir = path.join(root, 'observability', 'trusted-simple-close');
+    fs.mkdirSync(closeoutDir, { recursive: true });
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    const evidencePath = path.join(evidenceDir, 'TSK-321.json');
+    const evidence = {
+      ...buildTrustedSimpleCloseEvidence({
+      taskId: 'TSK-321', templateTier: 'Simple', repository: 'wiinc1/engineering-team',
+      branchName: 'agent/simple-cohort-v2-pr-evidence',
+      commitSha: 'e9c769fe45eef8e1498ff018c1c939109e8047bd',
+      prUrl: 'https://github.com/wiinc1/engineering-team/pull/301', prNumber: 301,
+      mergeCommitSha: '6f8ebd8ad9d48b27480dcc06845e8fc9a24f31f1',
+      mergedAt: '2026-08-19T17:00:00.000Z', changedFiles: ['README.md'],
+        includeGithubCheckProof: true, requiredChecks: ['unit tests', 'Merge readiness'],
+      }),
+      taskId: 'TSK-321',
+    };
+    const evidenceBody = `${JSON.stringify(evidence, null, 2)}\n`;
+    fs.writeFileSync(evidencePath, evidenceBody);
+    const digest = crypto.createHash('sha256').update(evidenceBody).digest('hex');
+    fs.writeFileSync(path.join(closeoutDir, 'TSK-321.json'), `${JSON.stringify({
+      taskId: 'TSK-321', deliveryStatus: 'phase6_complete', generatedAt: '2026-08-19T18:00:00.000Z',
+      manualInterventions: [], trustedSimpleCloseEvidence: {
+        path: 'observability/trusted-simple-close/TSK-321.json', sha256: digest,
+      },
+    })}\n`);
+    fs.writeFileSync(path.join(root, 'observability', 'factory-milestone-c-321.json'), JSON.stringify({
+      taskId: 'TSK-321', status: 'phase6_complete',
+      session: 'specialist-delegation-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee21',
+    }));
+
+    const cohort = buildSimpleTrustedCohortFromRepo(root, { closeoutDir });
+    assert.equal(cohort.rows[0].trusted, true);
+    assert.equal(cohort.rows[0].trustedEvidenceSha256, digest);
+    assert.equal(cohort.rows[0].prUrl, 'https://github.com/wiinc1/engineering-team/pull/301');
   });

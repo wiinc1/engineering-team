@@ -1144,3 +1144,6 @@ Operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
 - `../forgeadapter/docs/runbooks/phase2-local-smoke.md` — forge local stack
 - `docs/architecture/openclaw-forge-delivery-architecture.md` — target architecture
 - `prd/software-factory.md` — full factory vision
+### Record a prospective v2 trusted close
+
+For closeouts generated on or after 2026-08-19, write the validated trusted-close package beneath `observability/trusted-simple-close/`, calculate its SHA-256, and record both as `trustedSimpleCloseEvidence.path` and `trustedSimpleCloseEvidence.sha256` in the task closeout. The path must stay inside the repository and the evidence package `taskId` must match the closeout. Missing, changed, invalid, or cross-task evidence is reported as untrusted; do not edit the effective date or grandfather a new task.

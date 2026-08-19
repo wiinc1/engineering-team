@@ -192,3 +192,6 @@ Use `docs/runbook.md` for exact operator commands. At the architecture level:
 - Governance runtime workflow: `docs/diagrams/workflow-governance-runtime-gates.mmd`
 - Governance runtime architecture: `docs/diagrams/architecture-governance-runtime-gates.mmd`
 - Existing domain diagrams: `docs/diagrams/`
+### Prospective trusted Simple cohort policy
+
+`simple-trusted-cohort.v2` applies to closeouts generated on or after 2026-08-19. Earlier evidence keeps its v1 evaluation. A v2 closeout is trusted only when it points to a repository-contained `trusted-simple-close-evidence.v1` package by relative path and SHA-256; the package must validate as a real merged PR and carry the same task id. This makes the cohort reproducible without rewriting historical decisions.
