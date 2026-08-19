@@ -25,6 +25,8 @@ it('keeps every persistent service spec on the bound canonical checkout', () => 
   const { specs } = buildServiceSpecs(env, { skipForgeadapter: true });
 
   assert.equal(env.FACTORY_STACK_REPO_ROOT, binding.repoRoot);
+  assert.equal(env.GOLDEN_PATH_OPENCLAW_POST_APPROVAL_ARTIFACTS, 'true');
+  assert.equal(env.GOLDEN_PATH_OPENCLAW_ARCHITECT_ENGINEER_ASSIGNMENT, 'true');
   for (const spec of specs) {
     assert.equal(spec.workingDirectory, binding.repoRoot);
     for (const argument of spec.programArgs.filter((value) => path.isAbsolute(String(value)))) {
