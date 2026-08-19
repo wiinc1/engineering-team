@@ -29,6 +29,8 @@ stages:
   - performance
   - test
   - verify
+  - staging
+  - soak
   - deploy
 
 .node-job:
@@ -149,6 +151,72 @@ langgraph-01-verify:
       - playwright-report/
     expire_in: 2 weeks
 
+# Deploy the exact main revision into a persistent, isolated launchd profile.
+# Protected variables are mandatory; no local/default-stack fallback is allowed.
+deploy-runtime-staging:
+  extends: .node-job
+  stage: staging
+  interruptible: false
+  resource_group: runtime-staging
+  timeout: 45 minutes
+  needs:
+    - build
+    - graphile-02-verify
+    - langgraph-01-verify
+  environment:
+    name: staging
+    url: $STAGING_BASE_URL
+  script:
+    - export STAGING_REVISION="$CI_COMMIT_SHA"
+    - export STAGING_DEPLOYMENT_ID="staging-${CI_PIPELINE_ID}-${CI_COMMIT_SHORT_SHA}"
+    - export STAGING_REPOSITORY_URL="$CI_PROJECT_DIR"
+    - npm run release:staging:deploy
+    - mkdir -p .artifacts/runtime-release
+    - cp "$STAGING_RELEASE_ROOT/artifacts/$STAGING_DEPLOYMENT_ID/"*.json .artifacts/runtime-release/
+    - printf 'STAGING_DEPLOYMENT_ID=%s\nSTAGING_REVISION=%s\n' "$STAGING_DEPLOYMENT_ID" "$STAGING_REVISION" > .artifacts/runtime-release/deployment.env
+  artifacts:
+    paths:
+      - .artifacts/runtime-release/
+    reports:
+      dotenv: .artifacts/runtime-release/deployment.env
+    expire_in: 2 weeks
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAGING_BASE_URL && $STAGING_DATABASE_URL && $STAGING_RELEASE_ROOT'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: true
+    - when: never
+
+# This is intentionally a real 24-hour gate. Shortened harness runs cannot
+# satisfy the sealed runtime release manifest threshold.
+runtime-soak-24h:
+  extends: .node-job
+  stage: soak
+  interruptible: false
+  resource_group: runtime-staging
+  timeout: 26 hours
+  needs:
+    - job: deploy-runtime-staging
+      artifacts: true
+  variables:
+    SOAK_DURATION_SECONDS: "86400"
+    SOAK_ENVIRONMENT: staging
+    SOAK_OUTPUT_DIR: .artifacts/runtime-soak
+  script:
+    - export DATABASE_URL="$STAGING_DATABASE_URL"
+    - export SOAK_DEPLOYMENT_ID="$STAGING_DEPLOYMENT_ID"
+    - export SOAK_REVISION="$STAGING_REVISION"
+    - npm run test:runtime:soak
+  artifacts:
+    when: always
+    paths:
+      - .artifacts/runtime-release/
+      - .artifacts/runtime-soak/
+    expire_in: 2 weeks
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAGING_BASE_URL && $STAGING_DATABASE_URL && $STAGING_RELEASE_ROOT'
+    - when: never
+
 # Preserve an explicit deploy stage without performing an automatic production mutation.
 deploy-review:
   stage: deploy
@@ -156,6 +224,8 @@ deploy-review:
     - build
     - graphile-02-verify
     - langgraph-01-verify
+    - job: runtime-soak-24h
+      optional: true
   script:
     - echo "All verified artifacts are ready for an operator-owned production review."
   rules:

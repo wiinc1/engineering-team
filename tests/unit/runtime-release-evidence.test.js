@@ -12,6 +12,9 @@ const revision = 'a'.repeat(40);
 const now = Date.parse('2026-07-18T12:00:00.000Z');
 
 function summary(kind, runtime) {
+  if (kind === 'staging_deploy') return {
+    exactRevision: true, hostedHealth: true, isolatedProfile: true, localHealth: true,
+  };
   if (kind === 'security') return { high: 0, critical: 0 };
   if (kind === 'performance_2x_10m') return runtime === 'graphile'
     ? { durationSeconds: 600, loadFactor: 2, enqueueP95Ms: 99, enqueueP99Ms: 249, readP95Ms: 249 }
@@ -87,6 +90,15 @@ test('threshold failures block security performance chaos soak DR synthetic aler
   for (const expected of ['security:findings', 'performance_2x_10m:latency', 'chaos:recovery', 'soak_24h:threshold', 'dr_restore:recovery', 'synthetic_lifecycle:synthetic', 'alerts:routing', 'kill_switch:shutdown', 'rollback:ownership']) {
     assert.ok(reasons.includes(expected), expected);
   }
+});
+
+test('staging evidence requires exact-revision local and hosted health from an isolated profile', () => {
+  const value = manifest('graphile');
+  const artifact = value.artifacts.find((candidate) => candidate.kind === 'staging_deploy');
+  artifact.summary = {
+    exactRevision: true, hostedHealth: true, isolatedProfile: true, localHealth: false,
+  };
+  assert.ok(evaluateRuntimeEvidence(value, { runtime: 'graphile', revision, now }).reasons.includes('staging_deploy:deployment'));
 });
 
 function reasonsFor(runtime, kind, mutate) {

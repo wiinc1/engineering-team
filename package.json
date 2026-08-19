@@ -93,6 +93,7 @@
     "test:langgraph:docker": "LANGGRAPH_INTEGRATION_SCOPE=focused bash scripts/run-postgres-integration-docker.sh",
     "release:langgraph:verify": "node scripts/verify-runtime-release-evidence.js --runtime langgraph --evidence",
     "release:langgraph:collect": "node scripts/collect-runtime-release-evidence.js --runtime langgraph",
+    "release:staging:deploy": "node scripts/deploy-runtime-staging.js",
     "cutover:langgraph:preflight": "node scripts/verify-runtime-cutover.js",
     "cutover:langgraph:legacy-zero": "node scripts/verify-legacy-runtime-removal.js --scope factory",
     "test:integration:postgres": "node --test --test-concurrency=1 tests/integration/audit-postgres-e2e.test.js tests/integration/registration-auth-migration-postgres.integration.test.js tests/integration/factory-delivery-queue-postgres.integration.test.js tests/integration/job-runtime-postgres.integration.test.js tests/integration/langgraph-postgres.integration.test.js tests/integration/langgraph-process-recovery-postgres.integration.test.js",
