@@ -15,6 +15,22 @@ const {
 } = require('../../lib/task-platform/simple-trusted-cohort');
 const { buildTrustedSimpleCloseEvidence } = require('../../lib/task-platform/trusted-simple-close-evidence');
 
+function prospectiveProvenance() {
+  return {
+    humanReviewProvenance: {
+      eventId: 'review-1', eventType: 'task.pm_architect_human_review_recorded',
+      recordedAt: '2026-08-19T17:59:00.000Z', roles: {
+        pm: { actorId: 'operator-1', actorType: 'human', reviewedAt: '2026-08-19T17:59:00.000Z', eventId: 'review-1' },
+        architect: { actorId: 'operator-1', actorType: 'human', reviewedAt: '2026-08-19T17:59:00.000Z', eventId: 'review-1' },
+      },
+    },
+    approvalProvenance: {
+      eventId: 'approval-1', eventType: 'task.execution_contract_approved',
+      approvedAt: '2026-08-19T18:00:00.000Z', approvalMode: 'policy',
+    },
+  };
+}
+
   it('extracts live specialist-delegation session ids', () => {
     const sessions = extractLiveSessions({
       a: 'specialist-delegation-6eeeca15-04e1-46ff-bbb2-2e0137035f58',
@@ -104,6 +120,7 @@ const { buildTrustedSimpleCloseEvidence } = require('../../lib/task-platform/tru
         taskId: 'TSK-321', deliveryStatus: 'phase6_complete',
         generatedAt: '2026-08-19T18:00:00.000Z', manualInterventions: [], liveSessions: [],
         trustedEvidence: { provided: false, valid: false, reasons: ['missing_trusted_close_evidence_reference'] },
+        ...prospectiveProvenance(),
       }],
       factoryEvidence: [{
         filePath: '/repo/observability/factory-milestone-c-321.json', taskId: 'TSK-321',
@@ -143,6 +160,7 @@ const { buildTrustedSimpleCloseEvidence } = require('../../lib/task-platform/tru
       manualInterventions: [], trustedSimpleCloseEvidence: {
         path: 'observability/trusted-simple-close/TSK-321.json', sha256: digest,
       },
+      ...prospectiveProvenance(),
     })}\n`);
     fs.writeFileSync(path.join(root, 'observability', 'factory-milestone-c-321.json'), JSON.stringify({
       taskId: 'TSK-321', status: 'phase6_complete',
@@ -153,4 +171,19 @@ const { buildTrustedSimpleCloseEvidence } = require('../../lib/task-platform/tru
     assert.equal(cohort.rows[0].trusted, true);
     assert.equal(cohort.rows[0].trustedEvidenceSha256, digest);
     assert.equal(cohort.rows[0].prUrl, 'https://github.com/wiinc1/engineering-team/pull/301');
+  });
+
+  it('rejects a prospective close with an intervention after contract approval', () => {
+    const result = buildSimpleTrustedCohort({ closeouts: [{
+      taskId: 'TSK-322', deliveryStatus: 'phase6_complete',
+      generatedAt: '2026-08-19T19:00:00.000Z',
+      manualInterventions: [{ recordedAt: '2026-08-19T18:01:00.000Z' }],
+      trustedEvidence: { valid: true }, ...prospectiveProvenance(),
+    }], factoryEvidence: [{
+      taskId: 'TSK-322', status: 'phase6_complete', filePath: '/repo/evidence.json',
+      liveSessions: ['specialist-delegation-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee22'], liveSessionCount: 1,
+    }] });
+    assert.equal(result.rows[0].trusted, false);
+    assert.equal(result.rows[0].interventionCount, 1);
+    assert.ok(result.rows[0].trustedReason.includes('has_post_approval_interventions'));
   });
