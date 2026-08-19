@@ -32,6 +32,13 @@ Stack health includes configuration integrity: installed launchd definitions
 must reference existing paths and agree with the canonical root even when an old
 process is still temporarily responding.
 
+In the live coordinated-stack profile, an all-agent factory run includes intake
+and execution-contract Phase 1. After policy approval, the API generates the
+required repository artifacts and delegates the architect-to-engineer assignment
+through live OpenClaw before Forge readiness is evaluated. Forge remains
+fail-closed when that immutable assignment event is absent; fixture and non-live
+profiles do not inherit these launchd defaults.
+
 ## Runtime Model
 
 | Layer | Primary paths | Runtime | Responsibility |

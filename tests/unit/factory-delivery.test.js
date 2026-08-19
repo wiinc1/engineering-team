@@ -99,11 +99,13 @@ test('resolveFactoryConfig makes factory real-evidence collection strict', () =>
     });
     assert.equal(agentDriven.collectRealEvidence, true);
     assert.equal(agentDriven.requireRealEvidence, true);
+    assert.equal(agentDriven.agentDrivenPhase1, true);
 
     process.env.FF_FACTORY_AGENT_DRIVEN_PHASES = 'true';
     const envAgentDriven = resolveFactoryConfig({ queueBackend: 'postgres' });
     assert.equal(envAgentDriven.collectRealEvidence, true);
     assert.equal(envAgentDriven.requireRealEvidence, true);
+    assert.equal(envAgentDriven.agentDrivenPhase1, true);
     delete process.env.FF_FACTORY_AGENT_DRIVEN_PHASES;
 
     process.env.FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE = 'true';
