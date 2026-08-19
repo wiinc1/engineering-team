@@ -580,6 +580,7 @@
         {
           "name": "integration",
           "patterns": [
+            "^tests/contract/factory-stack-root-binding\\.contract\\.test\\.js$",
             "^tests/contract/forge-execution-readiness\\.contract\\.test\\.js$",
             "^tests/integration/forge-local-smoke-seed\\.integration\\.test\\.js$",
             "^tests/unit/projection-catch-up\\.test\\.js$",

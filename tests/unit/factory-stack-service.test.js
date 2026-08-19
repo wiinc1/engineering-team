@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const {
   buildPlist,
   buildServiceSpecs,
@@ -10,6 +11,9 @@ const {
   buildServiceEnv,
   DEFAULT_PORTS,
   LABELS,
+  ROOT,
+  assertPersistentRepoRoot,
+  readRepoRootBinding,
 } = require('../../lib/task-platform/factory-stack/defaults');
 const {
   probeHttp,
@@ -35,6 +39,47 @@ describe('factory-stack defaults', () => {
     assert.equal(LABELS.ui, 'com.engineering-team.factory-ui');
     assert.equal(LABELS.forgeadapter, 'com.engineering-team.factory-forgeadapter');
     assert.equal(LABELS.postgresEnsure, 'com.engineering-team.factory-postgres-ensure');
+  });
+});
+
+describe('factory-stack persistent root binding', () => {
+  it('binds persistent services once and requires explicit root rebinds', () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-root-binding-'));
+    const bindingFile = path.join(fixture, 'repo-root.json');
+    const first = assertPersistentRepoRoot({ root: ROOT, bindingFile });
+    assert.equal(first.repoRoot, fs.realpathSync(ROOT));
+    assert.equal(first.rebound, false);
+    assert.equal(readRepoRootBinding(bindingFile), fs.realpathSync(ROOT));
+
+    const repeated = assertPersistentRepoRoot({ root: ROOT, bindingFile });
+    assert.equal(repeated.rebound, false);
+
+    const alternate = path.join(path.dirname(ROOT), 'alternate-engineering-team');
+    assert.throws(
+      () => assertPersistentRepoRoot({ root: alternate, bindingFile, validateRoot: false }),
+      { code: 'FACTORY_STACK_ROOT_CONFLICT' },
+    );
+    const rebound = assertPersistentRepoRoot({
+      root: alternate,
+      bindingFile,
+      rebindRoot: true,
+      validateRoot: false,
+    });
+    assert.equal(rebound.repoRoot, alternate);
+    assert.equal(rebound.previousRoot, fs.realpathSync(ROOT));
+    assert.equal(rebound.rebound, true);
+  });
+
+  it('rejects temporary and managed staging checkouts', () => {
+    const bindingFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'factory-temp-root-')), 'binding.json');
+    assert.throws(
+      () => assertPersistentRepoRoot({ root: path.join(os.tmpdir(), 'engineering-team-staging'), bindingFile, validateRoot: false }),
+      { code: 'FACTORY_STACK_TEMPORARY_ROOT' },
+    );
+    assert.throws(
+      () => assertPersistentRepoRoot({ root: path.join(ROOT, '_checkouts', 'staging'), bindingFile, validateRoot: false }),
+      { code: 'FACTORY_STACK_TEMPORARY_ROOT' },
+    );
   });
 });
 
@@ -90,54 +135,43 @@ describe('factory-stack postgres docker resolution', () => {
   });
 });
 
-describe('factory-stack #269 acceptance evaluator', () => {
-  it('passes when health + launchd + runbooks are satisfied', () => {
-    const health = {
+function healthyAcceptanceFixture() {
+  return {
+    health: {
       ok: true,
       required: {
-        postgres: { ok: true },
-        api: { ok: true },
-        openclaw: { ok: true },
-        workers: { ok: true },
+        postgres: { ok: true }, api: { ok: true }, openclaw: { ok: true }, workers: { ok: true },
       },
-      claimTopology: {
-        ui: { ok: true, required: true },
-        forgeadapter: { ok: true, required: true },
-      },
-    };
-    const launchd = {
-      api: { loaded: true, running: true },
-      workers: { loaded: true, running: true },
-      postgresEnsure: { loaded: true, running: true },
-      ui: { loaded: true, running: true },
+      claimTopology: { ui: { ok: true, required: true }, forgeadapter: { ok: true, required: true } },
+    },
+    launchd: {
+      api: { loaded: true, running: true }, workers: { loaded: true, running: true },
+      postgresEnsure: { loaded: true, running: true }, ui: { loaded: true, running: true },
       forgeadapter: { loaded: true, running: true },
-    };
+    },
+  };
+}
+
+function workerDownAcceptanceFixture() {
+  const fixture = healthyAcceptanceFixture();
+  fixture.health.ok = false;
+  fixture.health.required.workers.ok = false;
+  fixture.health.claimTopology.forgeadapter = { ok: false, required: false };
+  fixture.launchd.workers = { loaded: false, running: false };
+  fixture.launchd.forgeadapter = { loaded: false, running: false };
+  return fixture;
+}
+
+describe('factory-stack #269 acceptance evaluator', () => {
+  it('passes when health + launchd + runbooks are satisfied', () => {
+    const { health, launchd } = healthyAcceptanceFixture();
     const result = evaluateFactoryStackAcceptance({ health, launchd, dockerAvailable: true });
     assert.equal(result.ok, true);
     assert.ok(result.criteria.every((c) => c.ok));
   });
 
   it('fails AC2 when workers are down', () => {
-    const health = {
-      ok: false,
-      required: {
-        postgres: { ok: true },
-        api: { ok: true },
-        openclaw: { ok: true },
-        workers: { ok: false },
-      },
-      claimTopology: {
-        ui: { ok: true, required: true },
-        forgeadapter: { ok: false, required: false },
-      },
-    };
-    const launchd = {
-      api: { loaded: true, running: true },
-      workers: { loaded: false, running: false },
-      postgresEnsure: { loaded: true, running: true },
-      ui: { loaded: true, running: true },
-      forgeadapter: { loaded: false, running: false },
-    };
+    const { health, launchd } = workerDownAcceptanceFixture();
     const result = evaluateFactoryStackAcceptance({ health, launchd, dockerAvailable: true });
     assert.equal(result.ok, false);
     assert.equal(result.criteria.find((c) => c.id === 'AC2').ok, false);

@@ -28,6 +28,7 @@ const {
   buildServiceEnv,
   defaultOpenclawUrl,
   resolveForgeadapterDir,
+  assertPersistentRepoRoot,
 } = require('../lib/task-platform/factory-stack/defaults');
 const {
   collectHealthReport,
@@ -62,6 +63,7 @@ Options:
   --skip-forgeadapter omit forgeadapter launchd unit
   --forgeadapter-dir  path to forgeadapter checkout
   --accept            include #269 acceptance evaluation on status
+  --rebind-root       explicitly replace the host-persistent canonical checkout binding
 `);
 }
 
@@ -82,6 +84,7 @@ function parseArgs(argv) {
     skipForgeadapter: args.has('--skip-forgeadapter'),
     forgeadapterDirExplicit: readValue('--forgeadapter-dir', process.env.FORGEADAPTER_DIR || ''),
     includeAccept: args.has('--accept') || command === 'accept',
+    rebindRoot: args.has('--rebind-root'),
   };
 }
 
@@ -263,6 +266,10 @@ async function main() {
   if (options.command === 'help') {
     usage();
     return;
+  }
+
+  if (['up', 'install', 'restart'].includes(options.command)) {
+    assertPersistentRepoRoot({ rebindRoot: options.rebindRoot });
   }
 
   let result;
