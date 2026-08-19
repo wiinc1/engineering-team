@@ -6,6 +6,7 @@ const os = require('node:os');
 const {
   buildPlist,
   buildServiceSpecs,
+  inspectLaunchdPlist,
 } = require('../../lib/task-platform/factory-stack/launchd');
 const {
   buildServiceEnv,
@@ -108,6 +109,24 @@ describe('factory-stack launchd plist', () => {
     assert.deepEqual(keys.filter((k) => k !== 'forgeadapter'), ['postgresEnsure', 'api', 'workers', 'ui']);
     assert.equal(skipped.forgeadapter, true);
     assert.ok(specs.find((s) => s.key === 'postgresEnsure').programArgs.some((a) => String(a).includes('factory-stack-postgres-watch')));
+  });
+
+  it('reports stale temporary checkout paths with remediation', () => {
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-plist-status-'));
+    const plist = path.join(fixture, 'stale.plist');
+    fs.writeFileSync(plist, buildPlist({
+      label: LABELS.api,
+      programArgs: ['/usr/bin/node', '/private/tmp/engineering-team-staging/scripts/run-audit-api.js'],
+      env: { FACTORY_STACK_REPO_ROOT: '/private/tmp/engineering-team-staging' },
+      stdoutLog: path.join(fixture, 'out.log'),
+      stderrLog: path.join(fixture, 'err.log'),
+      workingDirectory: '/private/tmp/engineering-team-staging',
+    }));
+    const result = inspectLaunchdPlist(plist, { expectedRoot: ROOT });
+    assert.equal(result.ok, false);
+    assert.ok(result.reasons.includes('bound_root_conflict'));
+    assert.ok(result.reasons.includes('stale_or_temporary_path'));
+    assert.match(result.remediation, /factory:stack:restart/);
   });
 });
 

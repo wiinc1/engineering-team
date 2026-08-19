@@ -10,7 +10,11 @@ const {
   assertPersistentRepoRoot,
   buildServiceEnv,
 } = require('../../lib/task-platform/factory-stack/defaults');
-const { buildServiceSpecs } = require('../../lib/task-platform/factory-stack/launchd');
+const {
+  buildPlist,
+  buildServiceSpecs,
+  inspectLaunchdPlist,
+} = require('../../lib/task-platform/factory-stack/launchd');
 
 it('keeps every persistent service spec on the bound canonical checkout', () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-stack-contract-'));
@@ -27,4 +31,18 @@ it('keeps every persistent service spec on the bound canonical checkout', () => 
       assert.ok(argument.startsWith(`${binding.repoRoot}${path.sep}`), `${spec.key} escapes canonical root`);
     }
   }
+});
+
+it('accepts a canonical generated plist as configuration evidence', () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-stack-plist-contract-'));
+  const plist = path.join(fixture, 'api.plist');
+  fs.writeFileSync(plist, buildPlist({
+    label: 'com.engineering-team.factory-audit-api',
+    programArgs: [process.execPath, path.join(ROOT, 'scripts', 'run-audit-api.js')],
+    env: buildServiceEnv(),
+    stdoutLog: path.join(fixture, 'out.log'),
+    stderrLog: path.join(fixture, 'err.log'),
+    workingDirectory: ROOT,
+  }));
+  assert.equal(inspectLaunchdPlist(plist).ok, true);
 });
