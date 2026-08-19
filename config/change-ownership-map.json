@@ -574,6 +574,7 @@
             "^tests/unit/audit-release-health-http\\.test\\.js$",
             "^tests/unit/governance/(check-secrets|source-integrity)\\.test\\.js$",
             "^tests/unit/trusted-simple-close-evidence\\.test\\.js$",
+            "^tests/unit/simple-trusted-cohort\\.test\\.js$",
             "^tests/unit/forge-claim-policy\\.test\\.js$"
           ]
         },
@@ -581,6 +582,7 @@
           "name": "integration",
           "patterns": [
             "^tests/contract/factory-stack-root-binding\\.contract\\.test\\.js$",
+            "^tests/contract/simple-trusted-cohort-v2\\.contract\\.test\\.js$",
             "^tests/contract/forge-execution-readiness\\.contract\\.test\\.js$",
             "^tests/integration/forge-local-smoke-seed\\.integration\\.test\\.js$",
             "^tests/unit/projection-catch-up\\.test\\.js$",
