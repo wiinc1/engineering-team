@@ -3,7 +3,10 @@
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const { test } = require('node:test');
-const { assertExecutionOwnership, classifyItem, createCutoverPlan, createDatabaseOwnershipGuard, evaluateRollback } = require('../../lib/runtime-cutover');
+const {
+  assertExecutionOwnership, classifyItem, createCutoverPlan, createDatabaseOwnershipGuard,
+  cutoverApprovalDigest, evaluateRollback, executeJointRuntimeCutover, validateJointCutover,
+} = require('../../lib/runtime-cutover');
 const { verify: verifyLegacyRemoval } = require('../../scripts/verify-legacy-runtime-removal');
 
 const base = {
@@ -122,6 +125,97 @@ test('database ownership guard queries the active epoch and applies the same fai
   assert.equal(await guard.assert(), true);
   assert.match(calls[0].sql, /runtime_control\.ownership_epochs/);
   assert.deepEqual(calls[0].values, ['jobs']);
+});
+
+function jointApplyFixture() {
+  const release = (digest) => ({
+    allowed: true, revision: base.revision, deploymentId: 'staging-42', manifestDigest: digest,
+  });
+  const plan = (scope, targetEngine, epoch, manifestDigest) => createCutoverPlan({
+    ...base, scope, targetEngine, epoch, mode: 'apply', releaseDecision: release(manifestDigest),
+    items: [{
+      tenantId: 'tenant-a', semanticId: `${scope}-1`, sourceState: 'queued',
+      activeExecutions: 0, executingEngines: [],
+      reconciliation: { verified: true, digest: `sha256:${'c'.repeat(64)}` },
+    }],
+  });
+  const jobsPlan = plan('jobs', 'graphile', base.epoch, `sha256:${'d'.repeat(64)}`);
+  const factoryPlan = plan('factory', 'langgraph', '6b852ce3-b3ef-40a7-a118-770d7215fdcb', `sha256:${'e'.repeat(64)}`);
+  const approval = {
+    schemaVersion: 'runtime-cutover-approval.v1', approved: true,
+    approvedAt: '2026-08-19T18:00:00.000Z', actorId: 'operator-1', actorRole: 'platform_owner',
+    requestId: 'cutover-20260819-1', revision: base.revision,
+    jobsPlanDigest: jobsPlan.digest, factoryPlanDigest: factoryPlan.digest,
+    graphileManifestDigest: jobsPlan.manifestDigest,
+    langgraphManifestDigest: factoryPlan.manifestDigest,
+  };
+  return { approval, jobsPlan, factoryPlan, confirmationDigest: cutoverApprovalDigest(approval) };
+}
+
+test('apply mode requires payload-free reconciliation proof and zero executing engines', () => {
+  const plan = createCutoverPlan({
+    ...base, scope: 'jobs', targetEngine: 'graphile', mode: 'apply',
+    items: [{
+      tenantId: 'tenant-a', semanticId: 'job-1', sourceState: 'running',
+      activeExecutions: 1, executingEngines: ['legacy'],
+      reconciliation: { verified: true, digest: `sha256:${'c'.repeat(64)}` },
+    }],
+  });
+  assert.equal(plan.allowed, false);
+  assert.ok(plan.reasons.includes('cutover_migration_unresolved'));
+  assert.equal(plan.records[0].resolved, false);
+});
+
+test('joint validation binds fresh manual approval to both exact plans and manifests', () => {
+  const input = jointApplyFixture();
+  assert.equal(validateJointCutover(input, Date.parse('2026-08-19T18:05:00.000Z')).allowed, true);
+  assert.ok(validateJointCutover(
+    { ...input, confirmationDigest: `sha256:${'f'.repeat(64)}` },
+    Date.parse('2026-08-19T18:05:00.000Z'),
+  ).reasons.includes('approval_confirmation_mismatch'));
+  assert.ok(validateJointCutover(input, Date.parse('2026-08-19T18:16:00.001Z')).reasons.includes('approval_stale'));
+});
+
+test('joint apply retires legacy and commits both target epochs plus audit in one transaction', async () => {
+  const input = jointApplyFixture();
+  const queries = [];
+  const client = {
+    async query(sql, values) {
+      queries.push({ sql: String(sql).trim(), values });
+      if (String(sql).includes('FOR UPDATE')) return { rows: [{ scope: 'jobs', engine: 'legacy' }, { scope: 'factory', engine: 'legacy' }] };
+      return { rows: [], rowCount: 1 };
+    },
+    release() { queries.push({ sql: 'RELEASE' }); },
+  };
+  const result = await executeJointRuntimeCutover({ async connect() { return client; } }, input, {
+    now: Date.parse('2026-08-19T18:05:00.000Z'),
+  });
+  assert.equal(result.applied, true);
+  assert.equal(queries[0].sql, 'BEGIN ISOLATION LEVEL SERIALIZABLE');
+  assert.ok(queries.some((entry) => entry.sql.includes('runtime_control.cutover_audit')));
+  assert.equal(queries.at(-2).sql, 'COMMIT');
+  assert.equal(queries.at(-1).sql, 'RELEASE');
+});
+
+test('joint apply rolls back when a target runtime already owns either scope', async () => {
+  const input = jointApplyFixture();
+  const queries = [];
+  const client = {
+    async query(sql) {
+      queries.push(String(sql).trim());
+      if (String(sql).includes('FOR UPDATE')) return { rows: [{ scope: 'jobs', engine: 'graphile' }] };
+      return { rows: [] };
+    },
+    release() { queries.push('RELEASE'); },
+  };
+  await assert.rejects(
+    executeJointRuntimeCutover({ async connect() { return client; } }, input, {
+      now: Date.parse('2026-08-19T18:05:00.000Z'),
+    }),
+    { code: 'runtime_cutover_existing_target_owner' },
+  );
+  assert.ok(queries.includes('ROLLBACK'));
+  assert.equal(queries.at(-1), 'RELEASE');
 });
 
 test('static legacy-zero guard truthfully blocks final cleanup while executable paths remain', () => {

@@ -66,3 +66,21 @@ npm run cutover:langgraph:preflight -- --inventory artifacts/factory-inventory.j
 ```
 
 After both allow, freeze starts, back up, drain, reconcile, activate both exclusive epochs, unfreeze, and run three immediate synthetics. Watch ownership conflicts, blocked legacy invocations, duplicate suppressions, queue/checkpoint latency, stale threads, and interrupt age. Rollback only if the automated decision proves zero active target work and compatible schema; otherwise keep both kill switches active and recover forward. Target RTO is under 15 minutes.
+
+Do not use the apply command as a preflight. After the full soak and manifests pass, generate apply-mode
+inventories with per-row reconciliation digests and zero active execution counts, prepare the exact
+approval document, and obtain immediate manual approval for its SHA-256. The mutation requires all of:
+
+```sh
+RUNTIME_CUTOVER_DATABASE_URL="$PRODUCTION_DATABASE_URL" npm run cutover:runtime:apply -- \
+  --apply --jobs-inventory artifacts/jobs-apply.json \
+  --factory-inventory artifacts/factory-apply.json \
+  --graphile-evidence artifacts/graphile-release-manifest.json \
+  --langgraph-evidence artifacts/langgraph-release-manifest.json \
+  --approval artifacts/runtime-cutover-approval.json \
+  --confirm 'sha256:<the-immediately-approved-document-digest>'
+```
+
+The approval is valid for 15 minutes. A changed plan, manifest, revision, actor, request ID, or approval
+timestamp changes the digest and blocks the transaction. Never retry with an edited confirmation or
+partially apply one scope; inspect the rolled-back audit result and rebuild the entire approval bundle.
