@@ -56,6 +56,12 @@ generated service environment. `--agent-driven-phases` covers downstream work;
 delegated Phase 1 remains an independent opt-in. The approved Simple contract
 receives its repository artifacts and live architect assignment before the
 orchestrator asks Forge for execution readiness.
+The later Forge-facing seed is a separate durable task. The factory must call
+the canonical architect-assignment endpoint for that task and require a live
+OpenClaw session before its readiness poll can pass. A transient
+`post_approval_gates_unsatisfied` response may be retried while PostgreSQL
+projections catch up; fallback attribution or any other assignment error is a
+failed run, not evidence.
 Do not bypass a 422 readiness response or inject the missing event manually;
 verify the service environment, restart with `npm run factory:stack:restart --
 --rebind-root --json`, and begin a fresh cohort task after the exact fix revision
