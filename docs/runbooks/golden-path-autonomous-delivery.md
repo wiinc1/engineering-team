@@ -52,9 +52,10 @@ export GOLDEN_PATH_OPENCLAW_ARCHITECT_ENGINEER_ASSIGNMENT=true
 ```
 
 The persistent launchd stack writes the two post-approval values above into its
-generated service environment. `--agent-driven-phases` also implies agent-driven
-Phase 1, so the approved contract receives its repository artifacts and live
-architect assignment before the orchestrator asks Forge for execution readiness.
+generated service environment. `--agent-driven-phases` covers downstream work;
+delegated Phase 1 remains an independent opt-in. The approved Simple contract
+receives its repository artifacts and live architect assignment before the
+orchestrator asks Forge for execution readiness.
 Do not bypass a 422 readiness response or inject the missing event manually;
 verify the service environment, restart with `npm run factory:stack:restart --
 --rebind-root --json`, and begin a fresh cohort task after the exact fix revision

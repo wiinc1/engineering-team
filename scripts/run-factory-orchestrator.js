@@ -85,7 +85,6 @@ function buildOrchestratorRuntime() {
       requireDelegationSmoke: !hasFlag('--skip-delegation-smoke'),
       skipValidation: hasFlag('--skip-validation'),
       releaseEnv: readArg('--release-env', process.env.RELEASE_ENV || ''),
-      agentDrivenPhase1: hasFlag('--agent-driven-phase1') || hasFlag('--agent-driven-phases'),
       agentDrivenPhases: hasFlag('--agent-driven-phases'),
       autoMerge: hasFlag('--auto-merge'),
       ...readRealEvidenceOptions(),

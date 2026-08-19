@@ -16,6 +16,13 @@ const {
   buildServiceSpecs,
   inspectLaunchdPlist,
 } = require('../../lib/task-platform/factory-stack/launchd');
+const { resolveFactoryConfig } = require('../../lib/task-platform/factory-delivery-shared');
+
+it('keeps delegated Phase 1 independent from downstream agent phases', () => {
+  const config = resolveFactoryConfig({ queueBackend: 'postgres', agentDrivenPhases: true });
+  assert.equal(config.agentDrivenPhases, true);
+  assert.equal(config.agentDrivenPhase1, false);
+});
 
 it('keeps every persistent service spec on the bound canonical checkout', () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-stack-contract-'));
