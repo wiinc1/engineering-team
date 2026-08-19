@@ -35,3 +35,19 @@ test('factory orchestrator CLI carries candidate and final proof artifact paths'
     process.argv = previousArgv;
   }
 });
+
+test('factory orchestrator CLI enables agent-driven Phase 1 with all agent-driven phases', () => {
+  const previousArgv = process.argv;
+  try {
+    process.argv = [
+      'node',
+      'scripts/run-factory-orchestrator.js',
+      '--agent-driven-phases',
+    ];
+    const runtime = buildOrchestratorRuntime();
+    assert.equal(runtime.config.agentDrivenPhase1, true);
+    assert.equal(runtime.config.agentDrivenPhases, true);
+  } finally {
+    process.argv = previousArgv;
+  }
+});

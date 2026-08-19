@@ -28,6 +28,8 @@ describe('factory-stack defaults', () => {
     const env = buildServiceEnv();
     assert.equal(env.FACTORY_PROOF_PROFILE, 'live');
     assert.equal(env.FF_REAL_SPECIALIST_DELEGATION, 'true');
+    assert.equal(env.GOLDEN_PATH_OPENCLAW_POST_APPROVAL_ARTIFACTS, 'true');
+    assert.equal(env.GOLDEN_PATH_OPENCLAW_ARCHITECT_ENGINEER_ASSIGNMENT, 'true');
     assert.match(env.OPENCLAW_BASE_URL, /18789|OPENCLAW/);
     assert.equal(env.PORT, String(DEFAULT_PORTS.api));
     assert.match(env.DATABASE_URL, /15432|postgres/);
