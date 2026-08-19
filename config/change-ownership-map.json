@@ -848,8 +848,8 @@
         "^lib/task-platform/langgraph-",
         "^lib/release-gates/(?:evidence-collector|runtime-evidence|staging-deployment)\\.js$",
         "^lib/runtime-cutover/",
-        "^db/migrations/(?:018_langgraph_runtime_persistence|019_job_runtime_operations|020_langgraph_interrupts|021_runtime_cutover_ownership|022_langgraph_lifecycle_events)(?:\\.down)?\\.sql$",
-        "^scripts/(?:collect-runtime-release-evidence|deploy-runtime-staging|generate-runtime-sbom|run-browser-gates|run-langgraph-load|run-runtime-soak|setup-langgraph-postgres|verify-langgraph-lifecycle-equivalence|verify-legacy-runtime-removal|verify-runtime-cutover|verify-runtime-release-evidence|wait-for-performance-host)\\.js$",
+        "^db/migrations/(?:018_langgraph_runtime_persistence|019_job_runtime_operations|020_langgraph_interrupts|021_runtime_cutover_ownership|022_langgraph_lifecycle_events|023_runtime_cutover_apply_audit)(?:\\.down)?\\.sql$",
+        "^scripts/(?:apply-runtime-cutover|collect-runtime-release-evidence|deploy-runtime-staging|generate-runtime-sbom|run-browser-gates|run-langgraph-load|run-runtime-soak|setup-langgraph-postgres|verify-langgraph-lifecycle-equivalence|verify-legacy-runtime-removal|verify-runtime-cutover|verify-runtime-release-evidence|wait-for-performance-host)\\.js$",
         "^scripts/run-langgraph-load-docker\\.sh$"
       ],
       "test_requirements": [
@@ -858,6 +858,7 @@
           "patterns": [
             "^tests/unit/langgraph-.+\\.test\\.js$",
             "^tests/unit/runtime-release-evidence\\.test\\.js$",
+            "^tests/unit/runtime-cutover\\.test\\.js$",
             "^tests/unit/staging-deployment\\.test\\.js$",
             "^tests/contract/langgraph-(?:runtime|alerts)\\.contract\\.test\\.js$",
             "^tests/e2e/langgraph-runtime\\.e2e\\.test\\.js$",

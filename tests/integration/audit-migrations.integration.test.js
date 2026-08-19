@@ -78,3 +78,17 @@ test('LangGraph lifecycle event migration is append-only, taskless-intake safe, 
   assert.match(rollback, /rollback refused/);
   assert.match(runtimeRollback, /lifecycle_event_rows/);
 });
+
+test('joint runtime cutover migration preserves digest-bound append-only audit evidence', () => {
+  const migration = fs.readFileSync(path.join(__dirname, '../../db/migrations/023_runtime_cutover_apply_audit.sql'), 'utf8');
+  const rollback = fs.readFileSync(path.join(__dirname, '../../db/migrations/023_runtime_cutover_apply_audit.down.sql'), 'utf8');
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS reconciliation_digest VARCHAR\(71\)/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS runtime_control\.cutover_audit/);
+  assert.match(migration, /approval_digest VARCHAR\(71\) NOT NULL UNIQUE/);
+  assert.match(migration, /cutover_audit is append-only/);
+  assert.match(migration, /BEFORE UPDATE ON runtime_control\.cutover_audit/);
+  assert.match(migration, /BEFORE DELETE ON runtime_control\.cutover_audit/);
+  assert.match(rollback, /DROP TABLE IF EXISTS runtime_control\.cutover_audit/);
+  assert.match(rollback, /DROP COLUMN IF EXISTS reconciliation_digest/);
+});

@@ -6,6 +6,7 @@ const {
   evaluateRuntimeEvidence, sealRuntimeManifest,
 } = require('../../lib/release-gates/runtime-evidence');
 const { stagingConfiguration } = require('../../lib/release-gates/staging-deployment');
+const { cutoverApprovalDigest, validateJointCutover } = require('../../lib/runtime-cutover');
 
 it('fails closed when deployment identity is changed after a manifest is sealed', () => {
   const revision = 'a'.repeat(40);
@@ -18,6 +19,32 @@ it('fails closed when deployment identity is changed after a manifest is sealed'
   });
   assert.ok(decision.reasons.includes('manifest:digest'));
   assert.equal(decision.allowed, false);
+});
+
+it('does not accept a cutover confirmation copied from a differently scoped approval', () => {
+  const plan = (scope, targetEngine, digest) => ({
+    schemaVersion: 1, scope, targetEngine, mode: 'apply', allowed: true, freezeConfirmed: true,
+    revision: 'a'.repeat(40), manifestDigest: digest, records: [], reasons: [],
+  });
+  const { cutoverPlanDigest } = require('../../lib/runtime-cutover');
+  const jobsPlan = plan('jobs', 'graphile', `sha256:${'b'.repeat(64)}`);
+  jobsPlan.digest = cutoverPlanDigest(jobsPlan);
+  const factoryPlan = plan('factory', 'langgraph', `sha256:${'c'.repeat(64)}`);
+  factoryPlan.digest = cutoverPlanDigest(factoryPlan);
+  const approval = {
+    schemaVersion: 'runtime-cutover-approval.v1', approved: true,
+    approvedAt: '2026-08-19T18:00:00.000Z', actorId: 'operator-1', actorRole: 'admin',
+    requestId: 'cutover-secure', revision: 'a'.repeat(40), jobsPlanDigest: jobsPlan.digest,
+    factoryPlanDigest: factoryPlan.digest, graphileManifestDigest: jobsPlan.manifestDigest,
+    langgraphManifestDigest: factoryPlan.manifestDigest,
+  };
+  const tampered = { ...approval, graphileManifestDigest: `sha256:${'d'.repeat(64)}` };
+  const result = validateJointCutover({
+    jobsPlan, factoryPlan, approval: tampered, confirmationDigest: cutoverApprovalDigest(approval),
+  }, Date.parse('2026-08-19T18:01:00.000Z'));
+  assert.equal(result.allowed, false);
+  assert.ok(result.reasons.includes('approval_scope_mismatch'));
+  assert.ok(result.reasons.includes('approval_confirmation_mismatch'));
 });
 
 it('rejects local hosted targets and credential-bearing repository URLs before staging mutation', () => {
