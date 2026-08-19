@@ -36,7 +36,7 @@ test('factory orchestrator CLI carries candidate and final proof artifact paths'
   }
 });
 
-test('factory orchestrator CLI enables agent-driven Phase 1 with all agent-driven phases', () => {
+test('factory orchestrator CLI keeps agent-driven Phase 1 separate from downstream phases', () => {
   const previousArgv = process.argv;
   try {
     process.argv = [
@@ -45,7 +45,7 @@ test('factory orchestrator CLI enables agent-driven Phase 1 with all agent-drive
       '--agent-driven-phases',
     ];
     const runtime = buildOrchestratorRuntime();
-    assert.equal(runtime.config.agentDrivenPhase1, true);
+    assert.equal(runtime.config.agentDrivenPhase1, undefined);
     assert.equal(runtime.config.agentDrivenPhases, true);
   } finally {
     process.argv = previousArgv;
