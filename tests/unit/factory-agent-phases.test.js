@@ -79,6 +79,22 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   assert.match(trusted, /filesystem, shell, git, and GitHub tools/);
   assert.doesNotMatch(trusted, /attribution proof only/);
   assert.match(session, /attribution proof only/);
+
+  const trustedSimple = buildImplementerPrompt({
+    taskId: 'TSK-2',
+    requirements: 'x',
+    trustedSimpleClose: true,
+  });
+  assert.match(trustedSimple, /TRUSTED DELIVERY/);
+
+  const fix = buildImplementerPrompt({
+    taskId: 'TSK-2',
+    requirements: 'x',
+    trustedSimpleClose: true,
+    runKind: 'fix_after_qa_fail',
+  });
+  assert.match(fix, /existing pull request/);
+  assert.match(fix, /Do not open a second pull request/);
 });
 
 test('isTrustedDeliveryMode is opt-in via real-evidence flags', () => {

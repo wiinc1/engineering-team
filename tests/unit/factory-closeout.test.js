@@ -37,6 +37,19 @@ test('buildFactoryCloseoutReport summarizes step classification', () => {
   assert.equal(report.taskId, 'TSK-CLOSEOUT');
   assert.ok(report.stepClassification.total >= 27);
   assert.equal(report.phase6.validationOk, true);
+  assert.equal(report.trustedSimpleCloseEvidence, null);
+});
+
+test('buildFactoryCloseoutReport retains the immutable trusted close reference', () => {
+  const reference = {
+    path: 'observability/trusted-simple-close/TSK-900.json',
+    sha256: 'a'.repeat(64),
+  };
+  const report = buildFactoryCloseoutReport({
+    engineeringTeam: { taskId: 'TSK-900' },
+    trustedSimpleCloseEvidence: reference,
+  }, { inventoryPath: '/definitely/missing/inventory.json' });
+  assert.deepEqual(report.trustedSimpleCloseEvidence, reference);
 });
 
 test('writeFactoryCloseoutReport writes JSON artifact', () => {

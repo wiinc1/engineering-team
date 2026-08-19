@@ -95,6 +95,8 @@ const UNIT_TEST_FILES = [
   'tests/unit/golden-path-rollback-evidence-collector.test.js',
   'tests/unit/golden-path-no-default-pr.test.js',
   'tests/unit/golden-path-phase6-real-merge.test.js',
+  'tests/unit/trusted-simple-close-evidence.test.js',
+  'tests/unit/trusted-simple-merge.test.js',
   'tests/unit/github-evidence-source-policy.test.js',
   'tests/unit/hosted-url-evidence.test.js',
   'tests/unit/real-commit-sha.test.js',

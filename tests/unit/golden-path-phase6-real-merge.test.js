@@ -210,6 +210,17 @@ test('real-evidence auto-merge proof rejects skipped merge results', () => {
   );
 });
 
+test('real-evidence auto-merge proof accepts a confirmed prior factory merge', () => {
+  assert.doesNotThrow(() => assertRealPhase6AutoMerge({
+    skipped: true,
+    simulated: false,
+    reason: 'already_merged',
+    merged: true,
+    mergeCommitSha: MERGE_COMMIT_SHA,
+    mergedAt: '2026-08-19T20:00:00.000Z',
+  }));
+});
+
 test('real-evidence phase 6 refreshes release artifacts to the GitHub merge commit', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'phase6-real-merge-'));
   const artifactDir = path.join(tmp, 'release-artifacts');
