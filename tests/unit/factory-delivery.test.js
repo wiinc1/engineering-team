@@ -12,6 +12,7 @@ const {
   runFactoryOrchestratorTick,
   resolveFactoryExecutionPhaseRange,
   assertFactoryItemRealEvidencePreflight,
+  requestFactoryForgeArchitectAssignment,
 } = require('../../lib/task-platform/factory-delivery');
 const { resolveGoldenPathStackPersistDir } = require('../../lib/task-platform/golden-path-phases');
 const { persistDirForItem, resolveFactoryConfig } = require('../../lib/task-platform/factory-delivery-shared');
@@ -263,6 +264,102 @@ test('resolveFactoryExecutionPhaseRange resumes at phase6 after phase5 evidence'
   assert.equal(full.resumePhase6Only, false);
 });
 
+test('factory Forge seeding waits for projection catch-up then records live architect assignment', async () => {
+  const calls = [];
+  const responses = [
+    {
+      ok: false,
+      status: 409,
+      body: { error: { code: 'post_approval_gates_unsatisfied' } },
+    },
+    {
+      ok: true,
+      status: 201,
+      body: {
+        data: {
+          delegation: {
+            delegated: true,
+            agentId: 'architect',
+            sessionId: 'session-live-architect',
+          },
+        },
+      },
+    },
+  ];
+  const result = await requestFactoryForgeArchitectAssignment({
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      const response = responses.shift();
+      return { ...response, json: async () => response.body };
+    },
+    baseUrl: 'http://127.0.0.1:13000',
+    tenantId: 'engineering-team',
+    actorId: 'factory-test',
+    jwtSecret: 'factory-test-secret',
+    requireRealEvidence: true,
+  }, 'TSK-GOLDEN-LIVE', { timeoutMs: 1000, intervalMs: 1 });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((call) => call.url.endsWith(
+    '/tasks/TSK-GOLDEN-LIVE/execution-contract/architect-engineer-assignment',
+  )));
+  assert.deepEqual(JSON.parse(calls[1].options.body), { delegate: true, actorType: 'agent' });
+});
+test('factory Forge architect assignment rejects fallback attribution in real-evidence mode', async () => {
+  await assert.rejects(
+    requestFactoryForgeArchitectAssignment({
+      fetchImpl: async () => ({
+        ok: true,
+        status: 201,
+        json: async () => ({ data: { delegation: { delegated: false } } }),
+      }),
+      baseUrl: 'http://127.0.0.1:13000',
+      tenantId: 'engineering-team',
+      actorId: 'factory-test',
+      jwtSecret: 'factory-test-secret',
+      requireRealEvidence: true,
+    }, 'TSK-GOLDEN-FALLBACK', { timeoutMs: 1000, intervalMs: 1 }),
+    /did not produce live delegated OpenClaw evidence/,
+  );
+});
+test('factory Forge architect assignment verifies live evidence when assignment already exists', async () => {
+  const calls = [];
+  const responses = [
+    {
+      ok: false,
+      status: 409,
+      body: { error: { code: 'architect_engineer_assignment_already_recorded' } },
+    },
+    {
+      ok: true,
+      status: 200,
+      body: {
+        items: [{
+          event_type: 'task.architect_engineer_assignment_recorded',
+          payload: { delegation: { delegated: true, sessionId: 'existing-live-session' } },
+        }],
+      },
+    },
+  ];
+  const result = await requestFactoryForgeArchitectAssignment({
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      const response = responses.shift();
+      return { ...response, json: async () => response.body };
+    },
+    baseUrl: 'http://127.0.0.1:13000',
+    tenantId: 'engineering-team',
+    actorId: 'factory-test',
+    jwtSecret: 'factory-test-secret',
+    requireRealEvidence: true,
+  }, 'TSK-GOLDEN-EXISTING', { timeoutMs: 1000, intervalMs: 1 });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.skipped, true);
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].url, /\/tasks\/TSK-GOLDEN-EXISTING\/history\?limit=500$/);
+});
 test('factory stack persistDir resolves before path.join forge seed', () => {
   const item = { id: 'factory-persist-test', taskId: 'TSK-PERSIST' };
   const deliveryDir = 'observability/factory-delivery';

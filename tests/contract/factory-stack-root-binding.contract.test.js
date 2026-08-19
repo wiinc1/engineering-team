@@ -24,6 +24,30 @@ it('keeps delegated Phase 1 independent from downstream agent phases', () => {
   assert.equal(config.agentDrivenPhase1, false);
 });
 
+it('routes a seeded Forge task through live architect assignment before readiness polling', () => {
+  const deliverySource = fs.readFileSync(
+    path.join(ROOT, 'lib/task-platform/factory-delivery.js'),
+    'utf8',
+  );
+  const assignmentSource = fs.readFileSync(
+    path.join(ROOT, 'lib/task-platform/factory-forge-architect-assignment.js'),
+    'utf8',
+  );
+  const seedStart = deliverySource.indexOf('async function seedFactoryForgeTask');
+  const assignment = deliverySource.indexOf(
+    'await requestFactoryForgeArchitectAssignment(config, forgeTaskId)',
+    seedStart,
+  );
+  const readiness = deliverySource.indexOf('await pollForgeExecutionReadiness(', seedStart);
+
+  assert.ok(seedStart >= 0);
+  assert.ok(assignment > seedStart);
+  assert.ok(readiness > assignment);
+  assert.match(assignmentSource, /architect-engineer-assignment/);
+  assert.match(assignmentSource, /delegate: true/);
+  assert.match(assignmentSource, /delegation\?\.delegated !== true/);
+});
+
 it('keeps every persistent service spec on the bound canonical checkout', () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-stack-contract-'));
   const bindingFile = path.join(fixture, 'repo-root.json');

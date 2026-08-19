@@ -39,6 +39,14 @@ through live OpenClaw before Forge readiness is evaluated. Forge remains
 fail-closed when that immutable assignment event is absent; fixture and non-live
 profiles do not inherit these launchd defaults.
 
+Factory execution uses a distinct Forge-facing task record. Its durable seed is
+not an API approval request, so the factory explicitly calls the canonical
+`POST /tasks/:taskId/execution-contract/architect-engineer-assignment` endpoint
+with delegation enabled after seeding and before polling Forge readiness.
+PostgreSQL projection catch-up conflicts are retried; other API failures stop the
+delivery. Real-evidence mode also verifies that new or previously recorded
+assignment events contain live OpenClaw delegation attribution.
+
 ## Runtime Model
 
 | Layer | Primary paths | Runtime | Responsibility |
