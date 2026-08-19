@@ -94,6 +94,7 @@
     "release:langgraph:verify": "node scripts/verify-runtime-release-evidence.js --runtime langgraph --evidence",
     "release:langgraph:collect": "node scripts/collect-runtime-release-evidence.js --runtime langgraph",
     "release:staging:deploy": "node scripts/deploy-runtime-staging.js",
+    "release:gate:normalize": "node scripts/normalize-runtime-gate-evidence.js",
     "cutover:langgraph:preflight": "node scripts/verify-runtime-cutover.js",
     "cutover:runtime:apply": "node scripts/apply-runtime-cutover.js",
     "cutover:langgraph:legacy-zero": "node scripts/verify-legacy-runtime-removal.js --scope factory",

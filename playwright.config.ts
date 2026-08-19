@@ -7,6 +7,7 @@ import {
 
 const normalizedEnv = { ...process.env };
 const performanceMode = normalizedEnv.BROWSER_PERFORMANCE_MODE === 'production';
+const hostedBaseUrl = normalizedEnv.RUNTIME_BROWSER_BASE_URL?.replace(/\/+$/, '');
 const projectDevices = {
   chromium: devices['Desktop Chrome'],
   firefox: devices['Desktop Firefox'],
@@ -46,11 +47,11 @@ export default defineConfig({
     },
   },
   use: {
-    baseURL: 'http://127.0.0.1:4174',
+    baseURL: hostedBaseUrl || 'http://127.0.0.1:4174',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  webServer: {
+  webServer: hostedBaseUrl ? undefined : {
     command: performanceMode
       ? 'env -u FORCE_COLOR npm run build:browser && npm run preview'
       : 'env -u FORCE_COLOR npm run dev -- --host 127.0.0.1 --port 4174',

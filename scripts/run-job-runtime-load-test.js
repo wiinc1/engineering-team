@@ -88,10 +88,13 @@ class JobRuntimeLoadTest {
       this.expectedQps * this.requiredLoadMultiplier,
     );
     this.pool = options.pool || createPgPoolFromEnv(options.connectionString);
-    this.logger = options.logger || createJobRuntimeLogger({ baseDir: options.baseDir || process.cwd() });
+    const logBaseDir = options.baseDir || process.env.RUNTIME_LOAD_LOG_DIR
+      || path.join(process.cwd(), '.artifacts', 'runtime-load-logs');
+    this.logger = options.logger || createJobRuntimeLogger({ baseDir: logBaseDir });
     this.runId = `load-${Date.now().toString(36)}`;
     this.tenantId = options.tenantId || process.env.JOB_RUNTIME_LOAD_TENANT_ID || `load_${Date.now().toString(36)}`;
     this.enqueueLatencies = [];
+    this.operationalReadLatencies = [];
     this.readyLatencies = [];
     this.workloadCounts = new Map();
     this.outboxSequence = 0;
@@ -147,7 +150,9 @@ class JobRuntimeLoadTest {
   async waitForCompletion(expected) {
     const deadline = Date.now() + 120_000;
     while (Date.now() < deadline) {
+      const readStarted = performance.now();
       const summary = await this.infrastructure.registry.summarizeCorrelationPrefix(`${this.runId}-corr-`);
+      this.operationalReadLatencies.push(performance.now() - readStarted);
       if (summary.delivery_acknowledged === expected) return summary;
       await delay(250);
     }
@@ -171,6 +176,7 @@ class JobRuntimeLoadTest {
       acknowledged: summary.delivery_acknowledged || 0,
       enqueue_p95_ms: percentile(this.enqueueLatencies, 0.95),
       enqueue_p99_ms: percentile(this.enqueueLatencies, 0.99),
+      operational_read_p95_ms: percentile(this.operationalReadLatencies, 0.95),
       ready_to_start_p95_ms: percentile(this.readyLatencies, 0.95),
       pool_max: this.pool.options.max,
       pool_peak_total: this.poolPeakTotal,
@@ -183,6 +189,7 @@ class JobRuntimeLoadTest {
     if (report.load_multiplier < report.required_load_multiplier) throw new Error('job_runtime_load_multiplier_failed');
     if (report.acknowledged !== report.submitted) throw new Error('job_runtime_load_delivery_loss');
     if (report.enqueue_p95_ms >= 100 || report.enqueue_p99_ms >= 250) throw new Error('job_runtime_enqueue_latency_budget_failed');
+    if (report.operational_read_p95_ms >= 250) throw new Error('job_runtime_operational_read_latency_budget_failed');
     if (report.ready_to_start_p95_ms >= 2_000) throw new Error('job_runtime_ready_latency_budget_failed');
     if (report.pool_peak_total > report.pool_max - 4
       || report.pool_waiting_at_end !== 0

@@ -6,9 +6,10 @@
 
 The default factory stack and staging are separate launchd profiles. Staging uses independent labels,
 ports, logs, state, and root binding, so an approved release cannot rebind or interrupt the host's
-factory of record. Configure protected CI variables `STAGING_BASE_URL`, `STAGING_DATABASE_URL`, and
-`STAGING_RELEASE_ROOT`; the base URL must be non-local HTTPS and the release root must be an absolute,
-persistent path outside temporary and `_checkouts` directories.
+factory of record. Configure protected CI variables `STAGING_BASE_URL`, `STAGING_BROWSER_BASE_URL`,
+`STAGING_DATABASE_URL`, `STAGING_JWT_SECRET`, and `STAGING_RELEASE_ROOT`; both URLs must be non-local
+HTTPS and the release root must be an absolute, persistent path outside temporary and `_checkouts`
+directories.
 
 On protected `main`, `deploy-runtime-staging` clones the exact `CI_COMMIT_SHA` into
 `$STAGING_RELEASE_ROOT/releases/<sha>`, removes the credential-bearing remote, installs from the lockfile,
@@ -22,6 +23,13 @@ window. Their artifacts and deployment dotenv are retained for two weeks. Produc
 manual review; the pipeline never applies a runtime cutover.
 
 Collect immutable artifacts from the same revision and staging deployment. Run focused Graphile/LangGraph tests, Docker integration, contracts, security/SBOM/secrets, 2× load for ten minutes, deterministic chaos, browser/accessibility, rollback, three lifecycle synthetics, 24-hour soak, and disposable backup/restore/reconcile. Exercise alert delivery and both kill switches. Do not copy raw jobs, checkpoints, tokens, database URLs, or task content into evidence.
+
+The `runtime-hosted-evidence` job executes every pre-soak gate from the persistent exact-revision
+checkout, stores each raw result for two weeks, and normalizes only parser-verified results with redacted
+command provenance and source SHA-256 digests. The 24-hour job consumes that exact deployment;
+`seal-runtime-release-manifests` then adds the soak components, seals both manifests, and runs both
+release verifiers. Missing protected variables suppress the hosted jobs instead of falling back to
+localhost. CI never runs the apply command.
 
 Validate with:
 
