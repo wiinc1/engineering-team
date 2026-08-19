@@ -204,3 +204,6 @@ The trusted Simple residual solves both thresholds under an explicit all-future-
 ### Stable cohort report provenance
 
 The canonical cohort report lives at `docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.md`. Its JSON and Markdown carry the exact Git revision, policy and generator identity, a sorted source inventory with per-file SHA-256 and byte size, and an aggregate source-set digest. A caller-supplied generation timestamp supports deterministic rebuilds; dated legacy reports remain immutable historical snapshots.
+### Dependency installation boundary
+
+The repository commits `package.json` and `package-lock.json`, not `node_modules/`. Persistent launchd and staging deployments install dependencies with `npm ci` at the exact revision. This prevents stale native binaries or package metadata from silently changing startup behavior while preserving reproducible dependency resolution.

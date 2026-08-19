@@ -1153,3 +1153,6 @@ Before counting a prospective trusted close, confirm its closeout contains PM an
 ### Interpret the cohort residual
 
 Use `summary.residual.additionalTrustedClosesRequired`, not only the distance to ten. The residual satisfies both the minimum count and delivery-rate bar and assumes every added Simple close will be trusted. Review the projected trusted/closed totals and projected rate before scheduling the cohort; `null` with `achievableWithAdditionalTrustedCloses=false` means additions alone cannot satisfy the configured target.
+### Reproduce dependencies for persistent services
+
+`node_modules/` is intentionally untracked. A clean checkout or exact-revision staging release must run `npm ci` from the committed `package-lock.json` before installing or restarting launchd services. Never copy an installed dependency tree between revisions; native binaries and Vite/Rolldown package metadata must come from the lockfile on the target host.
