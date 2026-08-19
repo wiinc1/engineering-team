@@ -230,7 +230,8 @@ async function cmdStatus(options) {
     ok: health.ok === true
       && launchd.api.loaded === true
       && launchd.workers.loaded === true
-      && launchd.postgresEnsure.loaded === true,
+      && launchd.postgresEnsure.loaded === true
+      && Object.values(launchd).every((service) => service.plistExists !== true || service.configuration?.ok === true),
     action: 'status',
     ports: DEFAULT_PORTS,
     openclawUrl: defaultOpenclawUrl(),

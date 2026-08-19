@@ -28,6 +28,9 @@ The stack stores that binding outside repository worktrees, records it as
 conflicting checkouts. Moving the factory of record requires the explicit
 `factory:stack:* -- --rebind-root` operator action; staging uses separate labels
 and ports instead of replacing this binding.
+Stack health includes configuration integrity: installed launchd definitions
+must reference existing paths and agree with the canonical root even when an old
+process is still temporarily responding.
 
 ## Runtime Model
 

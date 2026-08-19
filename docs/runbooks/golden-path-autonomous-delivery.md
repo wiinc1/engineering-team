@@ -158,6 +158,9 @@ the canonical checkout in `~/Library/Application Support/engineering-team-factor
 Commands from `/tmp`, `/private/tmp`, managed `_checkouts`, or a different checkout
 fail before changing launchd. To deliberately move the factory of record, run
 `npm run factory:stack:restart -- --rebind-root` from the intended canonical checkout.
+`factory:stack:status` also inspects every installed plist and reports stale
+working directories, executable arguments, root metadata, and ForgeAdapter
+repository bindings with the canonical restart remediation.
 
 | Service | LaunchAgent label | Port / role |
 | --- | --- | --- |
