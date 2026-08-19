@@ -96,11 +96,13 @@ npm run issue-273:verify
 
 **Session-proof** (default local C/D without real-evidence flags) may use short implementer JSON for session attribution only — that is **not** operator-trusted autonomous delivery.
 
-**Trusted delivery** (`requireRealEvidence` / `trustedDelivery` / `FACTORY_TRUSTED_DELIVERY=true` / `FF_FACTORY_TRUSTED_SIMPLE_CLOSE=true` for Simple tier):
+**Trusted delivery** (`trustedDelivery` / `FACTORY_TRUSTED_DELIVERY=true` / `FF_FACTORY_TRUSTED_SIMPLE_CLOSE=true` for Simple tier) is a real PR/merge claim. It is separate from hosted release proof (`requireRealEvidence` / `collectRealEvidence`), which remains fail-closed behind staging inputs:
 
-- Implementer must return real `branchName`, non-fixture 40-char `commitSha`, and a real PR URL (not pilot #271).
-- GP-022 auto-merge proof requires real merge confirmation + `mergeCommitSha` + `mergedAt` (no simulation / no skip for missing token).
-- Evidence package must store real PR URL + merge SHA (`lib/task-platform/trusted-simple-close-evidence.js`).
+- After execution-contract approval, the live OpenClaw implementer creates an isolated worktree, implements the requirement, pushes a unique branch, opens a schema-compliant PR, and waits for all protected checks except factory-owned `Merge readiness`.
+- A clean live QA approval proceeds without the historical synthetic fail/fix loop. A genuine QA rejection reuses the existing branch and PR.
+- The factory verifies every protected pre-merge check, emits `Merge readiness` for the exact head, confirms the GitHub merge, and only then begins SRE monitoring and close review. It attempts direct Checks API emission first and automatically dispatches `emit-merge-readiness-check.yml` when the operator token lacks check-run write permission; both paths are polled for the same exact-head result.
+- GP-022 proof requires real merge confirmation + `mergeCommitSha` + `mergedAt` (no simulation / no missing-token skip). A later phase may observe `already_merged` only when GitHub still confirms those immutable fields.
+- Before writing closeout, the factory stores the real PR/check/merge package and embeds its repository-relative path plus SHA-256 in the closeout (`lib/task-platform/trusted-simple-close-evidence.js`).
 - Auditor: `npm run issue-274:verify`.
 
 ### Simple trusted cohort + metrics MVP (GitLab #276)
