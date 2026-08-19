@@ -8,6 +8,7 @@ const {
 const { collectArtifact } = require('../../lib/release-gates/evidence-collector');
 const { buildStagingDeployComponent } = require('../../lib/release-gates/staging-deployment');
 const { createCutoverPlan, cutoverPlanDigest } = require('../../lib/runtime-cutover');
+const { evaluateArtifact } = require('../../scripts/run-langgraph-load');
 
 it('preserves an immutable manifest seal through JSON artifact transport', () => {
   const revision = 'a'.repeat(40);
@@ -52,4 +53,17 @@ it('preserves exact staging deployment evidence through the component collector 
   const artifact = collectArtifact(transported, { runtime: 'langgraph', revision });
   assert.equal(artifact.kind, 'staging_deploy');
   assert.equal(artifact.summary.hostedHealth, true);
+});
+
+it('admits LangGraph load evidence only with exact side effects and zero residual state', () => {
+  const artifact = {
+    failures: 0, checkpointWrites: { p95Ms: 20 }, checkpointReads: { p95Ms: 25 },
+    status: { p95Ms: 4 }, resume: { p95Ms: 13 }, graphOverheadPercent: 0.85,
+    duplicateSideEffects: 0, sideEffectCountMatchesCompleted: true,
+    poolPeak: 2, poolBudget: 2, endingPoolActive: 0, endingPoolWaiters: 0,
+    cleanupPassed: true, localBudgets: { checkpointWriteP95Ms: 100, checkpointReadP95Ms: 150 },
+  };
+  assert.equal(evaluateArtifact(artifact), true);
+  assert.equal(evaluateArtifact({ ...artifact, duplicateSideEffects: 1 }), false);
+  assert.equal(evaluateArtifact({ ...artifact, cleanupPassed: false }), false);
 });

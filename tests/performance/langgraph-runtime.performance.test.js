@@ -20,6 +20,7 @@ test('load artifact aggregation handles samples larger than the JavaScript argum
 test('load evidence requires observing the configured pool budget under concurrency', () => {
   const artifact = {
     failures: 0, checkpointWrites: { p95Ms: 1 }, checkpointReads: { p95Ms: 1 },
+    status: { p95Ms: 1 }, resume: { p95Ms: 1 }, graphOverheadPercent: 1,
     duplicateSideEffects: 0, poolBudget: 2, poolPeak: 0,
     sideEffectCountMatchesCompleted: true,
     endingPoolActive: 0, endingPoolWaiters: 0, cleanupPassed: true,

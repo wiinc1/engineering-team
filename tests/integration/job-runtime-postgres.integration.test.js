@@ -15,6 +15,12 @@ const { createJobOperatorService } = require('../../lib/job-runtime/operator-ser
 const { applyLeastPrivilegeGrants, verifyJobRuntimePrivileges } = require('../../lib/job-runtime/postgres-roles');
 const { createDeliveryRegistry } = require('../../lib/job-runtime/registry');
 const { FIXED_NOW, validContext, validRequest } = require('../fixtures/job-runtime/v1');
+const { assertJobRuntimeLoadBudgets } = require('../../scripts/run-job-runtime-load-test');
+
+test('load gate rejects a registry read at the hosted 250ms boundary', () => assert.throws(
+  () => assertJobRuntimeLoadBudgets({ load_multiplier: 2, required_load_multiplier: 2,
+    submitted: 1, acknowledged: 1, enqueue_p95_ms: 1, enqueue_p99_ms: 1, operational_read_p95_ms: 250,
+    ready_to_start_p95_ms: 1, pool_peak_total: 1, pool_max: 10, pool_waiting_at_end: 0, runtime_pool_waiting_at_end: 0 }), /job_runtime_operational_read_latency_budget_failed/));
 
 const connectionString = process.env.DATABASE_URL;
 const pgTest = connectionString ? test : test.skip;

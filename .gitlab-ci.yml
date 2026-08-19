@@ -30,7 +30,9 @@ stages:
   - test
   - verify
   - staging
+  - evidence
   - soak
+  - seal
   - deploy
 
 .node-job:
@@ -187,6 +189,103 @@ deploy-runtime-staging:
       allow_failure: true
     - when: never
 
+# Execute every pre-soak gate from the exact deployed checkout. The normalizer
+# accepts only code-owned command IDs and parses command output; no pass/fail
+# booleans are accepted from CI variables or operators.
+runtime-hosted-evidence:
+  extends: .node-job
+  stage: evidence
+  interruptible: false
+  resource_group: runtime-staging
+  timeout: 3 hours
+  needs:
+    - job: graphile-02-verify
+      artifacts: true
+    - job: langgraph-01-verify
+      artifacts: true
+    - job: deploy-runtime-staging
+      artifacts: true
+  environment:
+    name: staging
+    url: $STAGING_BASE_URL
+  script:
+    - export DATABASE_URL="$STAGING_DATABASE_URL"
+    - task_release_dir="$STAGING_RELEASE_ROOT/releases/$STAGING_REVISION"
+    - task_raw_dir="$CI_PROJECT_DIR/.artifacts/runtime-gates"
+    - task_release_dir_out="$CI_PROJECT_DIR/.artifacts/runtime-release"
+    - mkdir -p "$task_raw_dir" "$task_release_dir_out"
+    - cd "$task_release_dir"
+    - node --test tests/contract/job-runtime.contract.test.js > "$task_raw_dir/graphile-contract.tap"
+    - node --test tests/contract/langgraph-runtime.contract.test.js > "$task_raw_dir/langgraph-contract.tap"
+    - npm audit --omit=dev --json > "$task_raw_dir/npm-audit-production.json"
+    - node --test tests/security/job-runtime.security.test.js > "$task_raw_dir/graphile-security.tap"
+    - node --test tests/security/langgraph-runtime.security.test.js > "$task_raw_dir/langgraph-security.tap"
+    - JOB_RUNTIME_LOAD_DURATION_MS=600000 JOB_RUNTIME_EXPECTED_QPS=25 JOB_RUNTIME_LOAD_QPS=50 JOB_RUNTIME_LOAD_OUTPUT="$task_raw_dir/graphile-load.json" node scripts/run-job-runtime-load-test.js
+    - LANGGRAPH_LOAD_DURATION_MS=600000 LANGGRAPH_LOAD_CONCURRENCY=4 LANGGRAPH_LOAD_OUTPUT="$task_raw_dir/langgraph-load.json" node scripts/run-langgraph-load.js
+    - node --test chaos/job-runtime-resilience.test.js > "$task_raw_dir/graphile-chaos.tap"
+    - node --test chaos/langgraph-resilience.test.js > "$task_raw_dir/langgraph-chaos.tap"
+    - export COMPOSE_PROJECT_NAME="runtime-evidence-${CI_PIPELINE_ID}-${CI_JOB_ID}"
+    - export POSTGRES_HOST_PORT="$((57000 + (CI_JOB_ID % 7000)))"
+    - DATABASE_URL= LANGGRAPH_INTEGRATION_SCOPE=focused bash scripts/run-postgres-integration-docker.sh > "$task_raw_dir/dr-restore.tap"
+    - cp .artifacts/langgraph-01-recovery.json "$task_raw_dir/dr-restore.json"
+    - node --test tests/unit/job-runtime-artifacts.test.js > "$task_raw_dir/graphile-alerts.tap"
+    - node --test tests/contract/langgraph-alerts.contract.test.js > "$task_raw_dir/langgraph-alerts.tap"
+    - node --test tests/unit/job-runtime-contracts.test.js tests/unit/job-runtime-infrastructure.test.js > "$task_raw_dir/graphile-kill-switch.tap"
+    - node --test tests/unit/langgraph-mutation-contracts.test.js tests/unit/langgraph-runtime.test.js > "$task_raw_dir/langgraph-kill-switch.tap"
+    - node --test tests/unit/runtime-cutover.test.js tests/unit/runtime-cutover-artifacts.test.js > "$task_raw_dir/runtime-rollback.tap"
+    - node --test tests/unit/job-runtime-composition.test.js tests/integration/job-runtime-postgres.integration.test.js > "$task_raw_dir/graphile-composed-runtime.tap"
+    - node --test tests/integration/langgraph-postgres.integration.test.js > "$task_raw_dir/langgraph-checkpoint-retention.tap"
+    - |
+      for task_synthetic_index in 1 2 3; do
+        task_synthetic_dir="$(mktemp -d)"
+        STAGING_EVIDENCE_DIR="$task_synthetic_dir" node scripts/verify-factory-staging-smoke.js \
+          --base-url "$STAGING_BASE_URL" --out "$task_raw_dir/synthetic-$task_synthetic_index.json" \
+          --redacted-release-evidence
+        rm -rf "$task_synthetic_dir"
+      done
+    - CI=1 RUNTIME_BROWSER_BASE_URL="$STAGING_BROWSER_BASE_URL" node scripts/run-browser-gates.js
+    - cp test-results/browser/playwright-results.json "$task_raw_dir/hosted-browser.json"
+    - RUNTIME_SBOM_OUTPUT_DIR="$task_raw_dir/security" node scripts/generate-runtime-sbom.js
+    - |
+      normalize_gate() {
+        task_gate_runtime="$1"; task_gate_kind="$2"; shift 2
+        node scripts/normalize-runtime-gate-evidence.js --runtime "$task_gate_runtime" --kind "$task_gate_kind" \
+          "$@" --output "$task_release_dir_out/$task_gate_runtime-$task_gate_kind.json"
+      }
+      normalize_gate graphile contract --source "$task_raw_dir/graphile-contract.tap"
+      normalize_gate langgraph contract --source "$task_raw_dir/langgraph-contract.tap"
+      normalize_gate graphile security --source "$task_raw_dir/npm-audit-production.json" --source "$task_raw_dir/graphile-security.tap"
+      normalize_gate langgraph security --source "$task_raw_dir/npm-audit-production.json" --source "$task_raw_dir/langgraph-security.tap"
+      normalize_gate graphile performance_2x_10m --source "$task_raw_dir/graphile-load.json"
+      normalize_gate langgraph performance_2x_10m --source "$task_raw_dir/langgraph-load.json"
+      normalize_gate graphile chaos --source "$task_raw_dir/graphile-chaos.tap"
+      normalize_gate langgraph chaos --source "$task_raw_dir/langgraph-chaos.tap"
+      normalize_gate graphile dr_restore --source "$task_raw_dir/dr-restore.json" --source "$task_raw_dir/dr-restore.tap"
+      normalize_gate langgraph dr_restore --source "$task_raw_dir/dr-restore.json" --source "$task_raw_dir/dr-restore.tap"
+      for task_gate_runtime in graphile langgraph; do
+        normalize_gate "$task_gate_runtime" synthetic_lifecycle \
+          --source "$task_raw_dir/synthetic-1.json" --source "$task_raw_dir/synthetic-2.json" --source "$task_raw_dir/synthetic-3.json"
+        normalize_gate "$task_gate_runtime" rollback --source "$task_raw_dir/runtime-rollback.tap"
+      done
+      normalize_gate graphile alerts --source "$task_raw_dir/graphile-alerts.tap"
+      normalize_gate langgraph alerts --source "$task_raw_dir/langgraph-alerts.tap"
+      normalize_gate graphile kill_switch --source "$task_raw_dir/graphile-kill-switch.tap"
+      normalize_gate langgraph kill_switch --source "$task_raw_dir/langgraph-kill-switch.tap"
+      normalize_gate graphile composed_runtime --source "$task_raw_dir/graphile-composed-runtime.tap"
+      normalize_gate langgraph checkpoint_retention --source "$task_raw_dir/langgraph-checkpoint-retention.tap"
+      normalize_gate langgraph browser --source "$task_raw_dir/hosted-browser.json"
+    - cp "$task_raw_dir/security/graphile-sbom-evidence.json" "$task_release_dir_out/graphile-sbom.json"
+    - cp "$task_raw_dir/security/langgraph-sbom-evidence.json" "$task_release_dir_out/langgraph-sbom.json"
+  artifacts:
+    when: always
+    paths:
+      - .artifacts/runtime-gates/
+      - .artifacts/runtime-release/
+    expire_in: 2 weeks
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAGING_BASE_URL && $STAGING_BROWSER_BASE_URL && $STAGING_DATABASE_URL && $STAGING_RELEASE_ROOT && $STAGING_JWT_SECRET'
+    - when: never
+
 # This is intentionally a real 24-hour gate. Shortened harness runs cannot
 # satisfy the sealed runtime release manifest threshold.
 runtime-soak-24h:
@@ -196,7 +295,7 @@ runtime-soak-24h:
   resource_group: runtime-staging
   timeout: 26 hours
   needs:
-    - job: deploy-runtime-staging
+    - job: runtime-hosted-evidence
       artifacts: true
   variables:
     SOAK_DURATION_SECONDS: "86400"
@@ -217,6 +316,40 @@ runtime-soak-24h:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAGING_BASE_URL && $STAGING_DATABASE_URL && $STAGING_RELEASE_ROOT'
     - when: never
 
+# Add the real 24-hour components, seal both immutable manifests, and rerun the
+# fail-closed release verifiers. This job never invokes production cutover.
+seal-runtime-release-manifests:
+  extends: .node-job
+  stage: seal
+  interruptible: false
+  resource_group: runtime-staging
+  needs:
+    - job: runtime-soak-24h
+      artifacts: true
+  script:
+    - |
+      for task_gate_runtime in graphile langgraph; do
+        task_collect_args=()
+        for task_component in .artifacts/runtime-release/${task_gate_runtime}-*.json .artifacts/runtime-soak/${task_gate_runtime}-soak-24h.json; do
+          case "$task_component" in *manifest.json) continue ;; esac
+          task_collect_args+=(--artifact "$task_component")
+        done
+        node scripts/collect-runtime-release-evidence.js --runtime "$task_gate_runtime" \
+          --deployment "$STAGING_DEPLOYMENT_ID" --revision "$STAGING_REVISION" \
+          "${task_collect_args[@]}" --output ".artifacts/runtime-release/${task_gate_runtime}-release-manifest.json"
+        npm run "release:${task_gate_runtime}:verify" -- ".artifacts/runtime-release/${task_gate_runtime}-release-manifest.json"
+      done
+  artifacts:
+    when: always
+    paths:
+      - .artifacts/runtime-gates/
+      - .artifacts/runtime-release/
+      - .artifacts/runtime-soak/
+    expire_in: 2 weeks
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $STAGING_BASE_URL && $STAGING_BROWSER_BASE_URL && $STAGING_DATABASE_URL && $STAGING_RELEASE_ROOT && $STAGING_JWT_SECRET'
+    - when: never
+
 # Preserve an explicit deploy stage without performing an automatic production mutation.
 deploy-review:
   stage: deploy
@@ -224,7 +357,7 @@ deploy-review:
     - build
     - graphile-02-verify
     - langgraph-01-verify
-    - job: runtime-soak-24h
+    - job: seal-runtime-release-manifests
       optional: true
   script:
     - echo "All verified artifacts are ready for an operator-owned production review."
