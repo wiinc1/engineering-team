@@ -114,6 +114,8 @@ const NODE_TEST_FILES = [
   'tests/unit/runtime-cutover.test.js',
   'tests/unit/executable-runtime-evidence.test.js',
   'tests/unit/langgraph-runtime.test.js',
+  'tests/unit/trusted-simple-close-evidence.test.js',
+  'tests/unit/trusted-simple-merge.test.js',
   'tests/unit/product-delivery-integrity.test.js',
   'tests/unit/product-delivery-integrity-api.test.js',
   'tests/unit/execution-contract-architect-dispatch.test.js',
