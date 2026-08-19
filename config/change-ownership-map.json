@@ -857,6 +857,7 @@
           "name": "unit-contract-e2e",
           "patterns": [
             "^tests/unit/langgraph-.+\\.test\\.js$",
+            "^tests/unit/runtime-release-evidence\\.test\\.js$",
             "^tests/contract/langgraph-(?:runtime|alerts)\\.contract\\.test\\.js$",
             "^tests/e2e/langgraph-runtime\\.e2e\\.test\\.js$",
             "^src/app/LangGraphRunPanel\\.test\\.tsx$"
@@ -866,6 +867,7 @@
           "name": "integration-property",
           "patterns": [
             "^tests/integration/langgraph-(?:postgres|process-recovery-postgres)\\.integration\\.test\\.js$",
+            "^tests/integration/runtime-release-manifest\\.integration\\.test\\.js$",
             "^tests/property/langgraph-state\\.property\\.test\\.js$"
           ]
         },
@@ -873,6 +875,7 @@
           "name": "security-performance-chaos",
           "patterns": [
             "^tests/security/langgraph-runtime\\.security\\.test\\.js$",
+            "^tests/security/runtime-release-manifest\\.security\\.test\\.js$",
             "^tests/performance/langgraph-runtime\\.performance\\.test\\.js$",
             "^chaos/langgraph-resilience\\.test\\.js$"
           ]

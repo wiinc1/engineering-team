@@ -2,7 +2,9 @@
 
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { RUNTIME_ARTIFACTS, assertRuntimeEvidence, evaluateRuntimeEvidence } = require('../../lib/release-gates/runtime-evidence');
+const {
+  RUNTIME_ARTIFACTS, assertRuntimeEvidence, evaluateRuntimeEvidence, sealRuntimeManifest,
+} = require('../../lib/release-gates/runtime-evidence');
 const { collectRuntimeEvidence, evidenceDigest, stableValue } = require('../../lib/release-gates/evidence-collector');
 const { buildSbomEvidence, validateSbom } = require('../../scripts/generate-runtime-sbom');
 
@@ -25,7 +27,7 @@ function summary(kind, runtime) {
 }
 
 function manifest(runtime = 'graphile') {
-  return {
+  return sealRuntimeManifest({
     schemaVersion: 1, runtime, revision, deploymentId: 'staging-20260718-1',
     artifacts: RUNTIME_ARTIFACTS[runtime].map((kind) => ({
       kind, status: 'passed', revision, redacted: true,
@@ -33,7 +35,7 @@ function manifest(runtime = 'graphile') {
       generatedAt: '2026-07-18T11:00:00.000Z', expiresAt: '2026-07-19T12:00:00.000Z',
       provenance: { automation: 'pipeline-123', environment: 'staging' }, summary: summary(kind, runtime),
     })),
-  };
+  });
 }
 
 function components(runtime = 'graphile') {
@@ -121,6 +123,13 @@ test('manifest and immutable artifact provenance fail closed at every trust boun
   const nullArtifact = manifest('graphile');
   nullArtifact.artifacts.push(null);
   assert.ok(evaluateRuntimeEvidence(nullArtifact, { runtime: 'graphile', revision, now }).reasons.includes('artifact_invalid'));
+});
+
+test('manifest seal rejects any post-collection mutation', () => {
+  const value = JSON.parse(JSON.stringify(manifest('graphile')));
+  value.artifacts.find((artifact) => artifact.kind === 'security').summary.high = 1;
+  const decision = evaluateRuntimeEvidence(value, { runtime: 'graphile', revision, now });
+  assert.ok(decision.reasons.includes('manifest:digest'));
 });
 
 test('every release threshold dimension independently blocks readiness', () => {

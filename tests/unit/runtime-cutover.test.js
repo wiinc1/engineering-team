@@ -8,7 +8,9 @@ const { verify: verifyLegacyRemoval } = require('../../scripts/verify-legacy-run
 
 const base = {
   epoch: '98f48812-7aa6-4ce8-9e88-184ba4bcbb52', revision: 'a'.repeat(40), actorRole: 'admin',
-  freezeConfirmed: true, releaseDecision: { allowed: true, revision: 'a'.repeat(40) },
+  freezeConfirmed: true, releaseDecision: {
+    allowed: true, revision: 'a'.repeat(40), manifestDigest: `sha256:${'b'.repeat(64)}`,
+  },
 };
 
 test('approved matrices deterministically classify every supported legacy job and factory state', () => {

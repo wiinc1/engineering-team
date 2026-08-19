@@ -32,4 +32,6 @@ Rollback first freezes new work. It is permitted only with zero active target ex
 
 `scripts/verify-runtime-cutover.js` accepts sanitized inventory plus a release manifest and produces a deterministic signed decision. It does not mutate production. Epoch activation is an authenticated, audited database deployment operation after approval.
 
+Each release manifest carries `manifestDigest`, a deterministic SHA-256 over every other manifest field after stable key ordering. Collection seals the sorted exact-revision artifact set; evaluation recomputes the seal, and cutover rejects a decision without the verified digest. Any mutation to deployment identity, artifact status, threshold summary, provenance, expiry, or component digest therefore invalidates the handoff.
+
 After removal, `npm run cutover:graphile:legacy-zero` and `npm run cutover:langgraph:legacy-zero` must both pass. They intentionally fail in the pre-cutover repository while the inventoried executable paths remain.
