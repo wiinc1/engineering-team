@@ -74,6 +74,7 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   assert.match(trusted, /TRUSTED DELIVERY/);
   assert.match(trusted, /FORBIDDEN/);
   assert.match(trusted, /isolated git worktree/);
+  assert.match(trusted, /prefer the `github` remote/);
   assert.match(trusted, /Do not merge the pull request/);
   assert.match(trusted, /filesystem, shell, git, and GitHub tools/);
   assert.doesNotMatch(trusted, /attribution proof only/);
