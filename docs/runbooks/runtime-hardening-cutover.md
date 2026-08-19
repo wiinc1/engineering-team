@@ -13,6 +13,8 @@ npm run release:langgraph:verify -- artifacts/langgraph-release-manifest.json
 
 Any nonzero exit blocks cutover. Re-run the failing automation; do not edit or waive the result.
 
+Do not edit a collected manifest. Its `manifestDigest` seals the deployment identity and complete artifact metadata. Copy the JSON byte-for-byte between stages; verification recomputes the canonical digest and cutover requires that verified digest in its release decision.
+
 Run the composed staging soak from the exact deployed revision. The command defaults to 86,400 seconds,
 uses five-minute concurrent Graphile/LangGraph windows, isolates Graphile rows by a generated tenant,
 cleans every window, and records connection/thread cleanup without persisting database credentials:
