@@ -153,6 +153,12 @@ npm run factory:stack:down            # stop units; plists retained so reboot re
 npm run factory:stack:uninstall       # remove plists permanently
 ```
 
+The first `up`, `install`, or `restart` binds these host-persistent services to
+the canonical checkout in `~/Library/Application Support/engineering-team-factory/repo-root.json`.
+Commands from `/tmp`, `/private/tmp`, managed `_checkouts`, or a different checkout
+fail before changing launchd. To deliberately move the factory of record, run
+`npm run factory:stack:restart -- --rebind-root` from the intended canonical checkout.
+
 | Service | LaunchAgent label | Port / role |
 | --- | --- | --- |
 | Postgres ensure watcher | `com.engineering-team.factory-postgres-ensure` | keeps `:15432` up via compose/reuse |

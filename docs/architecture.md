@@ -22,6 +22,13 @@ and cloud Supabase are **not** part of the factory tech stack. Local development
 uses Vite for the browser and Docker Compose for PostgreSQL, Pushgateway, audit
 API, and audit workers.
 
+Host-persistent launchd services are owned by one canonical repository checkout.
+The stack stores that binding outside repository worktrees, records it as
+`FACTORY_STACK_REPO_ROOT`, and rejects installation or startup from temporary or
+conflicting checkouts. Moving the factory of record requires the explicit
+`factory:stack:* -- --rebind-root` operator action; staging uses separate labels
+and ports instead of replacing this binding.
+
 ## Runtime Model
 
 | Layer | Primary paths | Runtime | Responsibility |
