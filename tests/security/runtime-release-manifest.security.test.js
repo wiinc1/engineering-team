@@ -47,14 +47,28 @@ it('does not accept a cutover confirmation copied from a differently scoped appr
   assert.ok(result.reasons.includes('approval_confirmation_mismatch'));
 });
 
-it('rejects local hosted targets and credential-bearing repository URLs before staging mutation', () => {
+it('requires explicit host-local scope and rejects credential-bearing staging inputs before mutation', () => {
   const base = {
     STAGING_BASE_URL: 'https://127.0.0.1',
     STAGING_DATABASE_URL: 'postgres://staging@db.internal/staging',
     STAGING_DEPLOYMENT_ID: 'staging-secure',
+    STAGING_JWT_SECRET: 'staging-jwt-secret-with-at-least-32-characters',
     STAGING_RELEASE_ROOT: '/var/lib/engineering-team-staging',
     STAGING_REPOSITORY_URL: 'https://token@example.com/engineering-team.git',
     STAGING_REVISION: 'a'.repeat(40),
   };
   assert.throws(() => stagingConfiguration(base), { code: 'staging_configuration_invalid' });
+  assert.throws(() => stagingConfiguration({
+    ...base,
+    STAGING_BASE_URL: 'https://staging.example.com',
+    STAGING_ENDPOINT_MODE: 'host-local',
+    STAGING_REPOSITORY_URL: 'https://example.com/engineering-team.git',
+  }), { code: 'staging_configuration_invalid' });
+  const local = stagingConfiguration({
+    ...base,
+    STAGING_BASE_URL: 'http://127.0.0.1:23000',
+    STAGING_ENDPOINT_MODE: 'host-local',
+    STAGING_REPOSITORY_URL: '/srv/engineering-team',
+  });
+  assert.equal(local.endpointMode, 'host-local');
 });

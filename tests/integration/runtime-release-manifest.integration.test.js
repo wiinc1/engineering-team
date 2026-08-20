@@ -46,6 +46,7 @@ it('preserves exact staging deployment evidence through the component collector 
   const revision = 'b'.repeat(40);
   const component = buildStagingDeployComponent({
     automation: 'pipeline-42', deploymentId: 'staging-42', generatedAt: '2026-08-19T18:00:00.000Z',
+    endpointMode: 'host-local',
     healthUrl: 'https://factory-staging.example.com/health', hostedHealth: true, localHealth: true,
     profile: 'staging', releaseDirectory: '/var/lib/releases/revision', revision, runtime: 'langgraph',
   });
@@ -53,6 +54,8 @@ it('preserves exact staging deployment evidence through the component collector 
   const artifact = collectArtifact(transported, { runtime: 'langgraph', revision });
   assert.equal(artifact.kind, 'staging_deploy');
   assert.equal(artifact.summary.hostedHealth, true);
+  assert.equal(artifact.summary.hostLocalEndpoint, true);
+  assert.equal(transported.evidence.endpointMode, 'host-local');
 });
 
 it('admits LangGraph load evidence only with exact side effects and zero residual state', () => {
