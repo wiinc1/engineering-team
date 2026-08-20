@@ -18,6 +18,15 @@ function positiveInteger(value, fallback) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function loadMeasurement({ submitted, durationMs, expectedQps, targetQps }) {
+  const measuredQps = submitted / (durationMs / 1000);
+  return Object.freeze({
+    measuredQps,
+    measuredLoadMultiplier: measuredQps / expectedQps,
+    requestedLoadMultiplier: targetQps / expectedQps,
+  });
+}
+
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, milliseconds)));
 }
@@ -159,17 +168,24 @@ class JobRuntimeLoadTest {
     throw new Error('job_runtime_load_completion_timeout');
   }
 
-  buildReport(submitted, summary) {
+  buildReport(submitted, summary, submissionDurationMs) {
     const observations = this.metrics.snapshot().observations;
+    const measurement = loadMeasurement({
+      submitted, durationMs: submissionDurationMs,
+      expectedQps: this.expectedQps, targetQps: this.targetQps,
+    });
     this.readyLatencies = Object.entries(observations).flatMap(([key, values]) => (
       JSON.parse(key)[0] === 'job_runtime_ready_to_start_ms' ? values : []
     ));
     return {
       version: 1, run_id: this.runId, tenant_id: this.tenantId,
-      duration_ms: this.durationMs,
+      requested_duration_ms: this.durationMs,
+      duration_ms: submissionDurationMs,
       expected_qps: this.expectedQps,
       target_qps: this.targetQps,
-      load_multiplier: this.targetQps / this.expectedQps,
+      measured_qps: measurement.measuredQps,
+      requested_load_multiplier: measurement.requestedLoadMultiplier,
+      load_multiplier: measurement.measuredLoadMultiplier,
       required_load_multiplier: this.requiredLoadMultiplier,
       submitted,
       submitted_by_task: Object.fromEntries([...this.workloadCounts.entries()].sort()),
@@ -194,8 +210,10 @@ class JobRuntimeLoadTest {
     const submitted = Math.floor((this.durationMs / 1000) * this.targetQps);
     const startedAt = performance.now();
     for (let index = 0; index < submitted; index += 1) await this.enqueue(index, startedAt);
+    await delay((startedAt + this.durationMs) - performance.now());
+    const submissionDurationMs = performance.now() - startedAt;
     const summary = await this.waitForCompletion(submitted);
-    const report = this.buildReport(submitted, summary);
+    const report = this.buildReport(submitted, summary, submissionDurationMs);
     this.lastReport = report;
     this.assertBudgets(report);
     return report;
@@ -211,7 +229,8 @@ class JobRuntimeLoadTest {
 }
 
 function assertJobRuntimeLoadBudgets(report) {
-  if (report.load_multiplier < report.required_load_multiplier) throw new Error('job_runtime_load_multiplier_failed');
+  if (!Number.isFinite(report.load_multiplier)
+    || report.load_multiplier < report.required_load_multiplier) throw new Error('job_runtime_load_multiplier_failed');
   if (report.acknowledged !== report.submitted) throw new Error('job_runtime_load_delivery_loss');
   if (report.enqueue_p95_ms >= 100 || report.enqueue_p99_ms >= 250) throw new Error('job_runtime_enqueue_latency_budget_failed');
   if (report.operational_read_p95_ms >= 250) throw new Error('job_runtime_operational_read_latency_budget_failed');
@@ -288,6 +307,7 @@ module.exports = {
   JobRuntimeLoadTest,
   assertJobRuntimeLoadBudgets,
   cleanupLoadData,
+  loadMeasurement,
   main,
   percentile,
   positiveInteger,

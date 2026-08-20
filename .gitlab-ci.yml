@@ -220,7 +220,7 @@ runtime-hosted-evidence:
     - npm audit --omit=dev --json > "$task_raw_dir/npm-audit-production.json"
     - node --test tests/security/job-runtime.security.test.js > "$task_raw_dir/graphile-security.tap"
     - node --test tests/security/langgraph-runtime.security.test.js > "$task_raw_dir/langgraph-security.tap"
-    - JOB_RUNTIME_LOAD_DURATION_MS=600000 JOB_RUNTIME_EXPECTED_QPS=25 JOB_RUNTIME_LOAD_QPS=50 JOB_RUNTIME_LOAD_OUTPUT="$task_raw_dir/graphile-load.json" node scripts/run-job-runtime-load-test.js
+    - JOB_RUNTIME_LOAD_DURATION_MS=600000 JOB_RUNTIME_EXPECTED_QPS=25 JOB_RUNTIME_LOAD_QPS=52 JOB_RUNTIME_LOAD_OUTPUT="$task_raw_dir/graphile-load.json" node scripts/run-job-runtime-load-test.js
     - LANGGRAPH_LOAD_DURATION_MS=600000 LANGGRAPH_LOAD_CONCURRENCY=4 LANGGRAPH_LOAD_OUTPUT="$task_raw_dir/langgraph-load.json" node scripts/run-langgraph-load.js
     - node --test chaos/job-runtime-resilience.test.js > "$task_raw_dir/graphile-chaos.tap"
     - node --test chaos/langgraph-resilience.test.js > "$task_raw_dir/langgraph-chaos.tap"

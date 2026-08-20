@@ -66,8 +66,9 @@ test('security evidence requires both a clean production audit and passing runti
 
 test('performance components require measured complete 2x ten-minute threshold results', () => {
   const graphile = {
-    duration_ms: 600_000, load_multiplier: 2, enqueue_p95_ms: 10, enqueue_p99_ms: 20,
-    operational_read_p95_ms: 15, cleanup: { residual: 0 },
+    requested_duration_ms: 600_000, duration_ms: 600_000, expected_qps: 25, target_qps: 52,
+    submitted: 31_200, acknowledged: 31_200, measured_qps: 52, load_multiplier: 2.08,
+    enqueue_p95_ms: 10, enqueue_p99_ms: 20, operational_read_p95_ms: 15, cleanup: { residual: 0 },
   };
   assert.equal(parsePerformance({ bytes: Buffer.from(JSON.stringify(graphile)) }, 'graphile').readP95Ms, 15);
   assert.throws(() => parsePerformance({ bytes: Buffer.from(JSON.stringify({
