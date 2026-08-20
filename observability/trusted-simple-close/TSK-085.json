@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "trusted-simple-close-evidence.v1",
+  "issue": 274,
+  "mode": "trusted_delivery",
+  "templateTier": "Simple",
+  "repository": "wiinc1/engineering-team",
+  "branchName": "jr-engineer/tsk-085-env-var-formatting-20260820083724",
+  "implementationCommitSha": "cb92bf3a42071f3c2391a827baf5ea6405bb628d",
+  "commitSha": "cb92bf3a42071f3c2391a827baf5ea6405bb628d",
+  "prUrl": "https://github.com/wiinc1/engineering-team/pull/446",
+  "prNumber": 446,
+  "mergeCommitSha": "316e6c7c6cf030a0afa461e95603dcaafc5d0147",
+  "mergedAt": "2026-08-20T13:52:33Z",
+  "merged": true,
+  "changedFiles": [
+    "docs/reference/environment-variable-formatting.md"
+  ],
+  "requiredChecks": [
+    "Pull request metadata",
+    "Repo validation",
+    "Browser validation",
+    "verify",
+    "Merge readiness"
+  ],
+  "checks": [
+    {
+      "id": 96449917297,
+      "name": "Merge readiness",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/runs/96449917297",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96446906045,
+      "name": "Specialist delegation verification",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446906045",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96446906001,
+      "name": "Browser validation",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446906001",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96446905937,
+      "name": "Pull request metadata",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446905937",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96446905871,
+      "name": "Repo validation",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446905871",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96446905530,
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843831/job/96446905530",
+      "source": "github_check_run"
+    }
+  ],
+  "branchProtection": {
+    "branch": "main",
+    "requiredChecks": [
+      "Pull request metadata",
+      "Repo validation",
+      "Browser validation",
+      "verify",
+      "Merge readiness"
+    ],
+    "source": "github_branch_protection"
+  },
+  "mergeReadiness": {
+    "name": "Merge readiness",
+    "reviewStatus": "passed",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/wiinc1/engineering-team/runs/96449917297",
+    "source": "github_check_run"
+  },
+  "autoMerge": {
+    "simulated": false,
+    "skipped": false,
+    "merged": true,
+    "mergeCommitSha": "316e6c7c6cf030a0afa461e95603dcaafc5d0147",
+    "mergedAt": "2026-08-20T13:52:33Z",
+    "reason": "factory_owned_merge_after_green_checks"
+  },
+  "github": {
+    "repository": "wiinc1/engineering-team",
+    "branchName": "jr-engineer/tsk-085-env-var-formatting-20260820083724",
+    "commitSha": "cb92bf3a42071f3c2391a827baf5ea6405bb628d",
+    "prUrl": "https://github.com/wiinc1/engineering-team/pull/446",
+    "prNumber": 446,
+    "mergeCommitSha": "316e6c7c6cf030a0afa461e95603dcaafc5d0147",
+    "mergedAt": "2026-08-20T13:52:33Z",
+    "merged": true,
+    "changedFiles": [
+      "docs/reference/environment-variable-formatting.md"
+    ],
+    "requiredChecks": [
+      "Pull request metadata",
+      "Repo validation",
+      "Browser validation",
+      "verify",
+      "Merge readiness"
+    ],
+    "checks": [
+      {
+        "id": 96449917297,
+        "name": "Merge readiness",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/runs/96449917297",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96446906045,
+        "name": "Specialist delegation verification",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446906045",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96446906001,
+        "name": "Browser validation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446906001",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96446905937,
+        "name": "Pull request metadata",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446905937",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96446905871,
+        "name": "Repo validation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843843/job/96446905871",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96446905530,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32375843831/job/96446905530",
+        "source": "github_check_run"
+      }
+    ],
+    "branchProtection": {
+      "branch": "main",
+      "requiredChecks": [
+        "Pull request metadata",
+        "Repo validation",
+        "Browser validation",
+        "verify",
+        "Merge readiness"
+      ],
+      "source": "github_branch_protection"
+    },
+    "mergeReadiness": {
+      "name": "Merge readiness",
+      "reviewStatus": "passed",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/runs/96449917297",
+      "source": "github_check_run"
+    }
+  },
+  "recordedAt": "2026-08-20T13:53:03.261Z",
+  "notes": "Trusted Simple close for TSK-085; generated by the live factory after merge confirmation.",
+  "taskId": "TSK-085",
+  "factoryQueueId": "factory-cohort-bullet-safe-20260820-440",
+  "ok": true
+}

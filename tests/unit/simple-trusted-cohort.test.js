@@ -87,6 +87,30 @@ function prospectiveProvenance() {
     assert.ok(cohort.metrics);
   });
 
+  it('discovers factory cohort evidence and filters an explicit task cohort', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cohort-selection-'));
+    const closeoutDir = path.join(root, 'observability', 'factory-closeout');
+    fs.mkdirSync(closeoutDir, { recursive: true });
+    for (const taskId of ['TSK-401', 'TSK-402']) {
+      fs.writeFileSync(path.join(closeoutDir, `${taskId}.json`), JSON.stringify({
+        taskId, deliveryStatus: 'phase6_complete', generatedAt: '2026-07-01T00:00:00.000Z',
+        manualInterventions: [],
+      }));
+      fs.writeFileSync(
+        path.join(root, 'observability', `factory-cohort-selection-${taskId}.json`),
+        JSON.stringify({ taskId, status: 'phase6_complete',
+          session: `specialist-delegation-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee${taskId.slice(-2)}` }),
+      );
+    }
+    const cohort = buildSimpleTrustedCohortFromRepo(root, {
+      closeoutDir, taskIds: ['TSK-402'], cohortId: 'selection-test',
+      bar: { ...DEFAULT_BAR, minTrustedCloses: 1 },
+    });
+    assert.deepEqual(cohort.rows.map((row) => row.taskId), ['TSK-402']);
+    assert.equal(cohort.summary.autonomous_delivery_rate, 1);
+    assert.equal(cohort.selection.cohortId, 'selection-test');
+  });
+
   it('barMet true only at ≥10 trusted and ≥0.8 rate', () => {
     const closeouts = [];
     const factoryEvidence = [];

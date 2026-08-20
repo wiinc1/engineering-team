@@ -1,224 +1,220 @@
 {
-  "policy_version": "simple-trusted-cohort.v1",
+  "policy_version": "simple-trusted-cohort.v2",
   "bar": {
-    "minTrustedCloses": 10,
+    "minTrustedCloses": 6,
     "minAutonomousRate": 0.8,
     "taskClass": "Simple"
   },
-  "generatedAt": "2026-07-13T15:33:44.198Z",
+  "generatedAt": "2026-08-20T14:01:15.400Z",
   "summary": {
-    "closeouts": 10,
-    "factoryEvidenceFiles": 24,
-    "closedTasks": 9,
+    "closeouts": 6,
+    "factoryEvidenceFiles": 6,
+    "closedTasks": 6,
     "trustedCloses": 6,
-    "autonomous_delivery_rate": 0.6667,
-    "barMet": false,
-    "minTrustedCloses": 10,
-    "minAutonomousRate": 0.8
+    "autonomous_delivery_rate": 1,
+    "barMet": true,
+    "minTrustedCloses": 6,
+    "minAutonomousRate": 0.8,
+    "residual": {
+      "trustedCloseShortfall": 0,
+      "rateShortfall": 0,
+      "additionalTrustedClosesForRate": 0,
+      "additionalTrustedClosesRequired": 0,
+      "achievableWithAdditionalTrustedCloses": true,
+      "projectedTrustedCloses": 6,
+      "projectedClosedTasks": 6,
+      "projectedAutonomousDeliveryRate": 1,
+      "assumption": "every additional closed Simple task is trusted"
+    }
   },
   "rows": [
     {
-      "taskId": "TSK-007",
+      "taskId": "TSK-080",
       "task_class": "Simple",
       "template_tier": "Simple",
       "closed": true,
       "deliveryStatus": "phase6_complete",
       "interventionCount": 0,
-      "liveSessionCount": 0,
-      "liveSessions": [],
-      "trusted": false,
-      "trustedReason": [
-        "missing_live_session_evidence"
-      ],
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-007.json",
-      "factoryEvidencePath": null,
-      "generatedAt": "2026-06-24T20:51:25.048Z"
-    },
-    {
-      "taskId": "TSK-008",
-      "task_class": "Simple",
-      "template_tier": "Simple",
-      "closed": true,
-      "deliveryStatus": "phase6_complete",
-      "interventionCount": 0,
-      "liveSessionCount": 0,
-      "liveSessions": [],
-      "trusted": false,
-      "trustedReason": [
-        "missing_live_session_evidence"
-      ],
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-008.json",
-      "factoryEvidencePath": null,
-      "generatedAt": "2026-06-24T21:11:28.044Z"
-    },
-    {
-      "taskId": "TSK-010",
-      "task_class": "Simple",
-      "template_tier": "Simple",
-      "closed": true,
-      "deliveryStatus": "phase6_complete",
-      "interventionCount": 0,
-      "liveSessionCount": 0,
-      "liveSessions": [],
-      "trusted": false,
-      "trustedReason": [
-        "missing_live_session_evidence"
-      ],
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-010.json",
-      "factoryEvidencePath": null,
-      "generatedAt": "2026-06-24T21:18:34.133Z"
-    },
-    {
-      "taskId": "TSK-013",
-      "task_class": "Simple",
-      "template_tier": "Simple",
-      "closed": true,
-      "deliveryStatus": "phase6_complete",
-      "interventionCount": 0,
-      "liveSessionCount": 4,
+      "totalInterventionCount": 0,
+      "humanReviewProvenanceValid": true,
+      "interventionClassificationComplete": true,
+      "liveSessionCount": 3,
       "liveSessions": [
-        "specialist-delegation-fb50f5f2-d33b-4588-9823-68caba141cb1",
-        "specialist-delegation-f3f63e45-2776-4fce-950d-d1a7a7501ba1",
-        "specialist-delegation-adae12cf-4165-4037-a238-a9d9f770d7a5",
-        "specialist-delegation-4db88656-5ff0-4477-bee9-c5565cbf67e8"
+        "specialist-delegation-13d5a6fc-4057-4ca8-9d40-da509b8a590b",
+        "specialist-delegation-2f44f9c1-17e6-4b7c-81c8-4cf55cd4f149",
+        "specialist-delegation-ea876e88-5f91-4be9-8b42-7d9bc34e7b01"
       ],
       "trusted": true,
+      "policyVersion": "simple-trusted-cohort.v2",
+      "prEvidenceRequired": true,
+      "prEvidenceValid": true,
+      "trustedEvidencePath": "observability/trusted-simple-close/TSK-080.json",
+      "trustedEvidenceSha256": "9ab291e1a03b14dd53f065723ff0ed5b694cbb31512b418b0fe8f4f76948a9f1",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/441",
+      "mergeCommitSha": "832653c1dea4dcf36657d0f7599fe29c9c069eb7",
       "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-013.json",
-      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf3vuuv.json",
-      "generatedAt": "2026-06-24T21:46:08.809Z"
+      "closeoutPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-080.json",
+      "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-delivery/factory-cohort-bullet-safe-20260820-435.json",
+      "generatedAt": "2026-08-20T14:01:06.286Z"
     },
     {
-      "taskId": "TSK-014",
+      "taskId": "TSK-081",
       "task_class": "Simple",
       "template_tier": "Simple",
       "closed": true,
       "deliveryStatus": "phase6_complete",
       "interventionCount": 0,
-      "liveSessionCount": 4,
+      "totalInterventionCount": 0,
+      "humanReviewProvenanceValid": true,
+      "interventionClassificationComplete": true,
+      "liveSessionCount": 3,
       "liveSessions": [
-        "specialist-delegation-dbf52cb2-4b1b-4e7b-b24f-f9f0c668ed7b",
-        "specialist-delegation-ab6211d3-afe7-4cf7-beda-80b2bf486937",
-        "specialist-delegation-02212961-a48d-4a27-8716-7510b0826cfa",
-        "specialist-delegation-6d73cce2-fef5-4df5-bff4-fa39d0971b2b"
+        "specialist-delegation-de004853-5e3c-4124-904c-53718f2c289d",
+        "specialist-delegation-a10b9b05-928f-410a-8a13-2de6de07876b",
+        "specialist-delegation-872cb127-197f-4948-89bf-4170f8a8581a"
       ],
       "trusted": true,
+      "policyVersion": "simple-trusted-cohort.v2",
+      "prEvidenceRequired": true,
+      "prEvidenceValid": true,
+      "trustedEvidencePath": "observability/trusted-simple-close/TSK-081.json",
+      "trustedEvidenceSha256": "02b73fe117b021b30a6d5b47cc1e3b29e986313e4560f24dd2d60e74108917b4",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/442",
+      "mergeCommitSha": "2958d9672e0f8d9cf77c9225943ad46d6c6d7a63",
       "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-014.json",
-      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf42j01.json",
-      "generatedAt": "2026-07-10T15:53:02.747Z"
+      "closeoutPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-081.json",
+      "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-delivery/factory-cohort-bullet-safe-20260820-436.json",
+      "generatedAt": "2026-08-20T14:01:06.350Z"
     },
     {
-      "taskId": "TSK-015",
+      "taskId": "TSK-082",
       "task_class": "Simple",
       "template_tier": "Simple",
       "closed": true,
       "deliveryStatus": "phase6_complete",
       "interventionCount": 0,
-      "liveSessionCount": 4,
+      "totalInterventionCount": 0,
+      "humanReviewProvenanceValid": true,
+      "interventionClassificationComplete": true,
+      "liveSessionCount": 3,
       "liveSessions": [
-        "specialist-delegation-91938d40-189f-42f7-a47c-3d996d462e18",
-        "specialist-delegation-11c2e54c-7290-4115-b179-f7ba8c73f5b6",
-        "specialist-delegation-8dea4afc-6e94-4c3c-9030-e6e14dbe20de",
-        "specialist-delegation-1f8392f9-b612-4a3c-815b-a5a4b8f0835a"
+        "specialist-delegation-892a2f35-c7cf-4ba8-9888-3837a63313f1",
+        "specialist-delegation-f4c31309-b1e7-42eb-8ba1-23359922c540",
+        "specialist-delegation-b1ead0d5-f087-45b5-8977-1c218a69c3a7"
       ],
       "trusted": true,
+      "policyVersion": "simple-trusted-cohort.v2",
+      "prEvidenceRequired": true,
+      "prEvidenceValid": true,
+      "trustedEvidencePath": "observability/trusted-simple-close/TSK-082.json",
+      "trustedEvidenceSha256": "43728456a42590849a0b32afc6590363e7c7d6b7407074f20579dcf1d570a2db",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/443",
+      "mergeCommitSha": "1f4767216f7b529755ba1df5fdddeaf4afde1d1d",
       "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-015.json",
-      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf47hdy.json",
-      "generatedAt": "2026-06-24T22:06:38.937Z"
+      "closeoutPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-082.json",
+      "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-delivery/factory-cohort-bullet-safe-20260820-437.json",
+      "generatedAt": "2026-08-20T14:01:06.404Z"
     },
     {
-      "taskId": "TSK-016",
+      "taskId": "TSK-083",
       "task_class": "Simple",
       "template_tier": "Simple",
       "closed": true,
       "deliveryStatus": "phase6_complete",
       "interventionCount": 0,
-      "liveSessionCount": 4,
+      "totalInterventionCount": 0,
+      "humanReviewProvenanceValid": true,
+      "interventionClassificationComplete": true,
+      "liveSessionCount": 3,
       "liveSessions": [
-        "specialist-delegation-050e28bd-8a1e-4eed-84da-182d8129a551",
-        "specialist-delegation-27005ade-1ef9-4585-a292-78c9cd3149d3",
-        "specialist-delegation-91cbec67-2c50-4af0-b182-0a9b754840b3",
-        "specialist-delegation-566954a4-a61c-48f2-8efb-08e16e01fa8e"
+        "specialist-delegation-9add2ad0-859b-4b5c-bd49-e7be936577e9",
+        "specialist-delegation-7c65eb12-10bd-4c5c-9454-28b400ef4abc",
+        "specialist-delegation-1a7ac8d3-8d45-468b-aa2a-cb1c5e13478e"
       ],
       "trusted": true,
+      "policyVersion": "simple-trusted-cohort.v2",
+      "prEvidenceRequired": true,
+      "prEvidenceValid": true,
+      "trustedEvidencePath": "observability/trusted-simple-close/TSK-083.json",
+      "trustedEvidenceSha256": "5c6992df37749ef80df17af2f944bb9779223ee5895db06220a152429311ca6f",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/444",
+      "mergeCommitSha": "486004aee5e62229f52664b12347ffddc8d2ec61",
       "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-016.json",
-      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf4ch3t.json",
-      "generatedAt": "2026-07-10T16:00:52.855Z"
+      "closeoutPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-083.json",
+      "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-delivery/factory-cohort-bullet-safe-20260820-438.json",
+      "generatedAt": "2026-08-20T14:01:06.459Z"
     },
     {
-      "taskId": "TSK-019",
+      "taskId": "TSK-084",
       "task_class": "Simple",
       "template_tier": "Simple",
       "closed": true,
       "deliveryStatus": "phase6_complete",
       "interventionCount": 0,
-      "liveSessionCount": 4,
+      "totalInterventionCount": 0,
+      "humanReviewProvenanceValid": true,
+      "interventionClassificationComplete": true,
+      "liveSessionCount": 3,
       "liveSessions": [
-        "specialist-delegation-263e3dde-a0cd-4c83-adf3-581c8362461c",
-        "specialist-delegation-df933f07-7440-4093-84b0-c8f8ff1d01f1",
-        "specialist-delegation-3b7e204f-d55e-474e-8336-f1336ee92dba",
-        "specialist-delegation-c82e14fd-8f29-4462-8d83-498b7b8f6cc6"
+        "specialist-delegation-561b605e-0b91-4412-bd4d-643fbf8d600c",
+        "specialist-delegation-bd999782-5012-46bb-9379-eb28befc4b88",
+        "specialist-delegation-3ab5c986-6e07-439a-a502-7d5f1823aeb8"
       ],
       "trusted": true,
+      "policyVersion": "simple-trusted-cohort.v2",
+      "prEvidenceRequired": true,
+      "prEvidenceValid": true,
+      "trustedEvidencePath": "observability/trusted-simple-close/TSK-084.json",
+      "trustedEvidenceSha256": "9c3d91ffa4f61f8441636e61ea4b8213a8f6bf14d0e199688e6eec2cf8dd9b9b",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/445",
+      "mergeCommitSha": "880fae1b93015a50d17c09e3346f2d896a82eb9a",
       "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-019.json",
-      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-c-staging-live/factory-delivery/factory-milestone-c-mrf6azte.json",
-      "generatedAt": "2026-07-10T16:56:47.932Z"
+      "closeoutPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-084.json",
+      "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-delivery/factory-cohort-bullet-safe-20260820-439.json",
+      "generatedAt": "2026-08-20T14:01:06.514Z"
     },
     {
-      "taskId": "TSK-020",
+      "taskId": "TSK-085",
       "task_class": "Simple",
       "template_tier": "Simple",
       "closed": true,
       "deliveryStatus": "phase6_complete",
       "interventionCount": 0,
-      "liveSessionCount": 4,
+      "totalInterventionCount": 0,
+      "humanReviewProvenanceValid": true,
+      "interventionClassificationComplete": true,
+      "liveSessionCount": 3,
       "liveSessions": [
-        "specialist-delegation-6c1aecdf-6689-4128-b46d-e3f053df6c5f",
-        "specialist-delegation-6eeeca15-04e1-46ff-bbb2-2e0137035f58",
-        "specialist-delegation-3d83f334-177e-4d16-a5e5-faf8730b7f6d",
-        "specialist-delegation-484dad86-6cae-45c7-926c-477379edf568"
+        "specialist-delegation-b000d434-2ff0-42f6-87b5-8acc238ddb43",
+        "specialist-delegation-32ad995c-7ad4-49cf-af50-f8062cb69e26",
+        "specialist-delegation-951cef48-ca61-40ef-ba37-ecbba0269a72"
       ],
       "trusted": true,
+      "policyVersion": "simple-trusted-cohort.v2",
+      "prEvidenceRequired": true,
+      "prEvidenceValid": true,
+      "trustedEvidencePath": "observability/trusted-simple-close/TSK-085.json",
+      "trustedEvidenceSha256": "1e2c19b0320973ef6284e774a33113c56709b5886ddd1f8fb58de03f6e90418a",
+      "prUrl": "https://github.com/wiinc1/engineering-team/pull/446",
+      "mergeCommitSha": "316e6c7c6cf030a0afa461e95603dcaafc5d0147",
       "trustedReason": "phase6 closeout + zero recorded post-closeout interventions + live OpenClaw session evidence",
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-020.json",
-      "factoryEvidencePath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/milestone-d-staging-live/factory-delivery/factory-milestone-c-mrf6h8wv.json",
-      "generatedAt": "2026-07-10T17:01:46.599Z"
-    },
-    {
-      "taskId": "TSK-022",
-      "task_class": "Simple",
-      "template_tier": "Simple",
-      "closed": false,
-      "deliveryStatus": "phase5_complete",
-      "interventionCount": 0,
-      "liveSessionCount": 0,
-      "liveSessions": [],
-      "trusted": false,
-      "trustedReason": [
-        "not_phase6_complete",
-        "missing_live_session_evidence"
-      ],
-      "closeoutPath": "/Users/wiinc2/.grok/worktrees/workspace-engineering-team/strategy-review/observability/factory-closeout/TSK-022.json",
-      "factoryEvidencePath": null,
-      "generatedAt": "2026-06-24T19:45:15.386Z"
+      "closeoutPath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-closeout/TSK-085.json",
+      "factoryEvidencePath": "/Users/wiinc2/.openclaw/workspace/engineering-team/observability/factory-delivery/factory-cohort-bullet-safe-20260820-440.json",
+      "generatedAt": "2026-08-20T14:01:06.646Z"
     }
   ],
   "trustedTaskIds": [
-    "TSK-013",
-    "TSK-014",
-    "TSK-015",
-    "TSK-016",
-    "TSK-019",
-    "TSK-020"
+    "TSK-080",
+    "TSK-081",
+    "TSK-082",
+    "TSK-083",
+    "TSK-084",
+    "TSK-085"
   ],
   "metrics": {
     "schema_version": "autonomous-delivery-metrics-mvp.v1",
     "policy_version": "autonomous-delivery-metrics-policy.v1",
-    "generated_at": "2026-07-13T15:33:44.197Z",
+    "generated_at": "2026-08-20T14:07:32.955Z",
     "filters": {
       "tenantId": null,
       "dateFrom": null,
@@ -296,7 +292,7 @@
         "task_class": "Simple",
         "evaluation": {
           "policy_version": "autonomy-confidence-thresholds.v1",
-          "evaluated_at": "2026-07-13T15:33:44.198Z",
+          "evaluated_at": "2026-08-20T14:07:32.955Z",
           "task_class": "Simple",
           "status": "eligible",
           "can_expand": true,
@@ -322,11 +318,11 @@
     "signals": [
       {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-013",
+        "task_id": "TSK-080",
         "task_class": "Simple",
         "template_tier": "Simple",
         "implementation_agent": "openclaw-live",
-        "generated_at": "2026-06-24T21:46:08.809Z",
+        "generated_at": "2026-08-20T14:01:06.286Z",
         "excluded_from_thresholds": false,
         "approval_mode": "explicit",
         "operator_interventions": {
@@ -343,17 +339,17 @@
         },
         "final_outcome": {
           "closed": true,
-          "closed_at": "2026-06-24T21:46:08.809Z"
+          "closed_at": "2026-08-20T14:01:06.286Z"
         },
-        "live_session_count": 4
+        "live_session_count": 3
       },
       {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-014",
+        "task_id": "TSK-081",
         "task_class": "Simple",
         "template_tier": "Simple",
         "implementation_agent": "openclaw-live",
-        "generated_at": "2026-07-10T15:53:02.747Z",
+        "generated_at": "2026-08-20T14:01:06.350Z",
         "excluded_from_thresholds": false,
         "approval_mode": "explicit",
         "operator_interventions": {
@@ -370,17 +366,17 @@
         },
         "final_outcome": {
           "closed": true,
-          "closed_at": "2026-07-10T15:53:02.747Z"
+          "closed_at": "2026-08-20T14:01:06.350Z"
         },
-        "live_session_count": 4
+        "live_session_count": 3
       },
       {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-015",
+        "task_id": "TSK-082",
         "task_class": "Simple",
         "template_tier": "Simple",
         "implementation_agent": "openclaw-live",
-        "generated_at": "2026-06-24T22:06:38.937Z",
+        "generated_at": "2026-08-20T14:01:06.404Z",
         "excluded_from_thresholds": false,
         "approval_mode": "explicit",
         "operator_interventions": {
@@ -397,17 +393,17 @@
         },
         "final_outcome": {
           "closed": true,
-          "closed_at": "2026-06-24T22:06:38.937Z"
+          "closed_at": "2026-08-20T14:01:06.404Z"
         },
-        "live_session_count": 4
+        "live_session_count": 3
       },
       {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-016",
+        "task_id": "TSK-083",
         "task_class": "Simple",
         "template_tier": "Simple",
         "implementation_agent": "openclaw-live",
-        "generated_at": "2026-07-10T16:00:52.855Z",
+        "generated_at": "2026-08-20T14:01:06.459Z",
         "excluded_from_thresholds": false,
         "approval_mode": "explicit",
         "operator_interventions": {
@@ -424,17 +420,17 @@
         },
         "final_outcome": {
           "closed": true,
-          "closed_at": "2026-07-10T16:00:52.855Z"
+          "closed_at": "2026-08-20T14:01:06.459Z"
         },
-        "live_session_count": 4
+        "live_session_count": 3
       },
       {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-019",
+        "task_id": "TSK-084",
         "task_class": "Simple",
         "template_tier": "Simple",
         "implementation_agent": "openclaw-live",
-        "generated_at": "2026-07-10T16:56:47.932Z",
+        "generated_at": "2026-08-20T14:01:06.514Z",
         "excluded_from_thresholds": false,
         "approval_mode": "explicit",
         "operator_interventions": {
@@ -451,17 +447,17 @@
         },
         "final_outcome": {
           "closed": true,
-          "closed_at": "2026-07-10T16:56:47.932Z"
+          "closed_at": "2026-08-20T14:01:06.514Z"
         },
-        "live_session_count": 4
+        "live_session_count": 3
       },
       {
         "tenant_id": "engineering-team",
-        "task_id": "TSK-020",
+        "task_id": "TSK-085",
         "task_class": "Simple",
         "template_tier": "Simple",
         "implementation_agent": "openclaw-live",
-        "generated_at": "2026-07-10T17:01:46.599Z",
+        "generated_at": "2026-08-20T14:01:06.646Z",
         "excluded_from_thresholds": false,
         "approval_mode": "explicit",
         "operator_interventions": {
@@ -478,11 +474,124 @@
         },
         "final_outcome": {
           "closed": true,
-          "closed_at": "2026-07-10T17:01:46.599Z"
+          "closed_at": "2026-08-20T14:01:06.646Z"
         },
-        "live_session_count": 4
+        "live_session_count": 3
       }
     ],
     "excluded_signals": []
+  },
+  "selection": {
+    "cohortId": "simple-trusted-bullet-safe-20260820",
+    "mode": "explicit_task_ids",
+    "taskIds": [
+      "TSK-080",
+      "TSK-081",
+      "TSK-082",
+      "TSK-083",
+      "TSK-084",
+      "TSK-085"
+    ]
+  },
+  "provenance": {
+    "schemaVersion": "simple-trusted-cohort-report-provenance.v1",
+    "generator": "scripts/build-simple-trusted-cohort-report.js",
+    "policyVersion": "simple-trusted-cohort.v2",
+    "revision": "316e6c7c6cf030a0afa461e95603dcaafc5d0147",
+    "generatedAt": "2026-08-20T14:01:15.400Z",
+    "sourceSetSha256": "2429694b4d5de90d81720f1205a6e096a1448035e8152b00fee7a9cf14cb6a57",
+    "inputCount": 18,
+    "inputs": [
+      {
+        "path": "observability/factory-closeout/TSK-080.json",
+        "sha256": "3e0582671a137c877e1627df438ef527f4c4fd98f08a1783c957344e1921d63f",
+        "bytes": 263807
+      },
+      {
+        "path": "observability/factory-closeout/TSK-081.json",
+        "sha256": "d514abd29234573311d890ca80f16f42991cd15a01e88cbbd0f56a8fd4c3aa80",
+        "bytes": 263680
+      },
+      {
+        "path": "observability/factory-closeout/TSK-082.json",
+        "sha256": "4102af876fa7981baea85ab3028a1f949d0d289099d30d00e723fa06ac5e8bb3",
+        "bytes": 263819
+      },
+      {
+        "path": "observability/factory-closeout/TSK-083.json",
+        "sha256": "93d06baf69926d54b30c48011fa9dbf8226fb2ac7a411aacf43ee6cbc207f7b1",
+        "bytes": 263829
+      },
+      {
+        "path": "observability/factory-closeout/TSK-084.json",
+        "sha256": "f41108b4b85966a08e4045ea0c8668b44cdaf16ce337d63cba6fad05470f4ef4",
+        "bytes": 263702
+      },
+      {
+        "path": "observability/factory-closeout/TSK-085.json",
+        "sha256": "d1bf61d3f1e812a633991913414ec9b2656a263e8c0f17101302903ea7525395",
+        "bytes": 263715
+      },
+      {
+        "path": "observability/factory-delivery/factory-cohort-bullet-safe-20260820-435.json",
+        "sha256": "af9de1a9e1ab1254b1e4d4227fd0688983bce1ba6ec1cea11d87ead576750e92",
+        "bytes": 1288911
+      },
+      {
+        "path": "observability/factory-delivery/factory-cohort-bullet-safe-20260820-436.json",
+        "sha256": "80422d224b0bdff99502e9e7966b2f0e7b02f4d2efd79385877cbe7781545bf2",
+        "bytes": 1288237
+      },
+      {
+        "path": "observability/factory-delivery/factory-cohort-bullet-safe-20260820-437.json",
+        "sha256": "8598531094b4634a969908a283e222d921a622d39e2780a15c8ebc6fc3aabca8",
+        "bytes": 1288944
+      },
+      {
+        "path": "observability/factory-delivery/factory-cohort-bullet-safe-20260820-438.json",
+        "sha256": "c661d914dfb8a848bfed98bed752b9277088363bc4df7e4d7eb13517eb851f5d",
+        "bytes": 1289066
+      },
+      {
+        "path": "observability/factory-delivery/factory-cohort-bullet-safe-20260820-439.json",
+        "sha256": "090fb70f44185c74d120c1e387fd41a61113027dac2a2741d50516dfe6584b2e",
+        "bytes": 1288412
+      },
+      {
+        "path": "observability/factory-delivery/factory-cohort-bullet-safe-20260820-440.json",
+        "sha256": "85bfe4e70b7d16cf746ba83b0a198282878605d46ec46fb84ab417a798d2b52d",
+        "bytes": 1288529
+      },
+      {
+        "path": "observability/trusted-simple-close/TSK-080.json",
+        "sha256": "9ab291e1a03b14dd53f065723ff0ed5b694cbb31512b418b0fe8f4f76948a9f1",
+        "bytes": 6282
+      },
+      {
+        "path": "observability/trusted-simple-close/TSK-081.json",
+        "sha256": "02b73fe117b021b30a6d5b47cc1e3b29e986313e4560f24dd2d60e74108917b4",
+        "bytes": 6250
+      },
+      {
+        "path": "observability/trusted-simple-close/TSK-082.json",
+        "sha256": "43728456a42590849a0b32afc6590363e7c7d6b7407074f20579dcf1d570a2db",
+        "bytes": 6274
+      },
+      {
+        "path": "observability/trusted-simple-close/TSK-083.json",
+        "sha256": "5c6992df37749ef80df17af2f944bb9779223ee5895db06220a152429311ca6f",
+        "bytes": 6292
+      },
+      {
+        "path": "observability/trusted-simple-close/TSK-084.json",
+        "sha256": "9c3d91ffa4f61f8441636e61ea4b8213a8f6bf14d0e199688e6eec2cf8dd9b9b",
+        "bytes": 6296
+      },
+      {
+        "path": "observability/trusted-simple-close/TSK-085.json",
+        "sha256": "1e2c19b0320973ef6284e774a33113c56709b5886ddd1f8fb58de03f6e90418a",
+        "bytes": 6312
+      }
+    ]
   }
 }
