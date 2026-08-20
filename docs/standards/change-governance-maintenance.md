@@ -96,6 +96,13 @@ React development-mode effect replay from being mistaken for a second logical
 poll. When an update triggers a follow-up read, tests should await a response
 that actually contains the updated payload before asserting rendered content.
 
+URL-driven integration tests must also wait for any required initial navigation
+to settle before triggering a second navigation. For example, when a queue
+selects its initial task through a `selectedTask` query parameter, assert that
+query state before changing a filter that also rewrites the URL. This prevents
+two valid state transitions from replacing each other according to runner
+timing.
+
 ## Dual remotes (GitLab primary)
 Canonical ship path is GitLab (`origin`). GitHub (`github`) is the backup / public CI mirror. Prefer basing work on `origin/main`, push `origin` first, then `github`. Operator status: `npm run remotes:sync-status`. Full procedure: `docs/runbooks/dual-remote-gitlab-primary.md`.
 
