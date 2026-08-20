@@ -218,6 +218,9 @@ Prospective cohort rows retain the authoritative `task.pm_architect_human_review
 Trusted Simple execution is a PR lifecycle guarantee, not a hosted-deployment claim. After the human PM/Architect approval event, live OpenClaw owns implementation in an isolated worktree. The coordinator admits only the agent-returned real branch, head SHA, and PR URL; verifies protected checks for that exact head; emits the factory-owned `Merge readiness` check directly or through the permissioned workflow-dispatch fallback; merges through GitHub; and records a content-addressed close package before closeout. Hosted staging artifacts, soak evidence, and runtime-cutover manifests remain separate release gates and cannot be inferred from a trusted local close.
 
 Durable queue ownership spans the complete trusted delivery attempt. The shared one-hour lease default exceeds the implementer's 31-minute runtime allowance, leaving headroom for hosted checks while preserving fail-closed release semantics if ownership is actually lost.
+
+Trusted QA is an evidence-review boundary, not a synthetic approval. The coordinator supplies the exact repository, branch, implementation SHA, PR URL, and expected file scope to the live QA agent. QA may inspect those artifacts through read-only Git and GitHub commands, but cannot mutate the PR or release gates; a rejection routes the same immutable PR identity to the Sr correction agent. Both runtime roles therefore require scoped unattended gateway execution while the coordinator continues to reject missing or malformed branch, SHA, and PR evidence.
+
 ### Cohort residual arithmetic
 
 The trusted Simple residual solves both thresholds under an explicit all-future-closes-are-trusted assumption. It reports the larger of the count shortfall and `ceil((targetRate × closed - trusted) / (1 - targetRate))`, plus projected totals and rate. A 100% target is reported as unreachable by adding closes when any existing close is untrusted.
