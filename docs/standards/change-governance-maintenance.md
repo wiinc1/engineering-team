@@ -28,6 +28,10 @@ Required fields must not use the bare placeholder tokens rejected by
 `verify-pr-body.js` (`None`, `N/A`, `TBD`, `TODO`, or `unknown`). When no
 standards gap exists, state that there are no gaps or exceptions and include a
 specific conformance rationale; a bare `None` is a failed initial submission.
+Each governed field line must also begin with the literal ASCII `- ` prefix
+shown in the pull-request template. `verify-pr-body.js` anchors on
+`- Label: value`, so an unbulleted `Label: value` line is treated as missing
+even when its value is otherwise complete.
 
 ## Coverage Artifacts
 `npm run standards:check` reads `.artifacts/coverage-summary.json`. That file may be produced by `npm run coverage` with per-suite JavaScript/UI coverage, or by `make verify` with Python coverage totals. The coverage policy checker accepts both schemas so developers can run the verification commands in either order without regenerating coverage only to satisfy a parser shape.

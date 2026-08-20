@@ -112,6 +112,16 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   assert.match(fix, /Do not open a second pull request/);
 });
 
+test('buildImplementerPrompt requires literal PR metadata bullet prefixes', () => {
+  const trusted = buildImplementerPrompt({
+    taskId: 'TSK-1', requirements: 'x', requireRealEvidence: true,
+  });
+  assert.match(trusted, /MUST begin with the literal ASCII characters `- `/);
+  assert.match(trusted, /hosted validator matches `\^- <label>:`/);
+  assert.match(trusted, /unbulleted `Task: value` line is treated as missing/);
+  assert.match(trusted, /Preserve the `- ` prefix/);
+});
+
 test('buildQaPrompt supplies exact read-only PR evidence for trusted delivery QA', () => {
   const prompt = buildQaPrompt({
     taskId: 'TSK-26',
