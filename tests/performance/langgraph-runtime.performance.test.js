@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
 const { test } = require('node:test');
-const { compileFactoryGraph, validateFactoryState } = require('../../lib/software-factory/langgraph');
+const { compileFactoryGraph, createMetricSink, validateFactoryState } = require('../../lib/software-factory/langgraph');
 const { evaluateArtifact, maximum } = require('../../scripts/run-langgraph-load');
 const { state } = require('../fixtures/langgraph/v1');
 
@@ -15,6 +15,17 @@ function percentile(samples, value) {
 test('load artifact aggregation handles samples larger than the JavaScript argument stack', () => {
   const samples = Array.from({ length: 250_000 }, (_, index) => index % 10_000);
   assert.equal(maximum(samples), 9_999);
+});
+
+test('high-volume metric observation remains linear-time for sustained load evidence', () => {
+  const metrics = createMetricSink();
+  const startedAt = performance.now();
+  for (let index = 0; index < 50_000; index += 1) {
+    metrics.observe('langgraph_checkpoint_write_latency_ms', index % 100);
+  }
+  const durationMs = performance.now() - startedAt;
+  assert.equal(Object.values(metrics.snapshot().histograms)[0].length, 50_000);
+  assert.ok(durationMs < 500, `metric observation took ${durationMs.toFixed(1)}ms`);
 });
 
 test('load evidence requires observing the configured pool budget under concurrency', () => {
