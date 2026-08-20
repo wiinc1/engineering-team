@@ -987,6 +987,14 @@ curl -s -X POST -H "Authorization: Bearer local-forgeadapter-token" \
 
 `scripts/run-unit-tests.js` clears shell `DATABASE_URL`, `VERCEL`, and related golden-path env vars before `npm run test:unit` so local stack sessions do not route unit tests to shared Postgres.
 
+The phase runner also treats GP-023 as a clean-checkout validation boundary.
+Each npm subprocess receives only operating-system essentials (`PATH`, `HOME`,
+locale, and temporary-directory settings), `ALLOW_FILE_AUDIT_BACKEND=true`, and
+`NODE_ENV=test`. Do not add live database, auth, credential, OpenClaw, Forge,
+feature-flag, or trusted-delivery variables to that allowlist. If GP-023 passes
+in a normal shell but fails under the orchestrator, inspect this boundary before
+retrying a delivery; do not waive or bypass the post-merge validation.
+
 ```bash
 # With dev stack up — validation only; UI already at http://127.0.0.1:15173
 npm run lint && npm run test:unit && npm run standards:check

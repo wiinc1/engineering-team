@@ -90,6 +90,19 @@ assignment events contain live OpenClaw delegation attribution.
 3. Outbox workers publish durable side effects and metrics.
 4. Pushgateway integration is local/development support for metrics export.
 
+### GP-023 validation boundary
+
+GP-023 validates an autonomous delivery after merge by running the repository
+lint, unit, and standards scripts. The factory orchestrator carries live
+PostgreSQL, auth, feature-flag, OpenClaw, Forge, and trusted-delivery settings,
+but those settings are not part of the test contract. Validation subprocesses
+therefore receive only operating-system process essentials such as `PATH`,
+`HOME`, locale, and temporary-directory values, plus
+`ALLOW_FILE_AUDIT_BACKEND=true` and `NODE_ENV=test`. Credentials and product
+runtime modes never cross this boundary. This keeps post-merge verification
+equivalent to a clean-checkout test run and prevents live service state from
+changing unit-test defaults.
+
 ## State Ownership
 
 | State | Owner path | Source of truth | Recovery notes |
