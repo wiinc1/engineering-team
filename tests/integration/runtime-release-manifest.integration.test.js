@@ -8,6 +8,7 @@ const {
 const { collectArtifact } = require('../../lib/release-gates/evidence-collector');
 const { buildStagingDeployComponent } = require('../../lib/release-gates/staging-deployment');
 const { createCutoverPlan, cutoverPlanDigest } = require('../../lib/runtime-cutover');
+const { createMetricSink } = require('../../lib/software-factory/langgraph');
 const { evaluateArtifact } = require('../../scripts/run-langgraph-load');
 const { configuration: executableGateConfiguration } = require('../../scripts/normalize-runtime-gate-evidence');
 
@@ -87,4 +88,13 @@ it('admits LangGraph load evidence only with exact side effects and zero residua
   assert.equal(evaluateArtifact(artifact), true);
   assert.equal(evaluateArtifact({ ...artifact, duplicateSideEffects: 1 }), false);
   assert.equal(evaluateArtifact({ ...artifact, cleanupPassed: false }), false);
+});
+
+it('transports a stable LangGraph metric snapshot into load evidence aggregation', () => {
+  const metrics = createMetricSink();
+  for (const latency of [12, 18, 25]) metrics.observe('langgraph_checkpoint_write_latency_ms', latency);
+  const transported = JSON.parse(JSON.stringify(metrics.snapshot()));
+  metrics.observe('langgraph_checkpoint_write_latency_ms', 500);
+  assert.deepEqual(Object.values(transported.histograms)[0], [12, 18, 25]);
+  assert.deepEqual(Object.values(metrics.snapshot().histograms)[0], [12, 18, 25, 500]);
 });
