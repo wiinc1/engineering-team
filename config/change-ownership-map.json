@@ -541,7 +541,7 @@
         "^scripts/deploy/audit-workers\\.systemd\\.service$",
         "^src/app/command-center-queue\\.mjs$",
         "^src/app/shell/.+\\.jsx$",
-        "^scripts/build-simple-trusted-cohort-report\\.js$",
+        "^scripts/(build-simple-trusted-cohort-report|reconcile-factory-closeout-evidence)\\.js$",
         "^scripts/verify-vercel-factory-purge\\.js$",
         "^lib/task-platform/simple-trusted-cohort\\.js$"
       ],

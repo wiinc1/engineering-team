@@ -60,8 +60,15 @@ it('joins immutable task-bound PR evidence and rejects a changed package', () =>
   const digest = crypto.createHash('sha256').update(body).digest('hex');
   const closeoutDir = writeProspectiveCohort(root, digest);
 
-  let cohort = buildSimpleTrustedCohortFromRepo(root, { closeoutDir });
+  let cohort = buildSimpleTrustedCohortFromRepo(root, {
+    closeoutDir,
+    cohortId: 'prospective-v2-contract',
+    taskIds: ['TSK-319'],
+  });
   assert.equal(cohort.rows[0].trusted, true);
+  assert.deepEqual(cohort.selection, {
+    cohortId: 'prospective-v2-contract', mode: 'explicit_task_ids', taskIds: ['TSK-319'],
+  });
   assert.equal(cohort.summary.residual.additionalTrustedClosesRequired, 9);
   const provenance = buildReportProvenance(cohort, {
     root, revision: 'a'.repeat(40), generatedAt: '2026-08-19T19:00:00.000Z',
@@ -69,7 +76,11 @@ it('joins immutable task-bound PR evidence and rejects a changed package', () =>
   assert.equal(provenance.inputCount, 3);
   assert.match(provenance.sourceSetSha256, /^[a-f0-9]{64}$/);
   fs.appendFileSync(evidencePath, ' ');
-  cohort = buildSimpleTrustedCohortFromRepo(root, { closeoutDir });
+  cohort = buildSimpleTrustedCohortFromRepo(root, {
+    closeoutDir,
+    cohortId: 'prospective-v2-contract',
+    taskIds: ['TSK-319'],
+  });
   assert.equal(cohort.rows[0].trusted, false);
   assert.equal(cohort.summary.residual.additionalTrustedClosesRequired, 10);
   assert.ok(cohort.rows[0].trustedReason.includes('trusted_close_evidence_digest_mismatch'));

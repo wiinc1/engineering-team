@@ -226,6 +226,14 @@ Use `docs/runbook.md` for exact operator commands. At the architecture level:
 ### Trusted-close authority timeline
 
 Prospective cohort rows retain the authoritative `task.pm_architect_human_review_recorded` and `task.execution_contract_approved` event identities, actor provenance, roles, and timestamps from task history. The closeout classifies intervention events against the approval timestamp. Missing human role provenance, missing approval identity, ambiguous intervention time, or any post-approval intervention makes a v2 row untrusted.
+
+Approval handling drains the projection queue before attaching provenance, so
+the closeout observes the approval event written by the same successful API
+operation. When older delivery evidence predates that ordering, the reconciliation
+CLI may rebuild only its derived closeout summary from authoritative task history;
+it never changes the original factory-delivery record or content-addressed PR
+evidence. Named reports select an explicit task-id set, while the default report
+continues to evaluate all discovered evidence against the global policy bar.
 ### Trusted Simple execution boundary
 
 Trusted Simple execution is a PR lifecycle guarantee, not a hosted-deployment claim. After the human PM/Architect approval event, live OpenClaw owns implementation in an isolated worktree. The coordinator admits only the agent-returned real branch, head SHA, and PR URL; verifies protected checks for that exact head; emits the factory-owned `Merge readiness` check directly or through the permissioned workflow-dispatch fallback; merges through GitHub; and records a content-addressed close package before closeout. Hosted staging artifacts, soak evidence, and runtime-cutover manifests remain separate release gates and cannot be inferred from a trusted local close.

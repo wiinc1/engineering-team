@@ -6,7 +6,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { buildReportProvenance } = require('../../lib/task-platform/simple-trusted-cohort-report');
-const { buildCohortMarkdown, STABLE_REPORT_PATH } = require('../../scripts/build-simple-trusted-cohort-report');
+const {
+  buildCohortMarkdown, parseTaskIds, selectedBar, STABLE_REPORT_PATH,
+} = require('../../scripts/build-simple-trusted-cohort-report');
 
 it('builds sorted per-input and aggregate provenance for the stable report', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cohort-report-'));
@@ -36,4 +38,13 @@ it('renders revision, source digest, and joint residual', () => {
   assert.match(markdown, /need 6 additional trusted Simple closes/);
   assert.match(markdown, new RegExp('a{40}'));
   assert.match(markdown, /Source-set SHA-256/);
+  assert.match(markdown, /## Standards Alignment/);
+  assert.match(markdown, /## Required Evidence/);
+});
+
+it('parses an explicit report cohort and threshold overrides', () => {
+  assert.deepEqual(parseTaskIds('TSK-080, TSK-081'), ['TSK-080', 'TSK-081']);
+  assert.deepEqual(selectedBar({
+    COHORT_MIN_TRUSTED_CLOSES: '6', COHORT_MIN_AUTONOMOUS_RATE: '0.8',
+  }), { minTrustedCloses: 6, minAutonomousRate: 0.8, taskClass: 'Simple' });
 });

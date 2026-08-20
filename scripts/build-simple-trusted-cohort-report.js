@@ -33,10 +33,26 @@ function cohortRow(row) {
   return `| ${row.taskId} | ${row.closed} | ${row.liveSessionCount} | ${row.interventionCount} | ${row.trusted} | ${reasons || '—'} |`;
 }
 
+function parseTaskIds(value) {
+  return String(value || '').split(',').map((taskId) => taskId.trim()).filter(Boolean);
+}
+
+function selectedBar(env = process.env) {
+  const minTrustedCloses = Number.parseInt(env.COHORT_MIN_TRUSTED_CLOSES || '', 10);
+  const minAutonomousRate = Number.parseFloat(env.COHORT_MIN_AUTONOMOUS_RATE || '');
+  return {
+    ...DEFAULT_BAR,
+    ...(Number.isFinite(minTrustedCloses) && minTrustedCloses > 0 ? { minTrustedCloses } : {}),
+    ...(Number.isFinite(minAutonomousRate) && minAutonomousRate > 0
+      ? { minAutonomousRate } : {}),
+  };
+}
+
 function buildCohortMarkdown(cohort, jsonRelativePath) {
   return [
     '# Simple Operator-Trusted Cohort Report', '',
     `**Generated:** ${cohort.generatedAt}`, `**Policy:** ${cohort.policy_version}`,
+    `**Cohort:** ${cohort.selection?.cohortId || cohort.selection?.mode || 'all discovered evidence'}`,
     `**Revision:** \`${cohort.provenance.revision}\``,
     `**Source set:** \`${cohort.provenance.sourceSetSha256}\``,
     '**Issue:** GitLab #276 / factory autonomy Q1 bar', '', '## Bar', '',
@@ -59,6 +75,15 @@ function buildCohortMarkdown(cohort, jsonRelativePath) {
     cohort.summary.barMet
       ? '- Q1 near-term bar is met for this evidence snapshot.'
       : `- Bar not met: need ${cohort.summary.residual.additionalTrustedClosesRequired} additional trusted Simple closes to satisfy both count and rate, assuming every added close is trusted.`,
+    '', '## Standards Alignment', '',
+    '- Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring; team and process.',
+    '- Evidence expected for this change: immutable closeout, factory-delivery, hosted PR, human-review, and live OpenClaw evidence.',
+    '- Gap observed: legacy evidence discovery and projection ordering could omit valid provenance. Documented rationale: select an explicit clean cohort and reconcile only from authoritative task history (source https://github.com/wiinc1/engineering-team).',
+    '', '## Required Evidence', '',
+    '- Commands run: `npm run cohort:reconcile-closeouts`; `npm run cohort:simple-trusted`; `make verify`.',
+    '- Tests added or updated: cohort selection, factory-cohort discovery, report environment parsing, and governed report sections.',
+    '- Rollout or rollback notes: deploy the exact merged revision to staging; roll back by reverting the reporting commit without modifying source evidence.',
+    '- Docs updated: this generated cohort report and its SHA-256-addressed JSON snapshot.',
     '', '## Provenance', '',
     `- Generator: \`${cohort.provenance.generator}\``,
     `- Inputs: ${cohort.provenance.inputCount}`,
@@ -72,7 +97,12 @@ function buildCohortMarkdown(cohort, jsonRelativePath) {
 function main(options = {}) {
   const root = options.root || process.cwd();
   const generatedAt = options.generatedAt || process.env.COHORT_REPORT_GENERATED_AT || new Date().toISOString();
-  const cohort = buildSimpleTrustedCohortFromRepo(root, { bar: DEFAULT_BAR });
+  const taskIds = options.taskIds || parseTaskIds(process.env.COHORT_TASK_IDS);
+  const cohort = buildSimpleTrustedCohortFromRepo(root, {
+    bar: options.bar || selectedBar(),
+    taskIds,
+    cohortId: options.cohortId || process.env.COHORT_ID || null,
+  });
   cohort.generatedAt = generatedAt;
   cohort.provenance = buildReportProvenance(cohort, {
     root, generatedAt, revision: options.revision || revisionFor(root),
@@ -100,4 +130,12 @@ function main(options = {}) {
 
 if (require.main === module) main();
 
-module.exports = { STABLE_REPORT_PATH, buildCohortMarkdown, main, revisionFor, writeJsonAtomic };
+module.exports = {
+  STABLE_REPORT_PATH,
+  buildCohortMarkdown,
+  main,
+  parseTaskIds,
+  revisionFor,
+  selectedBar,
+  writeJsonAtomic,
+};
