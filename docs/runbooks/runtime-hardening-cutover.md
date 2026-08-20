@@ -7,15 +7,20 @@
 The default factory stack and staging are separate launchd profiles. Staging uses independent labels,
 ports, logs, state, and root binding, so an approved release cannot rebind or interrupt the host's
 factory of record. Configure protected CI variables `STAGING_BASE_URL`, `STAGING_BROWSER_BASE_URL`,
-`STAGING_DATABASE_URL`, `STAGING_JWT_SECRET`, and `STAGING_RELEASE_ROOT`; both URLs must be non-local
-HTTPS and the release root must be an absolute, persistent path outside temporary and `_checkouts`
-directories.
+`STAGING_DATABASE_URL`, `STAGING_JWT_SECRET`, and `STAGING_RELEASE_ROOT`; the release root must be an
+absolute, persistent path outside temporary and `_checkouts` directories. The default `hosted` endpoint
+mode requires non-local HTTPS. The host-only architecture instead sets
+`STAGING_ENDPOINT_MODE=host-local` and uses explicit loopback HTTP(S) URLs. Host-local mode rejects
+external hosts, and hosted mode continues to reject loopback, so neither mode can silently fall back to
+the other.
 
 On protected `main`, `deploy-runtime-staging` clones the exact `CI_COMMIT_SHA` into
 `$STAGING_RELEASE_ROOT/releases/<sha>`, removes the credential-bearing remote, installs from the lockfile,
-starts only the `staging` launchd profile, and verifies local plus hosted `/health`. It emits revision-bound
+starts only the `staging` launchd profile, and verifies local plus deployed `/health`. Host-local staging
+uses the profile ports (`127.0.0.1:23000` for the API and `127.0.0.1:25173` for the browser) on this same
+operator host. It emits revision-bound
 Graphile and LangGraph `staging_deploy` components. An existing release directory with another revision,
-an unhealthy local stack, a redirect, or unhealthy hosted endpoint blocks deployment.
+an unhealthy local stack, a redirect, or unhealthy deployed endpoint blocks deployment.
 
 The staging and soak jobs share the `runtime-staging` resource group and are non-interruptible. This
 prevents concurrent releases from sharing the dedicated staging database or contaminating the 24-hour
@@ -29,7 +34,7 @@ checkout, stores each raw result for two weeks, and normalizes only parser-verif
 command provenance and source SHA-256 digests. The 24-hour job consumes that exact deployment;
 `seal-runtime-release-manifests` then adds the soak components, seals both manifests, and runs both
 release verifiers. Missing protected variables suppress the hosted jobs instead of falling back to
-localhost. CI never runs the apply command.
+an implicit endpoint mode. CI never runs the apply command.
 
 Validate with:
 

@@ -267,8 +267,10 @@ The repository commits `package.json` and `package-lock.json`, not `node_modules
 
 ### Isolated staging factory profile
 
-The hosted staging release uses `FACTORY_STACK_PROFILE=staging`. That profile has independent launchd
+The same-host staging release uses `FACTORY_STACK_PROFILE=staging`. That profile has independent launchd
 labels, ports, root binding, state, logs, and database configuration; it cannot replace the default
 factory-of-record binding. The deployer accepts only an exact commit SHA in a persistent release root,
-then requires both local topology health and a non-local HTTPS `/health` response before it emits
-revision-bound staging evidence.
+then requires local topology health plus a deployed `/health` response before it emits revision-bound
+staging evidence. `STAGING_ENDPOINT_MODE=host-local` permits only explicit loopback HTTP(S) endpoints;
+the default hosted mode still requires non-local HTTPS. This keeps the deployment on the operator host
+without weakening profile, database, credential, or exact-revision isolation.

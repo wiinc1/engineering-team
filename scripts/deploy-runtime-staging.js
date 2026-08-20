@@ -90,6 +90,7 @@ async function activateRelease(configuration) {
     writeJson(path.join(configuration.artifactDir, `${runtime}-staging-deploy.json`), buildStagingDeployComponent({
       automation,
       deploymentId: configuration.deploymentId,
+      endpointMode: configuration.endpointMode,
       healthUrl: hosted.url,
       hostedHealth: hosted.ok,
       localHealth: status.health.ok,
