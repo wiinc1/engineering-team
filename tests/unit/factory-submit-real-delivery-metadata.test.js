@@ -13,6 +13,7 @@ const { buildPhaseRunnerOptions } = require('../../lib/task-platform/factory-pha
 const TEST_COMMAND = 'node --test tests/unit/factory-submit-real-delivery-metadata.test.js';
 const COMMIT_SHA = '3f4a7c9e12b84d6f90a1c2e3b4d5f6789012abcd';
 const PR_URL = 'https://github.com/wiinc1/engineering-team/pull/418';
+const ISSUE_URL = 'https://github.com/wiinc1/engineering-team/issues/388';
 const CHECKS = [{ name: 'unit tests', status: 'completed', conclusion: 'success', source: 'github_check_run' }];
 const REQUIRED_CHECKS = ['unit tests', 'Merge readiness'];
 const BRANCH_PROTECTION = {
@@ -114,6 +115,7 @@ function realDeliveryQueueInsert() {
       'lib/task-platform/golden-path-release-evidence-refresh.js',
       'tests/unit/golden-path-phase6-real-merge.test.js',
     ],
+    githubIssueUrl: ISSUE_URL,
     ciRepository: 'wiinc1/engineering-team',
     branchName: 'factory/release-evidence-refresh',
     implementationCommitSha: COMMIT_SHA,
@@ -290,6 +292,7 @@ test('factory phase runner receives queued branch-protection inventory', () => {
   assert.deepEqual(options.requiredChecks, REQUIRED_CHECKS);
   assert.deepEqual(options.branchProtection, BRANCH_PROTECTION);
   assert.equal(options.rollbackEvidence, ROLLBACK_EVIDENCE_PATH);
+  assert.equal(options.githubIssueUrl, ISSUE_URL);
   assert.equal(options.productionSafetyEvidence, PRODUCTION_SAFETY_PATH);
   assert.equal(options.riskLevel, 'low');
   assert.equal(options.productionSafe, true);

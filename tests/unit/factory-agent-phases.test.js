@@ -70,6 +70,9 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   const trusted = buildImplementerPrompt({
     taskId: 'TSK-1',
     requirements: 'x',
+    repository: 'wiinc1/engineering-team',
+    githubIssueUrl: 'https://github.com/wiinc1/engineering-team/issues/388',
+    changedFiles: ['docs/reference/example.md'],
     requireRealEvidence: true,
   });
   assert.match(trusted, /TRUSTED DELIVERY/);
@@ -78,6 +81,13 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   assert.match(trusted, /prefer the `github` remote/);
   assert.match(trusted, /Do not merge the pull request/);
   assert.match(trusted, /filesystem, shell, git, and GitHub tools/);
+  assert.match(trusted, /Repository: wiinc1\/engineering-team/);
+  assert.match(trusted, /Source GitHub issue: https:\/\/github\.com\/wiinc1\/engineering-team\/issues\/388/);
+  assert.match(trusted, /Expected changed files: docs\/reference\/example\.md/);
+  assert.match(trusted, /- Standards baseline reviewed:/);
+  assert.match(trusted, /- Rollback path:/);
+  assert.match(trusted, /documentation-only change, use the changed documentation path for both fields/);
+  assert.match(trusted, /Closes #388/);
   assert.doesNotMatch(trusted, /attribution proof only/);
   assert.match(session, /attribution proof only/);
 

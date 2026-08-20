@@ -232,6 +232,14 @@ Trusted Simple execution is a PR lifecycle guarantee, not a hosted-deployment cl
 
 Durable queue ownership spans the complete trusted delivery attempt. The shared one-hour lease default exceeds the implementer's 31-minute runtime allowance, leaving headroom for hosted checks while preserving fail-closed release semantics if ownership is actually lost.
 
+The queued delivery scope is also the source of truth for the implementer's
+first pull-request submission. Phase-runner options carry the repository,
+source issue URL, and expected changed-file list into the trusted OpenClaw
+prompt. The prompt requires the complete governed PR-body schema before the PR
+is opened, a closing reference to the source issue, and evidence paths drawn
+only from the real diff. This makes a passing initial metadata run part of the
+trusted execution contract instead of relying on a later body-repair cycle.
+
 Trusted QA is an evidence-review boundary, not a synthetic approval. The coordinator supplies the exact repository, branch, implementation SHA, PR URL, and expected file scope to the live QA agent. QA may inspect those artifacts through read-only Git and GitHub commands, but cannot mutate the PR or release gates; a rejection routes the same immutable PR identity to the Sr correction agent. Both runtime roles therefore require scoped unattended gateway execution while the coordinator continues to reject missing or malformed branch, SHA, and PR evidence.
 
 ### Cohort residual arithmetic
