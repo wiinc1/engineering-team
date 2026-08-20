@@ -147,8 +147,13 @@ function projectPayload(updated: boolean) {
   };
 }
 
-async function installProjectRoutes(page, state: { updated: boolean; delayFirstProjectListMs?: number }) {
+async function installProjectRoutes(page, state: {
+  updated: boolean;
+  delayFirstProjectListMs?: number;
+  updatedProjectListResponseCount?: number;
+}) {
   let requestCount = 0;
+  state.updatedProjectListResponseCount = 0;
   await page.route('**/api/v1/projects**', async (route) => {
     requestCount += 1;
     const updatedAtRequest = state.updated;
@@ -158,17 +163,19 @@ async function installProjectRoutes(page, state: { updated: boolean; delayFirstP
     await route.fulfill({
       json: projectPayload(updatedAtRequest),
     });
+    if (updatedAtRequest) {
+      state.updatedProjectListResponseCount = (state.updatedProjectListResponseCount || 0) + 1;
+    }
   });
 }
 
-function liveUpdatePayload(state: { pollCount: number }) {
-  const secondPoll = state.pollCount > 1;
+function liveUpdatePayload(state: { pollCount: number }, includeUpdates: boolean) {
   return {
     data: {
       cursor: `cursor-${state.pollCount}`,
       pollAfterMs: 100,
       serverTime: new Date().toISOString(),
-      updates: secondPoll ? [
+      updates: includeUpdates ? [
         {
           entityType: 'task',
           entityId: 'TSK-LIVE',
@@ -190,12 +197,16 @@ function liveUpdatePayload(state: { pollCount: number }) {
   };
 }
 
-async function installUpdateRoute(page, state: { updated: boolean; pollCount: number }) {
+async function installUpdateRoute(page, state: { updated: boolean; pollCount: number; updatePollCount?: number }) {
+  state.updatePollCount = 0;
   await page.route('**/api/v1/tasks/updates**', async (route) => {
     state.pollCount += 1;
-    const secondPoll = state.pollCount > 1;
-    if (secondPoll) state.updated = true;
-    await route.fulfill({ json: liveUpdatePayload(state) });
+    const updatePoll = new URL(route.request().url()).searchParams.has('cursor');
+    if (updatePoll) {
+      state.updatePollCount = (state.updatePollCount || 0) + 1;
+      state.updated = true;
+    }
+    await route.fulfill({ json: liveUpdatePayload(state, updatePoll) });
   });
 }
 
@@ -244,11 +255,25 @@ test('task detail refreshes the active task summary from live updates', async ({
 });
 
 test('Projects refreshes planning containers from live project updates', async ({ page }) => {
-  const state = { updated: false, pollCount: 0, delayFirstProjectListMs: 250 };
+  const state = {
+    updated: false,
+    pollCount: 0,
+    updatePollCount: 0,
+    delayFirstProjectListMs: 250,
+    updatedProjectListResponseCount: 0,
+  };
   await installSharedRoutes(page, state);
 
   await page.goto('/projects', { waitUntil: 'domcontentloaded' });
 
-  await expect(page.getByText('Live Project Updated')).toBeVisible({ timeout: 5000 });
+  await expect.poll(() => state.updatePollCount, {
+    message: 'the live-update endpoint should receive a cursor-based update poll',
+    timeout: 15000,
+  }).toBeGreaterThan(0);
+  await expect.poll(() => state.updatedProjectListResponseCount, {
+    message: 'the Projects route should finish a reload with the updated payload',
+    timeout: 15000,
+  }).toBeGreaterThan(0);
+  await expect(page.getByText('Live Project Updated')).toBeVisible();
   await expect(page).toHaveURL(/\/projects/);
 });

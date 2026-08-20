@@ -77,6 +77,16 @@ If a runtime file does not match any domain, `npm run change:check` fails with a
 - Do not silence failures by widening `doc_requirements` to unrelated docs.
 - Keep domain names stable so failure messages remain predictable.
 
+## Deterministic browser mocks
+
+Browser tests for polling or streaming behavior must synchronize on protocol
+boundaries rather than global request counts or short DOM-only timeouts. In
+particular, cursor-based polling mocks should return baseline data for requests
+without a cursor and updates only after the client sends a cursor. This keeps
+React development-mode effect replay from being mistaken for a second logical
+poll. When an update triggers a follow-up read, tests should await a response
+that actually contains the updated payload before asserting rendered content.
+
 ## Dual remotes (GitLab primary)
 Canonical ship path is GitLab (`origin`). GitHub (`github`) is the backup / public CI mirror. Prefer basing work on `origin/main`, push `origin` first, then `github`. Operator status: `npm run remotes:sync-status`. Full procedure: `docs/runbooks/dual-remote-gitlab-primary.md`.
 
