@@ -92,6 +92,15 @@ function deployedStagingUrl(valueToParse, name, endpointMode) {
   return parsed;
 }
 
+function stagingAutomation(valueToParse, endpointMode) {
+  const automation = String(valueToParse || '').trim();
+  if (/^https?:\/\/[^\s]+$/.test(automation)) return automation;
+  if (endpointMode === 'host-local' && /^local:[a-z0-9][a-z0-9._/-]*$/i.test(automation)) return automation;
+  throw new Error(endpointMode === 'host-local'
+    ? 'RUNTIME_EVIDENCE_AUTOMATION must be an HTTP(S) URL or a local automation identifier in host-local mode.'
+    : 'CI_JOB_URL or RUNTIME_EVIDENCE_AUTOMATION must be an HTTP(S) URL in hosted mode.');
+}
+
 function configuration(argv = process.argv.slice(2), env = process.env) {
   const runtime = value(argv, 'runtime');
   const kind = value(argv, 'kind');
@@ -101,8 +110,7 @@ function configuration(argv = process.argv.slice(2), env = process.env) {
   if (kind === 'browser') deployedStagingUrl(env.STAGING_BROWSER_BASE_URL, 'STAGING_BROWSER_BASE_URL', endpointMode);
   if (revision !== exactRevision()) throw new Error('STAGING_REVISION must equal the exact checked-out revision.');
   if (!COMMANDS[runtime]?.[kind]) throw new Error(`Unsupported executable gate: ${runtime || 'missing'}:${kind || 'missing'}.`);
-  const automation = String(env.CI_JOB_URL || '').trim();
-  if (!/^https?:\/\//.test(automation)) throw new Error('CI_JOB_URL is required for hosted evidence provenance.');
+  const automation = stagingAutomation(env.RUNTIME_EVIDENCE_AUTOMATION || env.CI_JOB_URL, endpointMode);
   return Object.freeze({
     runtime, kind, revision, automation, endpointMode,
     deploymentId: String(env.STAGING_DEPLOYMENT_ID || '').trim(),
@@ -136,4 +144,6 @@ if (require.main === module) {
   }
 }
 
-module.exports = { COMMAND_LINES, COMMANDS, THRESHOLDS, configuration, deployedStagingUrl, main, value, values, writeJson };
+module.exports = {
+  COMMAND_LINES, COMMANDS, THRESHOLDS, configuration, deployedStagingUrl, main, stagingAutomation, value, values, writeJson,
+};

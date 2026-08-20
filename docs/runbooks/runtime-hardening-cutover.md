@@ -33,7 +33,9 @@ The `runtime-hosted-evidence` job executes every pre-soak gate from the persiste
 checkout, stores each raw result for two weeks, and normalizes only parser-verified results with redacted
 command provenance and source SHA-256 digests. Its endpoint normalizer enforces the same explicit
 `hosted` or `host-local` scope as the deployer, preventing either mode from being downgraded while
-evidence is collected. The 24-hour job consumes that exact deployment;
+evidence is collected. Hosted mode requires HTTP(S) CI provenance. Host-local mode may instead use a
+code-owned `local:` automation identifier, so evidence never claims a remote runner that cannot reach
+this host. The 24-hour job consumes that exact deployment;
 `seal-runtime-release-manifests` then adds the soak components, seals both manifests, and runs both
 release verifiers. Missing protected variables suppress the hosted jobs instead of falling back to
 an implicit endpoint mode. CI never runs the apply command.

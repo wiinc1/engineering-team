@@ -90,4 +90,8 @@ it('rejects endpoint-scope downgrades while normalizing executable release evide
   assert.throws(() => executableGateConfiguration(['--runtime', 'graphile', '--kind', 'contract'], {
     ...base, STAGING_ENDPOINT_MODE: 'host-local', STAGING_BASE_URL: 'http://user@127.0.0.1:23000',
   }), /host-local mode/);
+  assert.throws(() => executableGateConfiguration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...base, CI_JOB_URL: undefined, RUNTIME_EVIDENCE_AUTOMATION: 'local:runtime-hosted-evidence',
+    STAGING_BASE_URL: 'https://staging.example.test',
+  }), /hosted mode/);
 });
