@@ -51,3 +51,19 @@ test('factory orchestrator CLI keeps agent-driven Phase 1 separate from downstre
     process.argv = previousArgv;
   }
 });
+
+test('factory orchestrator CLI defaults the queue lease beyond the trusted implementer timeout', () => {
+  const previousArgv = process.argv;
+  const previousLease = process.env.FACTORY_QUEUE_LEASE_SECONDS;
+  try {
+    delete process.env.FACTORY_QUEUE_LEASE_SECONDS;
+    process.argv = ['node', 'scripts/run-factory-orchestrator.js'];
+    const runtime = buildOrchestratorRuntime();
+    assert.equal(runtime.config.factoryQueueLeaseSeconds, 60 * 60);
+    assert.ok(runtime.config.factoryQueueLeaseSeconds > 31 * 60);
+  } finally {
+    process.argv = previousArgv;
+    if (previousLease == null) delete process.env.FACTORY_QUEUE_LEASE_SECONDS;
+    else process.env.FACTORY_QUEUE_LEASE_SECONDS = previousLease;
+  }
+});
