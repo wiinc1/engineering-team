@@ -42,6 +42,7 @@ const {
   kickstart,
 } = require('../lib/task-platform/factory-stack/launchd');
 const { ensurePostgres, dockerAvailable, stopDockerPostgres } = require('../lib/task-platform/factory-stack/postgres');
+const { prepareUiAssets } = require('../lib/task-platform/factory-stack/ui');
 
 function usage() {
   process.stdout.write(`Usage: node scripts/factory-stack.js <up|down|status|restart|install|uninstall|accept> [options]
@@ -133,6 +134,7 @@ async function cmdInstall(options) {
   ensureExampleEnv();
   fs.mkdirSync(STATE_DIR, { recursive: true });
   const env = buildServiceEnv();
+  prepareUiAssets(env, options);
   const installed = installLaunchdServices(env, stackOptions(options));
   return {
     ok: true,
@@ -148,43 +150,56 @@ async function cmdUninstall() {
   return { ok: true, action: 'uninstall', ...result };
 }
 
-async function cmdUp(options) {
-  ensureExampleEnv();
-  const env = buildServiceEnv();
+function upFailure(postgres, error, extra = {}) {
+  return { ok: false, action: 'up', postgres, error, ...extra };
+}
+
+async function prepareStackRuntime(env, options) {
   const postgres = await ensurePostgres();
   if (!postgres.ok) {
-    return {
-      ok: false,
-      action: 'up',
-      postgres,
-      error: postgres.error,
+    return upFailure(postgres, postgres.error, {
       hint: 'Start Postgres on 15432 or install Docker Desktop/OrbStack, then re-run npm run factory:stack:up',
       remediation: postgres.remediation,
-    };
+    });
   }
-
   try {
     runMigrations(env);
   } catch (error) {
-    return {
-      ok: false,
-      action: 'up',
-      postgres,
-      error: `migrations failed: ${error.message}`,
-    };
+    return upFailure(postgres, `migrations failed: ${error.message}`);
   }
+  try {
+    prepareUiAssets(env, options);
+  } catch (error) {
+    return upFailure(postgres, `production UI build failed: ${error.message}`);
+  }
+  return { ok: true, postgres };
+}
 
+function startStackServices(env, options) {
   const installed = installLaunchdServices(env, stackOptions(options));
   for (const label of installed.labels || Object.values(LABELS)) {
     kickstart(label);
   }
+  return installed;
+}
 
-  const health = options.skipWait
+async function collectStartedStack(options, installed) {
+  return options.skipWait
     ? await collectHealthReport({
       requireUi: !options.skipUi,
       requireForgeadapter: !options.skipForgeadapter && Boolean(installed.forgeadapterDir),
     })
     : await waitForRequiredHealth(options);
+}
+
+async function cmdUp(options) {
+  ensureExampleEnv();
+  const env = buildServiceEnv();
+  const prepared = await prepareStackRuntime(env, options);
+  if (!prepared.ok) return prepared;
+  const { postgres } = prepared;
+  const installed = startStackServices(env, options);
+  const health = await collectStartedStack(options, installed);
 
   const launchd = launchdStatus();
   const acceptance = evaluateFactoryStackAcceptance({

@@ -23,6 +23,7 @@ const {
 } = require('../../lib/task-platform/factory-stack/health');
 const { resolveDockerBin, dockerAvailable, ensurePostgres } = require('../../lib/task-platform/factory-stack/postgres');
 const { ensureContainerEngine } = require('../../lib/task-platform/factory-stack/container-engine');
+const { prepareUiAssets } = require('../../lib/task-platform/factory-stack/ui');
 
 describe('factory-stack defaults', () => {
   it('builds live OpenClaw-oriented service env', () => {
@@ -113,8 +114,48 @@ describe('factory-stack launchd plist', () => {
     assert.deepEqual(keys.filter((k) => k !== 'forgeadapter'), ['postgresEnsure', 'api', 'workers', 'ui']);
     assert.equal(skipped.forgeadapter, true);
     assert.ok(specs.find((s) => s.key === 'postgresEnsure').programArgs.some((a) => String(a).includes('factory-stack-postgres-watch')));
+    assert.equal(specs.find((s) => s.key === 'ui').programArgs.includes('preview'), false);
+  });
+});
+
+describe('factory-stack production UI', () => {
+  it('builds and previews production UI assets while leaving development on the Vite server', () => {
+    const calls = [];
+    const productionEnv = { ...buildServiceEnv(), NODE_ENV: 'production' };
+    const result = prepareUiAssets(productionEnv, {}, {
+      execFileSync: (...args) => calls.push(args), existsSync: () => true, stdio: 'pipe',
+    });
+    assert.equal(result.built, true);
+    assert.deepEqual(calls[0].slice(0, 2), ['npm', ['run', 'build:browser']]);
+    assert.equal(calls[0][2].env.VITE_TASK_API_BASE_URL, '/backend');
+    const productionUi = buildServiceSpecs(productionEnv, { skipForgeadapter: true }).specs
+      .find((service) => service.key === 'ui');
+    assert.ok(productionUi.programArgs.includes('preview'));
+    assert.equal(productionUi.env.VITE_TASK_API_PROXY_TARGET, `http://127.0.0.1:${DEFAULT_PORTS.api}`);
+    assert.equal(prepareUiAssets({ ...productionEnv, NODE_ENV: 'development' }, {}, {
+      execFileSync: () => assert.fail('development UI must not build'),
+    }).reason, 'development');
   });
 
+  it('keeps the same-origin API proxy active in Vite preview', () => {
+    const previous = process.env.VITE_TASK_API_PROXY_TARGET;
+    process.env.VITE_TASK_API_PROXY_TARGET = 'http://127.0.0.1:23000';
+    const configPath = require.resolve('../../vite.config.js');
+    delete require.cache[configPath];
+    try {
+      const configure = require(configPath);
+      const config = configure({ mode: 'production', command: 'serve' });
+      assert.equal(config.preview.proxy['/backend'].target, 'http://127.0.0.1:23000');
+      assert.equal(config.preview.proxy['/backend'].rewrite('/backend/health'), '/health');
+    } finally {
+      if (previous === undefined) delete process.env.VITE_TASK_API_PROXY_TARGET;
+      else process.env.VITE_TASK_API_PROXY_TARGET = previous;
+      delete require.cache[configPath];
+    }
+  });
+});
+
+describe('factory-stack launchd diagnostics', () => {
   it('reports stale temporary checkout paths with remediation', () => {
     const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'factory-plist-status-'));
     const plist = path.join(fixture, 'stale.plist');

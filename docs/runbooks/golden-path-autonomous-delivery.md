@@ -1199,3 +1199,8 @@ Configure staging through the protected `STAGING_BASE_URL`, `STAGING_DATABASE_UR
 persistent release root and starts only the `staging` launchd profile. Do not point these variables at
 the default ports, database, state directory, or root binding. A missing HTTPS host or unhealthy local
 or hosted probe blocks evidence creation and the 24-hour soak.
+
+Staging uses a production browser build served by Vite preview with `/backend` proxied to the isolated
+staging API. If the page is blank and reports `$RefreshReg$ is not defined`, the production profile was
+incorrectly started with the Vite development server; rebuild and rebind the exact release before
+collecting browser evidence.
