@@ -7,6 +7,7 @@ const {
 } = require('../../lib/release-gates/runtime-evidence');
 const { stagingConfiguration } = require('../../lib/release-gates/staging-deployment');
 const { cutoverApprovalDigest, validateJointCutover } = require('../../lib/runtime-cutover');
+const { configuration: executableGateConfiguration } = require('../../scripts/normalize-runtime-gate-evidence');
 
 it('fails closed when deployment identity is changed after a manifest is sealed', () => {
   const revision = 'a'.repeat(40);
@@ -71,4 +72,22 @@ it('requires explicit host-local scope and rejects credential-bearing staging in
     STAGING_REPOSITORY_URL: '/srv/engineering-team',
   });
   assert.equal(local.endpointMode, 'host-local');
+});
+
+it('rejects endpoint-scope downgrades while normalizing executable release evidence', () => {
+  const revision = require('node:child_process').execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const base = {
+    STAGING_REVISION: revision,
+    STAGING_DEPLOYMENT_ID: 'staging-secure',
+    CI_JOB_URL: 'https://ci.example.test/jobs/security',
+  };
+  assert.throws(() => executableGateConfiguration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...base, STAGING_BASE_URL: 'http://127.0.0.1:23000',
+  }), /hosted mode/);
+  assert.throws(() => executableGateConfiguration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...base, STAGING_ENDPOINT_MODE: 'host-local', STAGING_BASE_URL: 'https://staging.example.test',
+  }), /host-local mode/);
+  assert.throws(() => executableGateConfiguration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...base, STAGING_ENDPOINT_MODE: 'host-local', STAGING_BASE_URL: 'http://user@127.0.0.1:23000',
+  }), /host-local mode/);
 });

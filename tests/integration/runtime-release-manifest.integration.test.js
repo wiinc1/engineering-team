@@ -9,6 +9,7 @@ const { collectArtifact } = require('../../lib/release-gates/evidence-collector'
 const { buildStagingDeployComponent } = require('../../lib/release-gates/staging-deployment');
 const { createCutoverPlan, cutoverPlanDigest } = require('../../lib/runtime-cutover');
 const { evaluateArtifact } = require('../../scripts/run-langgraph-load');
+const { configuration: executableGateConfiguration } = require('../../scripts/normalize-runtime-gate-evidence');
 
 it('preserves an immutable manifest seal through JSON artifact transport', () => {
   const revision = 'a'.repeat(40);
@@ -56,6 +57,22 @@ it('preserves exact staging deployment evidence through the component collector 
   assert.equal(artifact.summary.hostedHealth, true);
   assert.equal(artifact.summary.hostLocalEndpoint, true);
   assert.equal(transported.evidence.endpointMode, 'host-local');
+});
+
+it('binds host-local executable gates to the same explicit endpoint scope as deployment', () => {
+  const revision = require('node:child_process').execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const configuration = executableGateConfiguration(
+    ['--runtime', 'graphile', '--kind', 'contract', '--source', 'contract.tap'],
+    {
+      STAGING_REVISION: revision,
+      STAGING_ENDPOINT_MODE: 'host-local',
+      STAGING_BASE_URL: 'http://127.0.0.1:23000',
+      STAGING_DEPLOYMENT_ID: 'staging-host-local',
+      CI_JOB_URL: 'https://ci.example.test/jobs/host-local',
+    },
+  );
+  assert.equal(configuration.endpointMode, 'host-local');
+  assert.equal(configuration.deploymentId, 'staging-host-local');
 });
 
 it('admits LangGraph load evidence only with exact side effects and zero residual state', () => {

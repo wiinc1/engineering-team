@@ -125,6 +125,26 @@ test('hosted normalizer binds command provenance to protected exact-revision sta
   assert.throws(() => configuration(['--runtime', 'langgraph', '--kind', 'browser'], env), /STAGING_BROWSER_BASE_URL/);
 });
 
+test('normalizer accepts loopback evidence only in explicit host-local mode', () => {
+  const currentRevision = require('node:child_process').execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const env = {
+    STAGING_REVISION: currentRevision,
+    STAGING_ENDPOINT_MODE: 'host-local',
+    STAGING_BASE_URL: 'http://127.0.0.1:23000',
+    STAGING_BROWSER_BASE_URL: 'http://127.0.0.1:25173',
+    STAGING_DEPLOYMENT_ID: 'staging-host-local',
+    CI_JOB_URL: 'https://gitlab.example.test/jobs/host-local',
+  };
+  const config = configuration(['--runtime', 'langgraph', '--kind', 'browser', '--source', 'result.json'], env);
+  assert.equal(config.endpointMode, 'host-local');
+  assert.throws(() => configuration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...env, STAGING_ENDPOINT_MODE: undefined,
+  }), /hosted mode/);
+  assert.throws(() => configuration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...env, STAGING_BASE_URL: 'https://staging.example.test',
+  }), /host-local mode/);
+});
+
 test('hosted synthetic receipts retain the source digest but remove task content and URLs', () => {
   const redacted = redactReleaseEvidence({
     generatedAt: '2026-08-19T12:00:00.000Z',

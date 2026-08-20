@@ -5,6 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { buildExecutableComponent } = require('../lib/release-gates/executable-evidence');
+const { stagingEndpointUrl } = require('../lib/release-gates/staging-deployment');
+
+const ENDPOINT_MODES = new Set(['hosted', 'host-local']);
 
 const COMMANDS = Object.freeze({
   graphile: Object.freeze({
@@ -78,11 +81,13 @@ function exactRevision() {
   return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 }
 
-function protectedHttpsUrl(valueToParse, name) {
-  let parsed;
-  try { parsed = new URL(String(valueToParse || '')); } catch { throw new Error(`${name} must be a protected non-local HTTPS endpoint.`); }
-  if (parsed.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) {
-    throw new Error(`${name} must be a protected non-local HTTPS endpoint.`);
+function deployedStagingUrl(valueToParse, name, endpointMode) {
+  if (!ENDPOINT_MODES.has(endpointMode)) throw new Error('STAGING_ENDPOINT_MODE must be hosted or host-local.');
+  const parsed = stagingEndpointUrl(String(valueToParse || ''), endpointMode);
+  if (!parsed) {
+    throw new Error(endpointMode === 'host-local'
+      ? `${name} must be a credential-free HTTP(S) loopback endpoint in host-local mode.`
+      : `${name} must be a credential-free, non-local HTTPS endpoint in hosted mode.`);
   }
   return parsed;
 }
@@ -91,14 +96,15 @@ function configuration(argv = process.argv.slice(2), env = process.env) {
   const runtime = value(argv, 'runtime');
   const kind = value(argv, 'kind');
   const revision = String(env.STAGING_REVISION || '').trim();
-  protectedHttpsUrl(env.STAGING_BASE_URL, 'STAGING_BASE_URL');
-  if (kind === 'browser') protectedHttpsUrl(env.STAGING_BROWSER_BASE_URL, 'STAGING_BROWSER_BASE_URL');
+  const endpointMode = String(env.STAGING_ENDPOINT_MODE || 'hosted').trim().toLowerCase();
+  deployedStagingUrl(env.STAGING_BASE_URL, 'STAGING_BASE_URL', endpointMode);
+  if (kind === 'browser') deployedStagingUrl(env.STAGING_BROWSER_BASE_URL, 'STAGING_BROWSER_BASE_URL', endpointMode);
   if (revision !== exactRevision()) throw new Error('STAGING_REVISION must equal the exact checked-out revision.');
   if (!COMMANDS[runtime]?.[kind]) throw new Error(`Unsupported executable gate: ${runtime || 'missing'}:${kind || 'missing'}.`);
   const automation = String(env.CI_JOB_URL || '').trim();
   if (!/^https?:\/\//.test(automation)) throw new Error('CI_JOB_URL is required for hosted evidence provenance.');
   return Object.freeze({
-    runtime, kind, revision, automation,
+    runtime, kind, revision, automation, endpointMode,
     deploymentId: String(env.STAGING_DEPLOYMENT_ID || '').trim(),
     environment: 'staging',
     commandId: COMMANDS[runtime][kind],
@@ -130,4 +136,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { COMMAND_LINES, COMMANDS, THRESHOLDS, configuration, main, protectedHttpsUrl, value, values, writeJson };
+module.exports = { COMMAND_LINES, COMMANDS, THRESHOLDS, configuration, deployedStagingUrl, main, value, values, writeJson };
