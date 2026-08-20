@@ -18,7 +18,7 @@ const { FIXED_NOW, validContext, validRequest } = require('../fixtures/job-runti
 const { assertJobRuntimeLoadBudgets } = require('../../scripts/run-job-runtime-load-test');
 
 test('load gate rejects a registry read at the hosted 250ms boundary', () => assert.throws(
-  () => assertJobRuntimeLoadBudgets({ load_multiplier: 2, required_load_multiplier: 2,
+  () => assertJobRuntimeLoadBudgets({ load_multiplier: 2.08, required_load_multiplier: 2,
     submitted: 1, acknowledged: 1, enqueue_p95_ms: 1, enqueue_p99_ms: 1, operational_read_p95_ms: 250,
     ready_to_start_p95_ms: 1, pool_peak_total: 1, pool_max: 10, pool_waiting_at_end: 0, runtime_pool_waiting_at_end: 0 }), /job_runtime_operational_read_latency_budget_failed/));
 

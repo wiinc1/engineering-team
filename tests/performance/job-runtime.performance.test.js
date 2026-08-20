@@ -79,7 +79,7 @@ test('application enqueue port sustains more than 2x expected QPS without key co
 
 test('hosted load report budget evaluation remains constant-time at gate volume', () => {
   const report = {
-    load_multiplier: 2, required_load_multiplier: 2,
+    load_multiplier: 2.08, required_load_multiplier: 2,
     submitted: 30_000, acknowledged: 30_000, enqueue_p95_ms: 20, enqueue_p99_ms: 40,
     operational_read_p95_ms: 30, ready_to_start_p95_ms: 100,
     pool_peak_total: 6, pool_max: 10, pool_waiting_at_end: 0,
