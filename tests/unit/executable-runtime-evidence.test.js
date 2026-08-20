@@ -133,16 +133,20 @@ test('normalizer accepts loopback evidence only in explicit host-local mode', ()
     STAGING_BASE_URL: 'http://127.0.0.1:23000',
     STAGING_BROWSER_BASE_URL: 'http://127.0.0.1:25173',
     STAGING_DEPLOYMENT_ID: 'staging-host-local',
-    CI_JOB_URL: 'https://gitlab.example.test/jobs/host-local',
+    RUNTIME_EVIDENCE_AUTOMATION: 'local:runtime-hosted-evidence',
   };
   const config = configuration(['--runtime', 'langgraph', '--kind', 'browser', '--source', 'result.json'], env);
   assert.equal(config.endpointMode, 'host-local');
+  assert.equal(config.automation, 'local:runtime-hosted-evidence');
   assert.throws(() => configuration(['--runtime', 'graphile', '--kind', 'contract'], {
     ...env, STAGING_ENDPOINT_MODE: undefined,
   }), /hosted mode/);
   assert.throws(() => configuration(['--runtime', 'graphile', '--kind', 'contract'], {
     ...env, STAGING_BASE_URL: 'https://staging.example.test',
   }), /host-local mode/);
+  assert.throws(() => configuration(['--runtime', 'graphile', '--kind', 'contract'], {
+    ...env, RUNTIME_EVIDENCE_AUTOMATION: 'local:../../untrusted',
+  }), /automation identifier/);
 });
 
 test('hosted synthetic receipts retain the source digest but remove task content and URLs', () => {

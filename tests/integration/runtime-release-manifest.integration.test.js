@@ -68,11 +68,12 @@ it('binds host-local executable gates to the same explicit endpoint scope as dep
       STAGING_ENDPOINT_MODE: 'host-local',
       STAGING_BASE_URL: 'http://127.0.0.1:23000',
       STAGING_DEPLOYMENT_ID: 'staging-host-local',
-      CI_JOB_URL: 'https://ci.example.test/jobs/host-local',
+      RUNTIME_EVIDENCE_AUTOMATION: 'local:runtime-hosted-evidence',
     },
   );
   assert.equal(configuration.endpointMode, 'host-local');
   assert.equal(configuration.deploymentId, 'staging-host-local');
+  assert.equal(configuration.automation, 'local:runtime-hosted-evidence');
 });
 
 it('admits LangGraph load evidence only with exact side effects and zero residual state', () => {
