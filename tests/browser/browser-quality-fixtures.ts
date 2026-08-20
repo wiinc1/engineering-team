@@ -109,6 +109,7 @@ async function installRuntimeConfig(page: Page) {
   await page.addInitScript(
     ({ discoveryUrl, clientId, redirectUri }) => {
       window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        productionAuthStrategy: 'internal-bootstrap',
         oidcDiscoveryUrl: discoveryUrl,
         oidcClientId: clientId,
         oidcRedirectUri: redirectUri,
