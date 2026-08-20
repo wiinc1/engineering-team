@@ -189,6 +189,7 @@
             "^tests/contract/autonomous-delivery-metrics\\.contract\\.test\\.js$",
             "^tests/contract/projects-openapi\\.contract\\.test\\.js$",
             "^tests/integration/audit-postgres-e2e\\.test\\.js$",
+            "^tests/integration/audit-postgres-concurrency\\.integration\\.test\\.js$",
             "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/integration/autonomous-delivery-metrics\\.integration\\.test\\.js$",
             "^tests/integration/audit-migrations\\.integration\\.test\\.js$",
@@ -200,6 +201,7 @@
           "name": "security-or-performance",
           "patterns": [
             "^tests/security/audit-api\\.security\\.test\\.js$",
+            "^tests/security/audit-postgres-sequence-lock\\.security\\.test\\.js$",
             "^tests/unit/audit-api-github-intake\\.test\\.js$",
             "^tests/security/execution-contract-refinement\\.security\\.test\\.js$",
             "^tests/security/live-task-updates\\.security\\.test\\.js$",
