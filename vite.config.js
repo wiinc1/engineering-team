@@ -19,26 +19,26 @@ function shouldBypassTasksProxy(req) {
 module.exports = defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const proxyTarget = env.VITE_TASK_API_PROXY_TARGET;
+  const proxy = proxyTarget
+    ? {
+        '/tasks': {
+          target: proxyTarget,
+          bypass: (req) => shouldBypassTasksProxy(req),
+        },
+        '/auth': {
+          target: proxyTarget,
+          bypass: (req) => (shouldBypassAuthProxy(req) ? req.url : undefined),
+        },
+        '/backend': {
+          target: proxyTarget,
+          rewrite: (path) => path.replace(/^\/backend/, '') || '/',
+        },
+      }
+    : undefined;
 
   return {
     plugins: [react()],
-    server: proxyTarget
-      ? {
-          proxy: {
-            '/tasks': {
-              target: proxyTarget,
-              bypass: (req) => shouldBypassTasksProxy(req),
-            },
-            '/auth': {
-              target: proxyTarget,
-              bypass: (req) => (shouldBypassAuthProxy(req) ? req.url : undefined),
-            },
-            '/backend': {
-              target: proxyTarget,
-              rewrite: (path) => path.replace(/^\/backend/, '') || '/',
-            },
-          },
-        }
-      : undefined,
+    server: proxy ? { proxy } : undefined,
+    preview: proxy ? { proxy } : undefined,
   };
 });

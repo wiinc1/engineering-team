@@ -155,3 +155,13 @@ it('gives staging independent persistent identity, ports, state, and logs', () =
   assert.match(isolated.binding, /profiles\/staging\/repo-root\.json$/);
   assert.match(isolated.logs, /engineering-team-factory-staging$/);
 });
+
+it('serves production staging UI from built assets with the isolated API proxy', () => {
+  const env = { ...buildServiceEnv(), NODE_ENV: 'production' };
+  const ui = buildServiceSpecs(env, { skipForgeadapter: true }).specs
+    .find((service) => service.key === 'ui');
+  assert.ok(ui.programArgs.includes('preview'));
+  assert.equal(ui.programArgs.includes('dev'), false);
+  assert.equal(ui.env.VITE_TASK_API_BASE_URL, '/backend');
+  assert.match(ui.env.VITE_TASK_API_PROXY_TARGET, /127\.0\.0\.1:\d+$/);
+});

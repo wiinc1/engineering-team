@@ -274,3 +274,9 @@ then requires local topology health plus a deployed `/health` response before it
 staging evidence. `STAGING_ENDPOINT_MODE=host-local` permits only explicit loopback HTTP(S) endpoints;
 the default hosted mode still requires non-local HTTPS. This keeps the deployment on the operator host
 without weakening profile, database, credential, or exact-revision isolation.
+
+Production-mode staging builds the browser bundle before launchd activation and serves `dist/` through
+Vite preview. The preview keeps `/backend` as a same-origin proxy to the profile-specific audit API.
+Development profiles retain the Vite development server, but a production profile must never enable
+React-refresh transforms; this separation makes the browser artifact reproducible and prevents a blank
+page caused by development-only refresh globals.

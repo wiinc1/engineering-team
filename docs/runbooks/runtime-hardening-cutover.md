@@ -16,7 +16,10 @@ the other.
 
 On protected `main`, `deploy-runtime-staging` clones the exact `CI_COMMIT_SHA` into
 `$STAGING_RELEASE_ROOT/releases/<sha>`, removes the credential-bearing remote, installs from the lockfile,
-starts only the `staging` launchd profile, and verifies local plus deployed `/health`. Host-local staging
+builds the browser assets, starts only the `staging` launchd profile, and verifies local plus deployed
+`/health`. Production-mode launchd serves the built browser through Vite preview with the same-origin
+`/backend` proxy; it must never launch the React-refresh development server under `NODE_ENV=production`.
+Host-local staging
 uses the profile ports (`127.0.0.1:23000` for the API and `127.0.0.1:25173` for the browser) on this same
 operator host. It emits revision-bound
 Graphile and LangGraph `staging_deploy` components. An existing release directory with another revision,
