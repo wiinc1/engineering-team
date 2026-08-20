@@ -154,7 +154,7 @@ those checks to the real local commands:
 |---|---|---|
 | Operator-hosted coordinated stack | Browser UI, API, workers, forgeadapter, OpenClaw | Restart stack services, fix env, rerun auth/build and factory smokes |
 | Operator-hosted PostgreSQL | Auth, audit, task platform, projections | Stop rollout, inspect migrations/backfill, run rebuild/verify scripts before retry |
-| Docker Compose Postgres | Local development, integration tests, factory proofs | Reset with `npm run dev:postgres:reset` if local state is disposable |
+| Docker Compose Postgres | Local development, integration tests, factory proofs | The launchd watcher starts a stopped active OrbStack VM with `orbctl start --all`, waits for Docker, and restores the named-volume container; fail closed if engine recovery fails |
 | Resend | Registration email verification and password reset when configured | Preserve generic responses; inspect redacted auth smoke and registration alert metrics |
 | OIDC provider | Explicit OIDC production strategy only | Registration remains canonical unless production switches to OIDC with fresh evidence |
 | GitHub | Issues, PRs, merge-readiness checks, branch protection evidence | GitHub check emission must fail closed; branch-protection verifier is read-only |

@@ -21,7 +21,8 @@ const {
   evaluateFactoryStackAcceptance,
   probeWorkersHeartbeat,
 } = require('../../lib/task-platform/factory-stack/health');
-const { resolveDockerBin, dockerAvailable } = require('../../lib/task-platform/factory-stack/postgres');
+const { resolveDockerBin, dockerAvailable, ensurePostgres } = require('../../lib/task-platform/factory-stack/postgres');
+const { ensureContainerEngine } = require('../../lib/task-platform/factory-stack/container-engine');
 
 describe('factory-stack defaults', () => {
   it('builds live OpenClaw-oriented service env', () => {
@@ -154,6 +155,71 @@ describe('factory-stack postgres docker resolution', () => {
     const bin = resolveDockerBin();
     assert.ok(bin === null || typeof bin === 'string');
     assert.equal(typeof dockerAvailable(), 'boolean');
+  });
+});
+
+describe('factory-stack container engine recovery', () => {
+  it('returns immediately when the configured Docker engine is running', async () => {
+    const calls = [];
+    const result = await ensureContainerEngine({
+      dockerBin: '/mock/docker',
+      execFileSyncImpl: (bin, args) => { calls.push([bin, args]); return 'running'; },
+    });
+    assert.equal(result.action, 'engine_already_running');
+    assert.deepEqual(calls, [['/mock/docker', ['info']]]);
+  });
+
+  it('starts the OrbStack VM and waits for Docker readiness', async () => {
+    let infoAttempts = 0;
+    const calls = [];
+    const result = await ensureContainerEngine({
+      dockerBin: '/mock/docker',
+      platform: 'darwin',
+      env: { ORBCTL_BIN: '/mock/orbctl' },
+      existsSyncImpl: () => true,
+      sleepImpl: async () => {},
+      execFileSyncImpl: (bin, args) => {
+        calls.push([bin, args]);
+        if (args[0] === 'info' && infoAttempts++ === 0) throw new Error('socket missing');
+        if (args[0] === 'context') return 'orbstack\n';
+        return 'ok';
+      },
+    });
+    assert.equal(result.action, 'orbstack_started');
+    assert.ok(calls.some(([bin, args]) => bin === '/mock/orbctl' && args.join(' ') === 'start --all'));
+  });
+
+  it('returns structured failure when OrbStack cannot start', async () => {
+    const result = await ensureContainerEngine({
+      dockerBin: '/mock/docker',
+      platform: 'darwin',
+      env: { ORBCTL_BIN: '/mock/orbctl' },
+      existsSyncImpl: () => true,
+      execFileSyncImpl: (bin, args) => {
+        if (args[0] === 'info') throw new Error('socket missing');
+        if (args[0] === 'context') return 'orbstack\n';
+        if (bin === '/mock/orbctl') throw new Error('start denied');
+        return 'ok';
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.action, 'orbstack_start_failed');
+    assert.match(result.error, /start denied/);
+  });
+});
+
+describe('factory-stack postgres recovery failure', () => {
+  it('returns a structured engine failure instead of throwing', async () => {
+    const result = await ensurePostgres({
+      probePostgresImpl: async () => ({ ok: false, error: 'database unavailable' }),
+      ensureContainerEngineImpl: async () => ({
+        ok: false, action: 'orbstack_start_failed', error: 'start denied',
+      }),
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.action, 'orbstack_start_failed');
+    assert.equal(result.error, 'start denied');
+    assert.ok(result.remediation.some((line) => line.includes('orbctl start --all')));
   });
 });
 

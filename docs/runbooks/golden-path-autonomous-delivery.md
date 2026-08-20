@@ -207,7 +207,13 @@ npm run factory:stack:up -- --skip-ui --skip-forgeadapter
 
 Logs: `~/Library/Logs/engineering-team-factory/`. Env example: `deploy/launchd/factory-stack.env.example`. Runtime env copy: `observability/factory-stack/service.env`.
 
-**Postgres durability:** compose uses `restart: unless-stopped` and a named volume (`factory_pgdata`). `factory:stack:up` starts compose when nothing listens on `:15432` and Docker/OrbStack is available. The `factory-postgres-ensure` KeepAlive watcher re-ensures Postgres after reboot. If Docker is missing and nothing listens, up fails with remediation steps.
+**Postgres durability:** compose uses `restart: unless-stopped` and a named volume (`factory_pgdata`). `factory:stack:up` starts compose when nothing listens on `:15432` and Docker/OrbStack is available. The `factory-postgres-ensure` KeepAlive watcher re-ensures Postgres after reboot. When the active Docker context is OrbStack but its VM is stopped, the watcher runs `orbctl start --all`, waits for the Docker engine, and then restores the named Postgres container. If the engine cannot be recovered or Docker is missing, startup fails closed with structured remediation instead of repeatedly throwing compose errors.
+
+Before admitting a zero-intervention cohort, confirm that the host has adequate
+free disk space as well as a healthy stack. A full filesystem can stop the
+OrbStack VM while leaving the GUI process present; `orbctl status` is the
+authoritative engine check. An engine or database failure after policy approval
+invalidates the whole cohort even when infrastructure later recovers.
 
 **Recovery drill (AC1):** kill API/workers/UI/forge processes (or `factory:stack:down` then reboot). Run `npm run factory:stack:up` once — required health (postgres, API, workers heartbeat, live OpenClaw, UI, forgeadapter when present) should return ok without tribal manual steps. Hermes is not part of required recovery health (Q7 / #272).
 

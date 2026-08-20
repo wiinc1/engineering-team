@@ -68,6 +68,23 @@ it('keeps every persistent service spec on the bound canonical checkout', () => 
   }
 });
 
+it('binds Postgres recovery to an autonomous OrbStack engine start', () => {
+  const engineSource = fs.readFileSync(
+    path.join(ROOT, 'lib/task-platform/factory-stack/container-engine.js'),
+    'utf8',
+  );
+  const postgresSource = fs.readFileSync(
+    path.join(ROOT, 'lib/task-platform/factory-stack/postgres.js'),
+    'utf8',
+  );
+
+  assert.match(engineSource, /\['start', '--all'\]/);
+  assert.match(engineSource, /orbstack_start_failed/);
+  assert.match(engineSource, /orbstack_start_timeout/);
+  assert.match(postgresSource, /await ensureContainerEngineImpl/);
+  assert.match(postgresSource, /docker_compose_failed/);
+});
+
 it('keeps GP-023 child validation isolated from persistent factory runtime state', () => {
   const env = validationSubprocessEnv({
     PATH: process.env.PATH,
