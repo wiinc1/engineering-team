@@ -7,6 +7,7 @@ const {
   resolveSreApproval,
   buildCiValidationEvidence,
   buildImplementerPrompt,
+  buildQaPrompt,
   isTrustedDeliveryMode,
 } = require('../../lib/task-platform/factory-agent-phases');
 
@@ -95,6 +96,34 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   });
   assert.match(fix, /existing pull request/);
   assert.match(fix, /Do not open a second pull request/);
+});
+
+test('buildQaPrompt supplies exact read-only PR evidence for trusted delivery QA', () => {
+  const prompt = buildQaPrompt({
+    taskId: 'TSK-26',
+    requirements: 'Add one documentation file.',
+    repository: 'wiinc1/engineering-team',
+    branchName: 'jr/tsk-26-docs',
+    commitSha: 'd3690b68a8aec49fa35194c7532a9629ba8109db',
+    prUrl: 'https://github.com/wiinc1/engineering-team/pull/362',
+    changedFiles: ['docs/reference/example.md'],
+    trustedSimpleClose: true,
+  });
+
+  assert.match(prompt, /TRUSTED DELIVERY QA/);
+  assert.match(prompt, /read-only filesystem, git, and GitHub commands/);
+  assert.match(prompt, /wiinc1\/engineering-team/);
+  assert.match(prompt, /d3690b68a8aec49fa35194c7532a9629ba8109db/);
+  assert.match(prompt, /pull\/362/);
+  assert.match(prompt, /docs\/reference\/example\.md/);
+  assert.match(prompt, /Do not edit files or pull-request metadata/);
+  assert.doesNotMatch(prompt, /no tools/);
+});
+
+test('buildQaPrompt keeps session-proof QA tool-free', () => {
+  const prompt = buildQaPrompt({ taskId: 'TSK-1', requirements: 'x' });
+  assert.match(prompt, /no tools, no file edits/);
+  assert.doesNotMatch(prompt, /TRUSTED DELIVERY QA/);
 });
 
 test('isTrustedDeliveryMode is opt-in via real-evidence flags', () => {
