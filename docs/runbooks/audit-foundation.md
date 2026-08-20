@@ -36,6 +36,12 @@ Supabase Postgres is the canonical production/staging database. Dockerized Postg
 - `autonomous_delivery_metric_snapshots` — aggregate autonomous delivery metric snapshots and threshold evaluation evidence
 - `schema_migrations` — forward migration ledger; normal migration apply skips `*.down.sql` rollback files so rollback scripts must be executed only by an explicit operator rollback procedure.
 
+PostgreSQL event appends acquire a transaction-scoped advisory lock per tenant
+and task before idempotency lookup and sequence allocation. Concurrent writers
+therefore receive a unique, contiguous task-local sequence instead of racing on
+the `audit_events` uniqueness constraint. Commit or rollback releases the lock,
+and unrelated tenant/task pairs remain independent.
+
 ## HTTP authz model in this slice
 Default auth contract: bearer JWT with tenant + actor claims.
 
