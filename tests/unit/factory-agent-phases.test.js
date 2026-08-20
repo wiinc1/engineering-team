@@ -86,6 +86,10 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   assert.match(trusted, /Expected changed files: docs\/reference\/example\.md/);
   assert.match(trusted, /- Standards baseline reviewed:/);
   assert.match(trusted, /- Rollback path:/);
+  assert.match(trusted, /rejects `None`, `N\/A`, `TBD`, `TODO`, and `unknown`/);
+  assert.match(trusted, /No gaps or exceptions; rationale: <specific reason this change conforms>/);
+  assert.match(trusted, /Do not write only `None`/);
+  assert.match(trusted, /Pending at PR creation; all protected checks are required before merge/);
   assert.match(trusted, /documentation-only change, use the changed documentation path for both fields/);
   assert.match(trusted, /Closes #388/);
   assert.doesNotMatch(trusted, /attribution proof only/);

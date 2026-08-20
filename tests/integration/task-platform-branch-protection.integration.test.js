@@ -86,5 +86,8 @@ test('propagates trusted queue scope into the first-pass implementer PR contract
   assert.match(prompt, /Repository: wiinc1\/engineering-team/);
   assert.match(prompt, /Source GitHub issue: https:\/\/github\.com\/wiinc1\/engineering-team\/issues\/388/);
   assert.match(prompt, /Expected changed files: docs\/reference\/example\.md/);
+  assert.match(prompt, /repository rejects `None`, `N\/A`, `TBD`, `TODO`, and `unknown`/);
+  assert.match(prompt, /No gaps or exceptions; rationale: <specific reason this change conforms>/);
+  assert.match(prompt, /Do not write only `None`/);
   assert.match(prompt, /Closes #388/);
 });

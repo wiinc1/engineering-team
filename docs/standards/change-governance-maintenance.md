@@ -24,6 +24,10 @@ expected changed-file list, include a closing issue reference, and use only
 paths present in the actual diff for both evidence-path fields. For docs-only
 changes, the changed documentation path may serve as both test evidence and
 documentation evidence because repository validation is the exercised gate.
+Required fields must not use the bare placeholder tokens rejected by
+`verify-pr-body.js` (`None`, `N/A`, `TBD`, `TODO`, or `unknown`). When no
+standards gap exists, state that there are no gaps or exceptions and include a
+specific conformance rationale; a bare `None` is a failed initial submission.
 
 ## Coverage Artifacts
 `npm run standards:check` reads `.artifacts/coverage-summary.json`. That file may be produced by `npm run coverage` with per-suite JavaScript/UI coverage, or by `make verify` with Python coverage totals. The coverage policy checker accepts both schemas so developers can run the verification commands in either order without regenerating coverage only to satisfy a parser shape.
