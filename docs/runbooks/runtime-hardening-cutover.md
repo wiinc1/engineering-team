@@ -70,6 +70,22 @@ The release components are written to `.artifacts/runtime-soak/graphile-soak-24h
 `.artifacts/runtime-soak/langgraph-soak-24h.json`. A shorter `SOAK_DURATION_SECONDS` is useful only
 for harness smoke testing and cannot pass the 24-hour release threshold.
 
+Each window also writes a redacted `windows/<index>-result.json` process diagnostic. The harness
+stops after the first failed runtime, asks timed-out children to drain, escalates hung shutdowns,
+and independently removes and verifies only the Graphile jobs and application rows referenced by
+that window's synthetic tenant before another window can start. If a hard-killed child leaves a
+logical Graphile lock, cleanup unlocks only the worker IDs attached to those exact synthetic jobs,
+retries supported job completion, and fails closed unless the residual count is zero.
+Graphile throughput evaluation permits only the fractional remainder created when duration times QPS
+is not an integer; one missing whole job or any latency, delivery, pool, or cleanup breach still fails.
+
+To remove backlog from an already failed run, set the exact `SOAK_CLEANUP_RUN_PREFIX`, the matching
+`SOAK_CLEANUP_CONFIRM=delete:<prefix>`, and a hosted `SOAK_CLEANUP_OUTPUT`, then run
+`npm run cleanup:runtime:soak`. The command refuses wildcard prefixes, removes jobs through Graphile's
+supported worker utilities, deletes only tenants matching that run, and records before/after evidence.
+An orphan from an earlier synthetic check can instead be selected with one exact
+`SOAK_CLEANUP_TENANT`; the same matching confirmation and hosted evidence requirements apply.
+
 ## Emergency response
 
 Set `FF_GRAPHILE_WORKER_CUTOVER=false` to stop new claims and drain Graphile. Set `LANGGRAPH_GLOBAL_KILL_SWITCH=true` to stop new graph operations while retaining checkpoints. Page P0 for duplicate/concurrent ownership, cross-tenant access, or data loss; P1 for scheduling/checkpoint outage, severe backlog, stuck run/interrupt, or security anomaly; P2 for capacity, retention, or version drift.

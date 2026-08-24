@@ -88,6 +88,7 @@
     "test:langgraph:operator:mutation": "stryker run stryker.langgraph-03.conf.json",
     "test:runtime-gates:mutation": "stryker run stryker.runtime-gates.conf.json",
     "test:runtime:soak": "node scripts/run-runtime-soak.js",
+    "cleanup:runtime:soak": "node scripts/cleanup-runtime-soak-run.js",
     "test:langgraph:load": "bash scripts/run-langgraph-load-docker.sh",
     "test:langgraph:integration:postgres": "node --test --test-concurrency=1 tests/integration/langgraph-postgres.integration.test.js tests/integration/langgraph-process-recovery-postgres.integration.test.js",
     "test:langgraph:docker": "LANGGRAPH_INTEGRATION_SCOPE=focused bash scripts/run-postgres-integration-docker.sh",

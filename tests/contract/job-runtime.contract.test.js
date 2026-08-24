@@ -57,6 +57,24 @@ test('hosted load evidence derives 2x from measured wall-clock throughput', () =
   );
 });
 
+test('hosted load evidence permits only the fractional final-job quantization remainder', () => {
+  const durationMs = 59_988.926;
+  const expectedQps = 2;
+  const expectedSubmissions = (durationMs / 1000) * expectedQps;
+  assert.doesNotThrow(() => assertJobRuntimeLoadBudgets(passingLoadReport({
+    duration_ms: durationMs,
+    expected_qps: expectedQps,
+    load_multiplier: Math.floor(expectedSubmissions) / expectedSubmissions,
+    required_load_multiplier: 1,
+  })));
+  assert.throws(() => assertJobRuntimeLoadBudgets(passingLoadReport({
+    duration_ms: durationMs,
+    expected_qps: expectedQps,
+    load_multiplier: (Math.floor(expectedSubmissions) - 1) / expectedSubmissions,
+    required_load_multiplier: 1,
+  })), /load_multiplier_failed/);
+});
+
 test('producer and handler share the exact v1 payload and correlation contract', async () => {
   const fullCatalog = createTaskCatalog();
   const catalog = createTaskCatalog([fullCatalog.resolve('job_runtime.synthetic', 1)]);

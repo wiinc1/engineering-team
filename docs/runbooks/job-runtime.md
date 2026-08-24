@@ -45,3 +45,10 @@ For ambiguous effects, query the owning canonical system by deterministic effect
 ## Verification
 
 Run the exact focused, coverage, mutation, real-Postgres, security, performance, 10-minute 2× load, repository, standards, build, and `make verify` commands recorded in `docs/reports/ISSUE-287_STANDARDS_COMPLIANCE_CHECKLIST.md`. The hosted load artifact must derive its load factor from submitted jobs divided by measured wall-clock submission duration; target QPS or requested duration alone is not promotion evidence. Never enable or merge with a red gate.
+
+The soak runner captures bounded redacted child diagnostics and stops after the first failed window.
+On termination, the synthetic load child drains before cleanup; the parent then removes referenced
+Graphile jobs, unlocks only residual worker IDs attached to that exited synthetic tenant, and fails
+unless both Graphile and application residual counts are zero. Partial-window throughput may credit
+only the fractional remainder between the exact duration/QPS product and its integer floor; one
+missing whole submission still fails the load gate.

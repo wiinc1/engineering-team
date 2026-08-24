@@ -11,6 +11,7 @@ const { createCutoverPlan, cutoverPlanDigest } = require('../../lib/runtime-cuto
 const { createMetricSink } = require('../../lib/software-factory/langgraph');
 const { evaluateArtifact } = require('../../scripts/run-langgraph-load');
 const { configuration: executableGateConfiguration } = require('../../scripts/normalize-runtime-gate-evidence');
+const { buildComponent } = require('../../scripts/run-runtime-soak');
 
 it('preserves an immutable manifest seal through JSON artifact transport', () => {
   const revision = 'a'.repeat(40);
@@ -23,6 +24,24 @@ it('preserves an immutable manifest seal through JSON artifact transport', () =>
   });
   assert.equal(decision.manifestDigest, manifest.manifestDigest);
   assert.equal(decision.reasons.includes('manifest:digest'), false);
+});
+
+it('transports a fail-closed LangGraph soak component after the first child violation', () => {
+  const revision = 'f'.repeat(40);
+  const component = buildComponent({
+    runtime: 'langgraph', revision, deploymentId: 'staging-fail-closed',
+    runId: 'runtime-soak-fail-closed', environment: 'staging',
+    startedAt: '2026-08-24T00:00:00.000Z', completedAt: '2026-08-24T00:05:00.000Z',
+    durationSeconds: 300, sampleCount: 2,
+    summary: {
+      violations: 1, leaks: 0, windows: 1, graphilePasses: 0, langgraphPasses: 1,
+      baselineConnections: 2, finalConnections: 2, peakConnections: 4,
+    },
+  });
+  const transported = JSON.parse(JSON.stringify(component));
+  assert.equal(transported.status, 'failed');
+  assert.equal(transported.evidence.windows, 1);
+  assert.equal(collectArtifact(transported, { runtime: 'langgraph', revision }).summary.violations, 1);
 });
 
 it('preserves an apply-plan digest through the operator approval transport boundary', () => {
