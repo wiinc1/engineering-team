@@ -8,7 +8,7 @@ const { captureLogger, metricRecorder, validContext, validRequest } = require('.
 const { createPayloadValidator } = require('../../lib/job-runtime/payload-schema');
 const { createJobRuntimePort } = require('../../lib/job-runtime/port');
 const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
-const { assertJobRuntimeLoadBudgets } = require('../../scripts/run-job-runtime-load-test');
+const { assertJobRuntimeLoadBudgets, delayUntil } = require('../../scripts/run-job-runtime-load-test');
 
 const EXPECTED_QPS = 25;
 const LOAD_MULTIPLIER = 2;
@@ -92,6 +92,22 @@ test('hosted load report budget evaluation remains constant-time at gate volume'
   };
   const started = performance.now();
   for (let index = 0; index < 10_000; index += 1) assertJobRuntimeLoadBudgets(report);
+  assert.ok(performance.now() - started < 100);
+});
+
+test('deadline correction remains bounded after an early timer wake', async () => {
+  let now = 0;
+  let waits = 0;
+  const started = performance.now();
+  await delayUntil(600_000, null, {
+    now: () => now,
+    async delay(milliseconds) {
+      waits += 1;
+      now += waits === 1 ? milliseconds - 0.5 : milliseconds;
+    },
+  });
+  assert.equal(waits, 2);
+  assert.equal(now, 600_000);
   assert.ok(performance.now() - started < 100);
 });
 

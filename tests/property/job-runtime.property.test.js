@@ -7,7 +7,7 @@ const { createPayloadValidator } = require('../../lib/job-runtime/payload-schema
 const { queueLane, semanticJobKey } = require('../../lib/job-runtime/policies');
 const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
 const { createWorkloadScheduler } = require('../../lib/job-runtime/workload-scheduler');
-const { assertJobRuntimeLoadBudgets } = require('../../scripts/run-job-runtime-load-test');
+const { assertJobRuntimeLoadBudgets, delayUntil } = require('../../scripts/run-job-runtime-load-test');
 
 function seededRandom(seed) {
   let state = seed >>> 0;
@@ -122,5 +122,21 @@ test('generated partial windows allow the fractional remainder but never a missi
       ...report, submitted: report.submitted - 1, acknowledged: report.acknowledged - 1,
       load_multiplier: (Math.floor(expected) - 1) / expected,
     }), /load_multiplier_failed/);
+  }
+});
+
+test('generated early timer wakes never let the hosted load finish before its deadline', async () => {
+  const random = seededRandom(287);
+  for (let sample = 0; sample < 100; sample += 1) {
+    const deadline = 600_000 + Math.floor(random() * 10_000);
+    const earlyBy = random();
+    let now = 0;
+    await delayUntil(deadline, null, {
+      now: () => now,
+      async delay(milliseconds) {
+        now += now === 0 ? milliseconds - earlyBy : milliseconds;
+      },
+    });
+    assert.ok(now >= deadline);
   }
 });

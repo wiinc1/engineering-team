@@ -99,3 +99,12 @@ test('shared-host performance files run serially without weakening their budgets
   assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.95\) < 100/);
   assert.match(read('tests/performance/job-runtime.performance.test.js'), /percentile\(latencies, 0\.99\) < 250/);
 });
+
+test('hosted runtime evidence keeps destructive migration fixtures off the persistent staging database', () => {
+  const ci = read('.gitlab-ci.yml');
+  const hosted = ci.match(/runtime-hosted-evidence:[\s\S]*?\n# This is intentionally a real 24-hour gate\./)?.[0] || '';
+  assert.match(hosted, /DATABASE_URL= LANGGRAPH_INTEGRATION_SCOPE=all bash scripts\/run-postgres-integration-docker\.sh/);
+  assert.match(hosted, /cp "\$task_raw_dir\/dr-restore\.tap" "\$task_raw_dir\/graphile-composed-runtime\.tap"/);
+  assert.match(hosted, /cp "\$task_raw_dir\/dr-restore\.tap" "\$task_raw_dir\/langgraph-checkpoint-retention\.tap"/);
+  assert.doesNotMatch(hosted, /node --test tests\/integration\/(?:job-runtime|langgraph)-postgres/);
+});

@@ -46,6 +46,12 @@ For ambiguous effects, query the owning canonical system by deterministic effect
 
 Run the exact focused, coverage, mutation, real-Postgres, security, performance, 10-minute 2× load, repository, standards, build, and `make verify` commands recorded in `docs/reports/ISSUE-287_STANDARDS_COMPLIANCE_CHECKLIST.md`. The hosted load artifact must derive its load factor from submitted jobs divided by measured wall-clock submission duration; target QPS or requested duration alone is not promotion evidence. Never enable or merge with a red gate.
 
+The ten-minute hosted load runner waits against the monotonic deadline until the complete requested
+duration has elapsed; an early timer wake-up cannot produce a sub-threshold artifact. The hosted
+integration gate runs migration rollback fixtures only in the isolated Docker PostgreSQL harness and
+reuses that complete passing TAP result for composed-runtime and checkpoint-retention evidence. Never
+run those rollback fixtures against the persistent staging database.
+
 The soak runner captures bounded redacted child diagnostics and stops after the first failed window.
 On termination, the synthetic load child drains before cleanup; the parent then removes referenced
 Graphile jobs, unlocks only residual worker IDs attached to that exited synthetic tenant, and fails
