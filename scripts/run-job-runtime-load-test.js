@@ -52,6 +52,11 @@ function delay(milliseconds, signal) {
   });
 }
 
+async function delayUntil(deadline, signal, dependencies = {}) {
+  const now = dependencies.now || performance.now.bind(performance);
+  const wait = dependencies.delay || delay;
+  for (let remaining = deadline - now(); remaining > 0; remaining = deadline - now()) await wait(remaining, signal);
+}
 function loadCanonical() {
   return {
     async lookup(input) {
@@ -62,7 +67,6 @@ function loadCanonical() {
     async authorize() { return true; },
   };
 }
-
 function loadWorkloads(loadTest) {
   return {
     langGraph: {
@@ -92,7 +96,6 @@ function loadWorkloads(loadTest) {
     async pruneRegistry() { return { code: 'pruned' }; },
   };
 }
-
 function loadInfrastructure(loadTest) {
   return createJobRuntimeInfrastructure({
     pool: loadTest.pool,
@@ -105,7 +108,6 @@ function loadInfrastructure(loadTest) {
     workloads: loadWorkloads(loadTest),
   });
 }
-
 class JobRuntimeLoadTest {
   constructor(options = {}) {
     this.durationMs = positiveInteger(options.durationMs || process.env.JOB_RUNTIME_LOAD_DURATION_MS, 600_000);
@@ -232,7 +234,7 @@ class JobRuntimeLoadTest {
     const submitted = Math.floor((this.durationMs / 1000) * this.targetQps);
     const startedAt = performance.now();
     for (let index = 0; index < submitted; index += 1) await this.enqueue(index, startedAt);
-    await delay((startedAt + this.durationMs) - performance.now(), this.abortController.signal);
+    await delayUntil(startedAt + this.durationMs, this.abortController.signal);
     const submissionDurationMs = performance.now() - startedAt;
     const summary = await this.waitForCompletion(submitted);
     const report = this.buildReport(submitted, summary, submissionDurationMs);
@@ -253,7 +255,6 @@ class JobRuntimeLoadTest {
     await this.pool.end();
   }
 }
-
 function assertJobRuntimeLoadBudgets(report) {
   const expectedSubmissions = (Number(report.duration_ms) / 1000) * Number(report.expected_qps);
   const submissionQuantum = Number.isFinite(expectedSubmissions) && expectedSubmissions > 0
@@ -273,7 +274,6 @@ function assertJobRuntimeLoadBudgets(report) {
     throw new Error('job_runtime_pool_budget_failed');
   }
 }
-
 async function cleanupGraphileBatch(workerUtils, client, batch) {
   let completed = (await workerUtils.completeJobs(batch)).length;
   let residual = await client.query(`SELECT id::text, locked_by
@@ -292,7 +292,6 @@ async function cleanupGraphileBatch(workerUtils, client, batch) {
   }
   return Object.freeze({ completed, residual: residual.rows.length, workersUnlocked: workerIds.length });
 }
-
 async function cleanupReferencedGraphileJobs(pool, client, tenantId, dependencies) {
   const references = await client.query(`SELECT graphile_job_id
     FROM job_runtime.job_delivery_registry
@@ -314,7 +313,6 @@ async function cleanupReferencedGraphileJobs(pool, client, tenantId, dependencie
     await workerUtils.release().catch(() => {});
   }
 }
-
 async function cleanupLoadData(pool, tenantId, dependencies = {}) {
   const client = await pool.connect();
   try {
@@ -393,6 +391,7 @@ module.exports = {
   JobRuntimeLoadTest,
   assertJobRuntimeLoadBudgets,
   cleanupLoadData,
+  delayUntil,
   loadMeasurement,
   main,
   percentile,

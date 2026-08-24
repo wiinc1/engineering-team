@@ -13,7 +13,7 @@ const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
 const { createMigratedWorkloadHandlers } = require('../../lib/job-runtime/workload-handlers');
 const { assertInventoryCompleteness, inventory } = require('../../lib/job-runtime/workload-inventory');
 const { createWorkloadProducers } = require('../../lib/job-runtime/workload-producers');
-const { assertJobRuntimeLoadBudgets, loadMeasurement } = require('../../scripts/run-job-runtime-load-test');
+const { assertJobRuntimeLoadBudgets, delayUntil, loadMeasurement } = require('../../scripts/run-job-runtime-load-test');
 
 function passingLoadReport(overrides = {}) {
   return {
@@ -55,6 +55,20 @@ test('hosted load evidence derives 2x from measured wall-clock throughput', () =
     () => assertJobRuntimeLoadBudgets(passingLoadReport({ load_multiplier: delayed.measuredLoadMultiplier })),
     /load_multiplier_failed/,
   );
+});
+
+test('hosted load runner waits again when a timer resolves just before the full deadline', async () => {
+  let now = 0;
+  const waits = [];
+  await delayUntil(600_000, null, {
+    now: () => now,
+    async delay(milliseconds) {
+      waits.push(milliseconds);
+      now += waits.length === 1 ? milliseconds - 0.25 : milliseconds;
+    },
+  });
+  assert.deepEqual(waits, [600_000, 0.25]);
+  assert.equal(now, 600_000);
 });
 
 test('hosted load evidence permits only the fractional final-job quantization remainder', () => {

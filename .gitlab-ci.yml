@@ -226,15 +226,15 @@ runtime-hosted-evidence:
     - node --test chaos/langgraph-resilience.test.js > "$task_raw_dir/langgraph-chaos.tap"
     - export COMPOSE_PROJECT_NAME="runtime-evidence-${CI_PIPELINE_ID}-${CI_JOB_ID}"
     - export POSTGRES_HOST_PORT="$((57000 + (CI_JOB_ID % 7000)))"
-    - DATABASE_URL= LANGGRAPH_INTEGRATION_SCOPE=focused bash scripts/run-postgres-integration-docker.sh > "$task_raw_dir/dr-restore.tap"
+    - DATABASE_URL= LANGGRAPH_INTEGRATION_SCOPE=all bash scripts/run-postgres-integration-docker.sh > "$task_raw_dir/dr-restore.tap"
     - cp .artifacts/langgraph-01-recovery.json "$task_raw_dir/dr-restore.json"
     - node --test tests/unit/job-runtime-artifacts.test.js > "$task_raw_dir/graphile-alerts.tap"
     - node --test tests/contract/langgraph-alerts.contract.test.js > "$task_raw_dir/langgraph-alerts.tap"
     - node --test tests/unit/job-runtime-contracts.test.js tests/unit/job-runtime-infrastructure.test.js > "$task_raw_dir/graphile-kill-switch.tap"
     - node --test tests/unit/langgraph-mutation-contracts.test.js tests/unit/langgraph-runtime.test.js > "$task_raw_dir/langgraph-kill-switch.tap"
     - node --test tests/unit/runtime-cutover.test.js tests/unit/runtime-cutover-artifacts.test.js > "$task_raw_dir/runtime-rollback.tap"
-    - node --test tests/unit/job-runtime-composition.test.js tests/integration/job-runtime-postgres.integration.test.js > "$task_raw_dir/graphile-composed-runtime.tap"
-    - node --test tests/integration/langgraph-postgres.integration.test.js > "$task_raw_dir/langgraph-checkpoint-retention.tap"
+    - cp "$task_raw_dir/dr-restore.tap" "$task_raw_dir/graphile-composed-runtime.tap"
+    - cp "$task_raw_dir/dr-restore.tap" "$task_raw_dir/langgraph-checkpoint-retention.tap"
     - |
       for task_synthetic_index in 1 2 3; do
         task_synthetic_dir="$(mktemp -d)"

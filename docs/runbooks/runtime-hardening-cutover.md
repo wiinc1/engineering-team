@@ -38,7 +38,10 @@ command provenance and source SHA-256 digests. Its endpoint normalizer enforces 
 `hosted` or `host-local` scope as the deployer, preventing either mode from being downgraded while
 evidence is collected. Hosted mode requires HTTP(S) CI provenance. Host-local mode may instead use a
 code-owned `local:` automation identifier, so evidence never claims a remote runner that cannot reach
-this host. The 24-hour job consumes that exact deployment;
+this host. Migration rollback, composed-runtime, and checkpoint-retention fixtures run against the
+job's disposable Docker PostgreSQL instance; they must never target the persistent staging database.
+The Graphile load runner also rechecks its monotonic deadline after an early timer wake-up so normalized
+evidence always represents at least the complete requested ten-minute window. The 24-hour job consumes that exact deployment;
 `seal-runtime-release-manifests` then adds the soak components, seals both manifests, and runs both
 release verifiers. Missing protected variables suppress the hosted jobs instead of falling back to
 an implicit endpoint mode. CI never runs the apply command.
