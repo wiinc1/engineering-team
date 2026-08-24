@@ -7,6 +7,7 @@ const { createPayloadValidator } = require('../../lib/job-runtime/payload-schema
 const { queueLane, semanticJobKey } = require('../../lib/job-runtime/policies');
 const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
 const { createWorkloadScheduler } = require('../../lib/job-runtime/workload-scheduler');
+const { assertJobRuntimeLoadBudgets } = require('../../scripts/run-job-runtime-load-test');
 
 function seededRandom(seed) {
   let state = seed >>> 0;
@@ -103,4 +104,23 @@ test('generated recurring occurrences remain monotonic and preserve one serializ
   assert.deepEqual(timestamps, [...timestamps].sort((left, right) => left - right));
   assert.equal(new Set(scheduled.map((entry) => entry.context.tenantId)).size, 1);
   assert.equal(new Set(scheduled.map((entry) => entry.input.occurrenceId)).size, scheduled.length);
+});
+
+test('generated partial windows allow the fractional remainder but never a missing whole job', () => {
+  for (let expectedQps = 1; expectedQps <= 25; expectedQps += 1) {
+    const durationMs = 60_000 + expectedQps;
+    const expected = (durationMs / 1000) * expectedQps;
+    const report = {
+      duration_ms: durationMs, expected_qps: expectedQps,
+      load_multiplier: Math.floor(expected) / expected, required_load_multiplier: 1,
+      submitted: Math.floor(expected), acknowledged: Math.floor(expected),
+      enqueue_p95_ms: 1, enqueue_p99_ms: 1, operational_read_p95_ms: 1, ready_to_start_p95_ms: 1,
+      pool_peak_total: 6, pool_max: 10, pool_waiting_at_end: 0, runtime_pool_waiting_at_end: 0,
+    };
+    assert.doesNotThrow(() => assertJobRuntimeLoadBudgets(report));
+    assert.throws(() => assertJobRuntimeLoadBudgets({
+      ...report, submitted: report.submitted - 1, acknowledged: report.acknowledged - 1,
+      load_multiplier: (Math.floor(expected) - 1) / expected,
+    }), /load_multiplier_failed/);
+  }
 });

@@ -853,7 +853,7 @@
         "^lib/release-gates/(?:evidence-collector|executable-evidence|runtime-evidence|staging-deployment)\\.js$",
         "^lib/runtime-cutover/",
         "^db/migrations/(?:018_langgraph_runtime_persistence|019_job_runtime_operations|020_langgraph_interrupts|021_runtime_cutover_ownership|022_langgraph_lifecycle_events|023_runtime_cutover_apply_audit)(?:\\.down)?\\.sql$",
-        "^scripts/(?:apply-runtime-cutover|collect-runtime-release-evidence|deploy-runtime-staging|generate-runtime-sbom|normalize-runtime-gate-evidence|run-browser-gates|run-langgraph-load|run-runtime-soak|setup-langgraph-postgres|verify-langgraph-lifecycle-equivalence|verify-legacy-runtime-removal|verify-runtime-cutover|verify-runtime-release-evidence|wait-for-performance-host)\\.js$",
+        "^scripts/(?:apply-runtime-cutover|cleanup-runtime-soak-run|collect-runtime-release-evidence|deploy-runtime-staging|generate-runtime-sbom|normalize-runtime-gate-evidence|run-browser-gates|run-langgraph-load|run-runtime-soak|setup-langgraph-postgres|verify-langgraph-lifecycle-equivalence|verify-legacy-runtime-removal|verify-runtime-cutover|verify-runtime-release-evidence|wait-for-performance-host)\\.js$",
         "^scripts/run-langgraph-load-docker\\.sh$"
       ],
       "test_requirements": [

@@ -8,6 +8,7 @@ const {
 const { stagingConfiguration } = require('../../lib/release-gates/staging-deployment');
 const { cutoverApprovalDigest, validateJointCutover } = require('../../lib/runtime-cutover');
 const { configuration: executableGateConfiguration } = require('../../scripts/normalize-runtime-gate-evidence');
+const { redactDiagnostic } = require('../../scripts/run-runtime-soak');
 
 it('fails closed when deployment identity is changed after a manifest is sealed', () => {
   const revision = 'a'.repeat(40);
@@ -20,6 +21,19 @@ it('fails closed when deployment identity is changed after a manifest is sealed'
   });
   assert.ok(decision.reasons.includes('manifest:digest'));
   assert.equal(decision.allowed, false);
+});
+
+it('redacts every supported database URL before soak child diagnostics are persisted', () => {
+  const diagnostic = redactDiagnostic([
+    'postgres://user:password@db.internal/runtime',
+    'postgresql://other:credential@db.internal/runtime',
+    'STAGING_DATABASE_URL=postgres://staging:token@db.internal/staging',
+    'PRODUCTION_DATABASE_URL=postgres://production:token@db.internal/production',
+  ].join('\n'));
+  for (const secret of ['password', 'credential', 'staging:token', 'production:token', 'db.internal']) {
+    assert.doesNotMatch(diagnostic, new RegExp(secret));
+  }
+  assert.match(diagnostic, /\[redacted\]/);
 });
 
 it('does not accept a cutover confirmation copied from a differently scoped approval', () => {
