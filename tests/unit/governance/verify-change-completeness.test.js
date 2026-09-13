@@ -156,6 +156,7 @@ test('verify-change-completeness skips dual-remote GitHub mirror branches', () =
   writeFile(root, 'src/sample/index.js', 'module.exports = 1;\n');
 
   const result = runScript('verify-change-completeness.js', root, {
+    GITHUB_EVENT_NAME: 'pull_request',
     GITHUB_HEAD_REF: 'sync/github-mirror-gitlab',
   });
   assert.equal(result.status, 0);

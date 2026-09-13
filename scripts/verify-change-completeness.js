@@ -11,7 +11,9 @@ const {
 const { classification, domains } = loadOwnershipModel();
 
 function isDualRemoteGithubMirror() {
-  const head = String(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || '').trim();
+  const event = String(process.env.GITHUB_EVENT_NAME || '').trim();
+  if (event !== 'pull_request' && event !== 'pull_request_target') return false;
+  const head = String(process.env.GITHUB_HEAD_REF || '').trim();
   return head === 'sync/github-mirror-gitlab' || head.startsWith('sync/github-mirror-');
 }
 
