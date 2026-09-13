@@ -53,11 +53,19 @@ test('resolveAgentDelegationRunner defaults to fixture runner for local factory 
 
 test('resolveAgentDelegationRunner uses live runner for strict real-evidence delegation', () => {
   const runner = resolveAgentDelegationRunner({ requireRealEvidence: true }, {});
-  assert.match(runner, /openclaw-specialist-runner\.js/);
+  assert.match(runner, /grok-specialist-runner\.js/);
   assert.doesNotMatch(runner, /specialist-runtime-runner/);
 
   const env = resolveAgentDelegationEnv({ collectRealEvidence: true }, {});
-  assert.match(env.SPECIALIST_DELEGATION_RUNNER, /openclaw-specialist-runner\.js/);
+  assert.match(env.SPECIALIST_DELEGATION_RUNNER, /grok-specialist-runner\.js/);
+  assert.equal(env.SPECIALIST_RUNTIME_PROVIDER, 'grok');
+});
+
+test('resolveAgentDelegationRunner uses the OpenClaw adapter when that provider is selected', () => {
+  const runner = resolveAgentDelegationRunner({ requireRealEvidence: true }, {
+    SPECIALIST_RUNTIME_PROVIDER: 'openclaw',
+  });
+  assert.match(runner, /openclaw-specialist-runner\.js/);
 });
 
 test('resolveAgentDelegationRunner rejects fixture runner in strict real-evidence delegation', () => {
@@ -88,7 +96,7 @@ test('resolveAgentDelegationRunner rejects fixture under FACTORY_PROOF_PROFILE=l
     FACTORY_PROOF_PROFILE: 'live',
     FF_REAL_SPECIALIST_DELEGATION: 'true',
   });
-  assert.match(runner, /openclaw-specialist-runner\.js/);
+  assert.match(runner, /grok-specialist-runner\.js/);
 });
 
 test('pmRefinementDelegated detects completed delegated refinement responses', () => {

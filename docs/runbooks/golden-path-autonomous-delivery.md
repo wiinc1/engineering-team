@@ -30,23 +30,28 @@ This brings up (pinned ports by default):
 | Service | URL | Notes |
 | --- | --- | --- |
 | Docker Postgres | `postgres://audit:audit@127.0.0.1:15432/engineering_team` | Port **15432** avoids conflicts with other local Postgres on 5432 (`docker-compose.golden-path.yml`); reusable by `factory:stack:up` |
-| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true`; stack injects live OpenClaw env by default |
+| ET audit API | `http://127.0.0.1:13000` | Postgres-backed, `FF_WORKFLOW_ENGINE=true`; stack injects the selected specialist runtime (`SPECIALIST_RUNTIME_PROVIDER`, default `grok`) |
 | ET audit workers | background | Projection + outbox on 3s interval; **ET→forge dispatch bridge** when `ET_FORGE_DISPATCH_ENABLED=true` |
 | ET UI (Vite) | `http://127.0.0.1:15173` | React SPA on `/tasks/*`; API via `/backend/*` and `/auth/*` proxies → audit API |
 | forgeadapter | `http://127.0.0.1:14010` | Requires sibling `../forgeadapter` checkout |
-| OpenClaw (live default) | `http://127.0.0.1:18789` | **Live gateway** is the stack default (launchd `ai.openclaw.gateway`). Mock `:14001` only with `--use-openclaw-mock` (not valid for operator-trusted claims) |
+| Specialist runtime (live default) | Grok CLI (`SPECIALIST_RUNTIME_PROVIDER=grok`) | Default after GitLab #292. OpenClaw `:18789` is optional and required only when `SPECIALIST_RUNTIME_PROVIDER=openclaw`. Mock `:14001` is not valid for operator-trusted claims. |
 
 ### Live factory proof (default for milestone claim verifies)
 
-Primary `npm run milestone-{b,c,d}:verify` probes **live OpenClaw** (`OPENCLAW_BASE_URL`, default `http://127.0.0.1:18789`) and **fails closed** if the gateway is unavailable, if the fixture specialist runner is configured, or if `OPENCLAW_BASE_URL` points at the **mock** (`:14001`) — mock health cannot satisfy `FACTORY_PROOF_PROFILE=live` (GitLab #271). Fixtures are opt-in only (`milestone-*:verify:fixture` or `--allow-fixture-delegation`) and are **not** valid for operator-trusted factory claims.
+Primary `npm run milestone-{b,c,d}:verify` probes the **selected specialist runtime** (`SPECIALIST_RUNTIME_PROVIDER`, default `grok`) and **fails closed** if that runtime is unavailable or if the fixture specialist runner is configured. OpenClaw `:18789` is probed only when the provider is `openclaw`. The OpenClaw mock (`:14001`) cannot satisfy `FACTORY_PROOF_PROFILE=live` (GitLab #271). Fixtures are opt-in only (`milestone-*:verify:fixture` or `--allow-fixture-delegation`) and are **not** valid for operator-trusted factory claims.
 
 Configure the **audit API process** (not only the verify client):
 
 ```bash
-export OPENCLAW_BASE_URL=http://127.0.0.1:18789
+export SPECIALIST_RUNTIME_PROVIDER=grok
+export GROK_BIN=grok
 export FF_REAL_SPECIALIST_DELEGATION=true
-export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
+export SPECIALIST_DELEGATION_RUNNER="node scripts/grok-specialist-runner.js"
 export FACTORY_USE_FIXTURE_DELEGATION=false
+# Optional OpenClaw:
+# export SPECIALIST_RUNTIME_PROVIDER=openclaw
+# export OPENCLAW_BASE_URL=http://127.0.0.1:18789
+# export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
 ```
 
 See `docs/refinement/REQ-live-factory-proof-default-openclaw.md` and milestone B/C/D runbooks.
@@ -55,14 +60,14 @@ See `docs/refinement/REQ-live-factory-proof-default-openclaw.md` and milestone B
 
 ```bash
 export FACTORY_PROOF_PROFILE=live
-export OPENCLAW_BASE_URL=http://127.0.0.1:18789
+export SPECIALIST_RUNTIME_PROVIDER=grok
 export STAGING_SKIP_FORGE_SEED=true
 export STAGING_SKIP_FORGE_PHASES=true
 export FF_REAL_SPECIALIST_DELEGATION=true
-export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
+export SPECIALIST_DELEGATION_RUNNER="node scripts/grok-specialist-runner.js"
 # Prefer always-on workers: npm run audit:workers (or docker compose audit-workers when available)
-node scripts/verify-milestone-c-agent.js --base-url http://127.0.0.1:13000 --openclaw-url http://127.0.0.1:18789
-node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000 --openclaw-url http://127.0.0.1:18789
+node scripts/verify-milestone-c-agent.js --base-url http://127.0.0.1:13000
+node scripts/verify-milestone-d-closeout.js --base-url http://127.0.0.1:13000
 ```
 
 Hosted real-evidence collection remains opt-in via explicit `FF_GOLDEN_PATH_*` / `STAGING_REQUIRE_REAL_EVIDENCE` flags and is not implied by agent-driven phases alone on a local base URL.

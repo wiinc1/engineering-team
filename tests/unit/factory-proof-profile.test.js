@@ -35,33 +35,36 @@ test('probeOpenClawGateway reports unavailable when all probe targets fail', asy
   assert.equal(probe.errorCode, FACTORY_PROOF_ERROR_CODES.GATEWAY_UNAVAILABLE);
 });
 
-test('resolveFactoryProofProfile selects live when gateway probe succeeds', async () => {
+test('resolveFactoryProofProfile selects live Grok by default without OpenClaw', async () => {
   const proof = await resolveFactoryProofProfile({
     argv: ['node', 'verify'],
     env: {},
-    openclawUrl: 'http://127.0.0.1:18789',
-    probe: { available: true, baseUrl: 'http://127.0.0.1:18789', latencyMs: 5 },
+    probe: { available: true, provider: 'grok', kind: 'cli', latencyMs: 5 },
   });
   assert.equal(proof.profile, 'live');
   assert.equal(proof.fixtureDelegation, false);
-  assert.match(proof.runner, /openclaw-specialist-runner\.js/);
+  assert.equal(proof.runtimeProvider, 'grok');
+  assert.match(proof.runner, /grok-specialist-runner\.js/);
+  assert.equal(proof.openclawBaseUrl, null);
 });
 
-test('resolveFactoryProofProfile defaults to live OpenClaw URL without --openclaw-url (GitLab #271)', async () => {
+test('resolveFactoryProofProfile uses OpenClaw URL when that provider is selected (GitLab #271)', async () => {
   const proof = await resolveFactoryProofProfile({
     argv: ['node', 'verify-milestone-c-agent.js'],
-    env: {},
+    env: { SPECIALIST_RUNTIME_PROVIDER: 'openclaw' },
     probe: { available: true, baseUrl: 'http://127.0.0.1:18789', latencyMs: 2 },
   });
   assert.equal(proof.profile, 'live');
+  assert.equal(proof.runtimeProvider, 'openclaw');
   assert.equal(proof.openclawBaseUrl, 'http://127.0.0.1:18789');
+  assert.match(proof.runner, /openclaw-specialist-runner\.js/);
 });
 
-test('resolveFactoryProofProfile fails closed when gateway unavailable on primary path', async () => {
+test('resolveFactoryProofProfile fails closed when OpenClaw gateway is unavailable', async () => {
   await assert.rejects(
     () => resolveFactoryProofProfile({
       argv: ['node', 'verify'],
-      env: {},
+      env: { SPECIALIST_RUNTIME_PROVIDER: 'openclaw' },
       openclawUrl: 'http://127.0.0.1:18789',
       probe: {
         available: false,
@@ -74,13 +77,16 @@ test('resolveFactoryProofProfile fails closed when gateway unavailable on primar
   );
 });
 
-test('resolveFactoryProofProfile rejects OpenClaw mock :14001 for live claim path (GitLab #271 AC2)', async () => {
+test('resolveFactoryProofProfile rejects OpenClaw mock :14001 for live OpenClaw claims (GitLab #271 AC2)', async () => {
   await assert.rejects(
     () => resolveFactoryProofProfile({
       argv: ['node', 'verify', '--live-openclaw'],
-      env: { FACTORY_PROOF_PROFILE: 'live', OPENCLAW_BASE_URL: 'http://127.0.0.1:14001' },
+      env: {
+        FACTORY_PROOF_PROFILE: 'live',
+        SPECIALIST_RUNTIME_PROVIDER: 'openclaw',
+        OPENCLAW_BASE_URL: 'http://127.0.0.1:14001',
+      },
       openclawUrl: 'http://127.0.0.1:14001',
-      // Even if mock health would succeed, live claim path must fail closed.
       probe: { available: true, baseUrl: 'http://127.0.0.1:14001', latencyMs: 1 },
     }),
     (error) => error.code === FACTORY_PROOF_ERROR_CODES.MOCK_GATEWAY_FORBIDDEN,
@@ -95,8 +101,7 @@ test('resolveFactoryProofProfile rejects fixture specialist runner under live pr
         FACTORY_PROOF_PROFILE: 'live',
         SPECIALIST_DELEGATION_RUNNER: 'node tests/fixtures/specialist-runtime-runner.js',
       },
-      openclawUrl: 'http://127.0.0.1:18789',
-      probe: { available: true, baseUrl: 'http://127.0.0.1:18789', latencyMs: 1 },
+      probe: { available: true, provider: 'grok', kind: 'cli', latencyMs: 1 },
     }),
     (error) => error.code === FACTORY_PROOF_ERROR_CODES.FIXTURE_FORBIDDEN,
   );
@@ -113,17 +118,31 @@ test('resolveFactoryProofProfile allows explicit fixture opt-in', async () => {
   assert.match(proof.runner, /specialist-runtime-runner\.js/);
 });
 
-test('applyFactoryProofProfileToEnv sets live runner and non-fixture flags', () => {
+test('applyFactoryProofProfileToEnv sets live Grok runner and non-fixture flags', () => {
   const env = {};
   applyFactoryProofProfileToEnv({
     profile: 'live',
     fixtureDelegation: false,
-    openclawBaseUrl: 'http://127.0.0.1:18789',
-    runner: 'node scripts/openclaw-specialist-runner.js',
+    runtimeProvider: 'grok',
+    runner: 'node scripts/grok-specialist-runner.js',
   }, env);
   assert.equal(env.FACTORY_PROOF_PROFILE, 'live');
   assert.equal(env.FACTORY_USE_FIXTURE_DELEGATION, 'false');
   assert.equal(env.FF_REAL_SPECIALIST_DELEGATION, 'true');
+  assert.equal(env.SPECIALIST_RUNTIME_PROVIDER, 'grok');
+  assert.match(env.SPECIALIST_DELEGATION_RUNNER, /grok-specialist-runner/);
+});
+
+test('applyFactoryProofProfileToEnv keeps OpenClaw URL when that provider is selected', () => {
+  const env = {};
+  applyFactoryProofProfileToEnv({
+    profile: 'live',
+    fixtureDelegation: false,
+    runtimeProvider: 'openclaw',
+    openclawBaseUrl: 'http://127.0.0.1:18789',
+    runner: 'node scripts/openclaw-specialist-runner.js',
+  }, env);
+  assert.equal(env.SPECIALIST_RUNTIME_PROVIDER, 'openclaw');
   assert.equal(env.OPENCLAW_BASE_URL, 'http://127.0.0.1:18789');
   assert.match(env.SPECIALIST_DELEGATION_RUNNER, /openclaw-specialist-runner/);
 });
