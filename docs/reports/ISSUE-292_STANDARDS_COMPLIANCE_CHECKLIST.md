@@ -10,6 +10,11 @@
 - Date: 2026-09-13
 - Scope summary: Pluggable specialist runtime provider (Grok default, OpenClaw and extra runners selectable) without rewriting factory orchestration.
 
+## Standards Alignment
+- Applicable standards areas: architecture and design; coding and code quality; testing and quality assurance; deployment and release; observability and monitoring; team and process.
+- Evidence expected for this change: provider registry, Grok runner, provider-selection tests, live-smoke wiring, factory-stack health probe selection, runbook, feature-flag/env docs, and this checklist.
+- Gap observed: Full billed Grok live-smoke is host-dependent. Documented rationale: the adapter contract is proven with a CLI stub and `npm run test:delegation:live-smoke:grok` remains the operator live path (source http://192.168.1.116/wiinc1/engineering-team/-/work_items/292).
+
 ## Architecture and Design
 - Applicable: yes
 - Evidence in this change: `lib/software-factory/specialist-runtime-provider.js`, runner contract, workflow and architecture diagrams.
