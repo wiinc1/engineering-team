@@ -32,7 +32,7 @@ test('Grok runner delegates through the shared stdin/stdout contract', async () 
     payloadVersion: 1,
   });
   assert.equal(result.agentId, 'sr-engineer');
-  assert.match(result.sessionId, /^[0-9a-f-]{36}$/i);
+  assert.match(result.sessionId, /^(specialist-delegation-)?[0-9a-f-]{36}$/i);
   assert.equal(result.ownership.runtimeProvider, 'grok');
   assert.equal(result.ownership.specialistId, 'engineer');
   assert.equal(result.output, 'OK');
