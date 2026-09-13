@@ -93,6 +93,12 @@
       "workloadIds": ["audit-projection-catch-up", "audit-outbox-delivery"]
     },
     {
+      "source": "lib/audit/postgres-base.js",
+      "kind": "ordered_queue_claim_retry",
+      "disposition": "migrated",
+      "workloadIds": ["audit-projection-catch-up", "audit-outbox-delivery"]
+    },
+    {
       "source": "scripts/process-audit-projection-queue.js",
       "kind": "one_shot_queue_consumer",
       "disposition": "migrated",
@@ -179,6 +185,6 @@
   ],
   "signature": {
     "algorithm": "sha256",
-    "digest": "684043fb2d81c6cd8a263c9cf3b3bd10a4ac509e215ac7c305ba6f6d0ff470aa"
+    "digest": "397d4210314103490d51bf7587c35a9556682f8da0788e572583a3abe127bb41"
   }
 }
