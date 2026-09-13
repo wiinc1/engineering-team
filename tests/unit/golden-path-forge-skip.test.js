@@ -39,15 +39,30 @@ describe('golden-path forge skip helpers', () => {
 });
 
 describe('golden-path validation env isolation', () => {
-  it('strips live proof forge tokens from validation env', () => {
+  it('allowlists operating-system values and strips every live factory mode from validation env', () => {
     const env = validationSubprocessEnv({
+      PATH: '/opt/test/bin',
+      HOME: '/tmp/test-home',
       FORGEADAPTER_SERVICE_TOKEN: 'live-token',
       OPENCLAW_BASE_URL: 'http://127.0.0.1:18789',
-      NODE_ENV: 'test',
+      DATABASE_URL: 'postgres://live-factory',
+      FACTORY_TRUSTED_DELIVERY: 'true',
+      FF_FACTORY_TRUSTED_SIMPLE_CLOSE: 'true',
+      FF_EXECUTION_CONTRACTS: 'true',
+      AUTH_JWT_SECRET: 'live-secret',
+      NODE_ENV: 'production',
     });
+    assert.equal(env.PATH, '/opt/test/bin');
+    assert.equal(env.HOME, '/tmp/test-home');
     assert.equal(env.FORGEADAPTER_SERVICE_TOKEN, undefined);
     assert.equal(env.OPENCLAW_BASE_URL, undefined);
+    assert.equal(env.DATABASE_URL, undefined);
+    assert.equal(env.FACTORY_TRUSTED_DELIVERY, undefined);
+    assert.equal(env.FF_FACTORY_TRUSTED_SIMPLE_CLOSE, undefined);
+    assert.equal(env.FF_EXECUTION_CONTRACTS, undefined);
+    assert.equal(env.AUTH_JWT_SECRET, undefined);
     assert.equal(env.ALLOW_FILE_AUDIT_BACKEND, 'true');
+    assert.equal(env.NODE_ENV, 'test');
   });
 
   it('marks intentional skip as ok', async () => {

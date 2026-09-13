@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createPgPoolFromEnv } = require('../../lib/audit/postgres');
 const {
+  DEFAULT_QUEUE_LEASE_SECONDS,
   claimPostgresFactoryQueueItems,
   countPendingPostgresFactoryQueueItems,
   releasePostgresFactoryQueueItem,
@@ -14,6 +15,11 @@ const { queryFactoryQueueStatus } = require('../../lib/task-platform/factory-del
 
 const connectionString = process.env.DATABASE_URL;
 const pgTest = connectionString ? test : test.skip;
+
+test('factory queue default lease exceeds the trusted implementer timeout', () => {
+  assert.equal(DEFAULT_QUEUE_LEASE_SECONDS, 60 * 60);
+  assert.ok(DEFAULT_QUEUE_LEASE_SECONDS > 31 * 60);
+});
 
 function quoteIdentifier(identifier) {
   if (!/^[a-z][a-z0-9_]*$/.test(identifier)) {

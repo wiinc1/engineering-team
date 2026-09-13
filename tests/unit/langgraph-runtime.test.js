@@ -292,6 +292,9 @@ test('metrics expose checkpoint counters, latencies, sizes and pool gauges', () 
   assert.equal(Object.values(snapshot.counters)[0], 1);
   assert.deepEqual(Object.values(snapshot.histograms)[0], [10]);
   assert.equal(Object.values(snapshot.gauges)[0], 2);
+  metrics.observe('langgraph_checkpoint_write_latency_ms', 20);
+  assert.deepEqual(Object.values(snapshot.histograms)[0], [10]);
+  assert.deepEqual(Object.values(metrics.snapshot().histograms)[0], [10, 20]);
 });
 
 test('logging field guard drops raw state and hashes are never required in contract', () => {

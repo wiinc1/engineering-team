@@ -56,7 +56,6 @@ describe('trusted Simple close (#274)', () => {
     assert.match(buildImplementerPrompt({ taskId: 'T1', requireRealEvidence: true }), /TRUSTED DELIVERY/);
     assert.match(buildImplementerPrompt({ taskId: 'T1' }), /SESSION PROOF ONLY/);
   });
-
   it('rejects synthetic implementer artifacts under trusted mode', () => {
     assert.throws(
       () => resolveImplementerArtifacts(
@@ -79,7 +78,6 @@ describe('trusted Simple close (#274)', () => {
       /real|non-fixture|non-default/,
     );
   });
-
   it('accepts real implementer artifacts under trusted mode', () => {
     const artifacts = resolveImplementerArtifacts(
       {
@@ -184,17 +182,19 @@ describe('trusted Simple close (#274)', () => {
     );
   });
 
-  it('factory phase options force requireRealEvidence for trusted Simple close', () => {
+  it('factory phase options separate trusted PR proof from hosted release proof', () => {
     const opts = evidenceModeOptions(
       { trustedDelivery: true, templateTier: 'Simple' },
       { id: 'item-1', templateTier: 'Simple' },
     );
-    assert.equal(opts.requireRealEvidence, true);
+    assert.equal(opts.requireRealEvidence, false);
+    assert.equal(opts.collectRealEvidence, false);
     assert.equal(opts.trustedSimpleClose, true);
     assert.equal(opts.trustedDelivery, true);
 
     const applied = applyTrustedSimpleCloseOptions({ templateTier: 'Simple', trustedDelivery: true });
-    assert.equal(applied.requireRealEvidence, true);
+    assert.equal(applied.requireRealEvidence, false);
+    assert.equal(applied.collectRealEvidence, false);
     assert.equal(applied.sessionProofOnly, false);
   });
 });

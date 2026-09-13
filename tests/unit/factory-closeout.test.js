@@ -7,6 +7,7 @@ const {
   buildFactoryCloseoutReport,
   writeFactoryCloseoutReport,
   classifyStepStatus,
+  buildInterventionAudit,
 } = require('../../lib/task-platform/factory-closeout');
 
 test('classifyStepStatus marks completed automated steps', () => {
@@ -36,6 +37,19 @@ test('buildFactoryCloseoutReport summarizes step classification', () => {
   assert.equal(report.taskId, 'TSK-CLOSEOUT');
   assert.ok(report.stepClassification.total >= 27);
   assert.equal(report.phase6.validationOk, true);
+  assert.equal(report.trustedSimpleCloseEvidence, null);
+});
+
+test('buildFactoryCloseoutReport retains the immutable trusted close reference', () => {
+  const reference = {
+    path: 'observability/trusted-simple-close/TSK-900.json',
+    sha256: 'a'.repeat(64),
+  };
+  const report = buildFactoryCloseoutReport({
+    engineeringTeam: { taskId: 'TSK-900' },
+    trustedSimpleCloseEvidence: reference,
+  }, { inventoryPath: '/definitely/missing/inventory.json' });
+  assert.deepEqual(report.trustedSimpleCloseEvidence, reference);
 });
 
 test('writeFactoryCloseoutReport writes JSON artifact', () => {
@@ -46,4 +60,13 @@ test('writeFactoryCloseoutReport writes JSON artifact', () => {
   }, { outputDir: dir });
   assert.equal(fs.existsSync(outputPath), true);
   assert.equal(report.kind, 'factory-closeout-report');
+});
+
+test('closeout preserves approval provenance and classifies later interventions', () => {
+  const audit = buildInterventionAudit([
+    { recordedAt: '2026-08-19T17:59:00.000Z' },
+    { recordedAt: '2026-08-19T18:01:00.000Z' },
+  ], '2026-08-19T18:00:00.000Z');
+  assert.equal(audit.classificationComplete, true);
+  assert.equal(audit.postApprovalCount, 1);
 });

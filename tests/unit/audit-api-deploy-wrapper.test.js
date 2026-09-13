@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const { redactReleaseEvidence } = require('../../scripts/verify-factory-staging-smoke');
 
 const API_ENTRYPOINTS = [
   '../../api/index.js',
@@ -81,6 +82,16 @@ test('Vercel API entrypoints have unique dynamic route shapes', () => {
   const shapes = routes.map(vercelRouteShape);
 
   assert.equal(new Set(shapes).size, shapes.length, `conflicting route shapes: ${shapes.join(', ')}`);
+});
+
+test('factory staging release evidence excludes hosted URLs and task content', () => {
+  const redacted = redactReleaseEvidence({
+    generatedAt: '2026-08-19T20:00:00.000Z', summary: { passed: true, stage: 'ready' },
+    baseUrl: 'https://secret-staging.example.com', task: { title: 'private task' },
+  });
+  assert.deepEqual(Object.keys(redacted.evidence), ['sourceDigest']);
+  assert.equal(JSON.stringify(redacted).includes('secret-staging'), false);
+  assert.equal(JSON.stringify(redacted).includes('private task'), false);
 });
 
 test('operator-hosted API entrypoints return the request handler promise', () => {

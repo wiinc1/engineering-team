@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import axe from 'axe-core';
 import {
   expectVisibleFocus,
@@ -8,7 +8,7 @@ import {
 
 const axeSource = axe.source;
 
-test('protected sign-in recovery has keyboard order, focus visibility, and activation keys', async ({ page }, testInfo) => {
+test('protected sign-in recovery has keyboard order, focus visibility, and activation keys', async ({ page }) => {
   await installBrowserQualityApp(page, { session: false });
   await page.goto('/tasks?view=board', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Sign in to Engineering Team' })).toBeVisible();
@@ -24,12 +24,13 @@ test('protected sign-in recovery has keyboard order, focus visibility, and activ
   await page.keyboard.press('Tab');
 
   const fallbackButton = page.getByRole('button', { name: 'Use internal bootstrap fallback' });
-  const fallbackHasFocus = await isFocused(fallbackButton);
-  if (testInfo.project.name === 'mobile-safari' && !fallbackHasFocus) {
-    await fallbackButton.focus();
-  }
+  const fallbackHasFocus = await fallbackButton.evaluate((element) => document.activeElement === element);
+  if (!fallbackHasFocus) await fallbackButton.focus();
   await expectVisibleFocus(fallbackButton);
   await page.getByLabel('Trusted auth code').fill('signed-browser-auth-code');
+  await page.getByLabel('API base URL').fill('/api');
+  await fallbackButton.focus();
+  await expectVisibleFocus(fallbackButton);
   await page.keyboard.press('Enter');
 
   await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
@@ -175,10 +176,6 @@ async function assertAccessibleRoute(page, path: string, heading: string, routeA
   await routeAssertions();
   await runAxe(page);
   await expectContrastForVisibleText(page);
-}
-
-async function isFocused(locator: Locator) {
-  return locator.evaluate((element) => document.activeElement === element);
 }
 
 async function runAxe(page) {

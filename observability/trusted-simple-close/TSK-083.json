@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "trusted-simple-close-evidence.v1",
+  "issue": 274,
+  "mode": "trusted_delivery",
+  "templateTier": "Simple",
+  "repository": "wiinc1/engineering-team",
+  "branchName": "jr/tsk-083-error-message-formatting-20260820080012",
+  "implementationCommitSha": "f1b255c6ab9d36b399811d4ba4bb9962b64a0289",
+  "commitSha": "f1b255c6ab9d36b399811d4ba4bb9962b64a0289",
+  "prUrl": "https://github.com/wiinc1/engineering-team/pull/444",
+  "prNumber": 444,
+  "mergeCommitSha": "486004aee5e62229f52664b12347ffddc8d2ec61",
+  "mergedAt": "2026-08-20T13:15:35Z",
+  "merged": true,
+  "changedFiles": [
+    "docs/reference/error-message-formatting.md"
+  ],
+  "requiredChecks": [
+    "Pull request metadata",
+    "Repo validation",
+    "Browser validation",
+    "verify",
+    "Merge readiness"
+  ],
+  "checks": [
+    {
+      "id": 96438452317,
+      "name": "Merge readiness",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/runs/96438452317",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96435672967,
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375381/job/96435672967",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96435672939,
+      "name": "Browser validation",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672939",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96435672907,
+      "name": "Pull request metadata",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672907",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96435672866,
+      "name": "Repo validation",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672866",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96435672603,
+      "name": "Specialist delegation verification",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672603",
+      "source": "github_check_run"
+    }
+  ],
+  "branchProtection": {
+    "branch": "main",
+    "requiredChecks": [
+      "Pull request metadata",
+      "Repo validation",
+      "Browser validation",
+      "verify",
+      "Merge readiness"
+    ],
+    "source": "github_branch_protection"
+  },
+  "mergeReadiness": {
+    "name": "Merge readiness",
+    "reviewStatus": "passed",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/wiinc1/engineering-team/runs/96438452317",
+    "source": "github_check_run"
+  },
+  "autoMerge": {
+    "simulated": false,
+    "skipped": false,
+    "merged": true,
+    "mergeCommitSha": "486004aee5e62229f52664b12347ffddc8d2ec61",
+    "mergedAt": "2026-08-20T13:15:35Z",
+    "reason": "factory_owned_merge_after_green_checks"
+  },
+  "github": {
+    "repository": "wiinc1/engineering-team",
+    "branchName": "jr/tsk-083-error-message-formatting-20260820080012",
+    "commitSha": "f1b255c6ab9d36b399811d4ba4bb9962b64a0289",
+    "prUrl": "https://github.com/wiinc1/engineering-team/pull/444",
+    "prNumber": 444,
+    "mergeCommitSha": "486004aee5e62229f52664b12347ffddc8d2ec61",
+    "mergedAt": "2026-08-20T13:15:35Z",
+    "merged": true,
+    "changedFiles": [
+      "docs/reference/error-message-formatting.md"
+    ],
+    "requiredChecks": [
+      "Pull request metadata",
+      "Repo validation",
+      "Browser validation",
+      "verify",
+      "Merge readiness"
+    ],
+    "checks": [
+      {
+        "id": 96438452317,
+        "name": "Merge readiness",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/runs/96438452317",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96435672967,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375381/job/96435672967",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96435672939,
+        "name": "Browser validation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672939",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96435672907,
+        "name": "Pull request metadata",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672907",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96435672866,
+        "name": "Repo validation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672866",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96435672603,
+        "name": "Specialist delegation verification",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32372375378/job/96435672603",
+        "source": "github_check_run"
+      }
+    ],
+    "branchProtection": {
+      "branch": "main",
+      "requiredChecks": [
+        "Pull request metadata",
+        "Repo validation",
+        "Browser validation",
+        "verify",
+        "Merge readiness"
+      ],
+      "source": "github_branch_protection"
+    },
+    "mergeReadiness": {
+      "name": "Merge readiness",
+      "reviewStatus": "passed",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/runs/96438452317",
+      "source": "github_check_run"
+    }
+  },
+  "recordedAt": "2026-08-20T13:16:04.533Z",
+  "notes": "Trusted Simple close for TSK-083; generated by the live factory after merge confirmation.",
+  "taskId": "TSK-083",
+  "factoryQueueId": "factory-cohort-bullet-safe-20260820-438",
+  "ok": true
+}

@@ -36,6 +36,7 @@ test('pollForgeExecutionReadiness stays within bounded retry budget', async () =
 });
 
 const { buildReleaseHealthPayload } = require('../../lib/audit/release-health-http');
+const { redactReleaseEvidence } = require('../../scripts/verify-factory-staging-smoke');
 
 test('release health payload construction stays within bounded read budget', () => {
   const started = performance.now();
@@ -48,4 +49,14 @@ test('release health payload construction stays within bounded read budget', () 
   }
   const elapsed = performance.now() - started;
   assert.ok(elapsed < 100, `release health payload budget exceeded: ${elapsed}ms`);
+});
+
+test('release evidence redaction stays within the hosted artifact budget', () => {
+  const source = {
+    generatedAt: '2026-08-19T20:00:00.000Z', summary: { passed: true, stage: 'ready' },
+    tasks: Array.from({ length: 100 }, (_, index) => ({ id: index, title: `task-${index}` })),
+  };
+  const started = performance.now();
+  for (let index = 0; index < 500; index += 1) redactReleaseEvidence(source);
+  assert.ok(performance.now() - started < 250);
 });

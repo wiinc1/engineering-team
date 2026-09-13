@@ -7,6 +7,7 @@ const {
   resolveSreApproval,
   buildCiValidationEvidence,
   buildImplementerPrompt,
+  buildQaPrompt,
   isTrustedDeliveryMode,
 } = require('../../lib/task-platform/factory-agent-phases');
 
@@ -69,10 +70,84 @@ test('buildImplementerPrompt labels session-proof vs trusted delivery', () => {
   const trusted = buildImplementerPrompt({
     taskId: 'TSK-1',
     requirements: 'x',
+    repository: 'wiinc1/engineering-team',
+    githubIssueUrl: 'https://github.com/wiinc1/engineering-team/issues/388',
+    changedFiles: ['docs/reference/example.md'],
     requireRealEvidence: true,
   });
   assert.match(trusted, /TRUSTED DELIVERY/);
   assert.match(trusted, /FORBIDDEN/);
+  assert.match(trusted, /isolated git worktree/);
+  assert.match(trusted, /prefer the `github` remote/);
+  assert.match(trusted, /Do not merge the pull request/);
+  assert.match(trusted, /filesystem, shell, git, and GitHub tools/);
+  assert.match(trusted, /Repository: wiinc1\/engineering-team/);
+  assert.match(trusted, /Source GitHub issue: https:\/\/github\.com\/wiinc1\/engineering-team\/issues\/388/);
+  assert.match(trusted, /Expected changed files: docs\/reference\/example\.md/);
+  assert.match(trusted, /- Standards baseline reviewed:/);
+  assert.match(trusted, /- Rollback path:/);
+  assert.match(trusted, /rejects `None`, `N\/A`, `TBD`, `TODO`, and `unknown`/);
+  assert.match(trusted, /No gaps or exceptions; rationale: <specific reason this change conforms>/);
+  assert.match(trusted, /Do not write only `None`/);
+  assert.match(trusted, /Pending at PR creation; all protected checks are required before merge/);
+  assert.match(trusted, /documentation-only change, use the changed documentation path for both fields/);
+  assert.match(trusted, /Closes #388/);
+  assert.doesNotMatch(trusted, /attribution proof only/);
+  assert.match(session, /attribution proof only/);
+
+  const trustedSimple = buildImplementerPrompt({
+    taskId: 'TSK-2',
+    requirements: 'x',
+    trustedSimpleClose: true,
+  });
+  assert.match(trustedSimple, /TRUSTED DELIVERY/);
+
+  const fix = buildImplementerPrompt({
+    taskId: 'TSK-2',
+    requirements: 'x',
+    trustedSimpleClose: true,
+    runKind: 'fix_after_qa_fail',
+  });
+  assert.match(fix, /existing pull request/);
+  assert.match(fix, /Do not open a second pull request/);
+});
+
+test('buildImplementerPrompt requires literal PR metadata bullet prefixes', () => {
+  const trusted = buildImplementerPrompt({
+    taskId: 'TSK-1', requirements: 'x', requireRealEvidence: true,
+  });
+  assert.match(trusted, /MUST begin with the literal ASCII characters `- `/);
+  assert.match(trusted, /hosted validator matches `\^- <label>:`/);
+  assert.match(trusted, /unbulleted `Task: value` line is treated as missing/);
+  assert.match(trusted, /Preserve the `- ` prefix/);
+});
+
+test('buildQaPrompt supplies exact read-only PR evidence for trusted delivery QA', () => {
+  const prompt = buildQaPrompt({
+    taskId: 'TSK-26',
+    requirements: 'Add one documentation file.',
+    repository: 'wiinc1/engineering-team',
+    branchName: 'jr/tsk-26-docs',
+    commitSha: 'd3690b68a8aec49fa35194c7532a9629ba8109db',
+    prUrl: 'https://github.com/wiinc1/engineering-team/pull/362',
+    changedFiles: ['docs/reference/example.md'],
+    trustedSimpleClose: true,
+  });
+
+  assert.match(prompt, /TRUSTED DELIVERY QA/);
+  assert.match(prompt, /read-only filesystem, git, and GitHub commands/);
+  assert.match(prompt, /wiinc1\/engineering-team/);
+  assert.match(prompt, /d3690b68a8aec49fa35194c7532a9629ba8109db/);
+  assert.match(prompt, /pull\/362/);
+  assert.match(prompt, /docs\/reference\/example\.md/);
+  assert.match(prompt, /Do not edit files or pull-request metadata/);
+  assert.doesNotMatch(prompt, /no tools/);
+});
+
+test('buildQaPrompt keeps session-proof QA tool-free', () => {
+  const prompt = buildQaPrompt({ taskId: 'TSK-1', requirements: 'x' });
+  assert.match(prompt, /no tools, no file edits/);
+  assert.doesNotMatch(prompt, /TRUSTED DELIVERY QA/);
 });
 
 test('isTrustedDeliveryMode is opt-in via real-evidence flags', () => {

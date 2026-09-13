@@ -12,6 +12,7 @@ const {
   langGraphRoute,
   normalizeRoutePath,
 } = require('../../lib/software-factory/langgraph');
+const { redactDiagnostic } = require('../../scripts/run-runtime-soak');
 
 function responseProbe() {
   return {
@@ -27,6 +28,15 @@ test('LangGraph dependencies are exact production pins with MIT licenses', () =>
   assert.equal(pkg.dependencies['@langchain/langgraph-checkpoint-postgres'], '1.0.4');
   assert.equal(require('@langchain/langgraph/package.json').license, 'MIT');
   assert.equal(require('@langchain/langgraph-checkpoint-postgres/package.json').license, 'MIT');
+});
+
+test('soak child diagnostics preserve failure context without database credentials', () => {
+  const diagnostic = redactDiagnostic(
+    'langgraph checkpoint failed DATABASE_URL=postgres://runtime:secret@db.internal/staging',
+  );
+  assert.match(diagnostic, /langgraph checkpoint failed/);
+  assert.match(diagnostic, /DATABASE_URL=\[redacted\]/);
+  assert.doesNotMatch(diagnostic, /runtime:secret|db\.internal/);
 });
 
 test('guarded adapter implements the framework checkpointer contract', () => {

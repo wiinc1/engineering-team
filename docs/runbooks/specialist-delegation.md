@@ -20,13 +20,14 @@
 2. Configure `SPECIALIST_DELEGATION_RUNNER` to invoke the real OpenClaw/runtime handoff path, then start the command router.
 3. Default live bridge (Grok): `SPECIALIST_RUNTIME_PROVIDER=grok` and `SPECIALIST_DELEGATION_RUNNER='node scripts/grok-specialist-runner.js'`. OpenClaw remains selectable: `SPECIALIST_RUNTIME_PROVIDER=openclaw` and `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'`.
 4. Default repo-local alias map:
-- `pm -> pm`
+- `pm -> product-manager`
 - `architect -> architect`
 - `engineer -> sr-engineer`
 - `qa -> qa-engineer`
 - `sre -> sre`
 5. Override aliases if your host uses different agent ids with `OPENCLAW_SPECIALIST_MAP='{"engineer":"jr-engineer","qa":"qa-engineer"}'`.
    Runtime ownership may report `ownership.specialistId=engineer` while `agentId=sr-engineer`; the bridge treats those aliases as equivalent when attribution is validated.
+   The coordinated stack installs the PM runtime as `product-manager`; keep both `pm` and `product-manager` specialist inputs mapped to that installed id unless the host inventory explicitly differs.
 6. Move an assigned task into `IN_PROGRESS` and confirm the reply only claims runtime ownership when a real `session_id` is returned.
 7. Confirm `observability/specialist-delegation.jsonl` contains `target_specialist`, `actual_agent`, `session_id`, `ownership`, and `delegation_id`.
 8. Confirm `observability/specialist-delegation-metrics.json` is updated with both the raw snapshot and flattened Prometheus-safe metrics.

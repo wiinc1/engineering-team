@@ -8,6 +8,7 @@ const { captureLogger, metricRecorder, validContext, validRequest } = require('.
 const { createPayloadValidator } = require('../../lib/job-runtime/payload-schema');
 const { createJobRuntimePort } = require('../../lib/job-runtime/port');
 const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
+const { assertJobRuntimeLoadBudgets, delayUntil } = require('../../scripts/run-job-runtime-load-test');
 
 const EXPECTED_QPS = 25;
 const LOAD_MULTIPLIER = 2;
@@ -74,6 +75,40 @@ test('application enqueue port sustains more than 2x expected QPS without key co
   assert.ok(percentile(latencies, 0.95) < 100);
   assert.ok(percentile(latencies, 0.99) < 250);
   assert.equal(keys.size, sampleSize);
+});
+
+test('hosted load report budget evaluation remains constant-time at gate volume', () => {
+  const durationMs = 59_988.926;
+  const expectedQps = 2;
+  const expectedSubmissions = (durationMs / 1000) * expectedQps;
+  const report = {
+    duration_ms: durationMs, expected_qps: expectedQps,
+    load_multiplier: Math.floor(expectedSubmissions) / expectedSubmissions, required_load_multiplier: 1,
+    submitted: Math.floor(expectedSubmissions), acknowledged: Math.floor(expectedSubmissions),
+    enqueue_p95_ms: 20, enqueue_p99_ms: 40,
+    operational_read_p95_ms: 30, ready_to_start_p95_ms: 100,
+    pool_peak_total: 6, pool_max: 10, pool_waiting_at_end: 0,
+    runtime_pool_waiting_at_end: 0,
+  };
+  const started = performance.now();
+  for (let index = 0; index < 10_000; index += 1) assertJobRuntimeLoadBudgets(report);
+  assert.ok(performance.now() - started < 100);
+});
+
+test('deadline correction remains bounded after an early timer wake', async () => {
+  let now = 0;
+  let waits = 0;
+  const started = performance.now();
+  await delayUntil(600_000, null, {
+    now: () => now,
+    async delay(milliseconds) {
+      waits += 1;
+      now += waits === 1 ? milliseconds - 0.5 : milliseconds;
+    },
+  });
+  assert.equal(waits, 2);
+  assert.equal(now, 600_000);
+  assert.ok(performance.now() - started < 100);
 });
 
 module.exports = {

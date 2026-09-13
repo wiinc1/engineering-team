@@ -39,4 +39,6 @@ Implemented in `lib/task-platform/simple-trusted-cohort.js`:
 ## Artifacts
 
 - `observability/trusted-simple-close/cohort-report.json`
-- `docs/reports/SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md`
+- `docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.md`
+
+The canonical report records the exact Git revision, generation time, generator, every source input with its SHA-256 and size, and an aggregate source-set digest. Set `COHORT_REPORT_GENERATED_AT` when byte-for-byte deterministic regeneration is required. The dated 2026-07-13 report remains a historical snapshot and is not overwritten.

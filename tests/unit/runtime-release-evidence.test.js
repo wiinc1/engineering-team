@@ -2,7 +2,9 @@
 
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { RUNTIME_ARTIFACTS, assertRuntimeEvidence, evaluateRuntimeEvidence } = require('../../lib/release-gates/runtime-evidence');
+const {
+  RUNTIME_ARTIFACTS, assertRuntimeEvidence, evaluateRuntimeEvidence, sealRuntimeManifest,
+} = require('../../lib/release-gates/runtime-evidence');
 const { collectRuntimeEvidence, evidenceDigest, stableValue } = require('../../lib/release-gates/evidence-collector');
 const { buildSbomEvidence, validateSbom } = require('../../scripts/generate-runtime-sbom');
 
@@ -10,6 +12,9 @@ const revision = 'a'.repeat(40);
 const now = Date.parse('2026-07-18T12:00:00.000Z');
 
 function summary(kind, runtime) {
+  if (kind === 'staging_deploy') return {
+    exactRevision: true, hostedHealth: true, isolatedProfile: true, localHealth: true,
+  };
   if (kind === 'security') return { high: 0, critical: 0 };
   if (kind === 'performance_2x_10m') return runtime === 'graphile'
     ? { durationSeconds: 600, loadFactor: 2, enqueueP95Ms: 99, enqueueP99Ms: 249, readP95Ms: 249 }
@@ -25,7 +30,7 @@ function summary(kind, runtime) {
 }
 
 function manifest(runtime = 'graphile') {
-  return {
+  return sealRuntimeManifest({
     schemaVersion: 1, runtime, revision, deploymentId: 'staging-20260718-1',
     artifacts: RUNTIME_ARTIFACTS[runtime].map((kind) => ({
       kind, status: 'passed', revision, redacted: true,
@@ -33,7 +38,7 @@ function manifest(runtime = 'graphile') {
       generatedAt: '2026-07-18T11:00:00.000Z', expiresAt: '2026-07-19T12:00:00.000Z',
       provenance: { automation: 'pipeline-123', environment: 'staging' }, summary: summary(kind, runtime),
     })),
-  };
+  });
 }
 
 function components(runtime = 'graphile') {
@@ -87,6 +92,15 @@ test('threshold failures block security performance chaos soak DR synthetic aler
   }
 });
 
+test('staging evidence requires exact-revision local and hosted health from an isolated profile', () => {
+  const value = manifest('graphile');
+  const artifact = value.artifacts.find((candidate) => candidate.kind === 'staging_deploy');
+  artifact.summary = {
+    exactRevision: true, hostedHealth: true, isolatedProfile: true, localHealth: false,
+  };
+  assert.ok(evaluateRuntimeEvidence(value, { runtime: 'graphile', revision, now }).reasons.includes('staging_deploy:deployment'));
+});
+
 function reasonsFor(runtime, kind, mutate) {
   const value = manifest(runtime);
   mutate(value.artifacts.find((artifact) => artifact.kind === kind), value);
@@ -121,6 +135,13 @@ test('manifest and immutable artifact provenance fail closed at every trust boun
   const nullArtifact = manifest('graphile');
   nullArtifact.artifacts.push(null);
   assert.ok(evaluateRuntimeEvidence(nullArtifact, { runtime: 'graphile', revision, now }).reasons.includes('artifact_invalid'));
+});
+
+test('manifest seal rejects any post-collection mutation', () => {
+  const value = JSON.parse(JSON.stringify(manifest('graphile')));
+  value.artifacts.find((artifact) => artifact.kind === 'security').summary.high = 1;
+  const decision = evaluateRuntimeEvidence(value, { runtime: 'graphile', revision, now });
+  assert.ok(decision.reasons.includes('manifest:digest'));
 });
 
 test('every release threshold dimension independently blocks readiness', () => {

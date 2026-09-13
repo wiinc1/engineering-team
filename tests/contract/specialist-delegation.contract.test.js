@@ -67,7 +67,7 @@ test('OpenClaw PM refinement responses satisfy the bridge evidence contract', ()
       specialist: 'pm',
       delegationId: 'contract-pm-refinement',
     },
-    runtimeAgent: 'pm',
+    runtimeAgent: 'product-manager',
     response: {
       result: {
         message: 'PM refinement complete',
@@ -80,11 +80,11 @@ test('OpenClaw PM refinement responses satisfy the bridge evidence contract', ()
     },
   });
 
-  assert.equal(bridge.agentId, 'pm');
+  assert.equal(bridge.agentId, 'product-manager');
   assert.equal(bridge.sessionId, 'specialist-delegation-contract-pm-refinement');
   assert.equal(bridge.output, 'PM refinement complete');
   assert.equal(bridge.ownership.specialistId, 'pm');
-  assert.equal(bridge.ownership.runtimeAgentId, 'pm');
+  assert.equal(bridge.ownership.runtimeAgentId, 'product-manager');
 });
 
 test('delegation artifacts may be stored outside the runtime working directory', async () => {

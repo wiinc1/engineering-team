@@ -169,6 +169,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(
     ({ discoveryUrl: runtimeDiscoveryUrl, clientId, redirectUri }) => {
       window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        productionAuthStrategy: 'internal-bootstrap',
         oidcDiscoveryUrl: runtimeDiscoveryUrl,
         oidcClientId: clientId,
         oidcRedirectUri: redirectUri,
@@ -272,7 +273,10 @@ test.beforeEach(async ({ page }) => {
 
   test('shows a safe no-login-path configuration state when preview auth is unavailable', async ({ page }) => {
     await page.addInitScript(() => {
-      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = { internalAuthBootstrapEnabled: false };
+      window.__ENGINEERING_TEAM_RUNTIME_CONFIG__ = {
+        productionAuthStrategy: 'disabled',
+        internalAuthBootstrapEnabled: false,
+      };
     });
 
     await page.goto('/sign-in', { waitUntil: 'domcontentloaded' });

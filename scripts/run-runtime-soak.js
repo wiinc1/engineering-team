@@ -5,7 +5,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync, spawn } = require('node:child_process');
 const { createPgPoolFromEnv } = require('../lib/audit/postgres');
+const { ensurePoolErrorHandler } = require('../lib/job-runtime/pool');
 const { evidenceDigest } = require('../lib/release-gates/evidence-collector');
+const { cleanupLoadData } = require('./run-job-runtime-load-test');
+
+const DIAGNOSTIC_LIMIT_BYTES = 16_384;
 
 function positiveInteger(value, fallback) {
   const parsed = Number(value);
@@ -23,17 +27,51 @@ function writeJson(file, value) {
   fs.renameSync(temporary, file);
 }
 
-function childProcess(script, env, timeoutMs) {
+function appendTail(current, chunk, limit = DIAGNOSTIC_LIMIT_BYTES) {
+  return Buffer.concat([current, Buffer.from(chunk)]).subarray(-limit);
+}
+
+function redactDiagnostic(value) {
+  return String(value || '')
+    .replace(/\b((?:DATABASE_URL|STAGING_DATABASE_URL|PRODUCTION_DATABASE_URL)\s*[=:]\s*)\S+/gi, '$1[redacted]')
+    .replace(/\bpostgres(?:ql)?:\/\/[^\s"'`]+/gi, '[redacted-postgres-url]')
+    .trim();
+}
+
+function childProcess(script, env, timeoutMs, terminationGraceMs = 30_000) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [script], { cwd: process.cwd(), env, stdio: 'ignore' });
-    const timeout = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
-    child.once('error', () => {
+    const startedAt = Date.now();
+    let stdout = Buffer.alloc(0);
+    let stderr = Buffer.alloc(0);
+    let timedOut = false;
+    let settled = false;
+    let killTimeout;
+    const child = spawn(process.execPath, [script], { cwd: process.cwd(), env, stdio: ['ignore', 'pipe', 'pipe'] });
+    child.stdout.on('data', (chunk) => { stdout = appendTail(stdout, chunk); });
+    child.stderr.on('data', (chunk) => { stderr = appendTail(stderr, chunk); });
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGTERM');
+      killTimeout = setTimeout(() => child.kill('SIGKILL'), terminationGraceMs);
+    }, timeoutMs);
+    const settle = (result) => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timeout);
-      resolve({ ok: false, code: 'spawn_error' });
+      clearTimeout(killTimeout);
+      resolve(Object.freeze({
+        ...result,
+        timedOut,
+        durationMs: Date.now() - startedAt,
+        stdout: redactDiagnostic(stdout.toString('utf8')),
+        stderr: redactDiagnostic(stderr.toString('utf8')),
+      }));
+    };
+    child.once('error', (error) => {
+      settle({ ok: false, code: 'spawn_error', error: redactDiagnostic(error.message) });
     });
-    child.once('exit', (code, signal) => {
-      clearTimeout(timeout);
-      resolve({ ok: code === 0, code: signal ? `signal_${signal}` : `exit_${code}` });
+    child.once('close', (code, signal) => {
+      settle({ ok: !timedOut && code === 0, code: signal ? `signal_${signal}` : `exit_${code}` });
     });
   });
 }
@@ -41,6 +79,7 @@ function childProcess(script, env, timeoutMs) {
 function windowEnvironment(input, index, windowMs) {
   const tag = `${input.runTag}_${index}`;
   return {
+    graphileTenantId: `soak_${tag}`.slice(0, 63),
     graphile: {
       ...process.env,
       JOB_RUNTIME_LOAD_DURATION_MS: String(windowMs),
@@ -61,14 +100,23 @@ function windowEnvironment(input, index, windowMs) {
   };
 }
 
-async function runWindow(input, index, windowMs) {
+async function runWindow(input, index, windowMs, pool) {
   const env = windowEnvironment(input, index, windowMs);
   const timeout = windowMs + input.windowTimeoutGraceMs;
-  const [graphile, langgraph] = await Promise.all([
-    childProcess('scripts/run-job-runtime-load-test.js', env.graphile, timeout),
-    childProcess('scripts/run-langgraph-load.js', env.langgraph, timeout),
+  const [graphileChild, langgraph] = await Promise.all([
+    childProcess('scripts/run-job-runtime-load-test.js', env.graphile, timeout, input.childTerminationGraceMs),
+    childProcess('scripts/run-langgraph-load.js', env.langgraph, timeout, input.childTerminationGraceMs),
   ]);
-  return Object.freeze({ index, durationMs: windowMs, graphile, langgraph });
+  let cleanup;
+  try {
+    cleanup = Object.freeze({ ok: true, ...(await cleanupLoadData(pool, env.graphileTenantId)) });
+  } catch (error) {
+    cleanup = Object.freeze({ ok: false, error: redactDiagnostic(error.message) });
+  }
+  const graphile = Object.freeze({ ...graphileChild, ok: graphileChild.ok && cleanup.ok, cleanup });
+  const result = Object.freeze({ index, durationMs: windowMs, graphile, langgraph, redacted: true });
+  writeJson(path.join(input.outputDir, 'windows', `${index}-result.json`), result);
+  return result;
 }
 
 async function databaseSample(pool) {
@@ -136,6 +184,7 @@ function configuration(env = process.env) {
   const durationSeconds = positiveInteger(env.SOAK_DURATION_SECONDS, 86_400);
   return Object.freeze({
     connectionAllowance: positiveInteger(env.SOAK_CONNECTION_ALLOWANCE, 4),
+    childTerminationGraceMs: positiveInteger(env.SOAK_CHILD_TERMINATION_GRACE_MS, 30_000),
     deploymentId: String(env.SOAK_DEPLOYMENT_ID || '').trim(),
     durationSeconds,
     environment: String(env.SOAK_ENVIRONMENT || 'staging').trim(),
@@ -154,6 +203,7 @@ async function executeSoak(input) {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for runtime soak.');
   if (!input.deploymentId) throw new Error('SOAK_DEPLOYMENT_ID is required for runtime soak.');
   const pool = createPgPoolFromEnv(process.env.DATABASE_URL);
+  ensurePoolErrorHandler(pool, { error() {} }, { increment() {} });
   const startedAt = new Date().toISOString();
   const deadline = Date.now() + input.durationSeconds * 1000;
   const baseline = await databaseSample(pool);
@@ -163,8 +213,10 @@ async function executeSoak(input) {
     while (Date.now() < deadline) {
       const remainingMs = deadline - Date.now();
       const windowMs = Math.min(input.windowSeconds * 1000, remainingMs);
-      windows.push(await runWindow(input, windows.length, windowMs));
+      const window = await runWindow(input, windows.length, windowMs, pool);
+      windows.push(window);
       samples.push(await databaseSample(pool));
+      if (!window.graphile.ok || !window.langgraph.ok) break;
     }
     const finalSample = await databaseSample(pool);
     const summary = summarizeWindows(windows, samples, baseline, finalSample, input.connectionAllowance);
@@ -195,4 +247,15 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { buildComponent, configuration, databaseSample, executeSoak, positiveInteger, summarizeWindows };
+module.exports = {
+  buildComponent,
+  childProcess,
+  configuration,
+  databaseSample,
+  executeSoak,
+  positiveInteger,
+  redactDiagnostic,
+  runWindow,
+  summarizeWindows,
+  windowEnvironment,
+};

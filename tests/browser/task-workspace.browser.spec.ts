@@ -315,15 +315,15 @@ async function assertOwnerFilterEmptyState(page) {
   );
   await page.getByRole('button', { name: 'Clear all filters' }).click();
 }
-
 async function assertMobileBoardOverflow(page) {
   await page.setViewportSize({ width: 390, height: 844 });
-  const boardMetrics = await page.locator('.task-board__scroll').evaluate((element) => {
-    const firstColumn = element.querySelector('.task-board__column')?.getBoundingClientRect();
-    return { clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, firstColumnWidth: firstColumn?.width || 0 };
-  });
-
-  expect(boardMetrics.scrollWidth).toBeGreaterThan(boardMetrics.clientWidth);
+  const board = page.locator('.task-board__scroll');
+  let boardMetrics = { clientWidth: 0, scrollWidth: 0, firstColumnWidth: 0 };
+  await expect.poll(async () => {
+    boardMetrics = await board.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+      firstColumnWidth: element.querySelector('.task-board__column')?.getBoundingClientRect().width || 0 }));
+    return boardMetrics.scrollWidth > boardMetrics.clientWidth;
+  }).toBe(true);
   expect(boardMetrics.firstColumnWidth).toBeLessThanOrEqual(330);
 }
 

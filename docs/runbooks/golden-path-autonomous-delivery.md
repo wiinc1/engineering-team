@@ -48,11 +48,29 @@ export GROK_BIN=grok
 export FF_REAL_SPECIALIST_DELEGATION=true
 export SPECIALIST_DELEGATION_RUNNER="node scripts/grok-specialist-runner.js"
 export FACTORY_USE_FIXTURE_DELEGATION=false
+export GOLDEN_PATH_OPENCLAW_POST_APPROVAL_ARTIFACTS=true
+export GOLDEN_PATH_OPENCLAW_ARCHITECT_ENGINEER_ASSIGNMENT=true
 # Optional OpenClaw:
 # export SPECIALIST_RUNTIME_PROVIDER=openclaw
 # export OPENCLAW_BASE_URL=http://127.0.0.1:18789
 # export SPECIALIST_DELEGATION_RUNNER="node scripts/openclaw-specialist-runner.js"
 ```
+
+The persistent launchd stack writes the two post-approval values above into its
+generated service environment. `--agent-driven-phases` covers downstream work;
+delegated Phase 1 remains an independent opt-in. The approved Simple contract
+receives its repository artifacts and live architect assignment before the
+orchestrator asks Forge for execution readiness.
+The later Forge-facing seed is a separate durable task. The factory must call
+the canonical architect-assignment endpoint for that task and require a live
+OpenClaw session before its readiness poll can pass. A transient
+`post_approval_gates_unsatisfied` response may be retried while PostgreSQL
+projections catch up; fallback attribution or any other assignment error is a
+failed run, not evidence.
+Do not bypass a 422 readiness response or inject the missing event manually;
+verify the service environment, restart with `npm run factory:stack:restart --
+--rebind-root --json`, and begin a fresh cohort task after the exact fix revision
+is healthy.
 
 See `docs/refinement/REQ-live-factory-proof-default-openclaw.md` and milestone B/C/D runbooks.
 
@@ -101,11 +119,14 @@ npm run issue-273:verify
 
 **Session-proof** (default local C/D without real-evidence flags) may use short implementer JSON for session attribution only — that is **not** operator-trusted autonomous delivery.
 
-**Trusted delivery** (`requireRealEvidence` / `trustedDelivery` / `FACTORY_TRUSTED_DELIVERY=true` / `FF_FACTORY_TRUSTED_SIMPLE_CLOSE=true` for Simple tier):
+**Trusted delivery** (`trustedDelivery` / `FACTORY_TRUSTED_DELIVERY=true` / `FF_FACTORY_TRUSTED_SIMPLE_CLOSE=true` for Simple tier) is a real PR/merge claim. It is separate from hosted release proof (`requireRealEvidence` / `collectRealEvidence`), which remains fail-closed behind staging inputs:
 
-- Implementer must return real `branchName`, non-fixture 40-char `commitSha`, and a real PR URL (not pilot #271).
-- GP-022 auto-merge proof requires real merge confirmation + `mergeCommitSha` + `mergedAt` (no simulation / no skip for missing token).
-- Evidence package must store real PR URL + merge SHA (`lib/task-platform/trusted-simple-close-evidence.js`).
+- After execution-contract approval, the live OpenClaw implementer creates an isolated worktree, implements the requirement, pushes a unique branch, opens a schema-compliant PR, and waits for all protected checks except factory-owned `Merge readiness`.
+- Trusted QA receives the exact repository, branch, commit SHA, PR URL, and expected changed-file list. It may use read-only filesystem, Git, and GitHub inspection to validate that evidence, but must not edit the PR, rerun checks, emit `Merge readiness`, or merge. The `qa-engineer` and `sr-engineer` OpenClaw roles need the same scoped unattended gateway exec policy as the trusted Jr implementer so evidence inspection and a genuine correction loop cannot pause on an interactive tool prompt.
+- A clean live QA approval proceeds without the historical synthetic fail/fix loop. A genuine QA rejection reuses the existing branch and PR.
+- The factory verifies every protected pre-merge check, emits `Merge readiness` for the exact head, confirms the GitHub merge, and only then begins SRE monitoring and close review. It attempts direct Checks API emission first and automatically dispatches `emit-merge-readiness-check.yml` when the operator token lacks check-run write permission; both paths are polled for the same exact-head result.
+- GP-022 proof requires real merge confirmation + `mergeCommitSha` + `mergedAt` (no simulation / no missing-token skip). A later phase may observe `already_merged` only when GitHub still confirms those immutable fields.
+- Before writing closeout, the factory stores the real PR/check/merge package and embeds its repository-relative path plus SHA-256 in the closeout (`lib/task-platform/trusted-simple-close-evidence.js`).
 - Auditor: `npm run issue-274:verify`.
 
 ### Simple trusted cohort + metrics MVP (GitLab #276)
@@ -115,7 +136,7 @@ Near-term bar (Q1): ≥10 Simple operator-trusted closes with live session evide
 ```bash
 npm run cohort:simple-trusted
 # writes observability/trusted-simple-close/cohort-report.json
-# and docs/reports/SIMPLE_TRUSTED_COHORT_REPORT_2026-07-13.md
+# and docs/reports/SIMPLE_TRUSTED_COHORT_REPORT.md
 ```
 
 Trusted close definition (evaluator): `phase6_complete` closeout/evidence, zero recorded manual interventions, ≥1 live `specialist-delegation-*` session id.
@@ -158,6 +179,15 @@ npm run factory:stack:down            # stop units; plists retained so reboot re
 npm run factory:stack:uninstall       # remove plists permanently
 ```
 
+The first `up`, `install`, or `restart` binds these host-persistent services to
+the canonical checkout in `~/Library/Application Support/engineering-team-factory/repo-root.json`.
+Commands from `/tmp`, `/private/tmp`, managed `_checkouts`, or a different checkout
+fail before changing launchd. To deliberately move the factory of record, run
+`npm run factory:stack:restart -- --rebind-root` from the intended canonical checkout.
+`factory:stack:status` also inspects every installed plist and reports stale
+working directories, executable arguments, root metadata, and ForgeAdapter
+repository bindings with the canonical restart remediation.
+
 | Service | LaunchAgent label | Port / role |
 | --- | --- | --- |
 | Postgres ensure watcher | `com.engineering-team.factory-postgres-ensure` | keeps `:15432` up via compose/reuse |
@@ -182,7 +212,13 @@ npm run factory:stack:up -- --skip-ui --skip-forgeadapter
 
 Logs: `~/Library/Logs/engineering-team-factory/`. Env example: `deploy/launchd/factory-stack.env.example`. Runtime env copy: `observability/factory-stack/service.env`.
 
-**Postgres durability:** compose uses `restart: unless-stopped` and a named volume (`factory_pgdata`). `factory:stack:up` starts compose when nothing listens on `:15432` and Docker/OrbStack is available. The `factory-postgres-ensure` KeepAlive watcher re-ensures Postgres after reboot. If Docker is missing and nothing listens, up fails with remediation steps.
+**Postgres durability:** compose uses `restart: unless-stopped` and a named volume (`factory_pgdata`). `factory:stack:up` starts compose when nothing listens on `:15432` and Docker/OrbStack is available. The `factory-postgres-ensure` KeepAlive watcher re-ensures Postgres after reboot. When the active Docker context is OrbStack but its VM is stopped, the watcher runs `orbctl start --all`, waits for the Docker engine, and then restores the named Postgres container. If the engine cannot be recovered or Docker is missing, startup fails closed with structured remediation instead of repeatedly throwing compose errors.
+
+Before admitting a zero-intervention cohort, confirm that the host has adequate
+free disk space as well as a healthy stack. A full filesystem can stop the
+OrbStack VM while leaving the GUI process present; `orbctl status` is the
+authoritative engine check. An engine or database failure after policy approval
+invalidates the whole cohort even when infrastructure later recovers.
 
 **Recovery drill (AC1):** kill API/workers/UI/forge processes (or `factory:stack:down` then reboot). Run `npm run factory:stack:up` once — required health (postgres, API, workers heartbeat, live OpenClaw, UI, forgeadapter when present) should return ok without tribal manual steps. Hermes is not part of required recovery health (Q7 / #272).
 
@@ -962,6 +998,14 @@ curl -s -X POST -H "Authorization: Bearer local-forgeadapter-token" \
 
 `scripts/run-unit-tests.js` clears shell `DATABASE_URL`, `VERCEL`, and related golden-path env vars before `npm run test:unit` so local stack sessions do not route unit tests to shared Postgres.
 
+The phase runner also treats GP-023 as a clean-checkout validation boundary.
+Each npm subprocess receives only operating-system essentials (`PATH`, `HOME`,
+locale, and temporary-directory settings), `ALLOW_FILE_AUDIT_BACKEND=true`, and
+`NODE_ENV=test`. Do not add live database, auth, credential, OpenClaw, Forge,
+feature-flag, or trusted-delivery variables to that allowlist. If GP-023 passes
+in a normal shell but fails under the orchestrator, inspect this boundary before
+retrying a delivery; do not waive or bypass the post-merge validation.
+
 ```bash
 # With dev stack up — validation only; UI already at http://127.0.0.1:15173
 npm run lint && npm run test:unit && npm run standards:check
@@ -1075,7 +1119,7 @@ npm run factory:orchestrator -- --once
 npm run factory:orchestrator -- --interval-ms 15000
 ```
 
-Queue state is durable by default in Postgres table `factory_delivery_queue` with idempotent submit, row leases, retry backoff, expired-lease recovery, and `dead_letter` terminal state. Per-item evidence remains in `observability/factory-delivery/<queue-id>.json`. The Autonomy metrics dashboard and `GET /api/v1/factory/queue` expose the current pending, leased, retrying, completed, dead-letter, and per-item `realDelivery.preflight` state for operator review. After an SRE/admin reviews the failure and records a reason, `POST /api/v1/factory/queue/<queue-id>/requeue` with `factory-queue:write` requeues only tenant-scoped rows already in `dead_letter`, clears stale lease/error fields, and resumes from the recorded failed stage. Real-delivery requeue also runs the same preflight before mutating the row; if required proof is still missing, the row stays in `dead_letter`.
+Queue state is durable by default in Postgres table `factory_delivery_queue` with idempotent submit, one-hour row leases, retry backoff, expired-lease recovery, and `dead_letter` terminal state. The one-hour default exceeds the trusted implementer's 31-minute runner timeout so hosted checks cannot invalidate an otherwise owned delivery while the agent is still working. Override `FACTORY_QUEUE_LEASE_SECONDS` or `--lease-seconds` only when the configured phase timeout remains shorter than the lease. Per-item evidence remains in `observability/factory-delivery/<queue-id>.json`. The Autonomy metrics dashboard and `GET /api/v1/factory/queue` expose the current pending, leased, retrying, completed, dead-letter, and per-item `realDelivery.preflight` state for operator review. After an SRE/admin reviews the failure and records a reason, `POST /api/v1/factory/queue/<queue-id>/requeue` with `factory-queue:write` requeues only tenant-scoped rows already in `dead_letter`, clears stale lease/error fields, and resumes from the recorded failed stage. Real-delivery requeue also runs the same preflight before mutating the row; if required proof is still missing, the row stays in `dead_letter`.
 
 ```bash
 npm run audit:migrate
@@ -1140,3 +1184,28 @@ Operator checklist: `docs/runbooks/milestone-a-hosted-factory.md`.
 - `../forgeadapter/docs/runbooks/phase2-local-smoke.md` — forge local stack
 - `docs/architecture/openclaw-forge-delivery-architecture.md` — target architecture
 - `prd/software-factory.md` — full factory vision
+### Record a prospective v2 trusted close
+
+For closeouts generated on or after 2026-08-19, write the validated trusted-close package beneath `observability/trusted-simple-close/`, calculate its SHA-256, and record both as `trustedSimpleCloseEvidence.path` and `trustedSimpleCloseEvidence.sha256` in the task closeout. The path must stay inside the repository and the evidence package `taskId` must match the closeout. Missing, changed, invalid, or cross-task evidence is reported as untrusted; do not edit the effective date or grandfather a new task.
+### Audit human authority and intervention timing
+
+Before counting a prospective trusted close, confirm its closeout contains PM and Architect records sourced from `task.pm_architect_human_review_recorded`, plus the event id and timestamp for `task.execution_contract_approved`. Every intervention must have a parseable `recordedAt`. The cohort fails closed for missing provenance or timestamps and rejects any intervention at or after approval; repair the source audit trail instead of editing the report.
+### Interpret the cohort residual
+
+Use `summary.residual.additionalTrustedClosesRequired`, not only the distance to ten. The residual satisfies both the minimum count and delivery-rate bar and assumes every added Simple close will be trusted. Review the projected trusted/closed totals and projected rate before scheduling the cohort; `null` with `achievableWithAdditionalTrustedCloses=false` means additions alone cannot satisfy the configured target.
+### Reproduce dependencies for persistent services
+
+`node_modules/` is intentionally untracked. A clean checkout or exact-revision staging release must run `npm ci` from the committed `package-lock.json` before installing or restarting launchd services. Never copy an installed dependency tree between revisions; native binaries and Vite/Rolldown package metadata must come from the lockfile on the target host.
+
+### Keep staging separate from the factory of record
+
+Configure staging through the protected `STAGING_BASE_URL`, `STAGING_DATABASE_URL`, and
+`STAGING_RELEASE_ROOT` variables. `release:staging:deploy` installs the exact revision beneath the
+persistent release root and starts only the `staging` launchd profile. Do not point these variables at
+the default ports, database, state directory, or root binding. A missing HTTPS host or unhealthy local
+or hosted probe blocks evidence creation and the 24-hour soak.
+
+Staging uses a production browser build served by Vite preview with `/backend` proxied to the isolated
+staging API. If the page is blank and reports `$RefreshReg$ is not defined`, the production profile was
+incorrectly started with the Vite development server; rebuild and rebind the exact release before
+collecting browser evidence.

@@ -20,17 +20,24 @@ function environmentBudget(name, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function createLoadRuntime(pool, nodeExecutions) {
+function createLoadRuntime(pool, nodeExecutions, nodeDurations) {
   return createLangGraphRuntime({
+    baseDir: process.env.RUNTIME_LOAD_LOG_DIR || path.join(process.cwd(), '.artifacts', 'runtime-load-logs'),
     pool,
     config: { enabled: true, operationTimeoutMs: 30_000, poolBudget: 2, retentionDays: 1 },
-    nodes: [{
-      name: 'load_checkpoint',
-      execute: (state) => {
-        nodeExecutions.set(state.factoryRunId, (nodeExecutions.get(state.factoryRunId) || 0) + 1);
-        return { attempt: 1 };
+    interruptAfter: ['load_checkpoint'],
+    nodes: [
+      {
+        name: 'load_checkpoint',
+        execute: (state) => {
+          const startedAt = Date.now();
+          nodeExecutions.set(state.factoryRunId, (nodeExecutions.get(state.factoryRunId) || 0) + 1);
+          nodeDurations.push(Date.now() - startedAt);
+          return { attempt: 1 };
+        },
       },
-    }],
+      { name: 'load_complete', execute: () => ({ lifecycleStatus: 'succeeded' }) },
+    ],
   });
 }
 
@@ -39,10 +46,17 @@ async function runWorker(runtime, input) {
   while (Date.now() < input.deadline) {
     const started = Date.now();
     const factoryRunId = `${input.prefix}:${input.workerId}:${sequence}`;
+    const tenantId = `load_${input.workerId}`;
     try {
-      await runtime.invoke({ tenantId: `load_${input.workerId}`, factoryRunId });
-      input.result.completed += 1;
+      const state = await runtime.invoke({ tenantId, factoryRunId });
       input.result.latencies.push(Date.now() - started);
+      const statusStarted = Date.now();
+      await runtime.runStatus({ tenantId, threadId: state.threadId });
+      input.result.statusLatencies.push(Date.now() - statusStarted);
+      const resumeStarted = Date.now();
+      await runtime.resume({ tenantId, threadId: state.threadId });
+      input.result.resumeLatencies.push(Date.now() - resumeStarted);
+      input.result.completed += 1;
     } catch (error) {
       input.result.failures += 1;
       const code = typeof error?.code === 'string' ? error.code : 'unknown';
@@ -56,7 +70,8 @@ async function runWorker(runtime, input) {
 async function runWorkload(runtime, nodeExecutions, prefix, durationMs, concurrency) {
   const startedAt = Date.now();
   const result = {
-    completed: 0, failedAfterSideEffect: 0, failureCodes: {}, failures: 0, latencies: [], poolPeak: 0,
+    completed: 0, failedAfterSideEffect: 0, failureCodes: {}, failures: 0, latencies: [],
+    poolPeak: 0, resumeLatencies: [], statusLatencies: [],
   };
   const sampler = setInterval(() => {
     result.poolPeak = Math.max(result.poolPeak, runtime.checkpointer.pool.langGraphBudget?.active() || 0);
@@ -107,6 +122,12 @@ function buildArtifact(input) {
   const sizes = checkpointSizes(metricValues(snapshot, 'histograms', 'langgraph_checkpoint_size_bytes'));
   const observed = [...input.nodeExecutions.values()].reduce((sum, count) => sum + count, 0);
   const duplicates = [...input.nodeExecutions.values()].reduce((sum, count) => sum + Math.max(count - 1, 0), 0);
+  const invocation = distribution(input.result.latencies);
+  const checkpointP95Ms = Math.max(percentile(writes, 0.95), percentile(reads, 0.95));
+  const nodeP95Ms = percentile(input.nodeDurations, 0.95);
+  const graphOverheadPercent = Number((
+    Math.max(0, invocation.p95Ms - checkpointP95Ms - nodeP95Ms) / 2_000 * 100
+  ).toFixed(2));
   return {
     schemaVersion: 'langgraph-01-load.v1', requestedDurationMs: input.durationMs,
     actualDurationMs: input.result.actualDurationMs, concurrency: input.concurrency,
@@ -114,7 +135,10 @@ function buildArtifact(input) {
     completed: input.result.completed, failures: input.result.failures,
     failureCodes: input.result.failureCodes, failedAfterSideEffect: input.result.failedAfterSideEffect,
     measuredThroughputQps: Number((input.result.completed / (input.result.actualDurationMs / 1000)).toFixed(2)),
-    invocation: distribution(input.result.latencies), checkpointWrites: distribution(writes), checkpointReads: distribution(reads),
+    invocation, status: distribution(input.result.statusLatencies), resume: distribution(input.result.resumeLatencies),
+    checkpointWrites: distribution(writes), checkpointReads: distribution(reads),
+    nodeExecution: distribution(input.nodeDurations), graphOverheadPercent,
+    graphOverheadBasis: 'percentage-of-2000ms-resume-slo-after-checkpoint-and-node-time',
     expectedSideEffects: input.result.completed, observedSideEffects: observed, duplicateSideEffects: duplicates,
     sideEffectCountMatchesCompleted: observed === input.result.completed,
     poolBudget: 2, poolPeak: input.result.poolPeak,
@@ -166,6 +190,8 @@ function evaluateArtifact(artifact) {
   return artifact.failures === 0
     && artifact.checkpointWrites.p95Ms < artifact.localBudgets.checkpointWriteP95Ms
     && artifact.checkpointReads.p95Ms < artifact.localBudgets.checkpointReadP95Ms
+    && artifact.status.p95Ms < 250 && artifact.resume.p95Ms < 2_000
+    && artifact.graphOverheadPercent < 10
     && artifact.duplicateSideEffects === 0 && artifact.sideEffectCountMatchesCompleted
     && artifact.poolPeak === artifact.poolBudget
     && artifact.endingPoolActive === 0 && artifact.endingPoolWaiters === 0 && artifact.cleanupPassed;
@@ -184,14 +210,15 @@ async function main() {
   const concurrency = Number(process.env.LANGGRAPH_LOAD_CONCURRENCY || 4);
   const pool = createPgPoolFromEnv(process.env.DATABASE_URL);
   const nodeExecutions = new Map();
-  const runtime = createLoadRuntime(pool, nodeExecutions);
+  const nodeDurations = [];
+  const runtime = createLoadRuntime(pool, nodeExecutions, nodeDurations);
   const prefix = `load_${Date.now()}`;
   let artifact;
   try {
     await runtime.setup();
     const result = await runWorkload(runtime, nodeExecutions, prefix, durationMs, concurrency);
     const storage = await storageEvidence(pool, prefix);
-    artifact = buildArtifact({ concurrency, durationMs, nodeExecutions, result, runtime, storage });
+    artifact = buildArtifact({ concurrency, durationMs, nodeDurations, nodeExecutions, result, runtime, storage });
   } finally {
     try {
       const cleanupRows = await cleanupLoad(pool, prefix);

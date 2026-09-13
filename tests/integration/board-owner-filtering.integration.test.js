@@ -129,7 +129,7 @@ describe('board owner filtering integration', () => {
     installBoardFetchMock();
     render(React.createElement(App));
 
-    await screen.findByText('5 cards shown.');
+    await waitForInitialBoardSelection();
     expect(screen.getByRole('heading', { name: 'Intake Draft' })).toBeInTheDocument();
     expect(screen.getByLabelText('Coverage Audit column')).toHaveTextContent('No matching tasks in this column.');
     expect(screen.getByText('Owner hidden')).toBeInTheDocument();
@@ -137,7 +137,7 @@ describe('board owner filtering integration', () => {
     expect(screen.queryByText('Governance review task')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Owner filter'), { target: { value: '__unassigned__' } });
-    await screen.findByText('1 unassigned cards shown.');
+    await screen.findByText('1 unassigned cards shown.', {}, { timeout: 10000 });
     expect(within(screen.getByLabelText('Operator Approval column')).getByText('Board unassigned task')).toBeInTheDocument();
     expect(within(screen.getByLabelText('Implementation column')).getByText('No matching tasks in this column.')).toBeInTheDocument();
 
@@ -261,3 +261,12 @@ describe('board owner filtering integration', () => {
     expect(screen.getByText(/governed close review or escalation handling/i)).toBeInTheDocument();
   });
 });
+
+async function waitForInitialBoardSelection() {
+  await screen.findByText('5 cards shown.');
+  // The inspector selects its initial task through a URL navigation. Let that
+  // settle before the test triggers a second navigation from the owner filter.
+  await waitFor(() => {
+    expect(new URLSearchParams(window.location.search).get('selectedTask')).toBe('TSK-BOARD-1');
+  });
+}

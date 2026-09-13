@@ -146,6 +146,14 @@ the ephemeral GitHub Actions token to `scripts/verify-pr-body.js`. This lets the
 validator fetch the current pull-request body when a rerun receives a stale or
 empty event payload, without granting write access.
 
+For trusted autonomous factory delivery, the implementer must receive the
+queued source issue URL and expected changed-file list and must populate the
+complete governed PR body before opening the pull request. Treat an initial
+`Pull request metadata` failure as a failed delivery attempt even when a later
+autonomous edit passes. Documentation-only tasks may list the changed document
+under both evidence-path fields because repository validation is their test
+evidence.
+
 Read `DESIGN.md` before UI changes, change reusable visual semantics there
 first, and avoid hard-coded visual values in migrated CSS. A rare one-off must
 use `DESIGN-TOKEN-EXCEPTION: <short reason and follow-up if reusable>`.
