@@ -7,7 +7,7 @@ const {
   buildOpenClawPmRefinementEnv,
 } = require('../../lib/audit/pm-refinement-delegate-config');
 
-test('golden path defaults to OpenClaw PM refinement delegate', () => {
+test('golden path defaults to the selected specialist runtime for PM refinement', () => {
   const env = {
     NODE_ENV: 'development',
     GOLDEN_PATH_LOCAL_PM_REFINEMENT: 'false',
@@ -18,6 +18,17 @@ test('golden path defaults to OpenClaw PM refinement delegate', () => {
   const resolved = resolvePmRefinementDelegateWork(env, path.join(process.cwd()));
   assert.equal(resolved.mode, 'openclaw');
   assert.equal(typeof resolved.delegateWork, 'function');
+  assert.match(resolved.openClawEnv.SPECIALIST_DELEGATION_RUNNER, /grok-specialist-runner\.js$/);
+  assert.equal(resolved.openClawEnv.SPECIALIST_RUNTIME_PROVIDER, 'grok');
+});
+
+test('PM refinement uses the OpenClaw adapter when that provider is selected', () => {
+  const env = {
+    NODE_ENV: 'development',
+    GOLDEN_PATH_OPENCLAW_PM_REFINEMENT: 'true',
+    SPECIALIST_RUNTIME_PROVIDER: 'openclaw',
+  };
+  const resolved = resolvePmRefinementDelegateWork(env, path.join(process.cwd()));
   assert.match(resolved.openClawEnv.SPECIALIST_DELEGATION_RUNNER, /openclaw-specialist-runner\.js$/);
 });
 

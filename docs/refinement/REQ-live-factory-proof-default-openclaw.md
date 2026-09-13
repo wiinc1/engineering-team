@@ -61,7 +61,7 @@ Milestone completion artifacts (`observability/milestone-*-complete.json`) have 
 | Term | Definition |
 | --- | --- |
 | **Fixture runner** | `tests/fixtures/specialist-runtime-runner.js` (or any runner path containing that fixture) |
-| **Live runner** | `scripts/openclaw-specialist-runner.js` (or equivalent configured via `SPECIALIST_DELEGATION_RUNNER` that talks to a real gateway) |
+| **Live runner** | Selected by `SPECIALIST_RUNTIME_PROVIDER` (default `grok` → `scripts/grok-specialist-runner.js`). OpenClaw remains `scripts/openclaw-specialist-runner.js`. Any runner must talk to a real runtime and return session evidence. |
 | **Gateway available** | HTTP(S) base URL (default probe `OPENCLAW_BASE_URL` or `--openclaw-url`) responds successfully to the agreed health/probe contract within timeout |
 | **Real session evidence** | Delegation result with `mode=delegated` (or equivalent), non-empty `sessionId`, `attribution.delegated=true` (or factory evidence field proving runtime session ownership), and agent id **not** a known fixture stub |
 | **Production-like proof** | Any of: primary milestone verify defaults, `FACTORY_PROOF_PROFILE=live` / `production-like`, `FF_GOLDEN_PATH_REQUIRE_REAL_EVIDENCE=true`, real-evidence collection flags, or npm scripts advertised as factory green claims |
