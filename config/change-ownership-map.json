@@ -662,8 +662,11 @@
       "name": "specialist-delegation",
       "runtime_patterns": [
         "^lib/software-factory/.*delegation.*\\.js$",
+        "^lib/software-factory/specialist-runtime-.*\\.js$",
         "^lib/software-factory/task-dispatch\\.js$",
         "^scripts/openclaw-specialist-runner\\.js$",
+        "^scripts/grok-specialist-runner\\.js$",
+        "^scripts/specialist-runtime-doctor\\.js$",
         "^scripts/push-specialist-delegation-metrics\\.js$",
         "^scripts/validate-specialist-runtime\\.js$",
         "^scripts/command-router\\.js$"
@@ -673,6 +676,8 @@
           "name": "unit",
           "patterns": [
             "^tests/unit/specialist-delegation\\.test\\.js$",
+            "^tests/unit/specialist-runtime-provider\\.test\\.js$",
+            "^tests/unit/grok-specialist-runner\\.test\\.js$",
             "^tests/unit/command-router-delegation\\.test\\.js$"
           ]
         },
@@ -680,6 +685,8 @@
           "name": "contract-or-e2e",
           "patterns": [
             "^tests/contract/specialist-delegation\\.contract\\.test\\.js$",
+            "^tests/contract/specialist-runtime-runner\\.contract\\.test\\.js$",
+            "^tests/integration/specialist-runtime-provider\\.integration\\.test\\.js$",
             "^tests/e2e/specialist-delegation\\.e2e\\.test\\.js$"
           ]
         },
@@ -687,6 +694,7 @@
           "name": "security-or-performance",
           "patterns": [
             "^tests/security/specialist-delegation\\.security\\.test\\.js$",
+            "^tests/security/specialist-runtime-provider\\.security\\.test\\.js$",
             "^tests/performance/specialist-delegation\\.performance\\.test\\.js$"
           ]
         }

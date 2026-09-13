@@ -26,12 +26,19 @@ const { ensureContainerEngine } = require('../../lib/task-platform/factory-stack
 const { prepareUiAssets } = require('../../lib/task-platform/factory-stack/ui');
 
 describe('factory-stack defaults', () => {
-  it('builds live OpenClaw-oriented service env', () => {
+  it('builds live specialist-runtime service env with Grok default', () => {
     const env = buildServiceEnv();
     assert.equal(env.FACTORY_PROOF_PROFILE, 'live');
     assert.equal(env.FF_REAL_SPECIALIST_DELEGATION, 'true');
+    assert.equal(env.SPECIALIST_RUNTIME_PROVIDER, 'grok');
+    assert.match(env.SPECIALIST_DELEGATION_RUNNER, /grok-specialist-runner\.js/);
     assert.equal(env.GOLDEN_PATH_OPENCLAW_POST_APPROVAL_ARTIFACTS, 'true');
     assert.equal(env.GOLDEN_PATH_OPENCLAW_ARCHITECT_ENGINEER_ASSIGNMENT, 'true');
+    assert.equal(env.FF_GITLAB_INTAKE_NORMALIZER, 'true');
+    assert.equal(env.FF_GITLAB_INTAKE_PROJECT_BOOTSTRAP, 'true');
+    assert.equal(env.FORGE_INTAKE_PROVIDER, 'gitlab');
+    assert.equal(env.GITLAB_WEBHOOK_SECRET, 'golden-path-local-webhook-secret');
+    assert.equal(env.SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS, '300000');
     assert.match(env.OPENCLAW_BASE_URL, /18789|OPENCLAW/);
     assert.equal(env.PORT, String(DEFAULT_PORTS.api));
     assert.match(env.DATABASE_URL, /15432|postgres/);

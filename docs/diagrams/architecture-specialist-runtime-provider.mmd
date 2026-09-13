@@ -1,0 +1,13 @@
+flowchart LR
+  subgraph factory [Factory coordinator]
+    coord[delegation.js]
+    port[runtime-delegation.js stdin/stdout]
+    registry[specialist-runtime-provider.js]
+  end
+  coord --> registry
+  registry --> port
+  port --> grok[scripts/grok-specialist-runner.js]
+  port --> oc[scripts/openclaw-specialist-runner.js]
+  port --> extra[Registered extra runner]
+  grok --> grokCli[grok CLI]
+  oc --> ocGw[OpenClaw gateway]

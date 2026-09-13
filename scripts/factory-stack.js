@@ -12,7 +12,9 @@
  *   - UI Vite (:15173) claim topology
  *   - forgeadapter (:14010) claim topology when checkout present
  *
- * OpenClaw live gateway remains separate launchd (ai.openclaw.gateway on :18789).
+ * Specialist runtime is selected by SPECIALIST_RUNTIME_PROVIDER (default grok).
+ * OpenClaw live gateway remains separate launchd (ai.openclaw.gateway on :18789)
+ * and is required only when the provider is openclaw.
  */
 
 const { execFileSync } = require('node:child_process');

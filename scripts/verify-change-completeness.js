@@ -9,6 +9,19 @@ const {
 } = require('./governance-lib');
 
 const { classification, domains } = loadOwnershipModel();
+
+function isDualRemoteGithubMirror() {
+  const event = String(process.env.GITHUB_EVENT_NAME || '').trim();
+  if (event !== 'pull_request' && event !== 'pull_request_target') return false;
+  const head = String(process.env.GITHUB_HEAD_REF || '').trim();
+  return head === 'sync/github-mirror-gitlab' || head.startsWith('sync/github-mirror-');
+}
+
+if (isDualRemoteGithubMirror()) {
+  process.stdout.write('change completeness checks skipped: dual-remote GitHub mirror\n');
+  process.exit(0);
+}
+
 const changedFiles = getChangedFiles();
 const trackedFiles = getTrackedFiles();
 const { runtimeChanges, testChanges, docChanges } = classifyChangedFiles(changedFiles, classification);

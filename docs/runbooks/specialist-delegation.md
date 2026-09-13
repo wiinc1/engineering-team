@@ -6,15 +6,19 @@
 - `FF_REAL_SPECIALIST_DELEGATION=true` enables specialist routing and delegation.
 - `FF_REAL_SPECIALIST_DELEGATION=false` disables delegation and keeps the coordinator in direct-response mode.
 - `FF_SPECIALIST_DELEGATION` remains a compatibility alias for older environments.
-- `SPECIALIST_DELEGATION_RUNNER` must point at the real runtime bridge command. Without it, the software factory falls back truthfully and does not claim session ownership.
+- `SPECIALIST_RUNTIME_PROVIDER` selects the live runtime: `grok` (default), `openclaw`, or a name registered in `SPECIALIST_RUNTIME_PROVIDERS`. Unknown names fail closed (`SPECIALIST_RUNTIME_PROVIDER_UNKNOWN`).
+- `SPECIALIST_DELEGATION_RUNNER` optionally overrides the provider's runner command. Without a live runner, the software factory falls back truthfully and does not claim session ownership.
 - `SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS` or `SPECIALIST_DELEGATION_RUNNER_TIMEOUT_MS` controls the runtime bridge timeout. Default: `20000`.
-- `OPENCLAW_DELEGATION_LOCAL=true` opts the repo-local OpenClaw bridge into embedded local mode. The default is gateway mode because it returns session evidence without requiring model provider keys in the shell.
-- `OPENCLAW_DELEGATION_THINKING` optionally sets the OpenClaw agent thinking level. The live OpenClaw smoke defaults this to `low`.
+- Grok adapter: `scripts/grok-specialist-runner.js`. Set `GROK_BIN` if `grok` is not on `PATH`. Override aliases with `GROK_SPECIALIST_MAP`.
+- OpenClaw adapter: `scripts/openclaw-specialist-runner.js`. `OPENCLAW_DELEGATION_LOCAL=true` opts into embedded local mode. `OPENCLAW_DELEGATION_THINKING` sets thinking level.
+- Extra providers: `SPECIALIST_RUNTIME_PROVIDERS='{"codex":{"runner":"node scripts/codex-specialist-runner.js","binary":"codex"}}'`.
+- Factory stack health requires OpenClaw `:18789` only when `SPECIALIST_RUNTIME_PROVIDER=openclaw`.
+- Doctor: `npm run specialist-runtime:doctor`.
 
 ## Rollout steps
 1. Enable in local/dev and verify `tests/unit/specialist-delegation.test.js` passes.
 2. Configure `SPECIALIST_DELEGATION_RUNNER` to invoke the real OpenClaw/runtime handoff path, then start the command router.
-3. Repo-local OpenClaw bridge command: `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'`.
+3. Default live bridge (Grok): `SPECIALIST_RUNTIME_PROVIDER=grok` and `SPECIALIST_DELEGATION_RUNNER='node scripts/grok-specialist-runner.js'`. OpenClaw remains selectable: `SPECIALIST_RUNTIME_PROVIDER=openclaw` and `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'`.
 4. Default repo-local alias map:
 - `pm -> product-manager`
 - `architect -> architect`

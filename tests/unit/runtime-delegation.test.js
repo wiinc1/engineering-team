@@ -55,3 +55,27 @@ test('createRuntimeDelegateWork fails closed when the runtime bridge exceeds the
     },
   );
 });
+
+test('createRuntimeDelegateWork does not throw uncaught EPIPE when the runner exits before stdin flush', async () => {
+  const grokRunner = path.join(__dirname, '..', '..', 'scripts', 'grok-specialist-runner.js');
+  const delegateWork = createRuntimeDelegateWork({
+    baseDir: path.join(__dirname, '..', '..'),
+    delegationRunnerCommand: `node ${grokRunner}`,
+    runnerEnv: {
+      PATH: '/usr/bin:/bin',
+      GROK_BIN: '/no/such/grok-binary',
+    },
+  });
+
+  await assert.rejects(
+    delegateWork({
+      specialist: 'engineer',
+      request: 'Please implement this fix',
+      payloadVersion: 1,
+    }),
+    (error) => {
+      assert.equal(error.code, 'SPECIALIST_RUNTIME_EXEC_FAILED');
+      return true;
+    },
+  );
+});

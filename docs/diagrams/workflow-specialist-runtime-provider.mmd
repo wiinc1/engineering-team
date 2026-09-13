@@ -1,0 +1,13 @@
+flowchart TD
+  start[Factory specialist request] --> resolve[Resolve SPECIALIST_RUNTIME_PROVIDER]
+  resolve -->|unset| grok[Default grok]
+  resolve -->|grok| grok
+  resolve -->|openclaw| oc[OpenClaw adapter]
+  resolve -->|registered extra| extra[Extra runner]
+  resolve -->|unknown| reject[SPECIALIST_RUNTIME_PROVIDER_UNKNOWN]
+  grok --> spawn[Spawn runner stdin JSON v1]
+  oc --> spawn
+  extra --> spawn
+  spawn --> ok{agentId and sessionId?}
+  ok -->|yes| delegated[Record delegated ownership]
+  ok -->|no| fallback[Coordinator fallback delegated false]

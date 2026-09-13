@@ -113,8 +113,9 @@ Behavior:
 
 - The runtime-backed specialist delegation path treats `FF_REAL_SPECIALIST_DELEGATION` as the canonical flag and still honors `FF_SPECIALIST_DELEGATION` for compatibility.
 - Disabling the flag fails closed to coordinator handling and does not claim specialist ownership.
-- `SPECIALIST_DELEGATION_RUNNER` must resolve to the real runtime bridge command before delegated ownership can be emitted.
-- Pilot readiness verification uses `npm run pilot:delegation:readiness`, which requires this flag to be enabled and `SPECIALIST_DELEGATION_RUNNER='node scripts/openclaw-specialist-runner.js'` before writing app-dispatched ownership evidence.
+- `SPECIALIST_RUNTIME_PROVIDER` selects `grok` (default), `openclaw`, or a registered extra provider. Switching providers is configuration, not a coordinator fork.
+- `SPECIALIST_DELEGATION_RUNNER` must resolve to the selected provider's real runtime bridge command before delegated ownership can be emitted. Explicit runner values override the provider default.
+- Pilot readiness verification uses `npm run pilot:delegation:readiness`, which requires this flag to be enabled and a non-fixture `SPECIALIST_DELEGATION_RUNNER` (Grok or OpenClaw) before writing app-dispatched ownership evidence.
 
 ## Orchestration
 
