@@ -2,7 +2,49 @@
 
 ## Evidence collection
 
+### Exact-revision isolated staging
+
+The default factory stack and staging are separate launchd profiles. Staging uses independent labels,
+ports, logs, state, and root binding, so an approved release cannot rebind or interrupt the host's
+factory of record. Configure protected CI variables `STAGING_BASE_URL`, `STAGING_BROWSER_BASE_URL`,
+`STAGING_DATABASE_URL`, `STAGING_JWT_SECRET`, and `STAGING_RELEASE_ROOT`; the release root must be an
+absolute, persistent path outside temporary and `_checkouts` directories. The default `hosted` endpoint
+mode requires non-local HTTPS. The host-only architecture instead sets
+`STAGING_ENDPOINT_MODE=host-local` and uses explicit loopback HTTP(S) URLs. Host-local mode rejects
+external hosts, and hosted mode continues to reject loopback, so neither mode can silently fall back to
+the other.
+
+On protected `main`, `deploy-runtime-staging` clones the exact `CI_COMMIT_SHA` into
+`$STAGING_RELEASE_ROOT/releases/<sha>`, removes the credential-bearing remote, installs from the lockfile,
+builds the browser assets, starts only the `staging` launchd profile, and verifies local plus deployed
+`/health`. Production-mode launchd serves the built browser through Vite preview with the same-origin
+`/backend` proxy; it must never launch the React-refresh development server under `NODE_ENV=production`.
+Host-local staging
+uses the profile ports (`127.0.0.1:23000` for the API and `127.0.0.1:25173` for the browser) on this same
+operator host. It emits revision-bound
+Graphile and LangGraph `staging_deploy` components. An existing release directory with another revision,
+an unhealthy local stack, a redirect, or unhealthy deployed endpoint blocks deployment.
+
+The staging and soak jobs share the `runtime-staging` resource group and are non-interruptible. This
+prevents concurrent releases from sharing the dedicated staging database or contaminating the 24-hour
+window. Their artifacts and deployment dotenv are retained for two weeks. Production remains a separate
+manual review; the pipeline never applies a runtime cutover.
+
 Collect immutable artifacts from the same revision and staging deployment. Run focused Graphile/LangGraph tests, Docker integration, contracts, security/SBOM/secrets, 2× load for ten minutes, deterministic chaos, browser/accessibility, rollback, three lifecycle synthetics, 24-hour soak, and disposable backup/restore/reconcile. Exercise alert delivery and both kill switches. Do not copy raw jobs, checkpoints, tokens, database URLs, or task content into evidence.
+
+The `runtime-hosted-evidence` job executes every pre-soak gate from the persistent exact-revision
+checkout, stores each raw result for two weeks, and normalizes only parser-verified results with redacted
+command provenance and source SHA-256 digests. Its endpoint normalizer enforces the same explicit
+`hosted` or `host-local` scope as the deployer, preventing either mode from being downgraded while
+evidence is collected. Hosted mode requires HTTP(S) CI provenance. Host-local mode may instead use a
+code-owned `local:` automation identifier, so evidence never claims a remote runner that cannot reach
+this host. Migration rollback, composed-runtime, and checkpoint-retention fixtures run against the
+job's disposable Docker PostgreSQL instance; they must never target the persistent staging database.
+The Graphile load runner also rechecks its monotonic deadline after an early timer wake-up so normalized
+evidence always represents at least the complete requested ten-minute window. The 24-hour job consumes that exact deployment;
+`seal-runtime-release-manifests` then adds the soak components, seals both manifests, and runs both
+release verifiers. Missing protected variables suppress the hosted jobs instead of falling back to
+an implicit endpoint mode. CI never runs the apply command.
 
 Validate with:
 
@@ -12,6 +54,8 @@ npm run release:langgraph:verify -- artifacts/langgraph-release-manifest.json
 ```
 
 Any nonzero exit blocks cutover. Re-run the failing automation; do not edit or waive the result.
+
+Do not edit a collected manifest. Its `manifestDigest` seals the deployment identity and complete artifact metadata. Copy the JSON byte-for-byte between stages; verification recomputes the canonical digest and cutover requires that verified digest in its release decision.
 
 Run the composed staging soak from the exact deployed revision. The command defaults to 86,400 seconds,
 uses five-minute concurrent Graphile/LangGraph windows, isolates Graphile rows by a generated tenant,
@@ -29,6 +73,22 @@ The release components are written to `.artifacts/runtime-soak/graphile-soak-24h
 `.artifacts/runtime-soak/langgraph-soak-24h.json`. A shorter `SOAK_DURATION_SECONDS` is useful only
 for harness smoke testing and cannot pass the 24-hour release threshold.
 
+Each window also writes a redacted `windows/<index>-result.json` process diagnostic. The harness
+stops after the first failed runtime, asks timed-out children to drain, escalates hung shutdowns,
+and independently removes and verifies only the Graphile jobs and application rows referenced by
+that window's synthetic tenant before another window can start. If a hard-killed child leaves a
+logical Graphile lock, cleanup unlocks only the worker IDs attached to those exact synthetic jobs,
+retries supported job completion, and fails closed unless the residual count is zero.
+Graphile throughput evaluation permits only the fractional remainder created when duration times QPS
+is not an integer; one missing whole job or any latency, delivery, pool, or cleanup breach still fails.
+
+To remove backlog from an already failed run, set the exact `SOAK_CLEANUP_RUN_PREFIX`, the matching
+`SOAK_CLEANUP_CONFIRM=delete:<prefix>`, and a hosted `SOAK_CLEANUP_OUTPUT`, then run
+`npm run cleanup:runtime:soak`. The command refuses wildcard prefixes, removes jobs through Graphile's
+supported worker utilities, deletes only tenants matching that run, and records before/after evidence.
+An orphan from an earlier synthetic check can instead be selected with one exact
+`SOAK_CLEANUP_TENANT`; the same matching confirmation and hosted evidence requirements apply.
+
 ## Emergency response
 
 Set `FF_GRAPHILE_WORKER_CUTOVER=false` to stop new claims and drain Graphile. Set `LANGGRAPH_GLOBAL_KILL_SWITCH=true` to stop new graph operations while retaining checkpoints. Page P0 for duplicate/concurrent ownership, cross-tenant access, or data loss; P1 for scheduling/checkpoint outage, severe backlog, stuck run/interrupt, or security anomaly; P2 for capacity, retention, or version drift.
@@ -45,3 +105,21 @@ npm run cutover:langgraph:preflight -- --inventory artifacts/factory-inventory.j
 ```
 
 After both allow, freeze starts, back up, drain, reconcile, activate both exclusive epochs, unfreeze, and run three immediate synthetics. Watch ownership conflicts, blocked legacy invocations, duplicate suppressions, queue/checkpoint latency, stale threads, and interrupt age. Rollback only if the automated decision proves zero active target work and compatible schema; otherwise keep both kill switches active and recover forward. Target RTO is under 15 minutes.
+
+Do not use the apply command as a preflight. After the full soak and manifests pass, generate apply-mode
+inventories with per-row reconciliation digests and zero active execution counts, prepare the exact
+approval document, and obtain immediate manual approval for its SHA-256. The mutation requires all of:
+
+```sh
+RUNTIME_CUTOVER_DATABASE_URL="$PRODUCTION_DATABASE_URL" npm run cutover:runtime:apply -- \
+  --apply --jobs-inventory artifacts/jobs-apply.json \
+  --factory-inventory artifacts/factory-apply.json \
+  --graphile-evidence artifacts/graphile-release-manifest.json \
+  --langgraph-evidence artifacts/langgraph-release-manifest.json \
+  --approval artifacts/runtime-cutover-approval.json \
+  --confirm 'sha256:<the-immediately-approved-document-digest>'
+```
+
+The approval is valid for 15 minutes. A changed plan, manifest, revision, actor, request ID, or approval
+timestamp changes the digest and blocks the transaction. Never retry with an edited confirmation or
+partially apply one scope; inspect the rolled-back audit result and rebuild the entire approval bundle.

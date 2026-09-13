@@ -198,6 +198,11 @@ test('factory final proof is required for real-evidence completion or item metad
   assert.equal(requiresFactoryFinalProof({ requireRealEvidence: true }), true);
   assert.equal(requiresFactoryFinalProof({ collectRealEvidence: true }), true);
   assert.equal(requiresFactoryFinalProof({ agentDrivenPhases: true }), true);
+  assert.equal(requiresFactoryFinalProof({
+    agentDrivenPhases: true,
+    proofProfile: 'live',
+    trustedDelivery: true,
+  }), false);
   assert.equal(requiresFactoryFinalProof({}, { metadata: { realDelivery: {} } }), false);
   assert.equal(requiresFactoryFinalProof({}, {
     metadata: { realDelivery: { candidateProofPath: 'proof.json' } },

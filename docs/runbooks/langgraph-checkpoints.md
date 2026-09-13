@@ -28,6 +28,11 @@ Alerts in `monitoring/alerts/langgraph-runtime.yml` cover unavailable storage, l
 
 Every rule links here and is contract-tested against its reviewed expression, threshold, duration, and severity. For unavailable storage, corruption, tenant rejection, version mismatch, or pool saturation, block new execution and inspect deep health, database reachability, migration/version compatibility, and the pool budget before clearing the alert. For write/read latency or stale threads, preserve the checkpoint evidence, compare hosted p95 and pool waiters to the dashboard, and drain concurrency before changing capacity. Never weaken a threshold or silence an alert without updating the reviewed fixture and obtaining normal change approval.
 
+If framework overhead rises while database CPU and checkpoint latency remain healthy, inspect telemetry
+aggregation before changing capacity or thresholds. Histogram observations must append in amortized
+constant time; immutable copies belong at the snapshot boundary. Quadratic sample copying can look like
+pool saturation and must be fixed before rerunning the ten-minute release gate.
+
 ## Crash, failover, backup/restore
 
 After a worker kill, start another compatible worker and call the application resume boundary with server tenant/thread context; it must continue at `snapshot.next`. After DB interruption/failover, require deep health before resuming. After restore, validate canonical task/audit data first, then saver migration, registry/checkpoint counts, graph/state compatibility, and a synthetic probe. Never infer canonical business completion from a checkpoint.

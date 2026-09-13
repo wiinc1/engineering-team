@@ -4,6 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createTaskPlatformService } = require('../../lib/task-platform');
+const { buildImplementerPrompt } = require('../../lib/task-platform/factory-agent-phases');
+const { buildPhaseRunnerOptions } = require('../../lib/task-platform/factory-phase-runner-options');
 
 function serviceWithTask() {
   const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'task-platform-branch-protection-'));
@@ -56,4 +58,39 @@ test('persists policy_blocked branch-protection state when Merge readiness is no
   assert.equal(review.classification.branch_protection_policy.status, 'policy_blocked');
   assert.equal(review.classification.branch_protection_policy.enforced, false);
   assert.ok(review.findings.some(finding => finding.type === 'policy_blocked'));
+});
+
+test('propagates trusted queue scope into the first-pass implementer PR contract', () => {
+  const githubIssueUrl = 'https://github.com/wiinc1/engineering-team/issues/388';
+  const changedFiles = ['docs/reference/example.md'];
+  const options = buildPhaseRunnerOptions(
+    { deliveryDir: 'observability/factory-delivery', ciRepository: 'wiinc1/engineering-team' },
+    {
+      id: 'factory-metadata-context',
+      title: 'Document a repository convention',
+      requirements: 'Add one documentation reference.',
+      templateTier: 'Simple',
+      githubIssueUrl,
+      changedFiles,
+    },
+  );
+  const prompt = buildImplementerPrompt({
+    taskId: 'TSK-050',
+    requirements: options.requirements,
+    repository: options.ciRepository,
+    githubIssueUrl: options.githubIssueUrl,
+    changedFiles: options.changedFiles,
+    trustedSimpleClose: true,
+  });
+
+  assert.match(prompt, /Repository: wiinc1\/engineering-team/);
+  assert.match(prompt, /Source GitHub issue: https:\/\/github\.com\/wiinc1\/engineering-team\/issues\/388/);
+  assert.match(prompt, /Expected changed files: docs\/reference\/example\.md/);
+  assert.match(prompt, /MUST begin with the literal ASCII characters `- `/);
+  assert.match(prompt, /hosted validator matches `\^- <label>:`/);
+  assert.match(prompt, /unbulleted `Task: value` line is treated as missing/);
+  assert.match(prompt, /repository rejects `None`, `N\/A`, `TBD`, `TODO`, and `unknown`/);
+  assert.match(prompt, /No gaps or exceptions; rationale: <specific reason this change conforms>/);
+  assert.match(prompt, /Do not write only `None`/);
+  assert.match(prompt, /Closes #388/);
 });

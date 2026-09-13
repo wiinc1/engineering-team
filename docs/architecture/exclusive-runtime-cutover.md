@@ -4,6 +4,11 @@ Issues #283 and #289 use the same ownership primitive from migration `021_runtim
 
 This is one full switch: no pilot, percentage rollout, shadow side effect, or permanent fallback is permitted.
 
+Staging is a distinct launchd profile, not a second binding of the default factory services. The release
+checkout, root binding, labels, state, logs, ports, database, and hosted health proof are isolated and tied
+to one exact 40-character revision plus deployment ID. The cutover gate rejects staging evidence unless
+both local and hosted health passed from this isolated profile.
+
 ## Reconciliation matrices
 
 | Scope | Legacy state | Disposition |
@@ -32,4 +37,21 @@ Rollback first freezes new work. It is permitted only with zero active target ex
 
 `scripts/verify-runtime-cutover.js` accepts sanitized inventory plus a release manifest and produces a deterministic signed decision. It does not mutate production. Epoch activation is an authenticated, audited database deployment operation after approval.
 
+Each release manifest carries `manifestDigest`, a deterministic SHA-256 over every other manifest field after stable key ordering. Collection seals the sorted exact-revision artifact set; evaluation recomputes the seal, and cutover rejects a decision without the verified digest. Any mutation to deployment identity, artifact status, threshold summary, provenance, expiry, or component digest therefore invalidates the handoff.
+
 After removal, `npm run cutover:graphile:legacy-zero` and `npm run cutover:langgraph:legacy-zero` must both pass. They intentionally fail in the pre-cutover repository while the inventoried executable paths remain.
+
+## Exclusive apply boundary
+
+The apply operation consumes both exact apply-mode plans in one call. Every inventory row must have a
+payload-free SHA-256 reconciliation proof, zero active executions, and no executing engine. A fresh
+`runtime-cutover-approval.v1` document binds the revision, both plan digests, both sealed manifest
+digests, actor, role, and request ID. Its digest must be supplied again as the explicit confirmation;
+approval expires after 15 minutes.
+
+Application takes one serializable transaction and one advisory lock across both scopes. It refuses to
+replace an already active non-legacy owner, retires legacy epochs, inserts both target epochs and all
+reconciled migration rows, and appends one `cutover_audit` record before commit. Any error rolls back
+both scopes. `cutover:runtime:apply` additionally requires `--apply`, `--confirm`, and the dedicated
+`RUNTIME_CUTOVER_DATABASE_URL`; CI never invokes it automatically. Operators must request the final
+manual approval only after the 24-hour soak and both sealed manifests are current.

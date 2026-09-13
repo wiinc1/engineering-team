@@ -9,7 +9,7 @@
         "lib/audit/execution-contracts.js",
         "lib/audit/feature-flags.js",
         "lib/audit/http.js",
-        "lib/audit/postgres.js",
+        "lib/audit/postgres-base.js",
         "lib/audit/review-questions.js",
         "lib/audit/store.js",
         "lib/audit/workflow-threads.js",

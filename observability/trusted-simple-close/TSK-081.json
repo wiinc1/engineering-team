@@ -1,0 +1,196 @@
+{
+  "schemaVersion": "trusted-simple-close-evidence.v1",
+  "issue": 274,
+  "mode": "trusted_delivery",
+  "templateTier": "Simple",
+  "repository": "wiinc1/engineering-team",
+  "branchName": "docs/tsk-081-file-path-formatting",
+  "implementationCommitSha": "945d7ad7dd8e8ec347808a9a0ec132a21d474027",
+  "commitSha": "945d7ad7dd8e8ec347808a9a0ec132a21d474027",
+  "prUrl": "https://github.com/wiinc1/engineering-team/pull/442",
+  "prNumber": 442,
+  "mergeCommitSha": "2958d9672e0f8d9cf77c9225943ad46d6c6d7a63",
+  "mergedAt": "2026-08-20T12:37:26Z",
+  "merged": true,
+  "changedFiles": [
+    "docs/reference/file-path-formatting.md"
+  ],
+  "requiredChecks": [
+    "Pull request metadata",
+    "Repo validation",
+    "Browser validation",
+    "verify",
+    "Merge readiness"
+  ],
+  "checks": [
+    {
+      "id": 96427484048,
+      "name": "Merge readiness",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/runs/96427484048",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96424924933,
+      "name": "Browser validation",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924933",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96424924928,
+      "name": "Specialist delegation verification",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924928",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96424924889,
+      "name": "Repo validation",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924889",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96424924861,
+      "name": "Pull request metadata",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924861",
+      "source": "github_check_run"
+    },
+    {
+      "id": 96424924457,
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989396/job/96424924457",
+      "source": "github_check_run"
+    }
+  ],
+  "branchProtection": {
+    "branch": "main",
+    "requiredChecks": [
+      "Pull request metadata",
+      "Repo validation",
+      "Browser validation",
+      "verify",
+      "Merge readiness"
+    ],
+    "source": "github_branch_protection"
+  },
+  "mergeReadiness": {
+    "name": "Merge readiness",
+    "reviewStatus": "passed",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/wiinc1/engineering-team/runs/96427484048",
+    "source": "github_check_run"
+  },
+  "autoMerge": {
+    "simulated": false,
+    "skipped": false,
+    "merged": true,
+    "mergeCommitSha": "2958d9672e0f8d9cf77c9225943ad46d6c6d7a63",
+    "mergedAt": "2026-08-20T12:37:26Z",
+    "reason": "factory_owned_merge_after_green_checks"
+  },
+  "github": {
+    "repository": "wiinc1/engineering-team",
+    "branchName": "docs/tsk-081-file-path-formatting",
+    "commitSha": "945d7ad7dd8e8ec347808a9a0ec132a21d474027",
+    "prUrl": "https://github.com/wiinc1/engineering-team/pull/442",
+    "prNumber": 442,
+    "mergeCommitSha": "2958d9672e0f8d9cf77c9225943ad46d6c6d7a63",
+    "mergedAt": "2026-08-20T12:37:26Z",
+    "merged": true,
+    "changedFiles": [
+      "docs/reference/file-path-formatting.md"
+    ],
+    "requiredChecks": [
+      "Pull request metadata",
+      "Repo validation",
+      "Browser validation",
+      "verify",
+      "Merge readiness"
+    ],
+    "checks": [
+      {
+        "id": 96427484048,
+        "name": "Merge readiness",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/runs/96427484048",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96424924933,
+        "name": "Browser validation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924933",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96424924928,
+        "name": "Specialist delegation verification",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924928",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96424924889,
+        "name": "Repo validation",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924889",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96424924861,
+        "name": "Pull request metadata",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989387/job/96424924861",
+        "source": "github_check_run"
+      },
+      {
+        "id": 96424924457,
+        "name": "verify",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/wiinc1/engineering-team/actions/runs/32368989396/job/96424924457",
+        "source": "github_check_run"
+      }
+    ],
+    "branchProtection": {
+      "branch": "main",
+      "requiredChecks": [
+        "Pull request metadata",
+        "Repo validation",
+        "Browser validation",
+        "verify",
+        "Merge readiness"
+      ],
+      "source": "github_branch_protection"
+    },
+    "mergeReadiness": {
+      "name": "Merge readiness",
+      "reviewStatus": "passed",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/wiinc1/engineering-team/runs/96427484048",
+      "source": "github_check_run"
+    }
+  },
+  "recordedAt": "2026-08-20T12:37:52.979Z",
+  "notes": "Trusted Simple close for TSK-081; generated by the live factory after merge confirmation.",
+  "taskId": "TSK-081",
+  "factoryQueueId": "factory-cohort-bullet-safe-20260820-436",
+  "ok": true
+}

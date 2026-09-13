@@ -13,6 +13,81 @@ const { createTaskCatalog } = require('../../lib/job-runtime/task-catalog');
 const { createMigratedWorkloadHandlers } = require('../../lib/job-runtime/workload-handlers');
 const { assertInventoryCompleteness, inventory } = require('../../lib/job-runtime/workload-inventory');
 const { createWorkloadProducers } = require('../../lib/job-runtime/workload-producers');
+const { assertJobRuntimeLoadBudgets, delayUntil, loadMeasurement } = require('../../scripts/run-job-runtime-load-test');
+
+function passingLoadReport(overrides = {}) {
+  return {
+    load_multiplier: 2.08, required_load_multiplier: 2,
+    submitted: 100, acknowledged: 100, enqueue_p95_ms: 20, enqueue_p99_ms: 40,
+    operational_read_p95_ms: 30, ready_to_start_p95_ms: 100,
+    pool_peak_total: 6, pool_max: 10, pool_waiting_at_end: 0,
+    runtime_pool_waiting_at_end: 0, ...overrides,
+  };
+}
+
+test('hosted load evidence enforces the operational read and pool contract', () => {
+  assert.doesNotThrow(() => assertJobRuntimeLoadBudgets(passingLoadReport()));
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ operational_read_p95_ms: 250 })),
+    /operational_read_latency_budget_failed/,
+  );
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ runtime_pool_waiting_at_end: 1 })),
+    /pool_budget_failed/,
+  );
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ load_multiplier: 1.99 })),
+    /load_multiplier_failed/,
+  );
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ load_multiplier: undefined })),
+    /load_multiplier_failed/,
+  );
+});
+
+test('hosted load evidence derives 2x from measured wall-clock throughput', () => {
+  const onSchedule = loadMeasurement({ submitted: 31_200, durationMs: 600_000, expectedQps: 25, targetQps: 52 });
+  assert.equal(onSchedule.requestedLoadMultiplier, 2.08);
+  assert.equal(onSchedule.measuredLoadMultiplier, 2.08);
+  const delayed = loadMeasurement({ submitted: 31_200, durationMs: 900_000, expectedQps: 25, targetQps: 52 });
+  assert.ok(delayed.measuredLoadMultiplier < 2);
+  assert.throws(
+    () => assertJobRuntimeLoadBudgets(passingLoadReport({ load_multiplier: delayed.measuredLoadMultiplier })),
+    /load_multiplier_failed/,
+  );
+});
+
+test('hosted load runner waits again when a timer resolves just before the full deadline', async () => {
+  let now = 0;
+  const waits = [];
+  await delayUntil(600_000, null, {
+    now: () => now,
+    async delay(milliseconds) {
+      waits.push(milliseconds);
+      now += waits.length === 1 ? milliseconds - 0.25 : milliseconds;
+    },
+  });
+  assert.deepEqual(waits, [600_000, 0.25]);
+  assert.equal(now, 600_000);
+});
+
+test('hosted load evidence permits only the fractional final-job quantization remainder', () => {
+  const durationMs = 59_988.926;
+  const expectedQps = 2;
+  const expectedSubmissions = (durationMs / 1000) * expectedQps;
+  assert.doesNotThrow(() => assertJobRuntimeLoadBudgets(passingLoadReport({
+    duration_ms: durationMs,
+    expected_qps: expectedQps,
+    load_multiplier: Math.floor(expectedSubmissions) / expectedSubmissions,
+    required_load_multiplier: 1,
+  })));
+  assert.throws(() => assertJobRuntimeLoadBudgets(passingLoadReport({
+    duration_ms: durationMs,
+    expected_qps: expectedQps,
+    load_multiplier: (Math.floor(expectedSubmissions) - 1) / expectedSubmissions,
+    required_load_multiplier: 1,
+  })), /load_multiplier_failed/);
+});
 
 test('producer and handler share the exact v1 payload and correlation contract', async () => {
   const fullCatalog = createTaskCatalog();

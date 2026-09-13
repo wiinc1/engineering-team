@@ -16,6 +16,23 @@ Canonical checks:
 
 `npm run pr:check` validates the required PR-body fields against the changed-file set. In CI, the checker prefers the current pull-request body fetched from GitHub when `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, and the PR number are available; this prevents stale `pull_request` event payloads from failing a corrected PR description. If the API lookup is unavailable, the checker falls back to the event body.
 
+Trusted autonomous delivery must populate every required PR-body field before
+opening the pull request. A failed initial metadata check followed by an
+autonomous body edit is still a failed attempt and cannot count toward a clean
+zero-intervention cohort. The implementer must receive the source issue URL and
+expected changed-file list, include a closing issue reference, and use only
+paths present in the actual diff for both evidence-path fields. For docs-only
+changes, the changed documentation path may serve as both test evidence and
+documentation evidence because repository validation is the exercised gate.
+Required fields must not use the bare placeholder tokens rejected by
+`verify-pr-body.js` (`None`, `N/A`, `TBD`, `TODO`, or `unknown`). When no
+standards gap exists, state that there are no gaps or exceptions and include a
+specific conformance rationale; a bare `None` is a failed initial submission.
+Each governed field line must also begin with the literal ASCII `- ` prefix
+shown in the pull-request template. `verify-pr-body.js` anchors on
+`- Label: value`, so an unbulleted `Label: value` line is treated as missing
+even when its value is otherwise complete.
+
 ## Coverage Artifacts
 `npm run standards:check` reads `.artifacts/coverage-summary.json`. That file may be produced by `npm run coverage` with per-suite JavaScript/UI coverage, or by `make verify` with Python coverage totals. The coverage policy checker accepts both schemas so developers can run the verification commands in either order without regenerating coverage only to satisfy a parser shape.
 
@@ -76,6 +93,23 @@ If a runtime file does not match any domain, `npm run change:check` fails with a
 - Do not use a catch-all domain when a more specific boundary exists.
 - Do not silence failures by widening `doc_requirements` to unrelated docs.
 - Keep domain names stable so failure messages remain predictable.
+
+## Deterministic browser mocks
+
+Browser tests for polling or streaming behavior must synchronize on protocol
+boundaries rather than global request counts or short DOM-only timeouts. In
+particular, cursor-based polling mocks should return baseline data for requests
+without a cursor and updates only after the client sends a cursor. This keeps
+React development-mode effect replay from being mistaken for a second logical
+poll. When an update triggers a follow-up read, tests should await a response
+that actually contains the updated payload before asserting rendered content.
+
+URL-driven integration tests must also wait for any required initial navigation
+to settle before triggering a second navigation. For example, when a queue
+selects its initial task through a `selectedTask` query parameter, assert that
+query state before changing a filter that also rewrites the URL. This prevents
+two valid state transitions from replacing each other according to runner
+timing.
 
 ## Dual remotes (GitLab primary)
 Canonical ship path is GitLab (`origin`). GitHub (`github`) is the backup / public CI mirror. Prefer basing work on `origin/main`, push `origin` first, then `github`. Operator status: `npm run remotes:sync-status`. Full procedure: `docs/runbooks/dual-remote-gitlab-primary.md`.

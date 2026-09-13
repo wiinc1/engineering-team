@@ -18,13 +18,13 @@ test('resolveSpecialistMap merges defaults with overrides', () => {
   });
 
   assert.equal(map.engineer, 'jr-engineer');
-  assert.equal(map.pm, 'pm');
+  assert.equal(map.pm, 'product-manager');
   assert.equal(map.architect, 'architect');
   assert.equal(map.qa, 'qa-engineer');
 });
 
 test('resolveRuntimeAgent uses the configured alias map', () => {
-  assert.equal(resolveRuntimeAgent('pm'), 'pm');
+  assert.equal(resolveRuntimeAgent('pm'), 'product-manager');
   assert.equal(resolveRuntimeAgent('architect'), 'architect');
   assert.equal(resolveRuntimeAgent('engineer'), 'sr-engineer');
   assert.equal(resolveRuntimeAgent('principal'), 'principal');
@@ -38,6 +38,11 @@ test('resolveRuntimeAgent uses the configured alias map', () => {
   assert.equal(resolveRuntimeAgent('engineer', {
     OPENCLAW_SPECIALIST_MAP: JSON.stringify({ engineer: 'jr-engineer' }),
   }), 'jr-engineer');
+});
+
+test('default PM aliases resolve to the installed product-manager runtime', () => {
+  assert.equal(resolveRuntimeAgent('pm', {}), 'product-manager');
+  assert.equal(resolveRuntimeAgent('product-manager', {}), 'product-manager');
 });
 
 test('buildOpenClawArgs targets the mapped agent through gateway mode by default', () => {

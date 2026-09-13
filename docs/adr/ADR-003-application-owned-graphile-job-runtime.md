@@ -25,6 +25,7 @@ Issue #280 establishes the coordinated LangGraph runtime/persistence posture. Th
 - Default `FF_GRAPHILE_WORKER_CUTOVER=false`. Disabled means production-ready standby, not a pilot, shadow consumer, or percentage rollout.
 - Treat `delivery_acknowledged` as an operational delivery state only. Canonical business completion must be recorded by the owning domain workflow.
 - Retain terminal delivery metadata for 30 days by default, prune at most 1,000 rows per hourly run, and never prune active deliveries.
+- Treat operational registry reads as part of the hosted load SLO. The 2x/10-minute gate records `operational_read_p95_ms` from application-owned delivery lookups and fails at 250 ms or above, alongside enqueue, ready-to-start, pool, delivery-loss, and residual-cleanup budgets.
 
 ## Consequences
 

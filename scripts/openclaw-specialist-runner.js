@@ -3,7 +3,7 @@
 const { spawn } = require('child_process');
 
 const DEFAULT_SPECIALIST_MAP = Object.freeze({
-  pm: 'pm',
+  pm: 'product-manager',
   architect: 'architect',
   engineer: 'sr-engineer',
   principal: 'principal',
@@ -16,7 +16,7 @@ const DEFAULT_SPECIALIST_MAP = Object.freeze({
   'engineer-jr': 'jr-engineer',
   'engineer-sr': 'sr-engineer',
   'engineer-principal': 'principal',
-  'product-manager': 'pm',
+  'product-manager': 'product-manager',
 });
 
 function readStdin() {

@@ -189,7 +189,8 @@ test('normalizeSpecialistForDelegation maps owner ids and engineer tiers to gran
 
 test('resolveRuntimeAgent maps granular persona keys to spawnable agent ids', () => {
   const personas = {
-    pm: 'pm',
+    pm: 'product-manager',
+    'product-manager': 'product-manager',
     architect: 'architect',
     engineer: 'sr-engineer',
     principal: 'principal',

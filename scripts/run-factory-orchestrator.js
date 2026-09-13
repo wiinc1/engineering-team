@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { runFactoryOrchestratorTick, resolveFactoryConfig } = require('../lib/task-platform/factory-delivery');
+const { DEFAULT_FACTORY_QUEUE_LEASE_SECONDS } = require('../lib/task-platform/factory-delivery-shared');
 const {
   readGoldenPathRealEvidenceCliOptions,
 } = require('../lib/task-platform/golden-path-real-evidence-preflight');
@@ -71,7 +72,10 @@ function buildOrchestratorRuntime() {
       ),
       workerId: readArg('--worker-id', process.env.FACTORY_WORKER_ID || `factory-${process.pid}`),
       factoryQueueLeaseSeconds: Number(
-        readArg('--lease-seconds', process.env.FACTORY_QUEUE_LEASE_SECONDS || 900),
+        readArg(
+          '--lease-seconds',
+          process.env.FACTORY_QUEUE_LEASE_SECONDS || DEFAULT_FACTORY_QUEUE_LEASE_SECONDS,
+        ),
       ),
       factoryQueueRetryBaseSeconds: Number(
         readArg('--retry-base-seconds', process.env.FACTORY_QUEUE_RETRY_BASE_SECONDS || 30),
