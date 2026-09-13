@@ -16,6 +16,7 @@ const {
 } = require('../lib/software-factory/specialist-runtime-bridge');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const LIVE_SESSION_PREFIX = 'specialist-delegation-';
 
 function readStdin() {
   return new Promise((resolve, reject) => {
@@ -40,8 +41,23 @@ function parsePayload(input) {
   }
 }
 
+function stripLiveSessionPrefix(value) {
+  const sessionId = String(value || '').trim();
+  return sessionId.startsWith(LIVE_SESSION_PREFIX)
+    ? sessionId.slice(LIVE_SESSION_PREFIX.length)
+    : sessionId;
+}
+
+function toLiveEvidenceSessionId(value) {
+  const sessionId = String(value || '').trim();
+  if (!sessionId) return '';
+  return sessionId.startsWith(LIVE_SESSION_PREFIX)
+    ? sessionId
+    : `${LIVE_SESSION_PREFIX}${sessionId}`;
+}
+
 function resolveSessionId(payload = {}) {
-  const requested = String(payload.sessionId || payload.session_id || '').trim();
+  const requested = stripLiveSessionPrefix(payload.sessionId || payload.session_id || '');
   if (UUID_RE.test(requested)) return requested;
   return crypto.randomUUID();
 }
@@ -125,6 +141,9 @@ async function main() {
     sessionIdFallback: sessionId,
     runtimeProvider: 'grok',
   });
+  const evidenceSessionId = toLiveEvidenceSessionId(bridge.sessionId);
+  bridge.sessionId = evidenceSessionId;
+  if (bridge.ownership) bridge.ownership.sessionId = evidenceSessionId;
   process.stdout.write(`${JSON.stringify(bridge)}\n`);
 }
 
@@ -137,10 +156,13 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_SPECIALIST_MAP,
+  LIVE_SESSION_PREFIX,
   buildGrokArgs,
   parseGrokResponse,
   parsePayload,
   resolveGrokBin,
   resolveRuntimeAgent,
   resolveSessionId,
+  stripLiveSessionPrefix,
+  toLiveEvidenceSessionId,
 };
