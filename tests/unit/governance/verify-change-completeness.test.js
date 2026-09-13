@@ -149,3 +149,15 @@ test('verify-change-completeness fails on unmapped runtime files', () => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /runtime files are not mapped to an ownership domain/);
 });
+
+test('verify-change-completeness skips dual-remote GitHub mirror branches', () => {
+  const root = makeTempDir('governance-change-mirror-');
+  initRepoWithBaseline(root);
+  writeFile(root, 'src/sample/index.js', 'module.exports = 1;\n');
+
+  const result = runScript('verify-change-completeness.js', root, {
+    GITHUB_HEAD_REF: 'sync/github-mirror-gitlab',
+  });
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /change completeness checks skipped: dual-remote GitHub mirror/);
+});
