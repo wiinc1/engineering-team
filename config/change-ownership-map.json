@@ -686,6 +686,7 @@
           "name": "security-or-performance",
           "patterns": [
             "^tests/security/specialist-delegation\\.security\\.test\\.js$",
+            "^tests/security/specialist-runtime-provider\\.security\\.test\\.js$",
             "^tests/performance/specialist-delegation\\.performance\\.test\\.js$"
           ]
         }

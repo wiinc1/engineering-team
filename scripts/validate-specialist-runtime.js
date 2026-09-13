@@ -3,6 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const { createSpecialistCoordinator } = require('../lib/software-factory/delegation');
+const {
+  applySelectedSpecialistRuntimeEnv,
+} = require('../lib/software-factory/specialist-runtime-provider');
 
 const DEFAULT_SMOKE_REQUEST = 'Implement a no-op delegation smoke by replying OK only. Do not inspect or edit files.';
 
@@ -12,10 +15,12 @@ function resolveBaseDir(env = process.env) {
     : path.join(__dirname, '..');
 }
 
-function buildSmokeReport({ request, result }) {
+function buildSmokeReport({ request, result, runtimeProvider = null, runner = null }) {
   return {
     validatedAt: new Date().toISOString(),
     request,
+    runtimeProvider,
+    runner,
     mode: result.mode,
     specialist: result.specialist || null,
     agentId: result.agentId || null,
@@ -49,7 +54,8 @@ function writeSmokeReport(baseDir, report) {
   return outputPath;
 }
 
-async function runValidation({ baseDir = resolveBaseDir(), request } = {}) {
+async function runValidation({ baseDir = resolveBaseDir(), request, env = process.env } = {}) {
+  const { resolved } = applySelectedSpecialistRuntimeEnv(env);
   const resolvedRequest = request || DEFAULT_SMOKE_REQUEST;
   const coordinator = createSpecialistCoordinator({
     baseDir,
@@ -61,7 +67,12 @@ async function runValidation({ baseDir = resolveBaseDir(), request } = {}) {
     validationMode: 'live-smoke',
   });
 
-  const report = buildSmokeReport({ request: resolvedRequest, result });
+  const report = buildSmokeReport({
+    request: resolvedRequest,
+    result,
+    runtimeProvider: resolved.name,
+    runner: resolved.runner,
+  });
   const outputPath = writeSmokeReport(baseDir, report);
   return { report, outputPath };
 }

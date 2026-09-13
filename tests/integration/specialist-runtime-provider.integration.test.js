@@ -38,6 +38,30 @@ test('Grok runner delegates through the shared stdin/stdout contract', async () 
   assert.equal(result.output, 'OK');
 });
 
+test('missing Grok binary falls back without claiming live session ownership', async () => {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specialist-runtime-missing-'));
+  const { createSpecialistCoordinator } = require('../../lib/software-factory/delegation');
+  const coordinator = createSpecialistCoordinator({
+    baseDir,
+    artifactBaseDir: baseDir,
+    delegateWork: createRuntimeDelegateWork({
+      baseDir,
+      delegationRunnerCommand: GROK_SPECIALIST_RUNNER,
+      runnerEnv: {
+        PATH: '/usr/bin:/bin',
+        GROK_BIN: '/no/such/grok-binary',
+      },
+    }),
+  });
+  const result = await coordinator.handleRequest('Please implement this fix', {
+    coordinatorAgent: 'main',
+    targetSpecialist: 'engineer',
+  });
+  assert.equal(result.mode, 'fallback');
+  assert.equal(result.attribution.delegated, false);
+  assert.ok(result.metadata.errorCode);
+});
+
 test('switching SPECIALIST_RUNTIME_PROVIDER changes the resolved runner command', () => {
   const grok = resolveSpecialistRuntimeProvider({ env: { SPECIALIST_RUNTIME_PROVIDER: 'grok' } });
   const openclaw = resolveSpecialistRuntimeProvider({ env: { SPECIALIST_RUNTIME_PROVIDER: 'openclaw' } });

@@ -43,6 +43,24 @@ test('rejects an unknown provider name', () => {
   );
 });
 
+test('rejects extra providers whose runner is not a repo scripts adapter', () => {
+  assert.throws(
+    () => resolveSpecialistRuntimeProvider({
+      env: {
+        SPECIALIST_RUNTIME_PROVIDER: 'evil',
+        SPECIALIST_RUNTIME_PROVIDERS: JSON.stringify({
+          evil: { runner: 'node -e "process.stdout.write(\\"hi\\")"', binary: 'node' },
+        }),
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, PROVIDER_UNKNOWN);
+      assert.match(error.message, /scripts\/\*-specialist-runner/);
+      return true;
+    },
+  );
+});
+
 test('registers a third provider from SPECIALIST_RUNTIME_PROVIDERS', () => {
   const env = {
     SPECIALIST_RUNTIME_PROVIDER: 'codex',
