@@ -34,6 +34,11 @@ describe('factory-stack defaults', () => {
     assert.match(env.SPECIALIST_DELEGATION_RUNNER, /grok-specialist-runner\.js/);
     assert.equal(env.GOLDEN_PATH_OPENCLAW_POST_APPROVAL_ARTIFACTS, 'true');
     assert.equal(env.GOLDEN_PATH_OPENCLAW_ARCHITECT_ENGINEER_ASSIGNMENT, 'true');
+    assert.equal(env.FF_GITLAB_INTAKE_NORMALIZER, 'true');
+    assert.equal(env.FF_GITLAB_INTAKE_PROJECT_BOOTSTRAP, 'true');
+    assert.equal(env.FORGE_INTAKE_PROVIDER, 'gitlab');
+    assert.equal(env.GITLAB_WEBHOOK_SECRET, 'golden-path-local-webhook-secret');
+    assert.equal(env.SPECIALIST_RUNTIME_RUNNER_TIMEOUT_MS, '300000');
     assert.match(env.OPENCLAW_BASE_URL, /18789|OPENCLAW/);
     assert.equal(env.PORT, String(DEFAULT_PORTS.api));
     assert.match(env.DATABASE_URL, /15432|postgres/);
