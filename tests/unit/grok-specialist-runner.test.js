@@ -7,6 +7,7 @@ const {
   parseGrokResponse,
   parsePayload,
   resolveSessionId,
+  toLiveEvidenceSessionId,
 } = require('../../scripts/grok-specialist-runner');
 const { buildBridgeResponse } = require('../../lib/software-factory/specialist-runtime-bridge');
 
@@ -26,11 +27,15 @@ test('parsePayload rejects unsupported payload versions', () => {
   );
 });
 
-test('resolveSessionId uses a UUID fallback', () => {
+test('resolveSessionId uses a UUID fallback and strips live evidence prefix for Grok CLI', () => {
   const generated = resolveSessionId({});
   assert.match(generated, /^[0-9a-f-]{36}$/i);
   const reused = resolveSessionId({ sessionId: '11111111-1111-4111-8111-111111111111' });
   assert.equal(reused, '11111111-1111-4111-8111-111111111111');
+  const stripped = resolveSessionId({
+    sessionId: 'specialist-delegation-11111111-1111-4111-8111-111111111111',
+  });
+  assert.equal(stripped, '11111111-1111-4111-8111-111111111111');
 });
 
 test('buildGrokArgs is headless JSON with always-approve and a UUID session', () => {
@@ -67,6 +72,10 @@ test('Grok JSON and plain output both satisfy the runner contract', () => {
   assert.equal(jsonBridge.sessionId, sessionId);
   assert.equal(jsonBridge.output, 'OK');
   assert.equal(jsonBridge.ownership.runtimeProvider, 'grok');
+  assert.equal(
+    toLiveEvidenceSessionId(jsonBridge.sessionId),
+    `specialist-delegation-${sessionId}`,
+  );
 
   const plain = parseGrokResponse('OK from grok');
   const plainBridge = buildBridgeResponse({
